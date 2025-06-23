@@ -72,7 +72,6 @@ public class ConfigurationLoader {
                 info.add("\n");
 
                 // Handle @template directives on object types
-                int templateId = -1; // INVALID
                 List<Directive> templateDirectivesOnType = type.getDirectives("template");
                 if (!templateDirectivesOnType.isEmpty()) {
                     unitTemplateLoader.load(type, templateDirectivesOnType, attributes, info);
@@ -441,7 +440,8 @@ public class ConfigurationLoader {
                                 int idx = rs.getInt("idx");
 
                                 ExistingUnitTemplatesMeta metadata = new ExistingUnitTemplatesMeta(templateId, name, attrId, alias, idx);
-                                existingTemplates.put(name + "." + alias, metadata);
+                                String key = name + "." + alias;
+                                existingTemplates.put(key, metadata);
                                 log.info(metadata.toString());
                             }
                         }
@@ -508,68 +508,85 @@ public class ConfigurationLoader {
                             conn.setAutoCommit(false);
 
                             Database.usePreparedStatement(conn, templateSql, templateStmt -> {
-                                templateStmt.setInt(1, _templateId);
-                                templateStmt.setString(2, templateName);
+                                try {
+                                    templateStmt.setInt(1, _templateId);
+                                    templateStmt.setString(2, templateName);
 
-                                Database.execute(templateStmt);
+                                    Database.execute(templateStmt);
 
-                                Database.usePreparedStatement(conn, elementsSql, elementsStmt -> {
-                                    // Handle field definitions on types
-                                    int idx = 0;
-                                    for (FieldDefinition f : type.getFieldDefinitions()) {
-                                        ++idx;
-                                        String alias = f.getName();
+                                } catch (SQLException sqle) {
+                                    String sqlState = sqle.getSQLState();
+                                    conn.rollback();
 
-                                        elementsStmt.clearParameters();
-                                        elementsStmt.setInt(1, _templateId);
+                                    if (sqlState.startsWith("23")) {
+                                        // 23505 : duplicate key value violates unique constraint "repo_unit_template_pk"
+                                        log.info("Unit template seems to already have been loaded");
+                                    } else {
+                                        throw sqle;
+                                    }
+                                }
+                            });
 
-                                        info.add("   " + f.getName());
+                            Database.usePreparedStatement(conn, elementsSql, elementsStmt -> {
+                                // Handle field definitions on types
+                                int idx = 0;
+                   NEXT_FIELD:  for (FieldDefinition f : type.getFieldDefinitions()) {
+                                    ++idx;
+                                    String alias = f.getName();
 
-                                        // Handle @use directive on field definitions
-                                        List<Directive> useDirectives = f.getDirectives("use");
-                                        if (!useDirectives.isEmpty()) {
-                                            for (Directive useDirective : useDirectives) {
-                                                // @use "attribute" argument
-                                                Argument arg = useDirective.getArgument("attribute");
-                                                EnumValue value = (EnumValue) arg.getValue();
+                                    elementsStmt.clearParameters();
+                                    elementsStmt.setInt(1, _templateId);
 
-                                                ProposedAttributeMeta attributeMeta = attributes.get(value.getName());
-                                                if (null != attributeMeta) {
-                                                    int attrId = attributeMeta.id();
+                                    info.add("   " + f.getName());
 
-                                                    // ----------------------------------------------------------------------
-                                                    // First check whether this template already exists in local database
-                                                    // ----------------------------------------------------------------------
-                                                    String key = templateName + "." + alias;
-                                                    ExistingUnitTemplatesMeta existingTemplate = existingTemplates.get(key);
-                                                    if (null != existingTemplate) {
+                                    // Handle @use directive on field definitions
+                                    List<Directive> useDirectives = f.getDirectives("use");
+                                    if (!useDirectives.isEmpty()) {
+                                        for (Directive useDirective : useDirectives) {
+                                            // @use "attribute" argument
+                                            Argument arg = useDirective.getArgument("attribute");
+                                            EnumValue value = (EnumValue) arg.getValue();
 
-                                                        if (existingTemplate.attrId != attrId) {
-                                                            log.warn("Failed to load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", templateName, alias, existingTemplate.attrId);
-                                                            return;
-                                                        }
+                                            ProposedAttributeMeta attributeMeta = attributes.get(value.getName());
+                                            if (null != attributeMeta) {
+                                                int attrId = attributeMeta.id();
 
-                                                        if (existingTemplate.idx != idx) {
-                                                            log.warn("Failed to load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", templateName, alias, existingTemplate.idx);
-                                                            return;
-                                                        }
+                                                // ----------------------------------------------------------------------
+                                                // First check whether this template already exists in local database
+                                                // ----------------------------------------------------------------------
+                                                String key = templateName + "." + alias;
+                                                ExistingUnitTemplatesMeta existingTemplate = existingTemplates.get(key);
+                                                if (null != existingTemplate) {
+                                                    // Already known
+                                                    if (existingTemplate.attrId != attrId) {
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", templateName, alias, existingTemplate.attrId);
+                                                        return;
                                                     }
 
-                                                    elementsStmt.setInt(2, attrId);
-                                                    elementsStmt.setString(3, alias);
-                                                    elementsStmt.setInt(4, idx);
+                                                    if (existingTemplate.idx != idx) {
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", templateName, alias, existingTemplate.idx);
+                                                        return;
+                                                    }
 
-                                                    info.add(" -> ");
-                                                    info.add(value.getName());
+                                                    // ...and identical
+                                                    info.add("\t-- ignoring\n");
+                                                    continue NEXT_FIELD;
                                                 }
+
+                                                elementsStmt.setInt(2, attrId);
+                                                elementsStmt.setString(3, alias);
+                                                elementsStmt.setInt(4, idx);
+
+                                                info.add(" -> ");
+                                                info.add(value.getName());
                                             }
                                         }
-
-                                        Database.execute(elementsStmt);
-
-                                        info.add("\n");
                                     }
-                                });
+
+                                    Database.execute(elementsStmt);
+
+                                    info.add("\n");
+                                }
                             });
 
                             conn.commit();
