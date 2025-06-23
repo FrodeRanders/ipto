@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="database">
+        repo
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="user">
+        repo
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="password">
+        repo
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="server">
+        localhost
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="port">
+        1402
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="manager">
+        postgresql
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.vopn.db.Database.Configuration
+    -->
+    <entry key="driver">
+        org.postgresql.ds.PGSimpleDataSource
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.database.adapter">
+        org.gautelis.repo.search.query.postgresql.PostgresAdapter
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.events.threshold">
+        60
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.events.listeners">
+        org.gautelis.repo.listeners.NopActionListener
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.cache.look_behind">
+        true
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.cache.max_size">
+        1000
+    </entry>
+
+    <!--
+        Corresponds to class org.gautelis.repo.model.Configuration
+    -->
+    <entry key="repository.cache.idle_check_interval">
+        60
+    </entry>
+</properties>
+
+
+

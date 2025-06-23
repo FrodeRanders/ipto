@@ -1,0 +1,146 @@
+schema {
+    query: Query
+}
+
+##############  directive definitions ############################
+directive @datatypeRegistry on ENUM
+directive @datatype(
+    id: Int!
+    type: String = null
+) on ENUM_VALUE
+
+directive @attributeRegistry on ENUM
+directive @attribute(
+    id:       Int!
+    datatype: DataTypes!
+    vector:   Boolean = false
+    alias:    String = null
+    uri:      String = null
+    description: String = null
+) on ENUM_VALUE
+
+directive @use(attribute: Attributes!) on FIELD_DEFINITION
+directive @template(id: Int!) on OBJECT
+directive @compound(attribute:  Attributes!) on OBJECT
+
+##############  basic data types ############################
+enum DataTypes @datatypeRegistry {
+    STRING    @datatype(id: 1,  type: "text")
+    TIME      @datatype(id: 2,  type: "timestamptz")
+    INTEGER   @datatype(id: 3,  type: "int")
+    LONG      @datatype(id: 4,  type: "bigint")
+    DOUBLE    @datatype(id: 5,  type: "double precision")
+    BOOLEAN   @datatype(id: 6,  type: "boolean")
+    DATA      @datatype(id: 7,  type: "bytea")
+    COMPOUND  @datatype(id: 99)
+}
+
+##############  global attributes ############################
+enum DublinCore @attributeRegistry {
+    TITLE @attribute(id: 1, datatype: STRING, vector: false,
+        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title",
+        description: "Namnet som ges till resursen. Det är en människoläsbar identifierare som ger en kortfattad representation av resursens innehåll.")
+        # "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
+
+    CREATOR @attribute(id: 2, datatype: STRING, vector: true,
+        alias: "dc:creator", uri: "http://purl.org/dc/elements/1.1/creator",
+        description: "En entitet som primärt är ansvarig för att skapa resursen, vanligtvis en individ, organisation eller tjänst.")
+        # "An entity primarily responsible for making the resource, typically an individual, organization, or service."
+
+    SUBJECT @attribute(id: 3, datatype: STRING, vector: true,
+        alias: "dc:subject", uri: "http://purl.org/dc/elements/1.1/subject",
+        description: "Ämnet eller fokuset för innehållet inom resursen, ofta representerat av nyckelord, fraser eller klassifikationskoder.")
+        # "The topic or the focus of the content within the resource, often represented by keywords, phrases, or classification codes."
+
+    DESCRIPTION @attribute(id: 4, datatype: STRING, vector: true,
+        alias: "dc:description", uri: "http://purl.org/dc/elements/1.1/description",
+        description: "En sammanfattning eller abstrakt som beskriver innehållet, syftet eller omfånget av resursen och ger insikt i dess huvudsakliga egenskaper.")
+        # "A summary or abstract detailing the content, purpose, or scope of the resource, providing insight into its primary features."
+
+    PUBLISHER @attribute(id: 5, datatype: STRING, vector: true,
+        alias: "dc:publisher", uri: "http://purl.org/dc/elements/1.1/publisher",
+        description: "Den entitet som ansvarar för att göra resursen tillgänglig, vilket kan vara en person, organisation eller tjänst.")
+        # "The entity responsible for making the resource available, which could be a person, organization, or service."
+
+    CONTRIBUTORS @attribute(id: 6, datatype: STRING, vector: true,
+        alias: "dc:contributors", uri: "http://purl.org/dc/elements/1.1/contributors",
+        description: "Entiteter som har bidragit till skapandet eller modifieringen av resursen, men som inte är de primära skaparna.")
+        # "Entities that have contributed to the creation or modification of the resource, but are not the primary creators."
+
+    DATE @attribute(id: 7, datatype: TIME, vector: true,
+        alias: "dc:date", uri: "http://purl.org/dc/elements/1.1/date",
+        description: "En tidpunkt eller tidsperiod associerad med resursens livscykel, som skapande-, publicerings- eller ändringsdatum, ofta representerat i ISO 8601-format.")
+        # "A point or period of time associated with the lifecycle of the resource, such as creation, publication, or modification date, often represented in ISO 8601 format."
+
+    TYPE @attribute(id: 8, datatype: STRING, vector: true,
+        alias: "dc:type", uri: "http://purl.org/dc/elements/1.1/type",
+        description: "Innehållets natur eller genre inom resursen, såsom text, bild, video, dataset, etc., vilket hjälper till att förstå dess format och användning.")
+        # "The nature or genre of the content within the resource, such as text, image, video, dataset, etc., aiding in understanding its format and use."
+
+    FORMAT @attribute(id: 9, datatype: STRING, vector: true,
+        alias: "dc:format", uri: "http://purl.org/dc/elements/1.1/format",
+        description: "Filformatet, det fysiska mediet eller dimensionerna av resursen, ofta standardiserade med MIME-typer (t.ex. text/html, image/jpeg).")
+        # "The file format, physical medium, or dimensions of the resource, often standardized using MIME types (e.g., text/html, image/jpeg)."
+
+    IDENTIFIER @attribute(id: 10, datatype: STRING, vector: false,
+        alias: "dc:identifier", uri: "http://purl.org/dc/elements/1.1/identifier",
+        description: "En unik referens till resursen inom ett givet sammanhang, såsom en URL, DOI, ISBN eller URN, som möjliggör entydig identifiering och åtkomst.")
+        # "A unique reference to the resource within a given context, such as a URL, DOI, ISBN, or URN, enabling unambiguous identification and access."
+
+    SOURCE @attribute(id: 11, datatype: STRING, vector: true,
+        alias: "dc:source", uri: "http://purl.org/dc/elements/1.1/source",
+        description: "Resursen från vilken den aktuella resursen är härledd eller genererad, vilket ger kontext om dess ursprung eller föregångare.")
+        # "The resource from which the current resource is derived or generated, providing context on its origins or predecessors."
+
+    LANGUAGE @attribute(id: 12, datatype: STRING, vector: true,
+        alias: "dc:language", uri: "http://purl.org/dc/elements/1.1/language",
+        description: "Huvudspråket (eller språken) för innehållet, ofta angivet med ISO 639-koder (t.ex. en för engelska, fr för franska).")
+        # "The primary language(s) of the content, often denoted using ISO 639 codes (e.g., en for English, fr for French)."
+
+    RELATION @attribute(id: 13, datatype: STRING, vector: true,
+        alias: "dc:relation", uri: "http://purl.org/dc/elements/1.1/relation",
+        description: "En referens till en relaterad resurs, som anger en koppling eller association, såsom en föräldra-, barn- eller syskonrelation.")
+        # "A reference to a related resource, indicating a connection or association, such as a parent, child, or sibling relationship."
+
+    COVERAGE @attribute(id: 14, datatype: STRING, vector: true,
+        alias: "dc:coverage", uri: "http://purl.org/dc/elements/1.1/coverage",
+        description: "Den rumsliga eller tidsmässiga omfattningen av innehållet, som anger geografiska platser eller tidsperioder som är relevanta för resursen.")
+        # "The spatial or temporal extent of the content, indicating geographical locations or time periods relevant to the resource."
+
+    RIGHTS @attribute(id: 15, datatype: STRING, vector: true,
+        alias: "dc:rights-management", uri: "http://purl.org/dc/elements/1.1/rights-management",
+        description: "Information om rättigheterna som innehas i och över resursen, såsom upphovsrättsstatus, licensvillkor eller åtkomstbegränsningar, vilket säkerställer korrekt användning och distribution.")
+        # "Information about the rights held in and over the resource, such as copyright status, licensing terms, or access restrictions, ensuring proper usage and distribution."
+}
+
+##############  domain specific attributes ############################
+enum Attributes @attributeRegistry {
+    ORDER_ID  @attribute(id: 1001, datatype: STRING)
+    DEADLINE  @attribute(id: 1002, datatype: TIME)
+    READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
+    SHIPMENT  @attribute(id: 1099, datatype: COMPOUND)
+}
+
+##############  root query (optional)  #################################
+scalar Long         # maps to bigint
+
+type Query {
+    unitById(tenantId: Int!, unitId: Long!) : PurchaseOrder
+}
+
+##############  object & unit types ##############################
+scalar DateTime     # maps to timestamptz  (java.time.Instant)
+scalar Bytes        # maps to bytea        (Base-64 strings on the wire)
+
+type Shipment @compound(attribute: SHIPMENT) {
+    orderId  : String    @use(attribute: ORDER_ID)
+    deadline : DateTime  @use(attribute: DEADLINE)
+    reading  : [Float]   @use(attribute: READING)
+}
+
+type PurchaseOrder @template(id: 42) {
+    orderId  : String    @use(attribute: ORDER_ID)
+    deadline : DateTime  @use(attribute: DEADLINE)
+    reading  : [Float]   @use(attribute: READING)
+    shipment : Shipment  @use(attribute: SHIPMENT)
+}
