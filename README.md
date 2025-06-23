@@ -1,42 +1,10 @@
-# 'One shot' repositorium
+# IPTO - A metadata management framework
 
 A metadata management system around 'units'. Units are immutable entities that can encapsulate dynamic sets of metadata.
 
-![Image](doc/repo.png)
+See end of README for instructions on how to setup test.
 
-The steps needed in order to fetch, start and configure PostgreSQL to run in a Docker container are 
-automated in ```db/postgresql/setup-for-test.py```, but you can do this manually (as described in [this README](db/postgresql/README.md)).
-```
-➜  python db/postgresql/setup-for-test.py
-Pulling the latest 'postgres' image from Docker Hub...
-Using default tag: latest
-latest: Pulling from library/postgres
-254e724d7786: Pull complete
-...
-
-Image pulled successfully.
-
-Removing existing container named 'repo-postgres' (if any)...
-Removed old container 'repo-postgres'.
-
-Starting new container 'repo-postgres' on port 1402 ...
-2e8b41855a8976901ed256cba75c6541c3dda188a4cb617f911688c26057212b
-Container started.
-
-Waiting 10 seconds for the database to initialize...
-Proceeding...
-
-Entering container to run psql commands...
-...
-
-Setup completed.
-
-You can now connect using something like:
-  psql -h localhost -p 1402 -U postgres
-using the superuser password you specified.
-
-➜  
-```
+## Configuration
 Configuration of attributes (using GraphQL SDL):
 ```graphql
 ##############  directive definitions ############################
@@ -93,7 +61,7 @@ type PurchaseOrder @template(id: 42) {
 }
 ```
 
-Example of usage:
+## Example of usage:
 ```java
     public void createAUnitAndAssignAttributes() {
         Repository repo = RepositoryFactory.getRepository();
@@ -196,4 +164,38 @@ Example of usage:
         }
         return attributeId.get();
     }
+```
+
+## Database
+The data model governed by this framework:
+![Image](doc/repo.png)
+
+## Setup
+The steps needed in order to fetch, start and configure PostgreSQL to run in a Docker container are 
+automated in ```db/postgresql/setup-for-test.py```, but you can do this manually (as described in [this README](db/postgresql/README.md)).
+
+```
+➜  python db/postgresql/setup-for-test.py
+Pulling the latest 'postgres' image from Docker Hub...
+Using default tag: latest
+latest: Pulling from library/postgres
+254e724d7786: Pull complete
+...
+
+Image pulled successfully.
+
+Removing existing container named 'repo-postgres' (if any)...
+Removed old container 'repo-postgres'.
+
+Starting new container 'repo-postgres' on port 1402 ...
+2e8b41855a8976901ed256cba75c6541c3dda188a4cb617f911688c26057212b
+Container started.
+
+Waiting 10 seconds for the database to initialize...
+Proceeding...
+
+Entering container to run psql commands...
+...
+
+Setup completed.  
 ```
