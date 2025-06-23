@@ -73,7 +73,7 @@ def run_psql_commands_in_container(
 
     # Spawn the psql session
     child = pexpect.spawn(shell_cmd, encoding="utf-8", timeout=5)
-    child.logfile = sys.stdout
+    # child.logfile = sys.stdout
 
     child.expect("postgres=#", timeout=5)
 
@@ -102,7 +102,7 @@ def run_sql_commands_in_container(container_name, repo_password, sql_files, repo
     shell_cmd = f"docker exec -it {container_name} psql -h {psql_host} -U {repo_user}"
 
     child = pexpect.spawn(shell_cmd, encoding="utf-8", timeout=10)
-    child.logfile = sys.stdout
+    # child.logfile = sys.stdout
 
     child.expect(repo_user + "=>", timeout=5)
 
@@ -146,21 +146,21 @@ def main():
     # Wait for container to become ready
     wait_for_container_startup(wait_seconds=10)
 
-    # Run commands as superuser
+    # Commands to run as superuser
     commands = [
         "CREATE USER repo WITH PASSWORD '" + repo_password + "';",
         "CREATE DATABASE repo OWNER repo;",
         "CREATE EXTENSION pg_stat_statements;"
     ]
 
-    # Run psql commands in the container
+    # Run commands in the container (as superuser)
     run_psql_commands_in_container(
         container_name=container_name,
         postgres_password=postgres_password,
         commands=commands
     )
 
-    # Run commands as user 'repo'
+    # Run commands in the container as user 'repo'
     sql_files = ["schema.sql", "procedures.sql", "boot.sql"]
     run_sql_commands_in_container(
             container_name=container_name,
@@ -169,10 +169,6 @@ def main():
     )
 
     print("Setup completed.\n")
-    # print("You can now connect using something like:")
-    # print(f"  psql -h localhost -p {host_port} -U postgres")
-    # print("using the superuser password you specified.\n")
-
 
 if __name__ == "__main__":
     main()
