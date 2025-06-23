@@ -1,0 +1,310 @@
++--------------------------------------------------------------------------------------+
+|   Run on an Apple MacBook Pro 2022 (Mac14,7) with an Apple M2 chip and 24 GB RAM,    |
+|   with 8 cores (4 performance and 4 efficiency).                                     |
+|                                                                                      |
+|   More often than not, tests are run on battery. The PostgreSQL database is run in   |
+|   a Docker container on the same machine without any special tuning.                 |
++--------------------------------------------------------------------------------------+
+
++--------------------------------------------------------------------------------------+
+|   Run on an Apple iMac Pro (iMacPro1,1) with an Intel Xeon W chip and                |
+|   64 GB RAM, with 10 cores .                                                         |
+|                                                                                      |
+|   The PostgreSQL database is run in a Docker container on the same machine           |
+|   without any special tuning.                                                        |
++--------------------------------------------------------------------------------------+
+
+2025-06-11 20:37:49.573:
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=1 858 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=58 MiB
+
+Units: total=80807 locks=0 vectors=480835
+Values: string=322435 time=160007 integer=0 long=0 double=80007 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-11 20:37:49.576: 
+-----------------------+--------+--------+--------+----------+-----------+-------------+----------------
+           Measurement |  Count |    Min |    Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+--------+--------+----------+-----------+-------------+----------------
+ fetch unit attributes |    502 |   0,00 |  24,00 |     1,32 |    120,66 |         661 |          661ms
+        resurrect unit |      1 |   6,00 |   6,00 |     6,00 |      0,00 |           6 |            6ms
+         custom search |      1 |  77,00 |  77,00 |    77,00 |      0,00 |          77 |           77ms
+fetch known attributes |      1 |   4,00 |   4,00 |     4,00 |      0,00 |           4 |            4ms
+            store unit |  50501 |   1,00 |  38,00 |     1,58 |     49,07 |       79967 | 1min 19s 967ms
+
+
+2025-06-11 20:44:21.229: 
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=863 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=52 MiB
+
+Units: total=131308 locks=0 vectors=781340
+Values: string=523940 time=260008 integer=0 long=0 double=130008 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-11 20:44:21.232: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+ fetch unit attributes |    502 |    0,00 |    9,00 |     0,94 |    120,41 |         472 |          472ms
+        resurrect unit |      1 |    8,00 |    8,00 |     8,00 |      0,00 |           8 |            8ms
+         custom search |      1 |  113,00 |  113,00 |   113,00 |      0,00 |         113 |          113ms
+fetch known attributes |      1 |    4,00 |    4,00 |     4,00 |      0,00 |           4 |            4ms
+            store unit |  50501 |    1,00 |   36,00 |     1,63 |     54,11 |       82173 | 1min 22s 173ms
+
+
+2025-06-11 20:47:12.544: 
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=477 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=55 MiB
+
+Units: total=181809 locks=0 vectors=1081845
+Values: string=725445 time=360009 integer=0 long=0 double=180009 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-11 20:47:12.548: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+ fetch unit attributes |    502 |    0,00 |   10,00 |     1,20 |    106,83 |         600 |          600ms
+        resurrect unit |      1 |    8,00 |    8,00 |     8,00 |      0,00 |           8 |            8ms
+         custom search |      1 |  138,00 |  138,00 |   138,00 |      0,00 |         138 |          138ms
+fetch known attributes |      1 |    3,00 |    3,00 |     3,00 |      0,00 |           3 |            3ms
+            store unit |  50501 |    1,00 |   42,00 |     1,62 |     44,19 |       81562 | 1min 21s 562ms
+
+
+2025-06-15 01:12:30.007:
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=79 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=48 MiB mem-free=28 MiB
+
+Units: total=1010973 locks=0 vectors=4512831
+Values: string=3532874 time=1000083 integer=0 long=0 double=1000086 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-15 01:12:30.022: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+ fetch unit attributes |   5001 |    0,00 |   17,00 |     1,12 |     59,20 |        5610 |       5s 610ms
+        resurrect unit |      1 |    7,00 |    7,00 |     7,00 |      0,00 |           7 |            7ms
+         custom search |      1 |  591,00 |  591,00 |   591,00 |      0,00 |         591 |          591ms
+fetch known attributes |      1 |    2,00 |    2,00 |     2,00 |      0,00 |           2 |            2ms
+            store unit | 505001 |    0,00 |  133,00 |     0,73 |    102,56 |      367246 | 6mins 7s 246ms
+
+
+2025-06-16 09:11:37.067: Storing 500.000 units in a fresh PostgreSQL environment
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=38 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=98 MiB
+
+Units: total=505001 locks=0 vectors=3005005
+Values: string=2015003 time=1000001 integer=0 long=0 double=1000002 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-16 09:11:37.072: 
+-----------------------+--------+----------+----------+----------+-----------+-------------+--------------
+           Measurement |  Count |      Min |      Max |  Average |  Variance |  Total time        i.e.
+-----------------------+--------+----------+----------+----------+-----------+-------------+--------------
+ fetch unit attributes |   5001 |     0,00 |   257,00 |     2,72 |    133,76 |       13621 |    13s 621ms
+        resurrect unit |      1 |     7,00 |     7,00 |     7,00 |      0,00 |           7 |          7ms
+         custom search |      1 |  1009,00 |  1009,00 |  1009,00 |      0,00 |        1009 |       1s 9ms
+fetch known attributes |      1 |     3,00 |     3,00 |     3,00 |      0,00 |           3 |          3ms
+            store unit | 505001 |     1,00 |    97,00 |     1,90 |     35,73 |      960963 | 16mins 963ms
+
+
+2025-06-16 10:03:44.226: Adding 500 units to running PostgreSQL instance
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=25 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=80 MiB
+
+Units: total=505552 locks=0 vectors=3008060
+Values: string=2017156 time=1001002 integer=0 long=0 double=1001004 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-16 10:03:44.231: 
+-----------------------+--------+-------+--------+----------+-----------+-------------+----------
+           Measurement |  Count |   Min |    Max |  Average |  Variance |  Total time    i.e.
+-----------------------+--------+-------+--------+----------+-----------+-------------+----------
+ fetch unit attributes |     51 |  0,00 |   9,00 |     1,04 |    153,92 |          53 |     53ms
+        resurrect unit |      1 |  7,00 |   7,00 |     7,00 |      0,00 |           7 |      7ms
+         custom search |      1 |  9,00 |   9,00 |     9,00 |      0,00 |           9 |      9ms
+fetch known attributes |      1 |  4,00 |   4,00 |     4,00 |      0,00 |           4 |      4ms
+            store unit |    551 |  1,00 |  32,00 |     2,10 |     65,50 |        1156 | 1s 156ms
+
+
+2025-06-16 10:12:00.660: Adding 500 more units to running PostgreSQL instance
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=25 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=79 MiB
+
+Units: total=506103 locks=0 vectors=3011115
+Values: string=2019309 time=1002003 integer=0 long=0 double=1002006 boolean=0 data=0
+Assocs: internal=0 external=0
+
+2025-06-16 10:12:00.665: 
+-----------------------+--------+--------+--------+----------+-----------+-------------+----------
+           Measurement |  Count |    Min |    Max |  Average |  Variance |  Total time    i.e.
+-----------------------+--------+--------+--------+----------+-----------+-------------+----------
+ fetch unit attributes |     51 |   0,00 |   9,00 |     1,02 |    156,30 |          52 |     52ms
+        resurrect unit |      1 |   8,00 |   8,00 |     8,00 |      0,00 |           8 |      8ms
+         custom search |      1 |  10,00 |  10,00 |    10,00 |      0,00 |          10 |     10ms
+fetch known attributes |      1 |   3,00 |   3,00 |     3,00 |      0,00 |           3 |      3ms
+            store unit |    551 |   1,00 |  32,00 |     2,18 |     63,75 |        1202 | 1s 202ms
+
+
+2025-06-22 01:26:48.592:
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=1 824 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=73 MiB
+
+Units: total=505001 locks=0 vectors=3005005
+Values: string=2015003 time=1000001 integer=0 long=0 double=1000002 boolean=0 data=0 compound=1500003
+Assocs: internal=0 external=0
+
+2025-06-22 01:26:48.596: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time           i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+ fetch unit attributes |   5002 |    0,00 |   25,00 |     2,63 |     25,53 |       13158 |       13s 158ms
+        resurrect unit |      1 |    7,00 |    7,00 |     7,00 |      0,00 |           7 |             7ms
+         custom search |      1 |  748,00 |  748,00 |   748,00 |      0,00 |         748 |           748ms
+fetch known attributes |      1 |    3,00 |    3,00 |     3,00 |      0,00 |           3 |             3ms
+            store unit | 505001 |    1,00 |  105,00 |     1,92 |     35,77 |      967662 | 16mins 7s 662ms
+
+
+2025-06-22 01:37:49.496: After vacuuming, adding 50.000 units
+===================================================================================================
+OS: Mac OS X 15.5 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=3 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=55 MiB
+
+Units: total=555502 locks=0 vectors=3305510
+Values: string=2216506 time=1100002 integer=0 long=0 double=1100004 boolean=0 data=0 compound=1650006
+Assocs: internal=0 external=0
+
+2025-06-22 01:37:49.499: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+ fetch unit attributes |    502 |    0,00 |    7,00 |     0,83 |    127,42 |         418 |          418ms
+        resurrect unit |      1 |    7,00 |    7,00 |     7,00 |      0,00 |           7 |            7ms
+         custom search |      1 |  169,00 |  169,00 |   169,00 |      0,00 |         169 |          169ms
+fetch known attributes |      1 |    3,00 |    3,00 |     3,00 |      0,00 |           3 |            3ms
+            store unit |  50501 |    1,00 |   32,00 |     1,63 |     34,10 |       82531 | 1min 22s 531ms
+
+
+2025-06-22 11:51:37.369: Adding 500.000 in clean database
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=83 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=64 MiB mem-free=44 MiB
+
+Units: total=505001 locks=0 vectors=3005005
+Values: string=2015003 time=1000001 integer=0 long=0 double=1000002 boolean=0 data=0 compound=1500003
+Assocs: internal=0 external=0
+
+2025-06-22 11:51:37.376: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time           i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+ fetch unit attributes |   5002 |    0,00 |  115,00 |     1,28 |    132,86 |        6402 |        6s 402ms
+        resurrect unit |      1 |    7,00 |    7,00 |     7,00 |      0,00 |           7 |             7ms
+         custom search |      1 |  385,00 |  385,00 |   385,00 |      0,00 |         385 |           385ms
+fetch known attributes |      1 |    1,00 |    1,00 |     1,00 |      0,00 |           1 |             1ms
+            store unit | 505001 |    0,00 |   98,00 |     0,77 |     77,21 |      388891 | 6mins 28s 891ms
+
+
+2025-06-22 18:49:15.797: Adding 500.000 more without vacuuming
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=91 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=64 MiB mem-free=45 MiB
+
+Units: total=1010002 locks=0 vectors=6010010
+Values: string=4030006 time=2000002 integer=0 long=0 double=2000004 boolean=0 data=0 compound=3000006
+Assocs: internal=0 external=0
+
+2025-06-22 18:49:15.806: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time           i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+-----------------
+ fetch unit attributes |   5002 |    0,00 |   12,00 |     1,06 |     62,59 |        5324 |        5s 324ms
+        resurrect unit |      1 |    8,00 |    8,00 |     8,00 |      0,00 |           8 |             8ms
+         custom search |      1 |  699,00 |  699,00 |   699,00 |      0,00 |         699 |           699ms
+fetch known attributes |      1 |    2,00 |    2,00 |     2,00 |      0,00 |           2 |             2ms
+            store unit | 505001 |    0,00 |  150,00 |     0,66 |     98,06 |      334399 | 5mins 34s 399ms
+
+
+2025-06-22 18:50:16.453: Adding 500 after vacuuming
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=1 086 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=56 MiB mem-free=23 MiB
+
+Units: total=1010553 locks=0 vectors=6013065
+Values: string=4032159 time=2001003 integer=0 long=0 double=2001006 boolean=0 data=0 compound=3001509
+Assocs: internal=0 external=0
+
+2025-06-22 18:50:16.458: 
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+           Measurement |  Count |   Min |    Max |  Average |  Variance |  Total time i.e.
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+ fetch unit attributes |     52 |  0,00 |   8,00 |     0,63 |    204,69 |          33 |  33ms
+        resurrect unit |      1 |  4,00 |   4,00 |     4,00 |      0,00 |           4 |   4ms
+         custom search |      1 |  5,00 |   5,00 |     5,00 |      0,00 |           5 |   5ms
+fetch known attributes |      1 |  1,00 |   1,00 |     1,00 |      0,00 |           1 |   1ms
+            store unit |    551 |  0,00 |  18,00 |     0,85 |    100,56 |         471 | 471ms
+
+
+2025-06-23 23:25:48.889: 
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=6 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=56 MiB mem-free=23 MiB
+
+Units: total=551 locks=0 vectors=3055
+Values: string=2153 time=1001 integer=0 long=0 double=1002 boolean=0 data=0 compound=1503
+Assocs: internal=0 external=0
+
+2025-06-23 23:25:48.892: 
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+           Measurement |  Count |   Min |    Max |  Average |  Variance |  Total time i.e.
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+ fetch unit attributes |     52 |  0,00 |  12,00 |     0,87 |    213,48 |          45 |  45ms
+        resurrect unit |      1 |  3,00 |   3,00 |     3,00 |      0,00 |           3 |   3ms
+         custom search |      1 |  7,00 |   7,00 |     7,00 |      0,00 |           7 |   7ms
+fetch known attributes |      1 |  1,00 |   1,00 |     1,00 |      0,00 |           1 |   1ms
+            store unit |    551 |  0,00 |  18,00 |     0,79 |    109,04 |         435 | 435ms
+
+
+2025-06-23 23:34:25.265: 
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=5 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=56 MiB mem-free=23 MiB
+
+Units: total=1102 locks=0 vectors=6110
+Values: string=4306 time=2002 integer=0 long=0 double=2004 boolean=0 data=0 compound=3006
+Assocs: internal=0 external=0
+
+2025-06-23 23:34:25.267: 
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+           Measurement |  Count |   Min |    Max |  Average |  Variance |  Total time i.e.
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+ fetch unit attributes |     52 |  0,00 |   9,00 |     0,85 |    184,85 |          44 |  44ms
+        resurrect unit |      1 |  4,00 |   4,00 |     4,00 |      0,00 |           4 |   4ms
+         custom search |      1 |  6,00 |   6,00 |     6,00 |      0,00 |           6 |   6ms
+fetch known attributes |      1 |  2,00 |   2,00 |     2,00 |      0,00 |           2 |   2ms
+            store unit |    551 |  0,00 |  17,00 |     0,83 |    101,00 |         457 | 457ms
+
+

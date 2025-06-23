@@ -115,7 +115,7 @@
                 <include>**/*.log</include>
               </includes>
               <excludes>
-                <exclude>**/statistics.log</exclude>
+                <exclude>**/statistics.txt</exclude>
               </excludes>
               <followSymlinks>false</followSymlinks>
             </fileset>
