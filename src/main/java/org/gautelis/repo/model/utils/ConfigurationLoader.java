@@ -87,7 +87,7 @@ public class ConfigurationLoader {
                 log.info(String.join("", info));
             }
         } catch (Throwable t) {
-            log.error("Failed load SDL: {}", t.getMessage(), t);
+            log.error("Failed to load configuration: {}", t.getMessage(), t);
 
             if (t.getCause() instanceof SQLException sqle) {
                 log.error("  ^-- more details: {}", Database.squeeze(sqle));
@@ -122,7 +122,7 @@ public class ConfigurationLoader {
                     }
                 }
 
-                arg = enumValueDirective.getArgument("type");
+                arg = enumValueDirective.getArgument("basictype");
                 if (null != arg) {
                     // NOTE: 'COMPOUND' does not have a particular dbType
                     info += ", " + arg.getName();
@@ -442,7 +442,7 @@ public class ConfigurationLoader {
                                 ExistingUnitTemplatesMeta metadata = new ExistingUnitTemplatesMeta(templateId, name, attrId, alias, idx);
                                 String key = name + "." + alias;
                                 existingTemplates.put(key, metadata);
-                                log.info(metadata.toString());
+                                log.debug(metadata.toString());
                             }
                         }
                     });
