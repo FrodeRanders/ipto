@@ -9,7 +9,7 @@ Configuration of attributes (using GraphQL SDL):
 ```graphql
 ##############  directive definitions ############################
 directive @datatypeRegistry on ENUM
-directive @datatype(id: Int!, type: String = null) on ENUM_VALUE
+directive @datatype(id: Int!, basictype: String = null) on ENUM_VALUE
 
 directive @attributeRegistry on ENUM
 directive @attribute(id: Int!, datatype: DataTypes!, vector: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
@@ -20,13 +20,13 @@ directive @compound(attribute: Attributes!) on OBJECT
 
 ##############  builtin data types, provided for reference #######
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  type: "text")
-    TIME      @datatype(id: 2,  type: "timestamptz")
-    INTEGER   @datatype(id: 3,  type: "int")
-    LONG      @datatype(id: 4,  type: "bigint")
-    DOUBLE    @datatype(id: 5,  type: "double precision")
-    BOOLEAN   @datatype(id: 6,  type: "boolean")
-    DATA      @datatype(id: 7,  type: "bytea")
+    STRING    @datatype(id: 1,  basictype: "text")
+    TIME      @datatype(id: 2,  basictype: "timestamptz")
+    INTEGER   @datatype(id: 3,  basictype: "int")
+    LONG      @datatype(id: 4,  basictype: "bigint")
+    DOUBLE    @datatype(id: 5,  basictype: "double precision")
+    BOOLEAN   @datatype(id: 6,  basictype: "boolean")
+    DATA      @datatype(id: 7,  basictype: "bytea")
     COMPOUND  @datatype(id: 99)
 }
 
