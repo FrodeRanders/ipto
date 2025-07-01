@@ -21,7 +21,7 @@ directive @attribute(
 
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
 directive @template(id: Int!) on OBJECT
-directive @compound(attribute:  Attributes!) on OBJECT
+directive @compound(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
@@ -35,8 +35,8 @@ enum DataTypes @datatypeRegistry {
     COMPOUND  @datatype(id: 99)
 }
 
-##############  global attributes ############################
-enum DublinCore @attributeRegistry {
+############## attributes ############################
+enum Attributes @attributeRegistry {
     TITLE @attribute(id: 1, datatype: STRING, vector: false,
         alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title",
         description: "Namnet som ges till resursen. Det är en människoläsbar identifierare som ger en kortfattad representation av resursens innehåll.")
@@ -111,10 +111,8 @@ enum DublinCore @attributeRegistry {
         alias: "dc:rights-management", uri: "http://purl.org/dc/elements/1.1/rights-management",
         description: "Information om rättigheterna som innehas i och över resursen, såsom upphovsrättsstatus, licensvillkor eller åtkomstbegränsningar, vilket säkerställer korrekt användning och distribution.")
         # "Information about the rights held in and over the resource, such as copyright status, licensing terms, or access restrictions, ensuring proper usage and distribution."
-}
 
-##############  domain specific attributes ############################
-enum Attributes @attributeRegistry {
+    # Domain specific attributes
     ORDER_ID  @attribute(id: 1001, datatype: STRING)
     DEADLINE  @attribute(id: 1002, datatype: TIME)
     READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
@@ -124,8 +122,13 @@ enum Attributes @attributeRegistry {
 ##############  root query (optional)  #################################
 scalar Long         # maps to bigint
 
+input UnitIdentification {
+    tenantId : Int!
+    unitId : Long!
+}
+
 type Query {
-    unitById(tenantId: Int!, unitId: Long!) : PurchaseOrder
+    unit(id : UnitIdentification!) : Test
 }
 
 ##############  object & unit types ##############################
@@ -144,3 +147,8 @@ type PurchaseOrder @template(id: 42) {
     reading  : [Float]   @use(attribute: READING)
     shipment : Shipment  @use(attribute: SHIPMENT)
 }
+
+type Test @template(id: 43) {
+    title : String @use(attribute: TITLE)
+}
+

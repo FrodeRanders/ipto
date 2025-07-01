@@ -36,7 +36,9 @@
         <logger name="org.gautelis.vopn" level="WARN" />
         <logger name="org.gautelis.repo" level="INFO" />
         <logger name="org.gautelis.repo.RepositoryTest" level="DEBUG" />
+        <logger name="org.gautelis.repo.graphql" level="TRACE" />
         <logger name="org.apache" level="WARN" />
+        <logger name="graphql" level="TRACE" />
 
         <logger name="STATISTICS" level="INFO">
             <appender-ref ref="STATISTICS"/>
