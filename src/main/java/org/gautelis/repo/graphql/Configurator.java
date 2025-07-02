@@ -1,5 +1,6 @@
 package org.gautelis.repo.graphql;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
 import graphql.language.*;
 import graphql.schema.DataFetcher;
@@ -129,27 +130,15 @@ public class Configurator {
     }
 
     private void wireQueries(RuntimeWiring.Builder runtimeWiring) {
+        record UnitIdentification(int tenantId, long unitId) {}
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        // Point lookup for specific unit
         DataFetcher<?> unitById = env -> {
             log.trace("Query::unit(id : {})", (Object) env.getArgument("id"));
 
-            @SuppressWarnings("unchecked")
-            Map<String,Object> idArg = env.getArgument("id");
-
-            if (idArg == null) {
-                log.info("No id provided for query");
-                return null;
-            }
-
-            Integer tenantId = (Integer) idArg.get("tenantId");
-            Number unitNum = (Number) idArg.get("unitId");
-            long unitId   = unitNum.longValue();
-
-            if (null == tenantId || unitId <= 0) {
-                log.info("No tenant or unit id provided for query");
-                return null;
-            }
-
-            return repoService.loadUnit(tenantId, unitId);
+            UnitIdentification id = objectMapper.convertValue(env.getArgument("id"), UnitIdentification.class);
+            return repoService.loadUnit(id.tenantId(), id.unitId());
         };
 
         runtimeWiring.type("Query", t -> t.dataFetcher("unit", unitById));

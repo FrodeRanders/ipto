@@ -17,6 +17,7 @@
 package org.gautelis.repo;
 
 import com.fasterxml.uuid.Generators;
+import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLError;
@@ -85,8 +86,8 @@ public class RepositoryTest extends TestCase {
                 Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            Optional<GraphQL> graphQl = repo.loadConfiguration(sdl);
-            if (graphQl.isEmpty()) {
+            Optional<GraphQL> _graphQL = repo.loadConfiguration(sdl);
+            if (_graphQL.isEmpty()) {
                 fail("Could not load configuration");
             }
 
@@ -106,19 +107,29 @@ public class RepositoryTest extends TestCase {
                 unitId = unit.getUnitId();
             }
 
-            String query = String.format("""
-                    query {
-                      unit (id: { tenantId: %d, unitId: %d }) {
-                        title
-                      }
-                    }
-                    """, tenantId, unitId);
-            log.info(query);
+            String query = """
+                query Unit($id: UnitIdentification!) {
+                  unit(id: $id) {
+                    title
+                  }
+                }
+                """;
             System.out.println("-------------------------------------------------------------------");
+            log.info(query);
             System.out.println(query);
 
-            GraphQL gql = graphQl.get();
-            ExecutionResult result = gql.execute(query);
+            GraphQL graphQL = _graphQL.get();
+            ExecutionResult result = graphQL.execute(
+                    ExecutionInput.newExecutionInput()
+                            .query(query)
+                            .variables(Map.of(
+                                "id", Map.of(
+                                     "tenantId", tenantId,
+                                     "unitId",   unitId
+                                     )
+                                )
+                            )
+                            .build());
 
             List<GraphQLError> errors = result.getErrors();
             if (errors.isEmpty()) {

@@ -43,7 +43,6 @@ public class RepositoryService {
         Map<Integer, AttributeVector> compoundAttributes = new HashMap<>();
 
         unit.get().getAttributes().forEach(attr -> {
-
             int attrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
 
