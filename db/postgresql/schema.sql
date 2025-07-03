@@ -144,10 +144,11 @@ CREATE INDEX repo_av_ind1 ON repo_attribute_value (
 
 ---------------------------------------------------------------
 -- Metadata-table: Unit-template lookup table.
--- The configuration loader inserts one row per @use field in every type … @unit.
+-- The configuration loader inserts one row per @use field in every @unit type ….
+-- Records (compound attributes) are handles separately in 'repo_compound_template'
 --
 CREATE TABLE repo_unit_template (
-    templateid INT  NOT NULL,   -- from @template(id: …)
+    templateid INT  NOT NULL,   -- from @unit(id: …)
 
     name       TEXT NOT NULL,   -- type name
 
@@ -159,7 +160,7 @@ CREATE TABLE repo_unit_template (
 ;
 
 CREATE TABLE repo_template_elements (
-    templateid INT  NOT NULL,   -- from @template(id: …)
+    templateid INT  NOT NULL,   -- from @unit(id: …)
     attrid     INT  NOT NULL,   -- global attribute id
 
     alias      TEXT NOT NULL,   -- field name inside unit (template)
@@ -176,7 +177,7 @@ CREATE TABLE repo_template_elements (
 -- Metadata-table: Template for compound objects
 --
 CREATE TABLE repo_compound_template (
-    compound_attrid  INT  NOT NULL,      -- id of the COMPOUND attribute
+    compound_attrid  INT  NOT NULL,      -- from @record(attribute: …)
     idx              INT  NOT NULL,
 
     child_attrid     INT  NOT NULL,      -- sub-attribute

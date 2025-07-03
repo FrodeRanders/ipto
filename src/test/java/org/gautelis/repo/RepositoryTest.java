@@ -210,7 +210,6 @@ public class RepositoryTest extends TestCase {
             int pageSize = 5;    // pick next 'pageSize' results
 
             System.out.println("Generating " + (numberOfParents * numberOfChildren) + " units...");
-            System.out.println("(This can take some time)\n");
             System.out.flush();
 
             MovingAverage averageTPI = new MovingAverage(); // Average timer per iteration
@@ -239,7 +238,7 @@ public class RepositoryTest extends TestCase {
 
                 for (int i = 1; i < numberOfChildren + 1; i++) {
                     long count = (j-1)*numberOfChildren + i;
-                    if (count % 1000 == 0) {
+                    if (count % 1000 == 0) { // depends on parameters (numberOfParents and numberOfChildren) > 1000
                         long iterationsLeft = (numberOfParents * numberOfChildren) - count;
                         double timeLeft = iterationsLeft * averageTPI.getAverage();
 

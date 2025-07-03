@@ -60,7 +60,7 @@ public class RepositoryService {
         return new UnitSnapshot(tenantId, unitId, values, compoundAttributes);
     }
 
-    public Object getVector(Snapshot snap, int attrId, boolean isMandatory) {
+    public Object getArray(Snapshot snap, int attrId, boolean isMandatory) {
         log.trace("RepositoryService::getVector({}, {}, {})", snap, attrId, isMandatory);
         ValueVector<?> vv = snap.values.getOrDefault(attrId, null);
         if (vv == null || vv.isEmpty()) {
@@ -73,8 +73,8 @@ public class RepositoryService {
         return vv;
     }
 
-    public Object getVector(Snapshot snap, int attrId) {
-        return getVector(snap, attrId, false);
+    public Object getArray(Snapshot snap, int attrId) {
+        return getArray(snap, attrId, false);
     }
 
     public Object getScalar(Snapshot snap, int attrId, boolean isMandatory) {
@@ -92,7 +92,7 @@ public class RepositoryService {
     }
 
 
-    public Snapshot getCompound(Snapshot parent, int compoundAttrIde, int idx) {
+    public Snapshot getRecord(Snapshot parent, int compoundAttrIde, int idx) {
         log.warn("RepositoryService::getCompound({}, {}, {})", parent, compoundAttrIde, idx);
         return null; // TODO
     }

@@ -267,7 +267,7 @@ class AttributeConfigurator {
                                                     return null;
                                                 }
 
-                                                return repoService.getVector(snap, _attrId);
+                                                return repoService.getArray(snap, _attrId);
                                             };
                                         } else {
                                             fetcher = env -> {

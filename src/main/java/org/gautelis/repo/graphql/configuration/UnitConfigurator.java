@@ -20,7 +20,7 @@ import java.util.Map;
 class UnitConfigurator {
     private static final Logger log = LoggerFactory.getLogger(UnitConfigurator.class);
 
-    private record ExistingUnitTemplatesMeta(int templateId, String name, int attrId, String alias, int idx) {
+    private record ExistingUnitMeta(int templateId, String name, int attrId, String alias, int idx) {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder("Existing unit template for ");
@@ -41,8 +41,8 @@ class UnitConfigurator {
         this.repo = repo;
     }
 
-    private Map<String, ExistingUnitTemplatesMeta> loadExisting() {
-        Map<String, ExistingUnitTemplatesMeta> existingTemplates = new HashMap<>();
+    private Map<String, ExistingUnitMeta> loadExisting() {
+        Map<String, ExistingUnitMeta> existingTemplates = new HashMap<>();
 
         String sql = """
                 SELECT rut.templateid, rut.name, rte.attrid, rte.alias, rte.idx
@@ -62,7 +62,7 @@ class UnitConfigurator {
                             String alias = rs.getString("alias");
                             int idx = rs.getInt("idx");
 
-                            ExistingUnitTemplatesMeta metadata = new ExistingUnitTemplatesMeta(templateId, name, attrId, alias, idx);
+                            ExistingUnitMeta metadata = new ExistingUnitMeta(templateId, name, attrId, alias, idx);
                             String key = name + "." + alias;
                             existingTemplates.put(key, metadata);
                             log.debug(metadata.toString());
@@ -80,17 +80,17 @@ class UnitConfigurator {
     /* package private */
     void load(
             ObjectTypeDefinition type,
-            List<Directive> templateDirectivesOnType,
+            List<Directive> unitDirectivesOnType,
             Map<String, Configurator.ProposedAttributeMeta> attributes,
             RuntimeWiring.Builder runtimeWiring,
             RepositoryService repoService,
             Collection<String> info
     ) {
-        Map<String, ExistingUnitTemplatesMeta> existingTemplates = loadExisting();
+        Map<String, ExistingUnitMeta> existingTemplates = loadExisting();
 
         int templateId = -1; // INVALID
-        for (Directive directive : templateDirectivesOnType) {
-            info.add(String.format("Unit template: %s (", type.getName()));
+        for (Directive directive : unitDirectivesOnType) {
+            info.add(String.format("Unit: %s (", type.getName()));
             Argument arg = directive.getArgument("id");
             if (null != arg) {
                 info.add(arg.getName());
@@ -102,15 +102,15 @@ class UnitConfigurator {
         }
 
         if (/* VALID? */ templateId > 0) {
-            final String templateName = type.getName();
+            final String unitName = type.getName();
             final int _templateId = templateId;
 
-            runtimeWiring.type(templateName, builder -> {
+            runtimeWiring.type(unitName, builder -> {
                 // ----------------------------------------------------------------------
                 // Store
                 // ----------------------------------------------------------------------
                 // repo_unit_template (
-                //    templateid INT  NOT NULL,   -- from @template(attrId: …)
+                //    templateid INT  NOT NULL,   -- from @unit(attrId: …)
                 //    name      TEXT NOT NULL,    -- type name
                 // }
                 String templateSql = """
@@ -119,7 +119,7 @@ class UnitConfigurator {
                         """;
 
                 // repo_template_elements (
-                //     templateid INT  NOT NULL,   -- from @template(attrId: …)
+                //     templateid INT  NOT NULL,   -- from @unit(attrId: …)
                 //     attrid     INT  NOT NULL,   -- global attribute attrId
                 //     alias      TEXT NOT NULL,   -- field name inside unit (template)
                 //     idx        INT  NULL,       -- optional order / display position
@@ -137,7 +137,7 @@ class UnitConfigurator {
                             Database.usePreparedStatement(conn, templateSql, templateStmt -> {
                                 try {
                                     templateStmt.setInt(1, _templateId);
-                                    templateStmt.setString(2, templateName);
+                                    templateStmt.setString(2, unitName);
 
                                     Database.execute(templateStmt);
 
@@ -147,7 +147,7 @@ class UnitConfigurator {
 
                                     if (sqlState.startsWith("23")) {
                                         // 23505 : duplicate key value violates unique constraint "repo_unit_template_pk"
-                                        log.info("Unit template {} seems to already have been loaded", templateName);
+                                        log.info("Unit template {} seems to already have been loaded", unitName);
                                     } else {
                                         throw sqle;
                                     }
@@ -217,19 +217,19 @@ class UnitConfigurator {
                                                 boolean isVector = attributeMeta.isVector();
 
                                                 // ----------------------------------------------------------------------
-                                                // First check whether this template already exists in local database
+                                                // First check whether this unit template already exists in local database
                                                 // ----------------------------------------------------------------------
-                                                final String key = templateName + "." + nameInSchema;
-                                                ExistingUnitTemplatesMeta existingTemplate = existingTemplates.get(key);
+                                                final String key = unitName + "." + nameInSchema;
+                                                ExistingUnitMeta existingTemplate = existingTemplates.get(key);
                                                 if (null != existingTemplate) {
                                                     // Already known
                                                     if (existingTemplate.attrId != attrId) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", templateName, nameInSchema, existingTemplate.attrId);
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", unitName, nameInSchema, existingTemplate.attrId);
                                                         return;
                                                     }
 
                                                     if (existingTemplate.idx != idx) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", templateName, nameInSchema, existingTemplate.idx);
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", unitName, nameInSchema, existingTemplate.idx);
                                                         return;
                                                     }
 
@@ -249,8 +249,8 @@ class UnitConfigurator {
 
 
                                                 // ----------------------------------------------------------------------
-                                                // Tell GraphQL how to fetch this specific template type
-                                                // by attaching generic field fetchers to every @template type
+                                                // Tell GraphQL how to fetch this specific unit type
+                                                // by attaching generic field fetchers to every @unit type
                                                 // ----------------------------------------------------------------------
                                                 final int _idx = idx;
                                                 final boolean _isMandatory = isMandatory;
@@ -259,7 +259,7 @@ class UnitConfigurator {
                                                 DataFetcher<?> fetcher = env -> {
                                                     // Hey, my mission in life is to provide support for
                                                     // resolving a single attribute 'nameInSchema' in a
-                                                    // single type 'templateName'. Everything I need later,
+                                                    // single type 'unitName'. Everything I need later,
                                                     // I have access to right now so I capture this information
                                                     // for later.
                                                     UnitSnapshot snap = env.getSource();
@@ -268,16 +268,16 @@ class UnitConfigurator {
                                                         return null;
                                                     }
 
-                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", _isArray ? nameInSchema + "[]" : nameInSchema, templateName, snap.getTenantId(), snap.getUnitId());
+                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", _isArray ? nameInSchema + "[]" : nameInSchema, unitName, snap.getTenantId(), snap.getUnitId());
 
                                                     if (_isArray) {
-                                                        return repoService.getVector(snap, attrId);
+                                                        return repoService.getArray(snap, attrId);
                                                     } else {
                                                         return repoService.getScalar(snap, attrId);
                                                     }
                                                 };
                                                 builder.dataFetcher(nameInSchema, fetcher);
-                                                log.info("Wiring: {}>{}", templateName, nameInSchema);
+                                                log.info("Wiring: {}>{}", unitName, nameInSchema);
 
                                                 //
                                                 if (identical) {
@@ -298,7 +298,7 @@ class UnitConfigurator {
                             conn.commit();
 
                         } catch (SQLException sqle) {
-                            log.error("Failed to store unit template entry: {}", Database.squeeze(sqle));
+                            log.error("Failed to store unit entry: {}", Database.squeeze(sqle));
 
                             try {
                                 conn.rollback();
@@ -308,7 +308,7 @@ class UnitConfigurator {
                         }
                     });
                 } catch (SQLException sqle) {
-                    log.error("Failed to store unit template: {}", Database.squeeze(sqle));
+                    log.error("Failed to store unit: {}", Database.squeeze(sqle));
                 }
                 return builder;
             });

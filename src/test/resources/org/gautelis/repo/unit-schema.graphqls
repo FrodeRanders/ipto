@@ -20,8 +20,8 @@ directive @attribute(
 ) on ENUM_VALUE
 
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @template(id: Int!) on OBJECT
-directive @compound(attribute: Attributes!) on OBJECT
+directive @unit(id: Int!) on OBJECT
+directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
@@ -123,20 +123,20 @@ enum Attributes @attributeRegistry {
 scalar DateTime
 scalar Bytes    # Base-64 strings on the wire
 
-type Shipment @compound(attribute: SHIPMENT) {
+type Shipment @record(attribute: SHIPMENT) {
     orderId  : String    @use(attribute: ORDER_ID)
     deadline : DateTime  @use(attribute: DEADLINE)
     reading  : [Float]   @use(attribute: READING)
 }
 
-type PurchaseOrder @template(id: 42) {
+type PurchaseOrder @unit(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
     deadline : DateTime  @use(attribute: DEADLINE)
     reading  : [Float!]  @use(attribute: READING)
     shipment : Shipment! @use(attribute: SHIPMENT)
 }
 
-type Test @template(id: 43) {
+type Test @unit(id: 43) {
     title : String       @use(attribute: TITLE)
 }
 

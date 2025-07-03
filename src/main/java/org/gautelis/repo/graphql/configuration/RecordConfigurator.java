@@ -17,16 +17,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-class CompoundConfigurator {
-    private static final Logger log = LoggerFactory.getLogger(CompoundConfigurator.class);
+class RecordConfigurator {
+    private static final Logger log = LoggerFactory.getLogger(RecordConfigurator.class);
 
-    private record ExistingCompoundTemplatesMeta(
-            int compoundAttrId, int idx, int childAttrId, String alias,boolean required
+    private record ExistingRecordMeta(
+            int recordAttrId, int idx, int childAttrId, String alias, boolean required
     ) {
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder("Existing compound template for ");
-            sb.append("parent=").append(compoundAttrId).append(" & child=").append(childAttrId).append("{");
+            StringBuilder sb = new StringBuilder("Existing record for ");
+            sb.append("parent=").append(recordAttrId).append(" & child=").append(childAttrId).append("{");
             sb.append("alias=").append(alias);
             sb.append(", required=").append(required);
             sb.append("}");
@@ -37,12 +37,12 @@ class CompoundConfigurator {
     private final Repository repo;
 
     /* package private */
-    CompoundConfigurator(Repository repo) {
+    RecordConfigurator(Repository repo) {
         this.repo = repo;
     }
 
-    private Map<String, ExistingCompoundTemplatesMeta> loadExisting() {
-        Map<String, ExistingCompoundTemplatesMeta> existingTemplates = new HashMap<>();
+    private Map<String, ExistingRecordMeta> loadExisting() {
+        Map<String, ExistingRecordMeta> existingTemplates = new HashMap<>();
 
         // repo_compound_template (
         //    compound_attrid  INT  NOT NULL,      -- attrId of the COMPOUND attribute
@@ -63,21 +63,21 @@ class CompoundConfigurator {
                     try (ResultSet rs = pStmt.executeQuery()) {
                         while (rs.next()) {
 
-                            int compoundAttrid = rs.getInt("compound_attrid");
+                            int recordAttrid = rs.getInt("compound_attrid");
                             int idx = rs.getInt("idx");
                             int childAttrId = rs.getInt("child_attrid");
                             String alias = rs.getString("alias");
                             boolean required = rs.getBoolean("required");
 
-                            ExistingCompoundTemplatesMeta metadata = new ExistingCompoundTemplatesMeta(compoundAttrid, idx, childAttrId, alias, required);
-                            existingTemplates.put(compoundAttrid + "." + childAttrId, metadata);
+                            ExistingRecordMeta metadata = new ExistingRecordMeta(recordAttrid, idx, childAttrId, alias, required);
+                            existingTemplates.put(recordAttrid + "." + childAttrId, metadata);
                             log.trace(metadata.toString());
                         }
                     }
                 });
             });
         } catch (SQLException sqle) {
-            log.error("Failed to load existing compound templates: {}", Database.squeeze(sqle));
+            log.error("Failed to load existing record: {}", Database.squeeze(sqle));
         }
 
         return existingTemplates;
@@ -86,29 +86,29 @@ class CompoundConfigurator {
     /* package private */
     void load(
             ObjectTypeDefinition type,
-            List<Directive> compoundAttributeDirectivesOnType,
+            List<Directive> recordDirectivesOnType,
             Map<String, Configurator.ProposedAttributeMeta> attributes,
             RuntimeWiring.Builder runtimeWiring,
             RepositoryService repoService,
             Collection<String> info
     ) {
-        Map<String, ExistingCompoundTemplatesMeta> existingTemplates = loadExisting();
+        Map<String, ExistingRecordMeta> existingTemplates = loadExisting();
 
-        String compoundAttributeName = null;
-        for (Directive directive : compoundAttributeDirectivesOnType) {
-            info.add(String.format("Compound attribute: %s", type.getName()));
+        String recordName = null;
+        for (Directive directive : recordDirectivesOnType) {
+            info.add(String.format("Record: %s", type.getName()));
 
             Argument arg = directive.getArgument("attribute");
             if (null != arg) {
                 EnumValue alias = (EnumValue) arg.getValue();
-                compoundAttributeName = alias.getName();
+                recordName = alias.getName();
 
-                info.add(" -> " + compoundAttributeName);
+                info.add(" -> " + recordName);
             }
             info.add("\n");
         }
 
-        if (null != compoundAttributeName && !compoundAttributeName.isEmpty()) {
+        if (null != recordName && !recordName.isEmpty()) {
             // repo_compound_template (
             //    compound_attrid  INT  NOT NULL,      -- attrId of the COMPOUND attribute
             //    idx              INT  NOT NULL,
@@ -121,7 +121,7 @@ class CompoundConfigurator {
                     VALUES (?,?,?,?,?)
                     """;
 
-            final String _compoundAttributeName = compoundAttributeName;
+            final String _recordName = recordName;
 
             runtimeWiring.type(type.getName(), builder -> {
                 try {
@@ -130,9 +130,9 @@ class CompoundConfigurator {
                             conn.setAutoCommit(false);
 
                             Database.usePreparedStatement(conn, sql, pStmt -> {
-                                Configurator.ProposedAttributeMeta compoundAttributeMeta = attributes.get(_compoundAttributeName);
-                                if (null != compoundAttributeMeta) {
-                                    final int compoundAttrid = compoundAttributeMeta.attrId();
+                                Configurator.ProposedAttributeMeta recordMeta = attributes.get(_recordName);
+                                if (null != recordMeta) {
+                                    final int recordAttrid = recordMeta.attrId();
 
                                     int idx = 0;
                                     NEXT_FIELD:
@@ -141,7 +141,7 @@ class CompoundConfigurator {
 
                                         ++idx;
                                         pStmt.clearParameters();
-                                        pStmt.setInt(1, compoundAttrid);
+                                        pStmt.setInt(1, recordAttrid);
                                         pStmt.setInt(2, idx);
 
                                         info.add("   " + nameInSchema);
@@ -165,17 +165,17 @@ class CompoundConfigurator {
                                                     // ----------------------------------------------------------------------
                                                     // First check whether this template already exists in local database
                                                     // ----------------------------------------------------------------------
-                                                    String key = compoundAttrid + "." + childAttrid;
-                                                    ExistingCompoundTemplatesMeta existingTemplate = existingTemplates.get(key);
+                                                    String key = recordAttrid + "." + childAttrid;
+                                                    ExistingRecordMeta existingTemplate = existingTemplates.get(key);
                                                     if (null != existingTemplate) {
                                                         if (!existingTemplate.alias.equals(alias)) {
-                                                            log.warn("Failed to load compound template {}.{}. New definition differs on existing 'alias' {} -- skipping", compoundAttrid, childAttrid, existingTemplate.alias);
+                                                            log.warn("Failed to load record {}.{}. New definition differs on existing 'alias' {} -- skipping", recordAttrid, childAttrid, existingTemplate.alias);
                                                             info.add("\t// SKIPPING //\n");
                                                             continue NEXT_FIELD;
                                                         }
 
                                                         if (existingTemplate.idx != idx) {
-                                                            log.warn("Failed to load compound template {}.{}. New definition differs on existing 'index' {} -- skipping", compoundAttrid, childAttrid, existingTemplate.idx);
+                                                            log.warn("Failed to load record {}.{}. New definition differs on existing 'index' {} -- skipping", recordAttrid, childAttrid, existingTemplate.idx);
                                                             info.add("\t// SKIPPING //\n");
                                                             continue NEXT_FIELD;
                                                         }
@@ -196,7 +196,7 @@ class CompoundConfigurator {
                                                     }
 
                                                     // ----------------------------------------------------------------------
-                                                    // Tell GraphQL how to fetch this specific (compound) type
+                                                    // Tell GraphQL how to fetch this specific (record) type
                                                     // ----------------------------------------------------------------------
                                                     final int _idx = idx;
 
@@ -207,8 +207,8 @@ class CompoundConfigurator {
                                                             return null;
                                                         }
 
-                                                        log.trace("Fetching data from compound {} ({}) [{}] ", childAttrid, nameInSchema, _idx);
-                                                        return repoService.getCompound(snap, childAttrid, _idx);
+                                                        log.trace("Fetching data from record {} ({}) [{}] ", childAttrid, nameInSchema, _idx);
+                                                        return repoService.getRecord(snap, childAttrid, _idx);
                                                     };
                                                     builder.dataFetcher(nameInSchema, fetcher);
                                                     log.info("Wiring: {} {}", type.getName(), nameInSchema);
@@ -236,7 +236,7 @@ class CompoundConfigurator {
                             conn.commit();
 
                         } catch (SQLException sqle) {
-                            log.error("Failed to store compound attribute element: {}", Database.squeeze(sqle));
+                            log.error("Failed to store record element: {}", Database.squeeze(sqle));
 
                             try {
                                 conn.rollback();
@@ -246,7 +246,7 @@ class CompoundConfigurator {
                         }
                     });
                 } catch (SQLException sqle) {
-                    log.error("Failed to store compound attribute: {}", Database.squeeze(sqle));
+                    log.error("Failed to store record: {}", Database.squeeze(sqle));
                 }
                 return builder;
             });

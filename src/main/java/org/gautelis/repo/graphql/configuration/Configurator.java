@@ -81,23 +81,23 @@ public class Configurator {
             }
 
             // Iterate over types
-            UnitConfigurator unitTemplateLoader = new UnitConfigurator(repo);
-            CompoundConfigurator compoundTemplateLoader = new CompoundConfigurator(repo);
+            UnitConfigurator unitLoader = new UnitConfigurator(repo);
+            RecordConfigurator recordLoader = new RecordConfigurator(repo);
 
             for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
                 Collection<String> info = new ArrayList<>();
                 info.add("\n");
 
-                // Handle @template directives on object types
-                List<Directive> templateDirectivesOnType = type.getDirectives("template");
-                if (!templateDirectivesOnType.isEmpty()) {
-                    unitTemplateLoader.load(type, templateDirectivesOnType, attributesSchemaView, runtimeWiring, repoService, info);
+                // Handle @unit directives on object types
+                List<Directive> unitDirectivesOnType = type.getDirectives("unit");
+                if (!unitDirectivesOnType.isEmpty()) {
+                    unitLoader.load(type, unitDirectivesOnType, attributesSchemaView, runtimeWiring, repoService, info);
 
                 } else {
-                    // Handle @compound directives on object types
-                    List<Directive> compoundAttributeDirectivesOnType = type.getDirectives("compound");
-                    if (!compoundAttributeDirectivesOnType.isEmpty()) {
-                        compoundTemplateLoader.load(type, compoundAttributeDirectivesOnType, attributesSchemaView, runtimeWiring, repoService, info);
+                    // Handle @record directives on object types
+                    List<Directive> recordDirectivesOnType = type.getDirectives("record");
+                    if (!recordDirectivesOnType.isEmpty()) {
+                        recordLoader.load(type, recordDirectivesOnType, attributesSchemaView, runtimeWiring, repoService, info);
                     } else {
                         // Query or Mutation?
                         type.getFieldDefinitions().forEach(field -> {
