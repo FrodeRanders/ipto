@@ -60,20 +60,37 @@ public class RepositoryService {
         return new UnitSnapshot(tenantId, unitId, values, compoundAttributes);
     }
 
-    public Object getVector(Snapshot snap, int attrId) {
-        log.trace("RepositoryService::getVector({}, {})", snap, attrId);
-        return snap.values.getOrDefault(attrId, null);
+    public Object getVector(Snapshot snap, int attrId, boolean isMandatory) {
+        log.trace("RepositoryService::getVector({}, {}, {})", snap, attrId, isMandatory);
+        ValueVector<?> vv = snap.values.getOrDefault(attrId, null);
+        if (vv == null || vv.isEmpty()) {
+            if (isMandatory) {
+                log.info("Mandatory attribute {} not present", attrId);
+            }
+            return null;
+        }
+
+        return vv;
     }
 
-    public Object getScalar(Snapshot snap, int attrId) {
-        log.trace("RepositoryService::getScalar({}, {})", snap, attrId);
+    public Object getVector(Snapshot snap, int attrId) {
+        return getVector(snap, attrId, false);
+    }
+
+    public Object getScalar(Snapshot snap, int attrId, boolean isMandatory) {
+        log.trace("RepositoryService::getScalar({}, {}, {})", snap, attrId, isMandatory);
         ValueVector<?> vv = snap.values.getOrDefault(attrId, null);
         if (vv == null || vv.isEmpty()) {
             return null;
-        } else {
-            return vv.getFirst();
         }
+
+        return vv.getFirst();
     }
+
+    public Object getScalar(Snapshot snap, int attrId) {
+        return getScalar(snap, attrId, false);
+    }
+
 
     public Snapshot getCompound(Snapshot parent, int compoundAttrIde, int idx) {
         log.warn("RepositoryService::getCompound({}, {}, {})", parent, compoundAttrIde, idx);

@@ -163,6 +163,38 @@ class UnitConfigurator {
                                     ++idx;
                                     final String nameInSchema = f.getName();
 
+                                    boolean isDefinedAsArray = false;
+                                    boolean isMandatory = false;
+                                    String fieldTypeName = null;
+
+                                    if (f.getType() instanceof ListType listType) {
+                                        isDefinedAsArray = true;
+                                        if (listType.getType() instanceof NonNullType nonNullType) {
+                                            isMandatory = true;
+                                            fieldTypeName = ((TypeName) nonNullType.getType()).getName();
+                                            log.trace("Signature: {} [{}!]", nameInSchema, fieldTypeName);
+                                        }
+                                        else {
+                                            fieldTypeName = ((TypeName) listType.getType()).getName();
+                                            log.trace("Signature: {} [{}]", nameInSchema, fieldTypeName);
+                                        }
+                                    }
+                                    else if (f.getType() instanceof NonNullType nonNullType) {
+                                        isMandatory = true;
+                                        if (nonNullType.getType() instanceof ListType listType) {
+                                            isDefinedAsArray = true;
+                                            fieldTypeName = ((TypeName) listType.getType()).getName();
+                                            log.trace("Signature: {} [{}]!", nameInSchema, fieldTypeName);
+                                        }
+                                        else {
+                                            fieldTypeName = ((TypeName) nonNullType.getType()).getName();
+                                            log.trace("Signature: {} {}!", nameInSchema, fieldTypeName);
+                                        }
+                                    }
+                                    else if (f.getType() instanceof TypeName typeName) {
+                                        fieldTypeName = typeName.getName();
+                                        log.trace("Signature: {} {}", nameInSchema, fieldTypeName);
+                                    }
 
                                     elementsStmt.clearParameters();
                                     elementsStmt.setInt(1, _templateId);
@@ -221,6 +253,8 @@ class UnitConfigurator {
                                                 // by attaching generic field fetchers to every @template type
                                                 // ----------------------------------------------------------------------
                                                 final int _idx = idx;
+                                                final boolean _isMandatory = isMandatory;
+                                                final boolean _isArray = isDefinedAsArray;
 
                                                 DataFetcher<?> fetcher = env -> {
                                                     // Hey, my mission in life is to provide support for
@@ -234,9 +268,9 @@ class UnitConfigurator {
                                                         return null;
                                                     }
 
-                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", isVector ? nameInSchema + "[]" : nameInSchema, templateName, snap.getTenantId(), snap.getUnitId());
+                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", _isArray ? nameInSchema + "[]" : nameInSchema, templateName, snap.getTenantId(), snap.getUnitId());
 
-                                                    if (isVector) {
+                                                    if (_isArray) {
                                                         return repoService.getVector(snap, attrId);
                                                     } else {
                                                         return repoService.getScalar(snap, attrId);

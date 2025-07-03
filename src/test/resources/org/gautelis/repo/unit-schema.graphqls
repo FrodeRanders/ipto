@@ -119,21 +119,9 @@ enum Attributes @attributeRegistry {
     SHIPMENT  @attribute(id: 1099, datatype: COMPOUND)
 }
 
-##############  root query (optional)  #################################
-scalar Long         # maps to bigint
-
-input UnitIdentification {
-    tenantId : Int!
-    unitId : Long!
-}
-
-type Query {
-    unit(id : UnitIdentification!) : Test
-}
-
 ##############  object & unit types ##############################
-scalar DateTime     # maps to timestamptz  (java.time.Instant)
-scalar Bytes        # maps to bytea        (Base-64 strings on the wire)
+scalar DateTime
+scalar Bytes    # Base-64 strings on the wire
 
 type Shipment @compound(attribute: SHIPMENT) {
     orderId  : String    @use(attribute: ORDER_ID)
@@ -144,11 +132,23 @@ type Shipment @compound(attribute: SHIPMENT) {
 type PurchaseOrder @template(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
     deadline : DateTime  @use(attribute: DEADLINE)
-    reading  : [Float]   @use(attribute: READING)
-    shipment : Shipment  @use(attribute: SHIPMENT)
+    reading  : [Float!]  @use(attribute: READING)
+    shipment : Shipment! @use(attribute: SHIPMENT)
 }
 
 type Test @template(id: 43) {
     title : String       @use(attribute: TITLE)
+}
+
+##############  Queries ###########################################
+scalar Long
+
+input UnitIdentification {
+    tenantId : Int!
+    unitId : Long!
+}
+
+type Query {
+    unit(id : UnitIdentification!) : Test
 }
 
