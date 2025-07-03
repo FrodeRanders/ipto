@@ -1,11 +1,10 @@
-package org.gautelis.repo.graphql;
+package org.gautelis.repo.graphql.runtime;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.stream.Stream;
 
 public class ValueVector<T> extends ArrayList<T>  {
-
     public ValueVector(ArrayList<T> values) {
         super(Collections.unmodifiableList(values));
     }

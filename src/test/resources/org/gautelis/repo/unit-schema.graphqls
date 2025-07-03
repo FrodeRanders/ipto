@@ -149,6 +149,6 @@ type PurchaseOrder @template(id: 42) {
 }
 
 type Test @template(id: 43) {
-    title : String @use(attribute: TITLE)
+    title : String       @use(attribute: TITLE)
 }
 

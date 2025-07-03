@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql.scalars;
+package org.gautelis.repo.graphql.runtime.scalars;
 
 import graphql.language.StringValue;
 import graphql.schema.*;

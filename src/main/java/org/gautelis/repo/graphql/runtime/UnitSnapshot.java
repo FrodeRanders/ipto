@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql;
+package org.gautelis.repo.graphql.runtime;
 
 import java.util.*;
 
@@ -11,5 +11,13 @@ public class UnitSnapshot extends Snapshot {
         super(primitives, compounds);
         this.tenantId = tenantId;
         this.unitId = unitId;
+    }
+
+    public int getTenantId() {
+        return tenantId;
+    }
+
+    public long getUnitId() {
+        return unitId;
     }
 }

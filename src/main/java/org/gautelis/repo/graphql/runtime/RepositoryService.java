@@ -1,5 +1,6 @@
-package org.gautelis.repo.graphql;
+package org.gautelis.repo.graphql.runtime;
 
+import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;

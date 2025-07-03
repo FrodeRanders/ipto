@@ -26,7 +26,7 @@ import org.gautelis.repo.model.associations.Type;
 
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
-import org.gautelis.repo.graphql.Configurator;
+import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.query.DatabaseAdapter;

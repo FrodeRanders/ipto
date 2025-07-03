@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql;
+package org.gautelis.repo.graphql.configuration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
@@ -10,9 +10,10 @@ import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.AttributeTypeException;
-import org.gautelis.repo.graphql.scalars.BytesScalar;
-import org.gautelis.repo.graphql.scalars.DateTimeScalar;
-import org.gautelis.repo.graphql.scalars.LongScalar;
+import org.gautelis.repo.graphql.runtime.RepositoryService;
+import org.gautelis.repo.graphql.runtime.scalars.BytesScalar;
+import org.gautelis.repo.graphql.runtime.scalars.DateTimeScalar;
+import org.gautelis.repo.graphql.runtime.scalars.LongScalar;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

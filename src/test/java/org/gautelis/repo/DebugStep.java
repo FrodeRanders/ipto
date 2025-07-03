@@ -74,8 +74,10 @@ public class DebugStep {
                     log.error("error: {}: {}", error.getMessage(), error);
 
                     List<SourceLocation> locations = error.getLocations();
-                    for (SourceLocation location : locations) {
-                        log.error("location: {}: {}", location.getLine(), location);
+                    if (null != locations) {
+                        for (SourceLocation location : locations) {
+                            log.error("location: {}: {}", location.getLine(), location);
+                        }
                     }
                 }
             }

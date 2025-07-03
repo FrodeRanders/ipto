@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql;
+package org.gautelis.repo.graphql.runtime;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,10 +10,10 @@ import java.util.Map;
 public class Snapshot {
     private static final Logger log = LoggerFactory.getLogger(Snapshot.class);
 
-    // attrName in Schema -> vector
+    // attrId in IPTO -> vector
     final Map<Integer, ValueVector<?>> values;
 
-    // attrName in Schema -> children (in idx order)
+    // attrId in IPTO -> children (in idx order)
     final Map<Integer, AttributeVector> compoundAttributes;
 
     /* Package private */
@@ -41,12 +41,10 @@ public class Snapshot {
         return firstOrNull(values.get(attrId), Integer.class);
     }
 
-    /*
     public Long scalarLong(int attrId) {
         log.trace("Snapshot::scalarLong({})", attrId);
         return firstOrNull(values.get(attrId), Long.class);
     }
-    */
 
     public Double scalarDouble(int attrId) {
         log.trace("Snapshot::scalarDouble({})", attrId);
