@@ -22,7 +22,7 @@ public final class LongScalar {
 
                         @Override
                         public Long parseValue(Object input) throws CoercingParseValueException {
-                            log.info("Parsing Long: {} of type {}", input, input.getClass().getName());
+                            log.trace("Parsing: {} of type {}", input, input.getClass().getName());
                             if (input instanceof String str) {
                                 return Long.parseLong(str);
                             } else {
@@ -32,6 +32,7 @@ public final class LongScalar {
 
                         @Override
                         public Long parseLiteral(Object input) throws CoercingParseLiteralException {
+                            log.trace("Parsing literal: {} of type {}", input, input.getClass().getName());
                             if (input instanceof graphql.language.IntValue iv)
                                 return iv.getValue().longValue();
                             throw new CoercingParseLiteralException("Expected IntValue");
@@ -40,6 +41,7 @@ public final class LongScalar {
                         /*
                         @Override
                         public Value valueToLiteral(Object input) {
+                            log.trace("Value -> literal (Long): {} of type {}", input, input.getClass().getName());
 
                         }
                         */

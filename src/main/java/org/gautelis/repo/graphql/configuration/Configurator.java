@@ -169,7 +169,8 @@ public class Configurator {
 
                 arg = enumValueDirective.getArgument("basictype");
                 if (null != arg) {
-                    // NOTE: 'COMPOUND' does not have a particular dbType
+                    // NOTE: 'COMPOUND' does not have a particular basictype,
+                    // it being compound of other attributes and all...
                     info += ", " + arg.getName();
                     StringValue _type = (StringValue) arg.getValue();
                     info += "=" + _type.getValue();

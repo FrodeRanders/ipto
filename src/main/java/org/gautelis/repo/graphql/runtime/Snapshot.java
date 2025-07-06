@@ -1,30 +1,34 @@
 package org.gautelis.repo.graphql.runtime;
 
 import org.gautelis.repo.model.attributes.Attribute;
+import org.gautelis.repo.model.attributes.AttributeValueRunnable;
 import org.gautelis.repo.model.attributes.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class Snapshot {
     private static final Logger log = LoggerFactory.getLogger(Snapshot.class);
 
-    final int tenantId;
-    final long unitId;
+    private final int tenantId;
+    private final long unitId;
 
     // attrId in IPTO -> attribute
-    final Map<Integer, Attribute<?>> attributes;
+    private final Map<Integer, Attribute<?>> attributes;
 
+    /* package private */
     Snapshot(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
         log.trace("Creating Snapshot");
         this.tenantId = tenantId;
         this.unitId = unitId;
         this.attributes = attributes;
+    }
+
+    /* package private */
+    Snapshot(Snapshot parent, Map<Integer, Attribute<?>> attributes) {
+        this(Objects.requireNonNull(parent).tenantId, parent.unitId, attributes);
     }
 
     public int getTenantId() {
@@ -35,73 +39,41 @@ public class Snapshot {
         return unitId;
     }
 
-    /* Used by generic DataFetchers */
-
-    /** Null when the attribute is missing or vector is empty. */
-    private String scalarString(int attrId) {
-        log.trace("Snapshot::scalarString({})", attrId);
-        return firstOrNull(attributes.get(attrId), String.class);
+    /* package private */
+    Attribute<?> getAttribute(int attrId) {
+        return attributes.get(attrId);
     }
 
-    private Instant scalarTime(int attrId) {
-        log.trace("Snapshot::scalarTime({})", attrId);
-        return firstOrNull(attributes.get(attrId), Instant.class);
+    public <A> A scalar(int attrId, Class<A> expectedClass) {
+        log.trace("Snapshot::scalar({}, {})", attrId, expectedClass.getName());
+
+        Attribute<?> attribute = attributes.get(attrId);
+        if (null == attribute) {
+            return null;
+        }
+
+        ArrayList<?> values = attribute.getValue();
+        if (values.isEmpty()) {
+            return null;
+        }
+
+        return expectedClass.cast(values.getFirst());
     }
 
-    private Integer scalarInt(int attrId) {
-        log.trace("Snapshot::scalarInt({})", attrId);
-        return firstOrNull(attributes.get(attrId), Integer.class);
-    }
+    public <A> List<A> array(int attrId, Class<A> expectedClass) {
+        log.trace("Snapshot::array({}, {})", attrId, expectedClass.getName());
 
-    private Long scalarLong(int attrId) {
-        log.trace("Snapshot::scalarLong({})", attrId);
-        return firstOrNull(attributes.get(attrId), Long.class);
-    }
-
-    private Double scalarDouble(int attrId) {
-        log.trace("Snapshot::scalarDouble({})", attrId);
-        return firstOrNull(attributes.get(attrId), Double.class);
-    }
-
-    private List<Double> doubleArray(int attrId) {
-        log.trace("Snapshot::doubleVector({})", attrId);
         Attribute<?> attribute = attributes.get(attrId);
         if (null == attribute) {
             return List.of();
         }
-        ValueVector<?> values = new ValueVector<>(attribute.getValue());
-        return values.isEmpty() ? List.of() : values.stream(Double.class).toList();
-    }
 
-    /* Helpers */
-    private static <T> T firstOrNull(Attribute<?> attribute, Class<T> type) {
-        if (null == attribute) {
-            return null;
-        }
-        ArrayList<?> valueVector = attribute.getValue();
-        return valueVector.isEmpty() ? null : type.cast(valueVector.getFirst());
-    }
-
-    /** Child snapshot inside a compound (or null). */
-    private /* for now */ Object child(int compoundAttrId, int idx) {
-        log.trace("Snapshot::child({}, {})", compoundAttrId, idx);
-        Attribute<?> attribute = attributes.get(compoundAttrId);
-        if (null == attribute) {
-            return null;
-        }
-        if (!Type.COMPOUND.equals(attribute.getType())) {
-            return null;
+        ArrayList<?> values = attribute.getValue();
+        if (values.isEmpty()) {
+            return List.of();
         }
 
-        ArrayList<Attribute<?>> childAttributes = (ArrayList<Attribute<?>>) attribute.getValue();
-        if (childAttributes.isEmpty()) {
-            return null;
-        }
-        Map<String, Attribute<?>> children = new HashMap<>();
-        for (Attribute<?> child : childAttributes) {
-            children.put(child.getName(), child);
-        }
-        return children;
+        return values.stream().map(expectedClass::cast).toList();
     }
 
     @Override
