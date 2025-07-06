@@ -149,6 +149,6 @@ input UnitIdentification {
 }
 
 type Query {
-    unit(id : UnitIdentification!) : Test
+    unit(id : UnitIdentification!) : PurchaseOrder
 }
 

@@ -5,7 +5,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql.runtime.RepositoryService;
-import org.gautelis.repo.graphql.runtime.UnitSnapshot;
+import org.gautelis.repo.graphql.runtime.Snapshot;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -261,7 +261,7 @@ class AttributeConfigurator {
                                         if (isVector) {
                                             fetcher = env -> {
                                                 log.trace("Fetching vector attribute {} ({})", _attrId, _attrName);
-                                                UnitSnapshot snap = env.getSource();
+                                                Snapshot snap = env.getSource();
                                                 if (null == snap) {
                                                     log.warn("No snap");
                                                     return null;
@@ -272,7 +272,7 @@ class AttributeConfigurator {
                                         } else {
                                             fetcher = env -> {
                                                 log.trace("Fetching scalar attribute {} ({})", _attrId, _attrName);
-                                                UnitSnapshot snap = env.getSource();
+                                                Snapshot snap = env.getSource();
                                                 if (null == snap) {
                                                     log.warn("No snap");
                                                     return null;

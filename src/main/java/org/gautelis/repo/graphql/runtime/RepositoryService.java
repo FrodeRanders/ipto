@@ -40,37 +40,31 @@ public class RepositoryService {
             return null;
         }
 
-        Map<Integer, ValueVector<?>> values = new HashMap<>();
-        Map<Integer, AttributeVector> compoundAttributes = new HashMap<>();
+        Map<Integer, Attribute<?>> attributes = new HashMap<>();
 
         unit.get().getAttributes().forEach(attr -> {
             int attrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
 
-            log.debug("Lookup IPTO attribute {} ({}) -> {}", attrId, attr.getName(), attributeMeta.nameInSchema());
-
-            if (attr.getType() == Type.COMPOUND) {
-                compoundAttributes.put(attributeMeta.attrId(), new AttributeVector((ArrayList<Attribute<?>>) attr.getValue()));
-            } else {
-                log.debug("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
-                values.put(attributeMeta.attrId(), new ValueVector<>(attr.getValue()));
-            }
+            log.debug("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            attributes.put(attributeMeta.attrId(), attr);
         });
 
-        return new UnitSnapshot(tenantId, unitId, values, compoundAttributes);
+        return new Snapshot(tenantId, unitId, attributes);
     }
 
     public Object getArray(Snapshot snap, int attrId, boolean isMandatory) {
-        log.trace("RepositoryService::getVector({}, {}, {})", snap, attrId, isMandatory);
-        ValueVector<?> vv = snap.values.getOrDefault(attrId, null);
-        if (vv == null || vv.isEmpty()) {
+        log.trace("RepositoryService::getArray({}, {}, {})", snap, attrId, isMandatory);
+
+        Attribute<?> attribute = snap.attributes.getOrDefault(attrId, null);
+        if (null == attribute) {
             if (isMandatory) {
                 log.info("Mandatory attribute {} not present", attrId);
             }
             return null;
         }
 
-        return vv;
+        return attribute.getValue();
     }
 
     public Object getArray(Snapshot snap, int attrId) {
@@ -79,21 +73,80 @@ public class RepositoryService {
 
     public Object getScalar(Snapshot snap, int attrId, boolean isMandatory) {
         log.trace("RepositoryService::getScalar({}, {}, {})", snap, attrId, isMandatory);
-        ValueVector<?> vv = snap.values.getOrDefault(attrId, null);
-        if (vv == null || vv.isEmpty()) {
+
+        Attribute<?> attribute = snap.attributes.getOrDefault(attrId, null);
+        if (null == attribute) {
+            if (isMandatory) {
+                log.info("Mandatory attribute {} not present", attrId);
+            }
             return null;
         }
 
-        return vv.getFirst();
+        ArrayList<?> values = attribute.getValue();
+        if (values.isEmpty()) {
+            if (isMandatory) {
+                log.info("Mandatory value(s) for attribute {} not present", attrId);
+            }
+            return null;
+        }
+
+        if (!Type.COMPOUND.equals(attribute.getType())) {
+            return values.getFirst();
+        }
+
+        Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
+
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValue();
+        children.forEach(attr -> {
+            int childAttrId = attr.getAttrId();
+            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
+
+            log.debug("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            attributeMap.put(attributeMeta.attrId(), attr);
+        });
+
+        return new Snapshot(snap.getTenantId(),  snap.getUnitId(), attributeMap);
     }
 
     public Object getScalar(Snapshot snap, int attrId) {
         return getScalar(snap, attrId, false);
     }
 
+    public Object getRecord(Snapshot parent, int compoundAttrIde, int idx) {
+        log.warn("RepositoryService::getRecord({}, {}, {})", parent, compoundAttrIde, idx);
+        boolean isMandatory = false; // TODO and for now
 
-    public Snapshot getRecord(Snapshot parent, int compoundAttrIde, int idx) {
-        log.warn("RepositoryService::getCompound({}, {}, {})", parent, compoundAttrIde, idx);
-        return null; // TODO
+        Attribute<?> attribute = parent.attributes.getOrDefault(compoundAttrIde, null);
+        if (null == attribute) {
+            if (isMandatory) {
+                log.info("Mandatory attribute {} not present", compoundAttrIde);
+            }
+            return null;
+        }
+
+        ArrayList<?> values = attribute.getValue();
+        if (values.isEmpty()) {
+            if (isMandatory) {
+                log.info("Mandatory value(s) for attribute {} not present", compoundAttrIde);
+            }
+            return null;
+        }
+
+        if (!Type.COMPOUND.equals(attribute.getType())) {
+            return values.getFirst();
+        }
+
+        Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
+
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValue();
+        children.forEach(attr -> {
+            int childAttrId = attr.getAttrId();
+            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
+
+            log.debug("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            attributeMap.put(attributeMeta.attrId(), attr);
+        });
+
+        return new Snapshot(parent.getTenantId(),  parent.getUnitId(), attributeMap);
     }
 }

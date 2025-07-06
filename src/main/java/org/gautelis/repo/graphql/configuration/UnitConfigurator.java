@@ -5,7 +5,7 @@ import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql.runtime.RepositoryService;
-import org.gautelis.repo.graphql.runtime.UnitSnapshot;
+import org.gautelis.repo.graphql.runtime.Snapshot;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -262,7 +262,7 @@ class UnitConfigurator {
                                                     // single type 'unitName'. Everything I need later,
                                                     // I have access to right now so I capture this information
                                                     // for later.
-                                                    UnitSnapshot snap = env.getSource();
+                                                    Snapshot snap = env.getSource();
                                                     if (null == snap) {
                                                         log.warn("No snap");
                                                         return null;

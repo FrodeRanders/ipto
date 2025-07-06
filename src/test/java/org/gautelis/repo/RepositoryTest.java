@@ -97,20 +97,41 @@ public class RepositoryTest extends TestCase {
 
                 Unit unit = repo.createUnit(tenantId, "graphql test");
 
-                unit.withAttribute("dc:title", String.class, attr -> {
-                    ArrayList<String> value = attr.getValue();
+                unit.withAttributeValue("dc:title", String.class, value -> {
                     value.add("abc");
+                });
+
+                unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
+                    CompoundAttribute compound = new CompoundAttribute(attr);
+
+                    compound.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+                        value.add("*order id*");
+                    });
+
+                    compound.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+                        value.add(Instant.now());
+                    });
+
+                    compound.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+                        value.add(Math.PI);
+                        value.add(Math.E);
+                    });
                 });
 
                 repo.storeUnit(unit);
 
                 unitId = unit.getUnitId();
+                System.out.println("purchase order: " + unit);
             }
 
             String query = """
                 query Unit($id: UnitIdentification!) {
                   unit(id: $id) {
-                    title
+                    shipment {
+                        orderId
+                        deadline
+                        reading
+                    }
                   }
                 }
                 """;
@@ -164,25 +185,21 @@ public class RepositoryTest extends TestCase {
         unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
             CompoundAttribute compound = new CompoundAttribute(attr);
 
-            compound.withNestedAttribute(unit, "ORDER_ID", String.class, nestedAttr -> {
-                ArrayList<String> value = nestedAttr.getValue();
+            compound.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                 value.add("*order id*");
             });
 
-            compound.withNestedAttribute(unit, "DEADLINE", Instant.class, nestedAttr -> {
-                ArrayList<Instant> value = nestedAttr.getValue();
+            compound.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
                 value.add(Instant.now());
             });
 
-            compound.withNestedAttribute(unit, "READING", Double.class, nestedAttr -> {
-                ArrayList<Double> value = nestedAttr.getValue();
+            compound.withNestedAttributeValue(unit, "READING", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
         });
 
-        unit.withAttribute("dc:title", String.class, attr -> {
-            ArrayList<String> value = attr.getValue();
+        unit.withAttributeValue("dc:title", String.class, value -> {
             value.add("Handling of " + "*order id*");
         });
 
