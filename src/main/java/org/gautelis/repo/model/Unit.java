@@ -42,8 +42,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import javax.management.AttributeNotFoundException;
-
 
 /**
  */
@@ -574,7 +572,7 @@ public class Unit implements Cloneable {
                 /* -------------------- Result set layout -------------------- *
                  * valueid,                       -- value vector id
                  * attrid, attrtype, attrname,    -- attribute
-                 * parent_valueid, compound_idx,  -- compounds
+                 * parent_valueid, record_idx,    -- records
                  * depth,
                  * string_idx, string_val,  -- string value at index string_idx
                  * time_idx, time_val,      -- time value at index time_idx
@@ -615,7 +613,7 @@ public class Unit implements Cloneable {
 
                     /*
                      * Since we are traversing the result set in 'depth' order,
-                     * any compound 'parent' attribute will be pulled ahead of
+                     * any record 'parent' attribute will be pulled ahead of
                      * any nested attribute. Therefore, we can connect nested
                      * attributes with its parent attribute as we go.
                      */
@@ -627,10 +625,10 @@ public class Unit implements Cloneable {
                             log.error("Could not find parent attribute for value id {}", parentValueid);
                             throw new AttributeValueException("Could not find parent attribute for value id " + parentValueid);
                         }
-                        if (parent.getType() != Type.COMPOUND) {
+                        if (parent.getType() != Type.RECORD) {
                             // Unexpected
-                            log.error("Parent attribute is not compound: {}", parent);
-                            throw new AttributeValueException("Parent attribute is not compound: " + parentValueid);
+                            log.error("Parent attribute is not record: {}", parent);
+                            throw new AttributeValueException("Parent attribute is not record: " + parentValueid);
                         }
 
                         ArrayList<Attribute<?>> nestedAttributes = ((Attribute<Attribute<?>>) parent).getValue();
@@ -766,7 +764,7 @@ public class Unit implements Cloneable {
         } else {
             Attribute<?> attribute = _attribute.get();
 
-            if (Type.COMPOUND == attribute.getType()) {
+            if (Type.RECORD == attribute.getType()) {
                 // TODO -- instantiate nested attributes?
             }
 
@@ -800,10 +798,10 @@ public class Unit implements Cloneable {
     }
 
     @SuppressWarnings("unchecked")
-    public <A> void withAttribute(Attribute<Attribute<?>> compoundAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
-        Objects.requireNonNull(compoundAttribute, "compoundAttribute");
+    public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
+        Objects.requireNonNull(recordAttribute, "recordAttribute");
 
-        ArrayList<Attribute<?>> values = compoundAttribute.getValue();
+        ArrayList<Attribute<?>> values = recordAttribute.getValue();
         for (Attribute<?> attribute : values) {
             // This scales reasonably well with a 'reasonable' number of nested attributes :)
             if (attribute.getName().equals(name)) {
@@ -818,10 +816,10 @@ public class Unit implements Cloneable {
             }
         }
 
-        // Named attribute was not available in compound attribute
+        // Named attribute was not available in record attribute
         if (!createIfMissing) {
             // ...and that's an error
-            throw new IllegalArgumentException("Attribute " + name + " not nested in attribute " + compoundAttribute);
+            throw new IllegalArgumentException("Attribute " + name + " not nested in attribute " + recordAttribute);
         } else {
             // ...and therefore we add it from pool of globally known attributes
             Optional<KnownAttributes.AttributeInfo> attributeInfo = KnownAttributes.getAttribute(ctx, name);
@@ -832,26 +830,26 @@ public class Unit implements Cloneable {
             Attribute<?> attribute = new Attribute<>(attributeInfo.get());
             values.add(attribute); // added to attribute's values
 
-            if (Type.COMPOUND == attribute.getType()) {
+            if (Type.RECORD == attribute.getType()) {
                 // TODO -- instantiate nested attributes if not instantiated already?
             }
             runnable.run((Attribute<A>) attribute);
         }
     }
 
-    public <A> void withAttributeValue(Attribute<Attribute<?>> compoundAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
-        withAttribute(compoundAttribute, name, expectedClass, createIfMissing, attr -> {
+    public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
+        withAttribute(recordAttribute, name, expectedClass, createIfMissing, attr -> {
             ArrayList<A> value = attr.getValue();
             runnable.run(value);
         });
     }
 
-    public <A> void withAttribute(Attribute<Attribute<?>> compoundAttribute, String name, Class<A> expectedClass, AttributeRunnable<A> runnable) {
-        withAttribute(compoundAttribute, name, expectedClass, true, runnable);
+    public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, AttributeRunnable<A> runnable) {
+        withAttribute(recordAttribute, name, expectedClass, true, runnable);
     }
 
-    public <A> void withAttributeValue(Attribute<Attribute<?>> compoundAttribute, String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
-        withAttribute(compoundAttribute, name, expectedClass, true, attr -> {
+    public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
+        withAttribute(recordAttribute, name, expectedClass, true, attr -> {
             ArrayList<A> value = attr.getValue();
             runnable.run(value);
         });
@@ -1084,7 +1082,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.COMPOUND) {
+        if (attr.isPresent() && attr.get().getType() == Type.RECORD) {
             @SuppressWarnings("unchecked")
             Attribute<Attribute<?>> sAttr = (Attribute<Attribute<?>>) attr.get();
             return Optional.of(sAttr);
@@ -1096,7 +1094,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.COMPOUND) {
+        if (attr.isPresent() && attr.get().getType() == Type.RECORD) {
             @SuppressWarnings("unchecked")
             Attribute<Attribute<?>> sAttr = (Attribute<Attribute<?>>) attr.get();
             return Optional.of(sAttr);

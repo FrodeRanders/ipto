@@ -53,14 +53,14 @@ public enum Column {
 
     private final String tableAlias;
     private final String columnName;
-    private final String compound;
+    private final String recrd;
     private final boolean supportsOrderBy;
 
     Column(String tableAlias,
            String columnName, boolean supportsOrderBy) {
         this.tableAlias = tableAlias;
         this.columnName = columnName;
-        this.compound = tableAlias + "." + columnName;
+        this.recrd = tableAlias + "." + columnName;
 
         this.supportsOrderBy = supportsOrderBy;
     }
@@ -75,6 +75,6 @@ public enum Column {
 
     @Override
     public String toString() {
-        return compound;
+        return recrd;
     }
 }

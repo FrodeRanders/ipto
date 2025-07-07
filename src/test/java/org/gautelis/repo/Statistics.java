@@ -131,11 +131,11 @@ public class Statistics {
             });
 
             /*
-             * Number of compound values
+             * Number of record values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_compound_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_record_vector", rs -> {
                 if (rs.next()) {
-                    buf.append("compound=").append(rs.getLong(1)).append("\n");
+                    buf.append("record=").append(rs.getLong(1)).append("\n");
                 }
             });
 

@@ -36,7 +36,7 @@ class RecordConfigurator {
 
     private final Repository repo;
 
-    /* package private */
+    /* package accessible only */
     RecordConfigurator(Repository repo) {
         this.repo = repo;
     }
@@ -44,17 +44,17 @@ class RecordConfigurator {
     private Map<String, ExistingRecordMeta> loadExisting() {
         Map<String, ExistingRecordMeta> existingTemplates = new HashMap<>();
 
-        // repo_compound_template (
-        //    compound_attrid  INT  NOT NULL,      -- attrId of the COMPOUND attribute
+        // repo_record_template (
+        //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute
         //    idx              INT  NOT NULL,
         //    child_attrid     INT  NOT NULL,      -- sub-attribute
         //    alias            TEXT NULL,
         //    required         BOOLEAN NOT NULL DEFAULT FALSE,
         // }
         String sql = """
-                SELECT compound_attrid, idx, child_attrid, alias, required
-                FROM repo_compound_template
-                ORDER BY compound_attrid, idx, child_attrid ASC
+                SELECT record_attrid, idx, child_attrid, alias, required
+                FROM repo_record_template
+                ORDER BY record_attrid, idx, child_attrid ASC
                 """;
 
         try {
@@ -63,7 +63,7 @@ class RecordConfigurator {
                     try (ResultSet rs = pStmt.executeQuery()) {
                         while (rs.next()) {
 
-                            int recordAttrid = rs.getInt("compound_attrid");
+                            int recordAttrid = rs.getInt("record_attrid");
                             int idx = rs.getInt("idx");
                             int childAttrId = rs.getInt("child_attrid");
                             String alias = rs.getString("alias");
@@ -83,7 +83,7 @@ class RecordConfigurator {
         return existingTemplates;
     }
 
-    /* package private */
+    /* package accessible only */
     void load(
             ObjectTypeDefinition type,
             List<Directive> recordDirectivesOnType,
@@ -109,15 +109,15 @@ class RecordConfigurator {
         }
 
         if (null != recordName && !recordName.isEmpty()) {
-            // repo_compound_template (
-            //    compound_attrid  INT  NOT NULL,      -- attrId of the COMPOUND attribute
+            // repo_record_template (
+            //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute
             //    idx              INT  NOT NULL,
             //    child_attrid     INT  NOT NULL,      -- sub-attribute
             //    alias            TEXT NULL,
             //    required         BOOLEAN NOT NULL DEFAULT FALSE,
             // }
             String sql = """
-                    INSERT INTO repo_compound_template (compound_attrid, idx, child_attrid, alias, required)
+                    INSERT INTO repo_record_template (record_attrid, idx, child_attrid, alias, required)
                     VALUES (?,?,?,?,?)
                     """;
 

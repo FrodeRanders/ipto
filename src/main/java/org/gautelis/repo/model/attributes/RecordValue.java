@@ -19,39 +19,34 @@ package org.gautelis.repo.model.attributes;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import jdk.jshell.spi.ExecutionControl;
-import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
-import org.gautelis.repo.model.Context;
-import org.gautelis.repo.model.Unit;
 
 import java.sql.*;
-import java.time.Instant;
 import java.util.ArrayList;
 
-final class CompoundValue extends Value<Attribute<?>> {
+final class RecordValue extends Value<Attribute<?>> {
 
     /* package accessible only */
-    final static String COLUMN_NAME = "compound_val";
+    final static String COLUMN_NAME = "record_val";
 
     /**
      * Creates a <I>new</I> long value
      */
-    CompoundValue() {
+    RecordValue() {
         super();
     }
 
     /**
-     * Creates an <I>existing</I> compound value
+     * Creates an <I>existing</I> record value
      */
-    CompoundValue(ArrayNode node) throws JsonProcessingException {
+    RecordValue(ArrayNode node) throws JsonProcessingException {
         super(node);
     }
 
     /**
-     * Creates an <I>existing</I> compound value
+     * Creates an <I>existing</I> record value
      */
-    CompoundValue(ResultSet rs) throws DatabaseReadException {
+    RecordValue(ResultSet rs) throws DatabaseReadException {
         super(rs);
     }
 
@@ -67,12 +62,12 @@ final class CompoundValue extends Value<Attribute<?>> {
 
     /* package accessible only */
     void inflate(ArrayNode node) {
-        // TODO
+        // TODO, if we go through with JSON loading
     }
 
     @Override
     public Type getType() {
-        return Type.COMPOUND;
+        return Type.RECORD;
     }
 
     @SuppressWarnings("unchecked")
@@ -90,7 +85,7 @@ final class CompoundValue extends Value<Attribute<?>> {
     }
 
     public boolean verify(Object value) {
-        return value instanceof Integer;
+        return value instanceof Attribute<?>;
     }
 
     public void set(Attribute<?> value) {
@@ -115,14 +110,14 @@ final class CompoundValue extends Value<Attribute<?>> {
 
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' either in 'unit' (if flat) or in
-            // compound parent attribute if not.
+            // record parent attribute if not.
             ObjectNode nestedAttributeNode = attributes.addObject();
             nestedAttribute.injectJson(attributes, nestedAttributeNode, complete, flat);
 
             // If flat (and thus having the nested attribute in the unit), then
             // we need to describe additional relations.
             if (flat && null != valueNode) {
-                // Add reference to that attribute within this compound attribute
+                // Add reference to that attribute within this record attribute
                 ObjectNode nestedAttributeRefNode = valueNode.addObject();
 
                 int attrId = nestedAttribute.getAttrId();

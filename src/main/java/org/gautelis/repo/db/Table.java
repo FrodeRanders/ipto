@@ -36,16 +36,16 @@ public enum Table {
     ATTRIBUTE_TIME_VALUE_VECTOR("repo_time_vector", "vv"),
     ATTRIBUTE_DOUBLE_VALUE_VECTOR("repo_double_vector", "vv"),
     ATTRIBUTE_BOOLEAN_VALUE_VECTOR("repo_boolean_vector", "vv"),
-    ATTRIBUTE_COMPOUND_VALUE_VECTOR("repo_compound_vector", "vv");
+    ATTRIBUTE_RECORD_VALUE_VECTOR("repo_record_vector", "vv");
 
     private final String tableName;
     private final String tableAlias;
-    private final String compound;
+    private final String recrd;
 
     Table(String tableName, String tableAlias) {
         this.tableName = tableName;
         this.tableAlias = tableAlias;
-        this.compound = tableName + " " + tableAlias;
+        this.recrd = tableName + " " + tableAlias;
     }
 
     private String getTableName() {
@@ -58,6 +58,6 @@ public enum Table {
 
     @Override
     public String toString() {
-        return compound;
+        return recrd;
     }
 }

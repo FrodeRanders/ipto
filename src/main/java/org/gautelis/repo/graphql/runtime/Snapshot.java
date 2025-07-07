@@ -18,7 +18,7 @@ public class Snapshot {
     // attrId in IPTO -> attribute
     private final Map<Integer, Attribute<?>> attributes;
 
-    /* package private */
+    /* package accessible only */
     Snapshot(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
         log.trace("Creating Snapshot");
         this.tenantId = tenantId;
@@ -26,7 +26,7 @@ public class Snapshot {
         this.attributes = attributes;
     }
 
-    /* package private */
+    /* package accessible only */
     Snapshot(Snapshot parent, Map<Integer, Attribute<?>> attributes) {
         this(Objects.requireNonNull(parent).tenantId, parent.unitId, attributes);
     }
@@ -39,7 +39,7 @@ public class Snapshot {
         return unitId;
     }
 
-    /* package private */
+    /* package accessible only */
     Attribute<?> getAttribute(int attrId) {
         return attributes.get(attrId);
     }

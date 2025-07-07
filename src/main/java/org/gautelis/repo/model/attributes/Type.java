@@ -30,7 +30,7 @@ public enum Type {
     DOUBLE(5, Double.class),
     BOOLEAN(6, Boolean.class),
     DATA(7, Object.class), // Not searchable
-    COMPOUND(99, Attribute.class);
+    RECORD(99, Attribute.class);
 
     //
     private final int type;

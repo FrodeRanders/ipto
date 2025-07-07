@@ -36,7 +36,7 @@ class UnitConfigurator {
 
     private final Repository repo;
 
-    /* package private */
+    /* package accessible only */
     UnitConfigurator(Repository repo) {
         this.repo = repo;
     }
@@ -77,7 +77,7 @@ class UnitConfigurator {
         return existingTemplates;
     }
 
-    /* package private */
+    /* package accessible only */
     void load(
             ObjectTypeDefinition type,
             List<Directive> unitDirectivesOnType,

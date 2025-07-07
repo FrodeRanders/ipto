@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
-import java.util.Objects;
 
 /**
  *
@@ -170,8 +169,8 @@ public class Attribute<T> {
         attributeNode.put("attrtype", type.getType());
         attributeNode.put("name", name);
 
-        if (!flat && Type.COMPOUND == type) {
-            // "hide" unit attributes with local array in compound attribute
+        if (!flat && Type.RECORD == type) {
+            // "hide" unit attributes with local array in record attribute
             attributes = attributeNode.putArray("attributes");
         }
 
@@ -179,7 +178,7 @@ public class Attribute<T> {
     }
 
     private void readEntry(JsonNode node) throws JsonProcessingException {
-        // TODO -- needs an overhaul to accommodate compound attributes
+        // TODO -- needs an overhaul to accommodate record attributes
         // Get attribute information
         id = node.path("attrid").asInt();
         valueId = node.path("valueid").asLong();
@@ -195,7 +194,7 @@ public class Attribute<T> {
             /* -------------------- Result set layout -------------------- *
              * valueid,                       -- value vector id
              * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, compound_idx,  -- compounds
+             * parent_valueid, record_idx,    -- records
              * depth,
              * string_idx, string_val,  -- string value at index string_idx
              * time_idx, time_val,      -- time value at index time_idx

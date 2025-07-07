@@ -34,7 +34,7 @@ DECLARE
 
     v_valueid    bigint;          -- last INSERT … RETURNING value
     attr         record;          -- loop variable
-    has_compound_attribs boolean := false;
+    has_record_attribs boolean := false;
 BEGIN
     --------------------------------------------------------------------
     -- 1. insert unit header row, capture unitid + created timestamp
@@ -59,7 +59,7 @@ BEGIN
                   , bool_val     boolean[]
                   , time_val     timestamp[]
                   , data_val     text[]          -- base-64 strings
-                  , compound_val jsonb           -- array of objects
+                  , record_val   jsonb           -- array of objects
                  )
         LOOP
             /* 2a. (tenant,unit,attrid) → repo_attribute_value → valueid ----*/
@@ -104,11 +104,11 @@ BEGIN
                     SELECT v_valueid, ord-1, decode(v,'base64')
                     FROM unnest(attr.data_val) WITH ORDINALITY AS t(v, ord);
 
-                WHEN 99 THEN -- COMPOUND  (placeholder ref_valueid NULL)
-                    has_compound_attribs := true;
-                    INSERT INTO repo_compound_vector(valueid, idx, ref_attrid, ref_valueid)
+                WHEN 99 THEN -- RECORD  (placeholder ref_valueid NULL)
+                    has_record_attribs := true;
+                    INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid)
                     SELECT v_valueid, ord-1, t.ref_attrid, NULL
-                    FROM ROWS FROM (jsonb_to_recordset(attr.compound_val)
+                    FROM ROWS FROM (jsonb_to_recordset(attr.record_val)
                                         AS (ref_attrid int, ref_valueid bigint))
                         WITH ORDINALITY AS t(ref_attrid, ref_valueid, ord);
 
@@ -120,10 +120,10 @@ BEGIN
         END LOOP;
 
     --------------------------------------------------------------------
-    -- 3. resolve compound placeholders
+    -- 3. resolve record placeholders
     --------------------------------------------------------------------
-    IF has_compound_attribs THEN
-        UPDATE repo_compound_vector cv
+    IF has_record_attribs THEN
+        UPDATE repo_record_vector cv
         SET    ref_valueid = child.valueid
         FROM   repo_attribute_value parent,
                repo_attribute_value child
@@ -208,13 +208,13 @@ WITH unit_hdr AS (
                                WHERE dat.valueid = av.valueid)
                     END AS data_val,
 
-                CASE WHEN a.attrtype = 99 -- COMPOUND
+                CASE WHEN a.attrtype = 99 -- RECORD
                          THEN (SELECT jsonb_agg(jsonb_build_object(
                              'ref_attrid',  cv.ref_attrid,
                              'ref_valueid', cv.ref_valueid) ORDER BY cv.idx)
-                         FROM repo_compound_vector cv
+                         FROM repo_record_vector cv
                          WHERE cv.valueid = av.valueid)
-                     END AS compound_val
+                     END AS record_val
 
          FROM   repo_attribute_value av
                     JOIN   repo_attribute  a  ON a.attrid = av.attrid
@@ -244,7 +244,7 @@ SELECT jsonb_build_object(
                                    'double_val',   double_val,
                                    'bool_val',     bool_val,
                                    'data_val',     data_val,
-                                   'compound_val', compound_val
+                                   'record_val',   record_val
                            )
                    )
                    ORDER BY attrid)
@@ -267,8 +267,8 @@ RETURNS TABLE (
     attrid         INTEGER,
     attrtype       INTEGER,
     attrname       TEXT,
-    parent_valueid BIGINT,   -- parent compound’s valueid (NULL = top-level)
-    compound_idx   INTEGER,  -- ordinal inside parent compound
+    parent_valueid BIGINT,   -- parent record’s valueid (NULL = top-level)
+    record_idx     INTEGER,  -- ordinal inside parent record
     depth          INTEGER,
 
     string_idx     INTEGER,
@@ -302,24 +302,24 @@ WITH RECURSIVE attr_tree AS (
            p.attrtype,
            p.attrname,
            NULL::bigint AS parent_valueid,   -- top level
-           NULL::int    AS compound_idx,
+           NULL::int    AS record_idx,
            0 AS depth
     FROM repo_attribute_value av
            JOIN repo_attribute p ON p.attrid = av.attrid
     WHERE av.tenantid = p_tenantid
       AND av.unitid = p_unitid
-      AND NOT EXISTS (SELECT 1 FROM repo_compound_vector cv WHERE cv.ref_valueid = av.valueid)
+      AND NOT EXISTS (SELECT 1 FROM repo_record_vector cv WHERE cv.ref_valueid = av.valueid)
   UNION ALL
-    -- Depth n: follows compound vectors
+    -- Depth n: follows record vectors
     SELECT cv.ref_valueid,
            cv.ref_attrid,
            p.attrtype,
            p.attrname,
            cv.valueid AS parent_valueid,
-           cv.idx     AS compound_idx,
+           cv.idx     AS record_idx,
            at.depth + 1
     FROM attr_tree at
-           JOIN repo_compound_vector cv ON cv.valueid = at.valueid
+           JOIN repo_record_vector cv ON cv.valueid = at.valueid
            JOIN repo_attribute p ON p.attrid = cv.ref_attrid
 )
 SELECT t.valueid,
@@ -327,7 +327,7 @@ SELECT t.valueid,
        t.attrtype,
        t.attrname,
        t.parent_valueid,
-       t.compound_idx,
+       t.record_idx,
        t.depth,
        sv.idx  AS string_idx,  sv.val  AS string_val,
        tv.idx  AS time_idx,    tv.val  AS time_val,
@@ -346,7 +346,7 @@ FROM attr_tree t
        LEFT JOIN repo_data_vector    dv  ON t.attrtype = 7 AND t.valueid = dv.valueid
 ORDER BY t.depth,
          COALESCE(t.parent_valueid, t.valueid),   -- group siblings
-         t.compound_idx,                          -- preserve order in compound
+         t.record_idx,                            -- preserve order in record
          COALESCE(sv.idx, tv.idx, iv.idx, lv.idx, dov.idx, bv.idx, dv.idx)
 $func$;
 ;

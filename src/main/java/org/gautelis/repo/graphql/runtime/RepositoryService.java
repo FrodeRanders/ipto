@@ -72,7 +72,7 @@ public class RepositoryService {
             return null;
         }
 
-        if (!Type.COMPOUND.equals(attribute.getType())) {
+        if (!Type.RECORD.equals(attribute.getType())) {
             return values;
         }
 
@@ -113,7 +113,7 @@ public class RepositoryService {
             return null;
         }
 
-        if (!Type.COMPOUND.equals(attribute.getType())) {
+        if (!Type.RECORD.equals(attribute.getType())) {
             return values.getFirst();
         }
 

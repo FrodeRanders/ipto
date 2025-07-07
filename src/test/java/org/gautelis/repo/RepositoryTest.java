@@ -30,7 +30,7 @@ import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.associations.Type;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.CompoundAttribute;
+import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.model.utils.MovingAverage;
 import org.gautelis.repo.search.model.*;
@@ -102,17 +102,17 @@ public class RepositoryTest extends TestCase {
                 });
 
                 unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                    CompoundAttribute compound = new CompoundAttribute(attr);
+                    RecordAttribute recrd = new RecordAttribute(attr);
 
-                    compound.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+                    recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                         value.add("*order id*");
                     });
 
-                    compound.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+                    recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
                         value.add(Instant.now());
                     });
 
-                    compound.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+                    recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
                         value.add(Math.PI);
                         value.add(Math.E);
                     });
@@ -183,17 +183,17 @@ public class RepositoryTest extends TestCase {
         Unit unit = repo.createUnit(tenantId, "a shipment instance");
 
         unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-            CompoundAttribute compound = new CompoundAttribute(attr);
+            RecordAttribute recrd = new RecordAttribute(attr);
 
-            compound.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                 value.add("*order id*");
             });
 
-            compound.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
                 value.add(Instant.now());
             });
 
-            compound.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -286,17 +286,17 @@ public class RepositoryTest extends TestCase {
                     });
 
                     childUnit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                        CompoundAttribute compound = new CompoundAttribute(attr);
+                        RecordAttribute recrd = new RecordAttribute(attr);
 
-                        compound.withNestedAttributeValue(childUnit, "ORDER_ID", String.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "ORDER_ID", String.class, value -> {
                             value.add("*order id*");
                         });
 
-                        compound.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
                             value.add(now);
                         });
 
-                        compound.withNestedAttributeValue(childUnit, "READING", Double.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "READING", Double.class, value -> {
                             value.add(Math.PI);
                             value.add(Math.E);
                         });

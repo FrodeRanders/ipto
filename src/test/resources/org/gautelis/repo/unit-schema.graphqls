@@ -32,7 +32,7 @@ enum DataTypes @datatypeRegistry {
     DOUBLE    @datatype(id: 5,  type: "double precision")
     BOOLEAN   @datatype(id: 6,  type: "boolean")
     DATA      @datatype(id: 7,  type: "bytea")
-    COMPOUND  @datatype(id: 99)
+    RECORD    @datatype(id: 99)
 }
 
 ############## attributes ############################
@@ -116,7 +116,7 @@ enum Attributes @attributeRegistry {
     ORDER_ID  @attribute(id: 1001, datatype: STRING)
     DEADLINE  @attribute(id: 1002, datatype: TIME)
     READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
-    SHIPMENT  @attribute(id: 1099, datatype: COMPOUND)
+    SHIPMENT  @attribute(id: 1099, datatype: RECORD)
 }
 
 ##############  object & unit types ##############################

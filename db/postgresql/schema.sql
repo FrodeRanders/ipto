@@ -145,7 +145,7 @@ CREATE INDEX repo_av_ind1 ON repo_attribute_value (
 ---------------------------------------------------------------
 -- Metadata-table: Unit-template lookup table.
 -- The configuration loader inserts one row per @use field in every @unit type ….
--- Records (compound attributes) are handles separately in 'repo_compound_template'
+-- Records  are handled separately in 'repo_record_template'
 --
 CREATE TABLE repo_unit_template (
     templateid INT  NOT NULL,   -- from @unit(id: …)
@@ -174,20 +174,20 @@ CREATE TABLE repo_template_elements (
 ;
 
 ---------------------------------------------------------------
--- Metadata-table: Template for compound objects
+-- Metadata-table: Template for records
 --
-CREATE TABLE repo_compound_template (
-    compound_attrid  INT  NOT NULL,      -- from @record(attribute: …)
+CREATE TABLE repo_record_template (
+    record_attrid  INT  NOT NULL,      -- from @record(attribute: …)
     idx              INT  NOT NULL,
 
     child_attrid     INT  NOT NULL,      -- sub-attribute
     alias            TEXT NULL,
     required         BOOLEAN NOT NULL DEFAULT FALSE,
 
-    CONSTRAINT repo_compound_template_pk
-        PRIMARY KEY (compound_attrid, idx),
-    CONSTRAINT repo_compound_template_attr_ex
-        FOREIGN KEY (compound_attrid)
+    CONSTRAINT repo_record_template_pk
+        PRIMARY KEY (record_attrid, idx),
+    CONSTRAINT repo_record_template_attr_ex
+        FOREIGN KEY (record_attrid)
             REFERENCES repo_attribute(attrid)
 )
 ;
@@ -337,34 +337,34 @@ CREATE TABLE repo_data_vector (
 ;
 
 --
--- Compound values
+-- Records
 -- TODO: Considering adding ref_attrid to PK, if the same sub-vector appears more than once in parent.
-CREATE TABLE repo_compound_vector (
+CREATE TABLE repo_record_vector (
     valueid     BIGINT NOT NULL,           -- parent value vector
     idx         INT    NOT NULL DEFAULT 0, -- position within parent
 
     ref_attrid  INT    NOT NULL,
     ref_valueid BIGINT NULL,               -- initially null when first written, later updated
 
-    CONSTRAINT repo_compound_vector_pk
+    CONSTRAINT repo_record_vector_pk
         PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_compound_vec_parent_ex
+    CONSTRAINT repo_record_vec_parent_ex
         FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE,
-    CONSTRAINT repo_compound_vec_child_ex
+    CONSTRAINT repo_record_vec_child_ex
         FOREIGN KEY (ref_valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
 -- Relevant when resolving placeholders (child -> parent),
 -- i.e. when querying "WHERE ref_valueid = ?child?"
-CREATE INDEX repo_cv_ind1 ON repo_compound_vector (
+CREATE INDEX repo_rv_ind1 ON repo_record_vector (
     ref_valueid
 ) WITH (fillfactor = 80) -- 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
 ;
 
 
 -- Relevant when deleting a child, validating schema, adding a composite
-CREATE INDEX repo_cv_ind2 ON repo_compound_vector (
+CREATE INDEX repo_rv_ind2 ON repo_record_vector (
     valueid, ref_attrid
 );
 

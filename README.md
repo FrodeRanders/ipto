@@ -15,8 +15,8 @@ directive @attributeRegistry on ENUM
 directive @attribute(id: Int!, datatype: DataTypes!, vector: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
 
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @template(id: Int!) on OBJECT
-directive @compound(attribute: Attributes!) on OBJECT
+directive @unit(id: Int!) on OBJECT
+directive @record(attribute: Attributes!) on OBJECT
 
 ##############  builtin data types, provided for reference #######
 enum DataTypes @datatypeRegistry {
@@ -27,34 +27,30 @@ enum DataTypes @datatypeRegistry {
     DOUBLE    @datatype(id: 5,  basictype: "double precision")
     BOOLEAN   @datatype(id: 6,  basictype: "boolean")
     DATA      @datatype(id: 7,  basictype: "bytea")
-    COMPOUND  @datatype(id: 99)
+    RECORD    @datatype(id: 99)
 }
 
-##############  global attributes #################################
-enum DublinCore @attributeRegistry {
+##############  attributes #######################################
+enum Attributes @attributeRegistry {
     TITLE @attribute(id: 1, datatype: STRING, vector: false,
         alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title")
-    ...    
-}
-
-##############  domain specific attributes ########################
-enum DomainSpecificAttributes @attributeRegistry {
+    ...
     ORDER_ID  @attribute(id: 1001, datatype: STRING)
     DEADLINE  @attribute(id: 1002, datatype: TIME)
     READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
-    SHIPMENT  @attribute(id: 1099, datatype: COMPOUND)
+    SHIPMENT  @attribute(id: 1099, datatype: RECORD)
 }
 
 ##############  object & unit types ##############################
 scalar DateTime     # maps to timestamptz  (java.time.Instant)
 
-type Shipment @compound(attribute: SHIPMENT) {
+type Shipment @record(attribute: SHIPMENT) {
     orderId  : String    @use(attribute: ORDER_ID)
     deadline : DateTime  @use(attribute: DEADLINE)
     reading  : [Float]   @use(attribute: READING)
 }
 
-type PurchaseOrder @template(id: 42) {
+type PurchaseOrder @unit(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
     ...
     shipment : Shipment  @use(attribute: SHIPMENT)
@@ -76,17 +72,17 @@ type PurchaseOrder @template(id: 42) {
         });
     
         unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-            CompoundAttribute compound = new CompoundAttribute(attr);
-    
-            compound.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+            RecordAttribute recrd = new RecordAttribute(attr);
+
+            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                 value.add("*order id*");
             });
-    
-            compound.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+
+            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
                 value.add(Instant.now()); // brutal :)
             });
-    
-            compound.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+
+            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });

@@ -67,7 +67,7 @@ final class DoubleValue extends Value<Double> {
             /* -------------------- Result set layout -------------------- *
              * valueid,                       -- value vector id
              * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, compound_idx,  -- compounds
+             * parent_valueid, record_idx,    -- records
              * depth,
              * string_idx, string_val,  -- string value at index string_idx
              * time_idx, time_val,      -- time value at index time_idx

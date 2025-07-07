@@ -21,13 +21,13 @@ import org.gautelis.repo.model.Unit;
 import java.util.ArrayList;
 import java.util.Objects;
 
-public class CompoundAttribute {
+public class RecordAttribute {
     private final Attribute<Attribute<?>> delegate;
 
-    public CompoundAttribute(Attribute<?> attr) {
+    public RecordAttribute(Attribute<?> attr) {
         Objects.requireNonNull(attr, "attr");
-        if (attr.getType() != Type.COMPOUND) {
-            throw new IllegalArgumentException("attribute must be COMPOUND (i.e. Attribute<Attribute<?>>)");
+        if (attr.getType() != Type.RECORD) {
+            throw new IllegalArgumentException("attribute must be RECORD (i.e. Attribute<Attribute<?>>)");
         }
         this.delegate = asCompound(attr);
     }

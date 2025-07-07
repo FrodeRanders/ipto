@@ -73,7 +73,7 @@ public abstract class Value<T> {
             /* -------------------- Result set layout -------------------- *
              * valueid,                       -- value vector id
              * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, compound_idx,  -- compounds
+             * parent_valueid, record_idx,    -- records
              * depth,
              * string_idx, string_val,  -- string value at index string_idx
              * time_idx, time_val,      -- time value at index time_idx
@@ -128,7 +128,7 @@ public abstract class Value<T> {
             case DOUBLE -> new DoubleValue();
             case BOOLEAN -> new BooleanValue();
             case DATA -> new DataValue();
-            case COMPOUND -> new CompoundValue();
+            case RECORD -> new RecordValue();
         };
 
         //noinspection unchecked
@@ -149,7 +149,7 @@ public abstract class Value<T> {
             case DATA -> new DataValue((ArrayNode) node.get(DataValue.COLUMN_NAME));
 
             /*
-             case COMPOUND:
+             case RECORD:
                 ArrayNode idArr  = (ArrayNode) aNode.get("ref_attrids");
                 ArrayNode valArr = (ArrayNode) aNode.get("ref_valueids");
                 List<CompoundRef> list = new ArrayList<>();
@@ -161,7 +161,7 @@ public abstract class Value<T> {
                 }
                 attr = new Attribute<>(attrId, attrType, new CompoundValue(list));
             }
-            //case COMPOUND -> new CompoundValue((ArrayNode) node.get(CompoundValue.COLUMN_NAME));
+            //case RECORD -> new CompoundValue((ArrayNode) node.get(CompoundValue.COLUMN_NAME));
             */
             default ->
                     throw new IllegalArgumentException("Value type not implemented: " + type);
@@ -190,7 +190,7 @@ public abstract class Value<T> {
             case DOUBLE -> new DoubleValue(rs);
             case BOOLEAN -> new BooleanValue(rs);
             case DATA -> new DataValue(rs);
-            case COMPOUND -> new CompoundValue(rs);
+            case RECORD -> new RecordValue(rs);
         };
 
         //noinspection unchecked

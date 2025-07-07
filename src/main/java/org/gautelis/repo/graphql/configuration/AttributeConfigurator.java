@@ -1,11 +1,9 @@
 package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
-import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql.runtime.RepositoryService;
-import org.gautelis.repo.graphql.runtime.Snapshot;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.gautelis.repo.model.attributes.Type.COMPOUND;
+import static org.gautelis.repo.model.attributes.Type.RECORD;
 
 class AttributeConfigurator {
     private static final Logger log = LoggerFactory.getLogger(AttributeConfigurator.class);
@@ -37,7 +35,7 @@ class AttributeConfigurator {
     private final Repository repo;
 
 
-    /* package private */
+    /* package accessible only */
     AttributeConfigurator(Repository repo) {
         this.repo = repo;
     }
@@ -75,7 +73,7 @@ class AttributeConfigurator {
         return existingAttributes;
     }
 
-    /* package private */
+    /* package accessible only */
     void load(
             EnumTypeDefinition enumType,
             Map<String, Configurator.ExistingDatatypeMeta> datatypes,
@@ -133,8 +131,8 @@ class AttributeConfigurator {
                                         log.error("Not a valid datatype: {}", datatype.getName());
                                     }
                                 } else {
-                                    // If no datatype is specified, we assume this is a compound
-                                    attrType = COMPOUND.getType();
+                                    // If no datatype is specified, we assume this is a record
+                                    attrType = RECORD.getType();
                                     pStmt.setInt(2, attrType);
                                 }
 
