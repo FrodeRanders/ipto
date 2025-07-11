@@ -3,7 +3,7 @@ package org.gautelis.repo.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
-import org.gautelis.repo.graphql.runtime.RepositoryService;
+import org.gautelis.repo.graphql.runtime.RuntimeService;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +80,7 @@ class AttributeConfigurator {
             Map<String, Configurator.ProposedAttributeMeta> attributesSchemaView,
             Map<Integer, Configurator.ProposedAttributeMeta> attributesIptoView,
             RuntimeWiring.Builder runtimeWiring,
-            RepositoryService repoService
+            RuntimeService repoService
     ) {
         Map<String, ExistingAttributeMeta> existingAttributes = loadExisting();
 

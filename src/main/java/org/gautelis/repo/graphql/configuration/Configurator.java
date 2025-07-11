@@ -1,16 +1,14 @@
 package org.gautelis.repo.graphql.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
 import graphql.language.*;
-import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.AttributeTypeException;
-import org.gautelis.repo.graphql.runtime.RepositoryService;
+import org.gautelis.repo.graphql.runtime.RuntimeService;
 import org.gautelis.repo.graphql.runtime.scalars.BytesScalar;
 import org.gautelis.repo.graphql.runtime.scalars.DateTimeScalar;
 import org.gautelis.repo.graphql.runtime.scalars.LongScalar;
@@ -33,7 +31,7 @@ public class Configurator {
     public record ProposedAttributeMeta(int attrId, String nameInSchema, int attrType, boolean isVector, String nameInIpto, String qualifiedName, String description) {}
 
     private final Repository repo;
-    private final RepositoryService repoService;
+    private final RuntimeService repoService;
     private final TypeDefinitionRegistry registry;
 
     private final Map<String, ExistingDatatypeMeta> datatypes = new HashMap<>();
@@ -42,7 +40,7 @@ public class Configurator {
 
     public Configurator(Repository repo, Reader reader) {
         this.repo = repo;
-        this.repoService = new RepositoryService(repo, datatypes, attributesIptoView);
+        this.repoService = new RuntimeService(repo, datatypes, attributesIptoView);
         this.registry = new SchemaParser().parse(reader);
     }
 
@@ -54,12 +52,32 @@ public class Configurator {
                      .scalar(DateTimeScalar.INSTANCE)
                      .scalar(BytesScalar.INSTANCE);
 
-        wireQueries(runtimeWiring);
-
         // Load attributes
         AttributeConfigurator attributeLoader = new AttributeConfigurator(repo);
 
         try {
+            enum SchemaOperation {QUERY, MUTATION};
+            Map<String, OperationsConfigurator.SchemaOperation> operations = new HashMap<>();
+
+            Optional<SchemaDefinition> _schemaDefinition = registry.schemaDefinition();
+            if (_schemaDefinition.isPresent()) {
+                SchemaDefinition schemaDefinition = _schemaDefinition.get();
+
+                List<OperationTypeDefinition> otds = schemaDefinition.getOperationTypeDefinitions();
+                for (OperationTypeDefinition otd : otds) {
+                    switch (otd.getName()) {
+                        case "query" -> {
+                            operations.put(otd.getTypeName().getName(), OperationsConfigurator.SchemaOperation.QUERY);
+                            log.info("Operation {}: {}", otd.getName(), otd.getTypeName().getName());
+                        }
+                        case "mutation" -> {
+                            operations.put(otd.getTypeName().getName(), OperationsConfigurator.SchemaOperation.MUTATION);
+                            log.info("Operation {}: {}", otd.getName(), otd.getTypeName().getName());
+                        }
+                    }
+                }
+            }
+
             for (EnumTypeDefinition enumeration : registry.getTypes(EnumTypeDefinition.class)) {
                 List<Directive> enumDirectives = enumeration.getDirectives();
                 for (Directive directive : enumDirectives) {
@@ -81,12 +99,14 @@ public class Configurator {
             }
 
             // Iterate over types
+            OperationsConfigurator opsLoader = new OperationsConfigurator(repo, operations);
             UnitConfigurator unitLoader = new UnitConfigurator(repo);
             RecordConfigurator recordLoader = new RecordConfigurator(repo);
 
             for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
                 Collection<String> info = new ArrayList<>();
                 info.add("\n");
+                info.add(type.getName());
 
                 // Handle @unit directives on object types
                 List<Directive> unitDirectivesOnType = type.getDirectives("unit");
@@ -99,12 +119,8 @@ public class Configurator {
                     if (!recordDirectivesOnType.isEmpty()) {
                         recordLoader.load(type, recordDirectivesOnType, attributesSchemaView, runtimeWiring, repoService, info);
                     } else {
-                        // Query or Mutation?
-                        type.getFieldDefinitions().forEach(field -> {
-                            if (field.getType() instanceof TypeName typeName) {
-                                log.trace("{}(...) : {}", field.getName(), typeName.getName());
-                            }
-                        });
+                        // Handle Query and Mutation
+                        opsLoader.load(type, datatypes, attributesSchemaView, attributesIptoView, runtimeWiring, repoService);
                     }
                 }
 
@@ -123,22 +139,6 @@ public class Configurator {
                     new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring.build())
                 ).build()
         );
-    }
-
-    private void wireQueries(RuntimeWiring.Builder runtimeWiring) {
-        record UnitIdentification(int tenantId, long unitId) {}
-        ObjectMapper objectMapper = new ObjectMapper();
-
-        // Point lookup for specific unit
-        DataFetcher<?> unitById = env -> {
-            log.trace("Query::unit(id : {})", (Object) env.getArgument("id"));
-
-            UnitIdentification id = objectMapper.convertValue(env.getArgument("id"), UnitIdentification.class);
-            return repoService.loadUnit(id.tenantId(), id.unitId());
-        };
-
-        runtimeWiring.type("Query", t -> t.dataFetcher("unit", unitById));
-        log.info("Wiring: Query unit");
     }
 
     private boolean verifyDatatypes(

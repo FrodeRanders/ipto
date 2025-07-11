@@ -172,6 +172,15 @@ public class RepositoryTest extends TestCase {
                 }
             }
             System.out.println("===================================================================");
+
+            /*
+                units(
+                    tenantId: Int!,
+                    where: AttrTree!,
+                    first: Int = 20,
+                    after: Long   # opaque cursor, maybe the last unitId
+                ) : PurchaseOrderConnection!
+             */
         }
     }
 

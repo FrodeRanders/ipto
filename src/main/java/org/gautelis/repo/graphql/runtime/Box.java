@@ -1,16 +1,13 @@
 package org.gautelis.repo.graphql.runtime;
 
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.AttributeValueRunnable;
-import org.gautelis.repo.model.attributes.Type;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Instant;
 import java.util.*;
 
-public class Snapshot {
-    private static final Logger log = LoggerFactory.getLogger(Snapshot.class);
+public class Box {
+    private static final Logger log = LoggerFactory.getLogger(Box.class);
 
     private final int tenantId;
     private final long unitId;
@@ -19,15 +16,15 @@ public class Snapshot {
     private final Map<Integer, Attribute<?>> attributes;
 
     /* package accessible only */
-    Snapshot(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
-        log.trace("Creating Snapshot");
+    Box(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
+        log.trace("Creating Box");
         this.tenantId = tenantId;
         this.unitId = unitId;
         this.attributes = attributes;
     }
 
     /* package accessible only */
-    Snapshot(Snapshot parent, Map<Integer, Attribute<?>> attributes) {
+    Box(Box parent, Map<Integer, Attribute<?>> attributes) {
         this(Objects.requireNonNull(parent).tenantId, parent.unitId, attributes);
     }
 
@@ -45,7 +42,7 @@ public class Snapshot {
     }
 
     public <A> A scalar(int attrId, Class<A> expectedClass) {
-        log.trace("Snapshot::scalar({}, {})", attrId, expectedClass.getName());
+        log.trace("Box::scalar({}, {})", attrId, expectedClass.getName());
 
         Attribute<?> attribute = attributes.get(attrId);
         if (null == attribute) {
@@ -61,7 +58,7 @@ public class Snapshot {
     }
 
     public <A> List<A> array(int attrId, Class<A> expectedClass) {
-        log.trace("Snapshot::array({}, {})", attrId, expectedClass.getName());
+        log.trace("Box::array({}, {})", attrId, expectedClass.getName());
 
         Attribute<?> attribute = attributes.get(attrId);
         if (null == attribute) {
@@ -79,7 +76,7 @@ public class Snapshot {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Snapshot{");
+        sb.append("Box{");
         sb.append("tenantId=").append(tenantId);
         sb.append(", unitId=").append(unitId);
         sb.append(", attributes=").append(attributes);

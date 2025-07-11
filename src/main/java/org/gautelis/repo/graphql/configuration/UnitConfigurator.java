@@ -4,8 +4,8 @@ import graphql.language.*;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
-import org.gautelis.repo.graphql.runtime.RepositoryService;
-import org.gautelis.repo.graphql.runtime.Snapshot;
+import org.gautelis.repo.graphql.runtime.RuntimeService;
+import org.gautelis.repo.graphql.runtime.Box;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +83,7 @@ class UnitConfigurator {
             List<Directive> unitDirectivesOnType,
             Map<String, Configurator.ProposedAttributeMeta> attributes,
             RuntimeWiring.Builder runtimeWiring,
-            RepositoryService repoService,
+            RuntimeService repoService,
             Collection<String> info
     ) {
         Map<String, ExistingUnitMeta> existingTemplates = loadExisting();
@@ -161,45 +161,13 @@ class UnitConfigurator {
                                 NEXT_FIELD:
                                 for (FieldDefinition f : type.getFieldDefinitions()) {
                                     ++idx;
-                                    final String nameInSchema = f.getName();
-
-                                    boolean isDefinedAsArray = false;
-                                    boolean isMandatory = false;
-                                    String fieldTypeName = null;
-
-                                    if (f.getType() instanceof ListType listType) {
-                                        isDefinedAsArray = true;
-                                        if (listType.getType() instanceof NonNullType nonNullType) {
-                                            isMandatory = true;
-                                            fieldTypeName = ((TypeName) nonNullType.getType()).getName();
-                                            log.trace("Signature: {} [{}!]", nameInSchema, fieldTypeName);
-                                        }
-                                        else {
-                                            fieldTypeName = ((TypeName) listType.getType()).getName();
-                                            log.trace("Signature: {} [{}]", nameInSchema, fieldTypeName);
-                                        }
-                                    }
-                                    else if (f.getType() instanceof NonNullType nonNullType) {
-                                        isMandatory = true;
-                                        if (nonNullType.getType() instanceof ListType listType) {
-                                            isDefinedAsArray = true;
-                                            fieldTypeName = ((TypeName) listType.getType()).getName();
-                                            log.trace("Signature: {} [{}]!", nameInSchema, fieldTypeName);
-                                        }
-                                        else {
-                                            fieldTypeName = ((TypeName) nonNullType.getType()).getName();
-                                            log.trace("Signature: {} {}!", nameInSchema, fieldTypeName);
-                                        }
-                                    }
-                                    else if (f.getType() instanceof TypeName typeName) {
-                                        fieldTypeName = typeName.getName();
-                                        log.trace("Signature: {} {}", nameInSchema, fieldTypeName);
-                                    }
+                                    final String fieldName = f.getName();
+                                    final FieldType fieldType = FieldType.get(f);
 
                                     elementsStmt.clearParameters();
                                     elementsStmt.setInt(1, _templateId);
 
-                                    info.add("   " + nameInSchema);
+                                    info.add("   " + fieldName);
 
                                     // Handle @use directive on field definitions
                                     boolean identical = false;
@@ -219,17 +187,17 @@ class UnitConfigurator {
                                                 // ----------------------------------------------------------------------
                                                 // First check whether this unit template already exists in local database
                                                 // ----------------------------------------------------------------------
-                                                final String key = unitName + "." + nameInSchema;
+                                                final String key = unitName + "." + fieldName;
                                                 ExistingUnitMeta existingTemplate = existingTemplates.get(key);
                                                 if (null != existingTemplate) {
                                                     // Already known
                                                     if (existingTemplate.attrId != attrId) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", unitName, nameInSchema, existingTemplate.attrId);
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", unitName, fieldName, existingTemplate.attrId);
                                                         return;
                                                     }
 
                                                     if (existingTemplate.idx != idx) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", unitName, nameInSchema, existingTemplate.idx);
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", unitName, fieldName, existingTemplate.idx);
                                                         return;
                                                     }
 
@@ -240,7 +208,7 @@ class UnitConfigurator {
 
                                                 if (!identical) {
                                                     elementsStmt.setInt(2, attrId);
-                                                    elementsStmt.setString(3, nameInSchema);
+                                                    elementsStmt.setString(3, fieldName);
                                                     elementsStmt.setInt(4, idx);
 
                                                     info.add(" -> ");
@@ -252,32 +220,28 @@ class UnitConfigurator {
                                                 // Tell GraphQL how to fetch this specific unit type
                                                 // by attaching generic field fetchers to every @unit type
                                                 // ----------------------------------------------------------------------
-                                                final int _idx = idx;
-                                                final boolean _isMandatory = isMandatory;
-                                                final boolean _isArray = isDefinedAsArray;
-
                                                 DataFetcher<?> fetcher = env -> {
                                                     // Hey, my mission in life is to provide support for
                                                     // resolving a single attribute 'nameInSchema' in a
                                                     // single type 'unitName'. Everything I need later,
                                                     // I have access to right now so I capture this information
                                                     // for later.
-                                                    Snapshot snap = env.getSource();
-                                                    if (null == snap) {
-                                                        log.warn("No snap");
+                                                    Box box = env.getSource();
+                                                    if (null == box) {
+                                                        log.warn("No box");
                                                         return null;
                                                     }
 
-                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", _isArray ? nameInSchema + "[]" : nameInSchema, unitName, snap.getTenantId(), snap.getUnitId());
+                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", fieldType.isArray() ? fieldName + "[]" : fieldName, unitName, box.getTenantId(), box.getUnitId());
 
-                                                    if (_isArray) {
-                                                        return repoService.getArray(snap, attrId);
+                                                    if (fieldType.isArray()) {
+                                                        return repoService.getArray(box, attrId);
                                                     } else {
-                                                        return repoService.getScalar(snap, attrId);
+                                                        return repoService.getScalar(box, attrId);
                                                     }
                                                 };
-                                                builder.dataFetcher(nameInSchema, fetcher);
-                                                log.info("Wiring: {}>{}", unitName, nameInSchema);
+                                                builder.dataFetcher(fieldName, fetcher);
+                                                log.info("Wiring: {}>{}", unitName, fieldName);
 
                                                 //
                                                 if (identical) {

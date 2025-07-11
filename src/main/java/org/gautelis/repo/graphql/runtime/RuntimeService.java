@@ -14,15 +14,15 @@ import java.util.Map;
 import java.util.Optional;
 
 
-public class RepositoryService {
-    private static final Logger log = LoggerFactory.getLogger(RepositoryService.class);
+public class RuntimeService {
+    private static final Logger log = LoggerFactory.getLogger(RuntimeService.class);
 
     private final Repository repo;
 
     private final Map<String, Configurator.ExistingDatatypeMeta> datatypes;
     private final Map<Integer, Configurator.ProposedAttributeMeta> attributesIptoView;
 
-    public RepositoryService(
+    public RuntimeService(
             Repository repo,
             Map<String, Configurator.ExistingDatatypeMeta> datatypes,
             Map<Integer, Configurator.ProposedAttributeMeta> attributesIptoView
@@ -32,8 +32,8 @@ public class RepositoryService {
         this.attributesIptoView = attributesIptoView; // empty at the moment
     }
 
-    public Snapshot loadUnit(int tenantId, long unitId) {
-        log.trace("RepositoryService::loadUnit({}, {})", tenantId, unitId);
+    public Box loadUnit(int tenantId, long unitId) {
+        log.trace("RuntimeService::loadUnit({}, {})", tenantId, unitId);
 
         Optional<Unit> unit = repo.getUnit(tenantId, unitId);
         if (unit.isEmpty()) {
@@ -50,13 +50,13 @@ public class RepositoryService {
             attributes.put(attributeMeta.attrId(), attr);
         });
 
-        return new Snapshot(tenantId, unitId, attributes);
+        return new /* outermost */ Box(tenantId, unitId, attributes);
     }
 
-    public Object getArray(Snapshot snap, int attrId, boolean isMandatory) {
-        log.trace("RepositoryService::getArray({}, {}, {})", snap, attrId, isMandatory);
+    public Object getArray(Box box, int attrId, boolean isMandatory) {
+        log.trace("RuntimeService::getArray({}, {}, {})", box, attrId, isMandatory);
 
-        Attribute<?> attribute = snap.getAttribute(attrId);
+        Attribute<?> attribute = box.getAttribute(attrId);
         if (null == attribute) {
             if (isMandatory) {
                 log.info("Mandatory attribute {} not present", attrId);
@@ -87,17 +87,17 @@ public class RepositoryService {
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
-        return new Snapshot(snap.getTenantId(), snap.getUnitId(), attributeMap);
+        return new /* inner */ Box(/* outer */ box, attributeMap);
     }
 
-    public Object getArray(Snapshot snap, int attrId) {
-        return getArray(snap, attrId, false);
+    public Object getArray(Box box, int attrId) {
+        return getArray(box, attrId, false);
     }
 
-    public Object getScalar(Snapshot snap, int attrId, boolean isMandatory) {
-        log.trace("RepositoryService::getScalar({}, {}, {})", snap, attrId, isMandatory);
+    public Object getScalar(Box box, int attrId, boolean isMandatory) {
+        log.trace("RuntimeService::getScalar({}, {}, {})", box, attrId, isMandatory);
 
-        Attribute<?> attribute = snap.getAttribute(attrId);
+        Attribute<?> attribute = box.getAttribute(attrId);
         if (null == attribute) {
             if (isMandatory) {
                 log.info("Mandatory attribute {} not present", attrId);
@@ -128,10 +128,10 @@ public class RepositoryService {
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
-        return new Snapshot(snap, attributeMap);
+        return new /* inner */ Box(/* outer */ box, attributeMap);
     }
 
-    public Object getScalar(Snapshot snap, int attrId) {
-        return getScalar(snap, attrId,false);
+    public Object getScalar(Box box, int attrId) {
+        return getScalar(box, attrId,false);
     }
 }

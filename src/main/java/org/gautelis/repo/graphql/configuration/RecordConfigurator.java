@@ -4,8 +4,8 @@ import graphql.language.*;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
-import org.gautelis.repo.graphql.runtime.RepositoryService;
-import org.gautelis.repo.graphql.runtime.Snapshot;
+import org.gautelis.repo.graphql.runtime.RuntimeService;
+import org.gautelis.repo.graphql.runtime.Box;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,7 +89,7 @@ class RecordConfigurator {
             List<Directive> recordDirectivesOnType,
             Map<String, Configurator.ProposedAttributeMeta> attributes,
             RuntimeWiring.Builder runtimeWiring,
-            RepositoryService repoService,
+            RuntimeService repoService,
             Collection<String> info
     ) {
         Map<String, ExistingRecordMeta> existingTemplates = loadExisting();
@@ -137,40 +137,8 @@ class RecordConfigurator {
                                     int idx = 0;
                                     NEXT_FIELD:
                                     for (FieldDefinition f : type.getFieldDefinitions()) {
-                                        String nameInSchema = f.getName();
-
-                                        boolean isDefinedAsArray = false;
-                                        boolean isMandatory = false;
-                                        String fieldTypeName = null;
-
-                                        if (f.getType() instanceof ListType listType) {
-                                            isDefinedAsArray = true;
-                                            if (listType.getType() instanceof NonNullType nonNullType) {
-                                                isMandatory = true;
-                                                fieldTypeName = ((TypeName) nonNullType.getType()).getName();
-                                                log.trace("Signature: {} [{}!]", nameInSchema, fieldTypeName);
-                                            }
-                                            else {
-                                                fieldTypeName = ((TypeName) listType.getType()).getName();
-                                                log.trace("Signature: {} [{}]", nameInSchema, fieldTypeName);
-                                            }
-                                        }
-                                        else if (f.getType() instanceof NonNullType nonNullType) {
-                                            isMandatory = true;
-                                            if (nonNullType.getType() instanceof ListType listType) {
-                                                isDefinedAsArray = true;
-                                                fieldTypeName = ((TypeName) listType.getType()).getName();
-                                                log.trace("Signature: {} [{}]!", nameInSchema, fieldTypeName);
-                                            }
-                                            else {
-                                                fieldTypeName = ((TypeName) nonNullType.getType()).getName();
-                                                log.trace("Signature: {} {}!", nameInSchema, fieldTypeName);
-                                            }
-                                        }
-                                        else if (f.getType() instanceof TypeName typeName) {
-                                            fieldTypeName = typeName.getName();
-                                            log.trace("Signature: {} {}", nameInSchema, fieldTypeName);
-                                        }
+                                        final String nameInSchema = f.getName();
+                                        final FieldType fieldType = FieldType.get(f);
 
                                         ++idx;
                                         pStmt.clearParameters();
@@ -231,25 +199,20 @@ class RecordConfigurator {
                                                     // ----------------------------------------------------------------------
                                                     // Tell GraphQL how to fetch this specific (record) type
                                                     // ----------------------------------------------------------------------
-                                                    final int _idx = idx;
-                                                    final boolean _isMandatory = isMandatory;
-                                                    final boolean _isArray = isDefinedAsArray;
-
                                                     DataFetcher<?> fetcher = env -> {
-                                                        Snapshot snap = env.getSource();
-                                                        if (null == snap) {
-                                                            log.warn("No snap");
+                                                        Box box = env.getSource();
+                                                        if (null == box) {
+                                                            log.warn("No box");
                                                             return null;
                                                         }
 
+                                                        log.trace("Fetching attribute {} from record {}: {}.{}", fieldType.isArray() ? nameInSchema + "[]" : nameInSchema, _recordName, box.getTenantId(), box.getUnitId());
 
-                                                        log.trace("Fetching attribute {} from record {}: {}.{}", _isArray ? nameInSchema + "[]" : nameInSchema, _recordName, snap.getTenantId(), snap.getUnitId());
-
-                                                        // REPLACE return repoService.getRecord(snap, childAttrid, _idx);
-                                                        if (_isArray) {
-                                                            return repoService.getArray(snap, childAttrid);
+                                                        // REPLACE return repoService.getRecord(box, childAttrid, _idx);
+                                                        if (fieldType.isArray()) {
+                                                            return repoService.getArray(box, childAttrid);
                                                         } else {
-                                                            return repoService.getScalar(snap, childAttrid);
+                                                            return repoService.getScalar(box, childAttrid);
                                                         }
                                                     };
                                                     builder.dataFetcher(nameInSchema, fetcher);

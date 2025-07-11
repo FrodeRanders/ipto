@@ -140,7 +140,7 @@ type Test @unit(id: 43) {
     title : String       @use(attribute: TITLE)
 }
 
-##############  Queries ###########################################
+##############  Query related ####################################
 scalar Long
 
 input UnitIdentification {
@@ -148,7 +148,38 @@ input UnitIdentification {
     unitId : Long!
 }
 
+enum Logical { AND OR }
+
+input AttrExpr {
+    attr  : Attributes!
+    value : String!
+}
+
+input AttrTree {
+    op    : Logical!
+    exprs : [AttrExpr!]!
+}
+
+type PurchaseOrderConnection {
+    edges      : [PurchaseOrder!]!
+    pageInfo   : PageInfo!
+}
+
+type PageInfo {
+    hasNextPage    : Boolean!
+    hasPreviousPage: Boolean!
+    startCursor    : String
+    endCursor      : String
+}
+
+##############  Queries ###########################################
 type Query {
     unit(id : UnitIdentification!) : PurchaseOrder
+    units(
+        tenantId: Int!
+        where: AttrTree!
+        first: Int = 20
+        after: Long   # opaque cursor
+    ) : PurchaseOrderConnection!
 }
 
