@@ -115,7 +115,7 @@ public class RepositoryFactory {
         hConfig.setJdbcUrl(url);
         hConfig.setUsername(config.user());
         hConfig.setPassword(config.password());
-        hConfig.setMaximumPoolSize(10);
+        hConfig.setMaximumPoolSize(20);
         HikariDataSource dataSource = new HikariDataSource(hConfig);
 
         // For now -- TODO Fix Configurable to allow collection return values

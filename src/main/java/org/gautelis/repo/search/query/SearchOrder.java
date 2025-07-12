@@ -35,17 +35,41 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
     }
 
     /**
-     * Creates a basic search order, ordering on modification date in
+     * Creates a basic search order, ordering on creation date in
      * descending order.
      *
      * @return the default search order
      */
     public static SearchOrder getDefaultOrder() {
+        return orderByCreation(false);
+    }
+
+
+    /**
+     * Creates a basic search order, ordering on creation date.
+     */
+    public static SearchOrder orderByCreation(boolean ascending) {
         Column[] order = new Column[1];
         order[0] = Column.UNIT_CREATED;
-        boolean[] asc = new boolean[1]; // default false, i.e. order descending
+        boolean[] asc = new boolean[1];
+        asc[0] = ascending;
+
         return new SearchOrder(order, asc);
     }
+
+    /**
+     * Creates a basic search order, ordering on unit id.
+     */
+    public static SearchOrder orderByUnitId(boolean ascending) {
+        Column[] order = new Column[1];
+        order[0] = Column.UNIT_UNITID;
+        boolean[] asc = new boolean[1];
+        asc[0] = ascending;
+
+        return new SearchOrder(order, asc);
+    }
+
+
 
     /**
      * Appends columns search order to buf.

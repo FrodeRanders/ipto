@@ -148,18 +148,36 @@ input UnitIdentification {
     unitId : Long!
 }
 
-enum Logical { AND OR }
+#
+enum Operator { GT, GEQ, EQ, LEQ, LT, LIKE, NEQ }
 
-input AttrExpr {
+input AttributeExpression {
     attr  : Attributes!
+    op : Operator!
     value : String!
 }
 
-input AttrTree {
-    op    : Logical!
-    exprs : [AttrExpr!]!
+enum Logical { AND, OR }
+
+input TreeExpression {
+    op : Logical!
+    left : Node!
+    right : Node!
 }
 
+input Node {
+    attrExpr : AttributeExpression,
+    treeExpr : TreeExpression
+}
+
+input Filter {
+    tenantId: Int!
+    where: Node!
+    offset: Int = 0
+    size: Int = 20
+}
+
+#
 type PurchaseOrderConnection {
     edges      : [PurchaseOrder!]!
     pageInfo   : PageInfo!
@@ -175,11 +193,6 @@ type PageInfo {
 ##############  Queries ###########################################
 type Query {
     unit(id : UnitIdentification!) : PurchaseOrder
-    units(
-        tenantId: Int!
-        where: AttrTree!
-        first: Int = 20
-        after: Long   # opaque cursor
-    ) : PurchaseOrderConnection!
+    units(filter: Filter!) : PurchaseOrderConnection!
 }
 

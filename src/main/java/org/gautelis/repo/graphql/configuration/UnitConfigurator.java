@@ -221,11 +221,12 @@ class UnitConfigurator {
                                                 // by attaching generic field fetchers to every @unit type
                                                 // ----------------------------------------------------------------------
                                                 DataFetcher<?> fetcher = env -> {
-                                                    // Hey, my mission in life is to provide support for
-                                                    // resolving a single attribute 'nameInSchema' in a
-                                                    // single type 'unitName'. Everything I need later,
-                                                    // I have access to right now so I capture this information
-                                                    // for later.
+                                                    //**** Executed at runtime **********************************
+                                                    // My mission in life is to resolve a specific attribute
+                                                    // (the current 'fieldName') in a specific type (the current
+                                                    // 'unitName'). Everything needed at runtime is accessible
+                                                    // right now so it is captured for later.
+                                                    //***********************************************************
                                                     Box box = env.getSource();
                                                     if (null == box) {
                                                         log.warn("No box");

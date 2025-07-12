@@ -4,21 +4,62 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import graphql.language.*;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
+import org.gautelis.repo.graphql.runtime.Box;
 import org.gautelis.repo.graphql.runtime.RuntimeService;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Map;
+import java.util.*;
 
 public class OperationsConfigurator {
     private static final Logger log = LoggerFactory.getLogger(OperationsConfigurator.class);
 
     /* package visible only */
-    record UnitIdentification(int tenantId, long unitId) {
+    record UnitIdentification(int tenantId, long unitId) {}
+
+    public enum Operator {
+        GT   (org.gautelis.repo.search.model.Operator.GT),
+        GEQ  (org.gautelis.repo.search.model.Operator.GEQ),
+        EQ   (org.gautelis.repo.search.model.Operator.EQ),
+        LEQ  (org.gautelis.repo.search.model.Operator.LEQ),
+        LT   (org.gautelis.repo.search.model.Operator.LT),
+        LIKE (org.gautelis.repo.search.model.Operator.LIKE),
+        NEQ  (org.gautelis.repo.search.model.Operator.NEQ);
+
+        private final org.gautelis.repo.search.model.Operator iptoOp;
+        Operator(org.gautelis.repo.search.model.Operator iptoOp) {
+            this.iptoOp = iptoOp;
+        }
+
+        public org.gautelis.repo.search.model.Operator iptoOp() {
+            return iptoOp;
+        }
     }
 
-    /* package visible only */
+    public record AttributeExpression(String attr, Operator op, String value) {}
+
+    public enum Logical {
+        AND  (org.gautelis.repo.search.model.Operator.AND),
+        OR   (org.gautelis.repo.search.model.Operator.OR);
+
+        private final org.gautelis.repo.search.model.Operator iptoOp;
+        Logical(org.gautelis.repo.search.model.Operator iptoOp) {
+            this.iptoOp = iptoOp;
+        }
+
+        public org.gautelis.repo.search.model.Operator iptoOp() {
+            return iptoOp;
+        }
+    }
+
+    public record TreeExpression(Logical op, Node left, Node right) {}
+
+    public record Node(AttributeExpression attrExpr, TreeExpression treeExpr) {}
+
+    public record Filter(int tenantId, Node where, int offset, int size) {}
+
+    //
     enum SchemaOperation {QUERY, MUTATION}
 
     private final Repository repo;
@@ -66,23 +107,57 @@ public class OperationsConfigurator {
             switch (fieldName) {
                 // "Hardcoded" point lookup for specific unit
                 case "unit" -> {
-                    log.trace("{}::{}(...) : {}", type.getName(), f.getName(), fieldType.name());
-
                     DataFetcher<?> unitById = env -> {
-                        log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument("id"), fieldType.name());
+                        //**** Executed at runtime **********************************
+                        // My mission in life is to resolve a specific query
+                        // (the current 'fieldName' -- in this case "unit").
+                        // Everything needed at runtime is accessible right
+                        // now so it is captured for later.
+                        //***********************************************************
+                        if (log.isTraceEnabled()) {
+                            log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument("id"), fieldType.name());
+                        }
 
                         UnitIdentification id = objectMapper.convertValue(env.getArgument("id"), UnitIdentification.class);
                         return repoService.loadUnit(id.tenantId(), id.unitId());
                     };
 
                     runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitById));
-                    log.info("Wiring: {}::{}", type.getName(), fieldName);
+                    log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, fieldType.name());
                 }
 
                 //
                 case "units" -> {
-                    log.trace("{}::{}(...) : {}", type.getName(), fieldName, fieldType.name());
-                    log.info("Wiring: {}::{}", type.getName(), fieldName);
+                    DataFetcher<?> unitByFilter = env -> {
+                        //**** Executed at runtime **********************************
+                        // My mission in life is to resolve a specific query
+                        // (the current 'fieldName' -- in this case "units").
+                        // Everything needed at runtime is accessible right
+                        // now so it is captured for later.
+                        //***********************************************************
+                        Map<String, Object> args = env.getArguments();
+                        if (log.isTraceEnabled()) {
+                            log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, fieldType.name());
+                        }
+                        // Query::units({filter={tenantId=1, where={attrExpr={attr=ORDER_ID, op=EQ, value=*order id 2*}}, first=20}}) : PurchaseOrderConnection
+
+                        Filter filter = objectMapper.convertValue(env.getArgument("filter"), Filter.class);
+                        log.trace("ARGS: filter = {}", filter);
+
+                        List<Box> edges = repoService.search(filter);
+                        return Map.of(
+                                "edges", edges,
+                                "pageInfo", Map.of(
+                                        "hasNextPage", false,
+                                        "hasPreviousPage", false,
+                                        "startCursor", "0",
+                                        "endCursor", "0"
+                                )
+                        );
+                    };
+
+                    runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitByFilter));
+                    log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, fieldType.name());
                 }
             }
         }

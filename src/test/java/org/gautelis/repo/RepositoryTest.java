@@ -40,6 +40,7 @@ import org.gautelis.repo.search.query.SearchExpression;
 import org.gautelis.repo.search.query.SearchOrder;
 import org.gautelis.repo.search.UnitSearch;
 import org.gautelis.vopn.lang.TimeDelta;
+import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
@@ -81,115 +82,210 @@ public class RepositoryTest extends TestCase {
         return new TestSuite( RepositoryTest.class );
     }
 
-    public void test1ConfigLoad() throws IOException {
+    private static GraphQL graphQL = null;
+
+    @Before
+    public void setUp() throws IOException {
+        if (null != graphQL) {
+            return;
+        }
+
+        Optional<GraphQL> _graphQL;
         try (InputStreamReader sdl = new InputStreamReader(
                 Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            Optional<GraphQL> _graphQL = repo.loadConfiguration(sdl);
+            _graphQL = repo.loadConfiguration(sdl);
             if (_graphQL.isEmpty()) {
                 fail("Could not load configuration");
             }
+        }
 
-            final int tenantId = 1;
-            long unitId;
-            {
+        graphQL = _graphQL.get();
+    }
 
-                Unit unit = repo.createUnit(tenantId, "graphql test");
+    public void test1GraphQL() {
+        Repository repo = RepositoryFactory.getRepository();
+        final int tenantId = 1;
+        long unitId;
+        {
 
-                unit.withAttributeValue("dc:title", String.class, value -> {
-                    value.add("abc");
+            Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
+
+            unit.withAttributeValue("dc:title", String.class, value -> {
+                value.add("abc");
+            });
+
+            unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
+                RecordAttribute recrd = new RecordAttribute(attr);
+
+                recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+                    value.add("*order id 1*");
                 });
 
-                unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                    RecordAttribute recrd = new RecordAttribute(attr);
-
-                    recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
-                        value.add("*order id*");
-                    });
-
-                    recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
-                        value.add(Instant.now());
-                    });
-
-                    recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
-                        value.add(Math.PI);
-                        value.add(Math.E);
-                    });
+                recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+                    value.add(Instant.now());
                 });
 
-                repo.storeUnit(unit);
+                recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+                    value.add(Math.PI);
+                    value.add(Math.E);
+                });
+            });
 
-                unitId = unit.getUnitId();
-                System.out.println("purchase order: " + unit);
+            repo.storeUnit(unit);
+            unitId = unit.getUnitId();
+        }
+
+        String query = """
+            query Unit($id: UnitIdentification!) {
+              unit(id: $id) {
+                shipment {
+                    orderId
+                    deadline
+                    reading
+                }
+              }
             }
+            """;
+        System.out.println("-------------------------------------------------------------------");
+        log.info(query);
+        System.out.println(query);
 
-            String query = """
-                query Unit($id: UnitIdentification!) {
-                  unit(id: $id) {
-                    shipment {
-                        orderId
-                        deadline
-                        reading
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(Map.of(
+                            "id", Map.of(
+                                 "tenantId", tenantId,
+                                 "unitId",   unitId
+                                 )
+                            )
+                        )
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result: {}", (Object) result.getData());
+            System.out.println("-------------------------------------------------------------------");
+            System.out.print("Result: ");
+            System.out.println((Object) result.getData());
+
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
                     }
+                }
+            }
+        }
+        System.out.println("===================================================================");
+    }
+
+    public void test2GraphQL() {
+        Repository repo = RepositoryFactory.getRepository();
+
+        final int tenantId = 1;
+        {
+            Unit unit = repo.createUnit(tenantId, "graphql 'units' test");
+
+            unit.withAttributeValue("dc:title", String.class, value -> {
+                value.add("abc");
+            });
+
+            unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
+                RecordAttribute recrd = new RecordAttribute(attr);
+
+                recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+                    value.add("*order id 2*");
+                });
+
+                recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+                    value.add(Instant.now());
+                });
+
+                recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+                    value.add(Math.PI);
+                    value.add(Math.E);
+                });
+            });
+
+            repo.storeUnit(unit);
+        }
+
+        String query = """
+            query Units($filter: Filter!) {
+              units(filter: $filter) {
+                edges {
+                  shipment {
+                    orderId
                   }
                 }
-                """;
-            System.out.println("-------------------------------------------------------------------");
-            log.info(query);
-            System.out.println(query);
+                pageInfo {
+                  hasNextPage
+                  hasPreviousPage
+                  startCursor
+                  endCursor
+                }
+              }
+            }
+            """;
+        log.info(query);
+        System.out.println(query);
 
-            GraphQL graphQL = _graphQL.get();
-            ExecutionResult result = graphQL.execute(
-                    ExecutionInput.newExecutionInput()
-                            .query(query)
-                            .variables(Map.of(
-                                "id", Map.of(
-                                     "tenantId", tenantId,
-                                     "unitId",   unitId
-                                     )
+        Map<String, Object> where = Map.of(
+            "attrExpr", Map.of(
+                        "attr", "ORDER_ID",
+                        "op", "EQ",
+                        "value", "*order id 2*"
+                    )
+        );
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(
+                                Map.of(
+                                        "filter", Map.of(
+                                                "tenantId", 1,
+                                                "where", where
+                                        )
                                 )
-                            )
-                            .build());
+                        )
+                        .build());
 
-            List<GraphQLError> errors = result.getErrors();
-            if (errors.isEmpty()) {
-                log.info("Result: {}", (Object) result.getData());
-                System.out.println("-------------------------------------------------------------------");
-                System.out.print("Result: ");
-                System.out.println((Object) result.getData());
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result: {}", (Object) result.getData());
+            System.out.println("-------------------------------------------------------------------");
+            System.out.print("Result: ");
+            System.out.println((Object) result.getData());
 
-            } else {
-                for (GraphQLError error : errors) {
-                    log.error("error: {}: {}", error.getMessage(), error);
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
 
-                    List<SourceLocation> locations = error.getLocations();
-                    if (null != locations) {
-                        for (SourceLocation location : locations) {
-                            log.error("location: {}: {}", location.getLine(), location);
-                        }
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
                     }
                 }
             }
-            System.out.println("===================================================================");
-
-            /*
-                units(
-                    tenantId: Int!,
-                    where: AttrTree!,
-                    first: Int = 20,
-                    after: Long   # opaque cursor, maybe the last unitId
-                ) : PurchaseOrderConnection!
-             */
         }
+        System.out.println("===================================================================");
     }
 
     @SuppressWarnings("unchecked")
-    public void test2Compound() {
+    public void test3Record() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
 
-        Unit unit = repo.createUnit(tenantId, "a shipment instance");
+        Unit unit = repo.createUnit(tenantId, "a record instance");
 
         unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
             RecordAttribute recrd = new RecordAttribute(attr);
@@ -215,7 +311,7 @@ public class RepositoryTest extends TestCase {
         repo.storeUnit(unit);
     }
 
-    public void test3Repository() {
+    public void test4Repository() {
         Repository repo = RepositoryFactory.getRepository();
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create

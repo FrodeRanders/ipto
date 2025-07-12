@@ -31,6 +31,21 @@ public class QueryBuilder {
     private QueryBuilder() {}
 
     /**
+     * Helper method that adds two search expressions with logical
+     * operator AND.
+     *
+     * @param left existing search expression
+     * @param right existing search expression
+     * @return search expression
+     * @throws InvalidParameterException
+     */
+    public static SearchExpression assembleAnd(
+            SearchExpression left, SearchExpression right
+    ) {
+        return new AndExpression(left, right);
+    }
+
+    /**
      * Helper method that adds a search item to an expression with logical
      * operator AND (item).
      *
@@ -70,6 +85,21 @@ public class QueryBuilder {
             SearchExpression left, SearchItem<?> item
     ) {
         return assembleAndNot(left, new LeafExpression<>(item));
+    }
+
+    /**
+     * Helper method that adds two search expressions with logical
+     * operator OR.
+     *
+     * @param left existing search expression
+     * @param right existing search expression
+     * @return search expression
+     * @throws InvalidParameterException
+     */
+    public static SearchExpression assembleOr(
+            SearchExpression left, SearchExpression right
+    ) {
+        return new OrExpression(left, right);
     }
 
     /**

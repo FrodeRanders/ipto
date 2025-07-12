@@ -137,7 +137,7 @@ class RecordConfigurator {
                                     int idx = 0;
                                     NEXT_FIELD:
                                     for (FieldDefinition f : type.getFieldDefinitions()) {
-                                        final String nameInSchema = f.getName();
+                                        final String fieldName = f.getName();
                                         final FieldType fieldType = FieldType.get(f);
 
                                         ++idx;
@@ -145,7 +145,7 @@ class RecordConfigurator {
                                         pStmt.setInt(1, recordAttrid);
                                         pStmt.setInt(2, idx);
 
-                                        info.add("   " + nameInSchema);
+                                        info.add("   " + fieldName);
 
                                         // Handle @use directive on field definitions
                                         boolean identical = false;
@@ -160,8 +160,7 @@ class RecordConfigurator {
                                                 Configurator.ProposedAttributeMeta attributeMeta = attributes.get(value.getName());
                                                 if (null != attributeMeta) {
                                                     int childAttrid = attributeMeta.attrId();
-                                                    String alias = nameInSchema;
-                                                    // required?
+                                                    String alias = fieldName;
 
                                                     // ----------------------------------------------------------------------
                                                     // First check whether this template already exists in local database
@@ -200,13 +199,19 @@ class RecordConfigurator {
                                                     // Tell GraphQL how to fetch this specific (record) type
                                                     // ----------------------------------------------------------------------
                                                     DataFetcher<?> fetcher = env -> {
+                                                        //**** Executed at runtime **********************************
+                                                        // My mission in life is to resolve a specific attribute
+                                                        // (the current 'fieldName') in a specific type (the current
+                                                        // 'recordName'). Everything needed at runtime is accessible
+                                                        // right now so it is captured for later.
+                                                        //***********************************************************
                                                         Box box = env.getSource();
                                                         if (null == box) {
                                                             log.warn("No box");
                                                             return null;
                                                         }
 
-                                                        log.trace("Fetching attribute {} from record {}: {}.{}", fieldType.isArray() ? nameInSchema + "[]" : nameInSchema, _recordName, box.getTenantId(), box.getUnitId());
+                                                        log.trace("Fetching attribute {} from record {}: {}.{}", fieldType.isArray() ? fieldName + "[]" : fieldName, _recordName, box.getTenantId(), box.getUnitId());
 
                                                         // REPLACE return repoService.getRecord(box, childAttrid, _idx);
                                                         if (fieldType.isArray()) {
@@ -215,8 +220,8 @@ class RecordConfigurator {
                                                             return repoService.getScalar(box, childAttrid);
                                                         }
                                                     };
-                                                    builder.dataFetcher(nameInSchema, fetcher);
-                                                    log.info("Wiring: {} {}", type.getName(), nameInSchema);
+                                                    builder.dataFetcher(fieldName, fetcher);
+                                                    log.info("Wiring: {} {}", type.getName(), fieldName);
 
                                                     //
                                                     if (identical) {
