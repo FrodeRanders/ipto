@@ -109,7 +109,6 @@ public class RepositoryTest extends TestCase {
         final int tenantId = 1;
         long unitId;
         {
-
             Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
 
             unit.withAttributeValue("dc:title", String.class, value -> {
@@ -139,7 +138,7 @@ public class RepositoryTest extends TestCase {
 
         String query = """
             query Unit($id: UnitIdentification!) {
-              unit(id: $id) {
+              order(id: $id) {
                 shipment {
                     orderId
                     deadline
@@ -148,7 +147,7 @@ public class RepositoryTest extends TestCase {
               }
             }
             """;
-        System.out.println("-------------------------------------------------------------------");
+        System.out.println("--------------------------------------------------------------");
         log.info(query);
         System.out.println(query);
 
@@ -167,8 +166,7 @@ public class RepositoryTest extends TestCase {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             log.info("Result: {}", (Object) result.getData());
-            System.out.println("-------------------------------------------------------------------");
-            System.out.print("Result: ");
+            System.out.print("--> ");
             System.out.println((Object) result.getData());
 
         } else {
@@ -183,7 +181,7 @@ public class RepositoryTest extends TestCase {
                 }
             }
         }
-        System.out.println("===================================================================");
+        System.out.println("--------------------------------------------------------------");
     }
 
     public void test2GraphQL() {
@@ -219,7 +217,7 @@ public class RepositoryTest extends TestCase {
 
         String query = """
             query Units($filter: Filter!) {
-              units(filter: $filter) {
+              orders(filter: $filter) {
                 edges {
                   shipment {
                     orderId
@@ -261,8 +259,7 @@ public class RepositoryTest extends TestCase {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             log.info("Result: {}", (Object) result.getData());
-            System.out.println("-------------------------------------------------------------------");
-            System.out.print("Result: ");
+            System.out.print("--> ");
             System.out.println((Object) result.getData());
 
         } else {
@@ -277,7 +274,7 @@ public class RepositoryTest extends TestCase {
                 }
             }
         }
-        System.out.println("===================================================================");
+        System.out.println("--------------------------------------------------------------");
     }
 
     @SuppressWarnings("unchecked")

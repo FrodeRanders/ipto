@@ -102,62 +102,70 @@ public class OperationsConfigurator {
         for (FieldDefinition f : type.getFieldDefinitions()) {
             // Operation name
             final String fieldName = f.getName();
-            final FieldType fieldType = FieldType.get(f);
+            final TypeDefinition resultType = TypeDefinition.get(f.getType());
 
-            switch (fieldName) {
-                // "Hardcoded" point lookup for specific unit
-                case "unit" -> {
-                    DataFetcher<?> unitById = env -> {
-                        //**** Executed at runtime **********************************
-                        // My mission in life is to resolve a specific query
-                        // (the current 'fieldName' -- in this case "unit").
-                        // Everything needed at runtime is accessible right
-                        // now so it is captured for later.
-                        //***********************************************************
-                        if (log.isTraceEnabled()) {
-                            log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument("id"), fieldType.name());
-                        }
+            List<InputValueDefinition> inputs = f.getInputValueDefinitions();
 
-                        UnitIdentification id = objectMapper.convertValue(env.getArgument("id"), UnitIdentification.class);
-                        return repoService.loadUnit(id.tenantId(), id.unitId());
-                    };
+            if (!inputs.isEmpty()) {
+                InputValueDefinition input = inputs.getFirst();
+                String inputName = input.getName();
+                TypeDefinition typeDef = TypeDefinition.get(input.getType());
 
-                    runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitById));
-                    log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, fieldType.name());
-                }
+                switch (typeDef.typeName()) {
+                    // "Hardcoded" point lookup for specific unit
+                    case "UnitIdentification" -> {
+                        DataFetcher<?> unitById = env -> {
+                            //**** Executed at runtime **********************************
+                            // My mission in life is to resolve a specific query
+                            // (the current 'fieldName').
+                            // Everything needed at runtime is accessible right
+                            // now so it is captured for later.
+                            //***********************************************************
+                            if (log.isTraceEnabled()) {
+                                log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument(inputName), resultType.typeName());
+                            }
 
-                //
-                case "units" -> {
-                    DataFetcher<?> unitByFilter = env -> {
-                        //**** Executed at runtime **********************************
-                        // My mission in life is to resolve a specific query
-                        // (the current 'fieldName' -- in this case "units").
-                        // Everything needed at runtime is accessible right
-                        // now so it is captured for later.
-                        //***********************************************************
-                        Map<String, Object> args = env.getArguments();
-                        if (log.isTraceEnabled()) {
-                            log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, fieldType.name());
-                        }
-                        // Query::units({filter={tenantId=1, where={attrExpr={attr=ORDER_ID, op=EQ, value=*order id 2*}}, first=20}}) : PurchaseOrderConnection
+                            UnitIdentification id = objectMapper.convertValue(env.getArgument(inputName), UnitIdentification.class);
+                            return repoService.loadUnit(id.tenantId(), id.unitId());
+                        };
 
-                        Filter filter = objectMapper.convertValue(env.getArgument("filter"), Filter.class);
-                        log.trace("ARGS: filter = {}", filter);
+                        runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitById));
+                        log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, resultType.typeName());
+                    }
 
-                        List<Box> edges = repoService.search(filter);
-                        return Map.of(
-                                "edges", edges,
-                                "pageInfo", Map.of(
-                                        "hasNextPage", false,
-                                        "hasPreviousPage", false,
-                                        "startCursor", "0",
-                                        "endCursor", "0"
-                                )
-                        );
-                    };
+                    //
+                    case "Filter" -> {
+                        DataFetcher<?> unitByFilter = env -> {
+                            //**** Executed at runtime **********************************
+                            // My mission in life is to resolve a specific query
+                            // (the current 'fieldName').
+                            // Everything needed at runtime is accessible right
+                            // now so it is captured for later.
+                            //***********************************************************
+                            Map<String, Object> args = env.getArguments();
+                            if (log.isTraceEnabled()) {
+                                log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, resultType.typeName());
+                            }
+                            // Query::units({filter={tenantId=1, where={attrExpr={attr=ORDER_ID, op=EQ, value=*order id 2*}}, first=20}}) : PurchaseOrderConnection
 
-                    runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitByFilter));
-                    log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, fieldType.name());
+                            Filter filter = objectMapper.convertValue(env.getArgument(inputName), Filter.class);
+                            log.trace("ARGS: filter = {}", filter);
+
+                            List<Box> edges = repoService.search(filter);
+                            return Map.of(
+                                    "edges", edges,
+                                    "pageInfo", Map.of(
+                                            "hasNextPage", false,
+                                            "hasPreviousPage", false,
+                                            "startCursor", "0",
+                                            "endCursor", "0"
+                                    )
+                            );
+                        };
+
+                        runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitByFilter));
+                        log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, resultType.typeName());
+                    }
                 }
             }
         }

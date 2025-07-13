@@ -17,7 +17,6 @@ public class Box {
 
     /* package accessible only */
     Box(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
-        log.trace("Creating Box");
         this.tenantId = tenantId;
         this.unitId = unitId;
         this.attributes = attributes;

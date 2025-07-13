@@ -202,6 +202,7 @@ public class RuntimeService {
         }
     }
 
+    /****************** Search related ******************/
 
     private SearchExpression assembleConstraints(OperationsConfigurator.Filter filter) {
         // Implicit unit constraints

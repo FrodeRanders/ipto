@@ -138,7 +138,7 @@ class RecordConfigurator {
                                     NEXT_FIELD:
                                     for (FieldDefinition f : type.getFieldDefinitions()) {
                                         final String fieldName = f.getName();
-                                        final FieldType fieldType = FieldType.get(f);
+                                        final TypeDefinition fieldType = TypeDefinition.get(f.getType());
 
                                         ++idx;
                                         pStmt.clearParameters();

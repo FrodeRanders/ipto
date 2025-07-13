@@ -162,7 +162,7 @@ class UnitConfigurator {
                                 for (FieldDefinition f : type.getFieldDefinitions()) {
                                     ++idx;
                                     final String fieldName = f.getName();
-                                    final FieldType fieldType = FieldType.get(f);
+                                    final TypeDefinition fieldType = TypeDefinition.get(f.getType());
 
                                     elementsStmt.clearParameters();
                                     elementsStmt.setInt(1, _templateId);
