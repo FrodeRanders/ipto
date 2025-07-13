@@ -7,9 +7,13 @@ See end of README for instructions on how to setup test.
 ## Configuration
 Configuration of attributes (using GraphQL SDL):
 ```graphql
+schema {
+    query: Query
+}
+
 ##############  directive definitions ############################
 directive @datatypeRegistry on ENUM
-directive @datatype(id: Int!, basictype: String = null) on ENUM_VALUE
+directive @datatype(id: Int!, type: String = null) on ENUM_VALUE
 
 directive @attributeRegistry on ENUM
 directive @attribute(id: Int!, datatype: DataTypes!, vector: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
@@ -18,23 +22,27 @@ directive @use(attribute: Attributes!) on FIELD_DEFINITION
 directive @unit(id: Int!) on OBJECT
 directive @record(attribute: Attributes!) on OBJECT
 
-##############  builtin data types, provided for reference #######
+##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  basictype: "text")
-    TIME      @datatype(id: 2,  basictype: "timestamptz")
-    INTEGER   @datatype(id: 3,  basictype: "int")
-    LONG      @datatype(id: 4,  basictype: "bigint")
-    DOUBLE    @datatype(id: 5,  basictype: "double precision")
-    BOOLEAN   @datatype(id: 6,  basictype: "boolean")
-    DATA      @datatype(id: 7,  basictype: "bytea")
+    STRING    @datatype(id: 1,  type: "text")
+    TIME      @datatype(id: 2,  type: "timestamptz")
+    INTEGER   @datatype(id: 3,  type: "int")
+    LONG      @datatype(id: 4,  type: "bigint")
+    DOUBLE    @datatype(id: 5,  type: "double precision")
+    BOOLEAN   @datatype(id: 6,  type: "boolean")
+    DATA      @datatype(id: 7,  type: "bytea")
     RECORD    @datatype(id: 99)
 }
 
-##############  attributes #######################################
+############## attributes ############################
 enum Attributes @attributeRegistry {
+    "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
     TITLE @attribute(id: 1, datatype: STRING, vector: false,
-        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title")
-    ...
+        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title"
+   
+    ... 
+        
+    # Domain specific attributes
     ORDER_ID  @attribute(id: 1001, datatype: STRING)
     DEADLINE  @attribute(id: 1002, datatype: TIME)
     READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
@@ -42,7 +50,8 @@ enum Attributes @attributeRegistry {
 }
 
 ##############  object & unit types ##############################
-scalar DateTime     # maps to timestamptz  (java.time.Instant)
+scalar DateTime
+scalar Bytes    # Base-64 strings on the wire
 
 type Shipment @record(attribute: SHIPMENT) {
     orderId  : String    @use(attribute: ORDER_ID)
@@ -52,12 +61,115 @@ type Shipment @record(attribute: SHIPMENT) {
 
 type PurchaseOrder @unit(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
-    ...
-    shipment : Shipment  @use(attribute: SHIPMENT)
+    deadline : DateTime  @use(attribute: DEADLINE)
+    reading  : [Float!]  @use(attribute: READING)
+    shipment : Shipment! @use(attribute: SHIPMENT)
+}
+
+##############  Query related ####################################
+scalar Long
+
+input UnitIdentification {
+    tenantId : Int!
+    unitId : Long!
+}
+
+#
+enum Operator { GT, GEQ, EQ, LEQ, LT, LIKE, NEQ }
+
+input AttributeExpression {
+    attr  : Attributes!
+    op : Operator!
+    value : String!
+}
+
+enum Logical { AND, OR }
+
+input TreeExpression {
+    op : Logical!
+    left : Node!
+    right : Node!
+}
+
+input Node {
+    attrExpr : AttributeExpression,
+    treeExpr : TreeExpression
+}
+
+input Filter {
+    tenantId: Int!
+    where: Node!
+    offset: Int = 0
+    size: Int = 20
+}
+
+#
+type PurchaseOrderConnection {
+    edges      : [PurchaseOrder!]!
+    pageInfo   : PageInfo!
+}
+
+type PageInfo {
+    hasNextPage    : Boolean!
+    hasPreviousPage: Boolean!
+    startCursor    : String
+    endCursor      : String
+}
+
+##############  Queries ###########################################
+type Query {
+    order(id : UnitIdentification!) : PurchaseOrder
+    orders(filter: Filter!) : PurchaseOrderConnection!
 }
 ```
 
-## Example of usage:
+## Example of usage (in Java on top of GraphQL):
+```java
+String query = """
+    query Units($filter: Filter!) {
+      orders(filter: $filter) {
+        edges {
+          shipment {
+            orderId
+          }
+        }
+        pageInfo {
+          hasNextPage
+          hasPreviousPage
+          startCursor
+          endCursor
+        }
+      }
+    }
+    """;
+
+Map<String, Object> filter = Map.of(
+        "filter", Map.of(
+                "tenantId", 1,
+                "where", Map.of(
+                        "attrExpr", Map.of(
+                                "attr", "ORDER_ID",
+                                "op", "EQ",
+                                "value", "*order id 2*"
+                        )
+                )
+        )
+);
+        
+ExecutionResult result = graphQL.execute(
+        ExecutionInput.newExecutionInput()
+                .query(query)
+                .variables(filter)
+                .build());
+
+System.out.println((Object) result.getData());
+```
+Result:
+```
+{orders={edges=[{shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}, {shipment={orderId=*order id 2*}}], pageInfo={hasNextPage=false, hasPreviousPage=false, startCursor=0, endCursor=0}}}
+```
+
+## Example in Java of creating objects and querying:
 ```java
     public void createAUnitAndAssignAttributes() {
         Repository repo = RepositoryFactory.getRepository();
