@@ -136,21 +136,21 @@ class AttributeConfigurator {
                                     pStmt.setInt(2, attrType);
                                 }
 
-                                // 3: vector -------------------------------------------------------
-                                boolean isVector = false;
-                                arg = enumValueDirective.getArgument("vector");
+                                // 3: array -------------------------------------------------------
+                                boolean isArray = false;
+                                arg = enumValueDirective.getArgument("array");
                                 if (null != arg) {
-                                    // NOTE: 'vector' is optional
+                                    // NOTE: 'array' is optional
                                     BooleanValue vector = (BooleanValue) arg.getValue();
-                                    isVector = vector.isValue();
+                                    isArray = vector.isValue();
 
                                     pStmt.setBoolean(3, !vector.isValue()); // Note: negation
 
                                     info += ", " + arg.getName();
                                     info += "=" + vector.isValue();
                                 } else {
-                                    // default vector
-                                    pStmt.setBoolean(3, !isVector); // Note: negation
+                                    // default array
+                                    pStmt.setBoolean(3, !isArray); // Note: negation
                                 }
 
                                 // 4: attribute name in ipto (i.e. an alias) --------------------------
@@ -209,10 +209,10 @@ class AttributeConfigurator {
 
                                     ExistingAttributeMeta existingAttribute = existingAttributes.get(qualName);
                                     if (null != existingAttribute) {
-                                        log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, org.gautelis.repo.model.attributes.Type.of(attrType), isVector);
+                                        log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, org.gautelis.repo.model.attributes.Type.of(attrType), isArray);
 
                                         // This attribute has already been loaded -- check similarity
-                                        if (existingAttribute.vector != isVector) {
+                                        if (existingAttribute.vector != isArray) {
                                             log.warn("Failed to load attribute {}. New definition differs on existing 'dimensionality' (vector) {} -- skipping", qualName, existingAttribute.vector);
                                             continue;
                                         }
@@ -242,7 +242,7 @@ class AttributeConfigurator {
                                     //
                                     // We need to be able to look up attributes both from a schema viewpoint
                                     // (name in schema) as well as from an IPTO viewpoint (name in IPTO).
-                                    Configurator.ProposedAttributeMeta attributeMeta = new Configurator.ProposedAttributeMeta(attrId, nameInSchema, attrType, isVector, nameInIpto, qualName, description);
+                                    Configurator.ProposedAttributeMeta attributeMeta = new Configurator.ProposedAttributeMeta(attrId, nameInSchema, attrType, isArray, nameInIpto, qualName, description);
                                     attributesSchemaView.put(nameInSchema, attributeMeta);
                                     attributesIptoView.put(attrId, attributeMeta);
 
