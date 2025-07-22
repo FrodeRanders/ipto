@@ -276,7 +276,7 @@ Result:
 
 ## Database
 The data model governed by this framework:
-![Image](doc/repo.png)
+![Image](doc/system/images/datamodel.png)
 
 ## Setup
 The steps needed in order to fetch, start and configure PostgreSQL to run in a Docker container are 
