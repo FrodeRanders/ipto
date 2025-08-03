@@ -56,7 +56,6 @@ public class Configurator {
         AttributeConfigurator attributeLoader = new AttributeConfigurator(repo);
 
         try {
-            enum SchemaOperation {QUERY, MUTATION};
             Map<String, OperationsConfigurator.SchemaOperation> operations = new HashMap<>();
 
             Optional<SchemaDefinition> _schemaDefinition = registry.schemaDefinition();

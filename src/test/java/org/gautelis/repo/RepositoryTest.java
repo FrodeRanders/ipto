@@ -49,6 +49,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.Duration;
 import java.time.Instant;
@@ -104,37 +105,38 @@ public class RepositoryTest extends TestCase {
         graphQL = _graphQL.get();
     }
 
-    public void test1GraphQL() {
+    private long createUnit(int tenantId) {
         Repository repo = RepositoryFactory.getRepository();
+        Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
+
+        unit.withAttributeValue("dc:title", String.class, value -> {
+            value.add("abc");
+        });
+
+        unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
+            RecordAttribute recrd = new RecordAttribute(attr);
+
+            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+                value.add("*order id 1*");
+            });
+
+            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+                value.add(Instant.now());
+            });
+
+            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+                value.add(Math.PI);
+                value.add(Math.E);
+            });
+        });
+
+        repo.storeUnit(unit);
+        return unit.getUnitId();
+    }
+
+    public void test1GraphQL() {
         final int tenantId = 1;
-        long unitId;
-        {
-            Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
-
-            unit.withAttributeValue("dc:title", String.class, value -> {
-                value.add("abc");
-            });
-
-            unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                RecordAttribute recrd = new RecordAttribute(attr);
-
-                recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
-                    value.add("*order id 1*");
-                });
-
-                recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
-                    value.add(Instant.now());
-                });
-
-                recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
-                    value.add(Math.PI);
-                    value.add(Math.E);
-                });
-            });
-
-            repo.storeUnit(unit);
-            unitId = unit.getUnitId();
-        }
+        final long unitId = createUnit(tenantId);
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -185,35 +187,62 @@ public class RepositoryTest extends TestCase {
     }
 
     public void test2GraphQL() {
-        Repository repo = RepositoryFactory.getRepository();
-
         final int tenantId = 1;
-        {
-            Unit unit = repo.createUnit(tenantId, "graphql 'units' test");
+        final long unitId = createUnit(tenantId);
 
-            unit.withAttributeValue("dc:title", String.class, value -> {
-                value.add("abc");
-            });
+        String query = """
+            query Unit($id: UnitIdentification!) {
+              orderRaw(id: $id)
+            }
+            """;
+        log.info(query);
+        System.out.println(query);
 
-            unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                RecordAttribute recrd = new RecordAttribute(attr);
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(Map.of(
+                                        "id", Map.of(
+                                                "tenantId", tenantId,
+                                                "unitId",   unitId
+                                        )
+                                )
+                        )
+                        .build());
 
-                recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
-                    value.add("*order id 2*");
-                });
 
-                recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
-                    value.add(Instant.now());
-                });
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result (base64 encoded): {}", (Object) result.getData());
 
-                recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
-                    value.add(Math.PI);
-                    value.add(Math.E);
-                });
-            });
+            final Base64.Decoder DEC = Base64.getDecoder();
+            LinkedHashMap<String, String> map = result.getData();
+            String b64 = map.get("orderRaw");
+            String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 
-            repo.storeUnit(unit);
+            log.info("Result (String/JSON): {}", json);
+
+            System.out.print("--> ");
+            System.out.println(json);
+
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
         }
+        System.out.println("--------------------------------------------------------------");
+    }
+
+    public void test3GraphQL() {
+        final int tenantId = 1;
+        final long _unitId = createUnit(tenantId);
 
         String query = """
             query Units($filter: Filter!) {
@@ -278,7 +307,7 @@ public class RepositoryTest extends TestCase {
     }
 
     @SuppressWarnings("unchecked")
-    public void test3Record() {
+    public void test4Record() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
 

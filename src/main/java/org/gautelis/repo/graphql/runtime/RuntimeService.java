@@ -15,6 +15,7 @@ import org.gautelis.repo.utils.TimeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
@@ -57,6 +58,18 @@ public class RuntimeService {
         });
 
         return new /* outermost */ Box(tenantId, unitId, attributes);
+    }
+
+    public byte[] loadRawUnit(int tenantId, long unitId) {
+        log.trace("RuntimeService::loadRawUnit({}, {})", tenantId, unitId);
+
+        Optional<Unit> unit = repo.getUnit(tenantId, unitId);
+        if (unit.isEmpty()) {
+            return null;
+        }
+
+        String json = unit.get().asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false);
+        return json.getBytes(StandardCharsets.UTF_8);
     }
 
     public Object getArray(Box box, int attrId, boolean isMandatory) {

@@ -114,22 +114,42 @@ public class OperationsConfigurator {
                 switch (typeDef.typeName()) {
                     // "Hardcoded" point lookup for specific unit
                     case "UnitIdentification" -> {
-                        DataFetcher<?> unitById = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'fieldName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
-                            if (log.isTraceEnabled()) {
-                                log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument(inputName), resultType.typeName());
-                            }
+                        if (resultType.typeName().equals("Bytes")) {
+                            DataFetcher<?> rawUnitById = env -> {
+                                //**** Executed at runtime **********************************
+                                // My mission in life is to resolve a specific query
+                                // (the current 'fieldName').
+                                // Everything needed at runtime is accessible right
+                                // now so it is captured for later.
+                                //***********************************************************
+                                if (log.isTraceEnabled()) {
+                                    log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument(inputName), resultType.typeName());
+                                }
 
-                            UnitIdentification id = objectMapper.convertValue(env.getArgument(inputName), UnitIdentification.class);
-                            return repoService.loadUnit(id.tenantId(), id.unitId());
-                        };
+                                UnitIdentification id = objectMapper.convertValue(env.getArgument(inputName), UnitIdentification.class);
+                                return repoService.loadRawUnit(id.tenantId(), id.unitId());
+                            };
 
-                        runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitById));
+                            runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, rawUnitById));
+
+                        } else {
+                            DataFetcher<?> unitById = env -> {
+                                //**** Executed at runtime **********************************
+                                // My mission in life is to resolve a specific query
+                                // (the current 'fieldName').
+                                // Everything needed at runtime is accessible right
+                                // now so it is captured for later.
+                                //***********************************************************
+                                if (log.isTraceEnabled()) {
+                                    log.trace("{}::{}(id : {}) : {}", type.getName(), fieldName, env.getArgument(inputName), resultType.typeName());
+                                }
+
+                                UnitIdentification id = objectMapper.convertValue(env.getArgument(inputName), UnitIdentification.class);
+                                return repoService.loadUnit(id.tenantId(), id.unitId());
+                            };
+
+                            runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitById));
+                        }
                         log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, resultType.typeName());
                     }
 
