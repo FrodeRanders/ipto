@@ -28,7 +28,7 @@ CREATE OR REPLACE PROCEDURE ingest_unit_json (
 AS $$
 DECLARE
     v_tenantid   int         := (p_unit ->> 'tenantid')::int;
-    v_corrid     text        :=  p_unit ->> 'corrid';
+    v_corrid     uuid        := (p_unit ->> 'corrid')::uuid;
     v_status     int         := (p_unit ->> 'status')::int;
     v_name       text        :=  p_unit ->> 'name';
 
