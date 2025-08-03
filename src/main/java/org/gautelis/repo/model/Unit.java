@@ -89,7 +89,7 @@ public class Unit implements Cloneable {
     // Unit information
     protected int tenantId;
     protected long unitId;
-    protected String corrId;
+    protected UUID corrId;
     protected String name = null;
     protected Status status;
     protected Instant createdTime = null;
@@ -121,7 +121,7 @@ public class Unit implements Cloneable {
         //
         this.tenantId = tenantId;
         this.unitId = -1L; // assigned first when stored
-        this.corrId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+        this.corrId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
         this.name = null != name ? name.trim() : null;
         this.status = Status.EFFECTIVE;
 
@@ -285,7 +285,7 @@ public class Unit implements Cloneable {
         } else {
             unitNode.putNull("unitid");
         }
-        unitNode.put("corrid", corrId);
+        unitNode.put("corrid", corrId.toString());
         unitNode.put("status", status.getStatus());
         unitNode.put("name",   name);
         unitNode.put("created", createdTime != null ? createdTime.toString() : null);
@@ -436,7 +436,7 @@ public class Unit implements Cloneable {
             // Read kernel information
             tenantId = rs.getInt("tenantid");
             unitId = rs.getLong("unitid");
-            corrId = rs.getString("corrid");
+            corrId = rs.getObject("corrid", UUID.class);
             name = rs.getString("name");
             if (rs.wasNull()) {
                 name = null; // to ensure we don't end up with 'NULL' names
@@ -456,7 +456,7 @@ public class Unit implements Cloneable {
             // unit
             tenantId = root.path("tenant").asInt();
             unitId = root.path("unitid").asLong();
-            corrId = root.path("corrid").asText();
+            corrId = UUID.fromString(root.path("corrid").asText());
             if (root.hasNonNull("name")) {
                 name = root.path("name").asText();
             } else {
@@ -1180,7 +1180,7 @@ public class Unit implements Cloneable {
     /**
      * Gets the correlation id of this unit
      */
-    public String getCorrId() {
+    public UUID getCorrId() {
         return corrId;
     }
 
