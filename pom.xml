@@ -16,11 +16,11 @@
     <maven.compiler.source>21</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <postgresql.version>42.7.7</postgresql.version>
-    <jackson.version>2.19.1</jackson.version>
-    <graphql-java.version>24.1</graphql-java.version>
+    <jackson.version>2.19.2</jackson.version>
+    <graphql-java.version>24.2</graphql-java.version>
     <guid-gen.version>5.1.0</guid-gen.version>
-    <hikari.version>6.3.0</hikari.version>
-    <log4j.version>2.24.3</log4j.version>
+    <hikari.version>7.0.0</hikari.version>
+    <log4j.version>2.25.1</log4j.version>
     <slf4j.version>2.0.17</slf4j.version>
     <vopn.version>2.4-SNAPSHOT</vopn.version> <!-- sibling project -->
   </properties>
