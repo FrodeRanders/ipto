@@ -20,28 +20,39 @@ public class TimedExecution {
 
     private TimedExecution() {}
 
-    public static <T> T run(final MovingAverage movingAverage, RepoRunnable<T> runnable) {
-        long startTime = System.currentTimeMillis();
-        T t = runnable.run();
-        long endTime = System.currentTimeMillis();
-        movingAverage.update(endTime - startTime);
-        return t;
+    public static <T> T run(final MovingAverage movingAverage, RepoRunnable<T> task) {
+        long t0 = System.nanoTime();
+        try {
+            return task.run();
+        } finally {
+            long elapsedNanos = System.nanoTime() - t0;
+
+            // double elapsedMicros = elapsedNanos / 1_000.0;
+            double elapsedMillis = elapsedNanos / 1_000_000.0;
+            movingAverage.update(elapsedMillis);
+        }
     }
 
-    public static <T> T run(final TimingData timingData, String timing, RepoRunnable<T> runnable) {
+    public static <T> T run(final TimingData timingData, String timing, RepoRunnable<T> task) {
         MovingAverage ma = timingData.computeIfAbsent(timing, k -> new MovingAverage());
-        return run(ma, runnable);
+        return run(ma, task);
     }
 
-    public static void run(final MovingAverage movingAverage, Runnable runnable) {
-        long startTime = System.currentTimeMillis();
-        runnable.run();
-        long endTime = System.currentTimeMillis();
-        movingAverage.update(endTime - startTime);
+    public static void run(final MovingAverage movingAverage, Runnable task) {
+        long t0 = System.nanoTime();
+        try {
+            task.run();
+        } finally {
+            long elapsedNanos = System.nanoTime() - t0;
+
+            // double elapsedMicros = elapsedNanos / 1_000.0;
+            double elapsedMillis = elapsedNanos / 1_000_000.0;
+            movingAverage.update(elapsedMillis);
+        }
     }
 
-    public static void run(final TimingData timingData, String timing, Runnable runnable) {
+    public static void run(final TimingData timingData, String timing, Runnable task) {
         MovingAverage ma = timingData.computeIfAbsent(timing, k -> new MovingAverage());
-        run(ma, runnable);
+        run(ma, task);
     }
 }

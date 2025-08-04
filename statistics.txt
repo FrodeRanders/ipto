@@ -497,3 +497,24 @@ fetch known attributes |      1 |  2,00 |   2,00 |     2,00 |      0,00 |       
             store unit |    552 |  0,00 |  32,00 |     1,00 |    158,94 |         553 | 553ms
 
 
+2025-08-04 13:52:29.677: 
+===================================================================================================
+OS: Mac OS X 15.5 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=1 792 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.4+7-LTS) mem-total=64 MiB mem-free=39 MiB
+
+Units: total=20498 locks=0 vectors=113590
+Values: string=79883 time=37148 integer=0 long=0 double=37296 boolean=0 data=0 record=55944
+Assocs: internal=0 external=0
+
+2025-08-04 13:52:29.679: 
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+           Measurement |  Count |   Min |    Max |  Average |  Variance |  Total time i.e.
+-----------------------+--------+-------+--------+----------+-----------+-------------+-------
+ fetch unit attributes |     78 |  0,18 |  25,44 |     4,21 |    142,58 |         316 | 316ms
+        resurrect unit |     24 |  0,34 |   3,80 |     0,65 |    107,38 |          13 |  13ms
+         custom search |      2 |  3,22 |  16,58 |     9,90 |     95,39 |          20 |  20ms
+fetch known attributes |      1 |  1,43 |   1,43 |     1,43 |      0,00 |           1 |   1ms
+            store unit |    554 |  0,46 |  20,22 |     0,77 |    111,11 |         572 | 572ms
+
+
