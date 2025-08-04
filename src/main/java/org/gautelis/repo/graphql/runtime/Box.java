@@ -1,5 +1,6 @@
 package org.gautelis.repo.graphql.runtime;
 
+import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,11 @@ public class Box {
         this.tenantId = tenantId;
         this.unitId = unitId;
         this.attributes = attributes;
+    }
+
+    /* package accessible only */
+    Box(Unit unit, Map<Integer, Attribute<?>> attributes) {
+        this(Objects.requireNonNull(unit).getTenantId(), unit.getUnitId(), attributes);
     }
 
     /* package accessible only */

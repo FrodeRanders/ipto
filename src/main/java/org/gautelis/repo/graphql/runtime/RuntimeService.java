@@ -53,7 +53,7 @@ public class RuntimeService {
             int attrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
 
-            log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
             attributes.put(attributeMeta.attrId(), attr);
         });
 
@@ -102,7 +102,7 @@ public class RuntimeService {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
 
-            log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
@@ -143,7 +143,7 @@ public class RuntimeService {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
 
-            log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
+            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
@@ -161,8 +161,6 @@ public class RuntimeService {
 
         SearchExpression expr = assembleConstraints(filter);
 
-        Map<Integer, Attribute<?>> attributes = new HashMap<>();
-
         // Result set constraints (paging)
         SearchOrder order = SearchOrder.orderByUnitId(true); // ascending on unit id
         UnitSearch usd = new UnitSearch(expr, order, filter.offset(), filter.size());
@@ -170,7 +168,7 @@ public class RuntimeService {
         // Build SQL statement for search
         DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
 
-        Collection<Unit.Id> unitId = new ArrayList<>();
+        Collection<Unit.Id> ids = new ArrayList<>();
         try {
             repo.withConnection(conn -> searchAdapter.search(conn, usd, repo.getTimingData(), rs -> {
                 while (rs.next()) {
@@ -180,7 +178,7 @@ public class RuntimeService {
                     Timestamp _created = rs.getTimestamp(++j);
 
                     log.debug("Found: tenantId=" + _tenantId + " unitId=" + _unitId + " created=" + _created);
-                    unitId.add(new Unit.Id(_tenantId, _unitId));
+                    ids.add(new Unit.Id(_tenantId, _unitId));
                 }
             }));
         } catch (SQLException sqle) {
@@ -188,22 +186,24 @@ public class RuntimeService {
             return List.of();
         }
 
-        if (unitId.isEmpty()) {
+        if (ids.isEmpty()) {
             return List.of();
         } else {
             List<Box> units = new ArrayList<>();
-            for (Unit.Id id : unitId) {
+            for (Unit.Id id : ids) {
+                log.trace("Fetching unit {}", id);
                 try {
                     Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
                     if (_unit.isPresent()) {
                         Unit unit = _unit.get();
-                        for (Attribute<?> attr : unit.getAttributes()) {
-                            int attrId = attr.getAttrId();
-                            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
-                            attributes.put(attributeMeta.attrId(), attr);
-                        }
+                        Map<Integer, Attribute<?>> attributes = new HashMap<>(); // because organized by name in Unit (instead of attribute id)
 
-                        units.add(new /* outermost */ Box(unit.getTenantId(), unit.getUnitId(), attributes));
+                        for (Attribute<?> attr : unit.getAttributes()) {
+                            log.trace("Unit {} attribute {}", id, attr);
+                            attributes.put(attr.getAttrId(), attr);
+                        }
+                        units.add(new /* outermost */ Box(unit, attributes));
+
                     } else {
                         log.error("Unknown unit: {}", id);
                     }

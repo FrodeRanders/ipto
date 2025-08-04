@@ -105,7 +105,7 @@ public class RepositoryTest extends TestCase {
         graphQL = _graphQL.get();
     }
 
-    private long createUnit(int tenantId) {
+    private long createUnit(int tenantId, String aSpecificString, Instant aSpecificInstant) {
         Repository repo = RepositoryFactory.getRepository();
         Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
 
@@ -117,11 +117,11 @@ public class RepositoryTest extends TestCase {
             RecordAttribute recrd = new RecordAttribute(attr);
 
             recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
-                value.add("*order id 1*");
+                value.add(aSpecificString);
             });
 
             recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
-                value.add(Instant.now());
+                value.add(aSpecificInstant);
             });
 
             recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
@@ -134,9 +134,40 @@ public class RepositoryTest extends TestCase {
         return unit.getUnitId();
     }
 
+    private void dumpMap(Map<String, ?> root) {
+        dump(root, 0);
+        System.out.println();
+    }
+
+    private void dump(Object obj, int depth) {
+        String indent = "  ".repeat(depth);
+
+        if (obj instanceof Map<?, ?> map) {
+            map.forEach((k, v) -> {
+                System.out.println();
+                System.out.print(indent + k + ":");
+                dump(v, depth + 1);
+            });
+
+        } else if (obj instanceof Collection<?> col) {
+            System.out.println();
+            System.out.print(indent + "[");
+            for (Object item : col) {
+                dump(item, depth + 1);
+                System.out.println();
+                System.out.print(indent + ",");
+            }
+            System.out.println();
+            System.out.print(indent + "]");
+
+        } else {
+            System.out.print(" " + obj);
+        }
+    }
+
     public void test1GraphQL() {
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId);
+        final long unitId = createUnit(tenantId, "*order id 1*", Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -168,8 +199,9 @@ public class RepositoryTest extends TestCase {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             log.info("Result: {}", (Object) result.getData());
+
             System.out.print("--> ");
-            System.out.println((Object) result.getData());
+            dumpMap(result.getData());
 
         } else {
             for (GraphQLError error : errors) {
@@ -188,7 +220,7 @@ public class RepositoryTest extends TestCase {
 
     public void test2GraphQL() {
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId);
+        final long unitId = createUnit(tenantId, "*order id 2*", Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -213,13 +245,13 @@ public class RepositoryTest extends TestCase {
 
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
-            log.info("Result (base64 encoded): {}", (Object) result.getData());
+            Map<String, String> map = result.getData();
+            String b64 = map.get("orderRaw"); // name same as fieldname in query type
 
             final Base64.Decoder DEC = Base64.getDecoder();
-            LinkedHashMap<String, String> map = result.getData();
-            String b64 = map.get("orderRaw");
             String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 
+            log.info("Result (base64 encoded): {}", b64);
             log.info("Result (String/JSON): {}", json);
 
             System.out.print("--> ");
@@ -242,7 +274,8 @@ public class RepositoryTest extends TestCase {
 
     public void test3GraphQL() {
         final int tenantId = 1;
-        final long _unitId = createUnit(tenantId);
+        final String specificString = "*order id 3*";
+        final long _unitId = createUnit(tenantId, specificString, Instant.now());
 
         String query = """
             query Units($filter: Filter!) {
@@ -250,6 +283,7 @@ public class RepositoryTest extends TestCase {
                 edges {
                   shipment {
                     orderId
+                    deadline
                   }
                 }
                 pageInfo {
@@ -268,7 +302,7 @@ public class RepositoryTest extends TestCase {
             "attrExpr", Map.of(
                         "attr", "ORDER_ID",
                         "op", "EQ",
-                        "value", "*order id 2*"
+                        "value", specificString
                     )
         );
 
@@ -288,8 +322,9 @@ public class RepositoryTest extends TestCase {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             log.info("Result: {}", (Object) result.getData());
+
             System.out.print("--> ");
-            System.out.println((Object) result.getData());
+            dumpMap(result.getData());
 
         } else {
             for (GraphQLError error : errors) {
