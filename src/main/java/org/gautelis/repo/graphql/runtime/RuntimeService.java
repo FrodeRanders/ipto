@@ -83,7 +83,7 @@ public class RuntimeService {
             return null;
         }
 
-        ArrayList<?> values = attribute.getValue();
+        ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             if (isMandatory) {
                 log.info("Mandatory value(s) for attribute {} not present", attrId);
@@ -97,7 +97,7 @@ public class RuntimeService {
 
         Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
 
-        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValue();
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
@@ -124,7 +124,7 @@ public class RuntimeService {
             return null;
         }
 
-        ArrayList<?> values = attribute.getValue();
+        ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             if (isMandatory) {
                 log.info("Mandatory value(s) for attribute {} not present", attrId);
@@ -138,7 +138,7 @@ public class RuntimeService {
 
         Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
 
-        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValue();
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
@@ -199,7 +199,7 @@ public class RuntimeService {
                         Map<Integer, Attribute<?>> attributes = new HashMap<>(); // because organized by name in Unit (instead of attribute id)
 
                         for (Attribute<?> attr : unit.getAttributes()) {
-                            log.trace("Unit {} attribute {}", id, attr);
+                            log.trace("Unit {} {}", id, attr);
                             attributes.put(attr.getAttrId(), attr);
                         }
                         units.add(new /* outermost */ Box(unit, attributes));

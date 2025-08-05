@@ -17,17 +17,22 @@
 package org.gautelis.repo.model.attributes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
 
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.*;
+import java.util.stream.Collectors;
 
-final class RecordValue extends Value<Attribute<?>> {
+public final class RecordValue extends Value<Attribute<?>> {
 
     /* package accessible only */
     final static String COLUMN_NAME = "record_val";
+
+    public record AttributeReference(int refAttrId, long refValueId) {}
+    private final Collection<AttributeReference> initialReferences = new ArrayList<>();
 
     /**
      * Creates a <I>new</I> long value
@@ -41,6 +46,7 @@ final class RecordValue extends Value<Attribute<?>> {
      */
     RecordValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -48,6 +54,10 @@ final class RecordValue extends Value<Attribute<?>> {
      */
     RecordValue(ResultSet rs) throws DatabaseReadException {
         super(rs);
+    }
+
+    public Collection<AttributeReference> getInitialReferences() {
+        return initialReferences;
     }
 
     /**
@@ -62,7 +72,29 @@ final class RecordValue extends Value<Attribute<?>> {
 
     /* package accessible only */
     void inflate(ArrayNode node) {
-        // TODO, if we go through with JSON loading
+        /*
+         * 'node' structure:
+         * [
+         *    {"ref_attrid":1001,"ref_valueid":49132},
+         *    {"ref_attrid":1002,"ref_valueid":49133},
+         *    {"ref_attrid":1003,"ref_valueid":49134}
+         * ]
+         *
+         * If we go through with JSON loading, these values
+         * are actually referring to attributes that will
+         * be instantiated soon -- so just to be clear,
+         * they don't exist yet.
+         *
+         * Therefore, there is nothing to be done and
+         * the values have to be "injected" one-by-one
+         * as they are later instantiated.
+         */
+
+        for (JsonNode element : node) {
+            int refAttrId = element.get("ref_attrid").asInt();
+            long refValueId = element.get("ref_valueid").asLong();
+            initialReferences.add(new AttributeReference(refAttrId, refValueId));
+        }
     }
 
     @Override
@@ -97,7 +129,7 @@ final class RecordValue extends Value<Attribute<?>> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode attributes,
             ObjectNode attributeNode,
             boolean complete,
@@ -131,5 +163,19 @@ final class RecordValue extends Value<Attribute<?>> {
                 }
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder result = new StringBuilder();
+        if (!initialReferences.isEmpty()) {
+            result.append("[");
+            result.append(initialReferences.stream()
+                    .map(ref -> "#" + ref.refAttrId + ":" + ref.refValueId)
+                    .collect(Collectors.joining(", ")));
+            result.append("]+");
+        }
+        result.append(values);
+        return result.toString();
     }
 }

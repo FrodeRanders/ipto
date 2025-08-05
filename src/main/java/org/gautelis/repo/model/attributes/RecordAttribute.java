@@ -44,13 +44,13 @@ public class RecordAttribute {
 
     public <A> void withNestedAttributeValue(Unit unit, String name, Class<A> type, AttributeValueRunnable<A> runnable) {
         withNestedAttribute(unit, name, type, attr -> {
-            ArrayList<A> value = attr.getValue();
+            ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
     }
 
     public ArrayList<Attribute<?>> getValue() {
-        return delegate.getValue();
+        return delegate.getValueVector();
     }
 
     @Override

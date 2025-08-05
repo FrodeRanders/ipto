@@ -454,7 +454,7 @@ public class Unit implements Cloneable {
             JsonNode root = MAPPER.readTree(json);
 
             // unit
-            tenantId = root.path("tenant").asInt();
+            tenantId = root.path("tenantid").asInt();
             unitId = root.path("unitid").asLong();
             corrId = UUID.fromString(root.path("corrid").asText());
             if (root.hasNonNull("name")) {
@@ -469,13 +469,30 @@ public class Unit implements Cloneable {
             if (attributes == null) {
                 attributes = new HashMap<>();
 
+                // Lookup table: valueid -> attribute
+                Map<Long, Attribute<?>> valueIdToAttribute = new HashMap<>();
+
                 ArrayNode attributeNodes = (ArrayNode) root.path("attributes");
                 for (JsonNode node : attributeNodes) {
                     Attribute<?> attribute = new Attribute<>(node);
+                    valueIdToAttribute.put(attribute.getValueId(), attribute);
 
-                    if (log.isTraceEnabled()) {
-                        log.trace("Inflated {}", attribute);
+                    if (Type.RECORD.equals(attribute.getType())) {
+                        if (attribute.getValue() instanceof RecordValue recValue) {
+                            Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
+                            Iterator<RecordValue.AttributeReference> rit = refs.iterator();
+                            while (rit.hasNext()) {
+                                RecordValue.AttributeReference ref = rit.next();
+                                Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
+                                if (null != referredAttribute) {
+                                    recValue.set(referredAttribute);
+                                    rit.remove();
+                                }
+                            }
+                        }
                     }
+
+                    log.debug("Inflated {}", attribute);
 
                     // Associate attribute with name in hashtable
                     attributes.put(attribute.getName(), attribute);
@@ -537,8 +554,14 @@ public class Unit implements Cloneable {
 
         // Ignore request if we have already loaded our attributes
         if (attributes == null) {
-            log.trace("Fetching attributes for unit {}", getReference());
-            TimedExecution.run(ctx.getTimingData(), "fetch unit attributes", () -> Database.useReadonlyConnection(ctx.getDataSource(), this::fetchAttributes));
+            if (isNew) {
+                // Not yet stored
+                attributes = new HashMap<>();
+
+            } else {
+                log.trace("Fetching attributes for unit {}", getReference());
+                TimedExecution.run(ctx.getTimingData(), "fetch unit attributes", () -> Database.useReadonlyConnection(ctx.getDataSource(), this::fetchAttributes));
+            }
         }
         return attributes;
     }
@@ -596,7 +619,7 @@ public class Unit implements Cloneable {
                 // must not advance the pointer further here.
                 //
                 // The following construction is used to allow Value<?> to
-                // peek at the next row in the resultset, in order to deterimine
+                // peek at the next row in the resultset, in order to determine
                 // whether it may continue.
                 //
                 // If, after peeking in Value<?>, we want to continue with the
@@ -622,16 +645,20 @@ public class Unit implements Cloneable {
                         Attribute<?> parent = valueIdToAttribute.get(parentValueid);
                         if (null == parent) {
                             // Unexpected
-                            log.error("Could not find parent attribute for value id {}", parentValueid);
-                            throw new AttributeValueException("Could not find parent attribute for value id " + parentValueid);
+                            String info = "Could not find parent attribute for value with id " + parentValueid;
+                            log.error(info);
+                            throw new AttributeValueException(info);
                         }
                         if (parent.getType() != Type.RECORD) {
                             // Unexpected
-                            log.error("Parent attribute is not record: {}", parent);
-                            throw new AttributeValueException("Parent attribute is not record: " + parentValueid);
+                            String info = "Parent attribute is not a record: type=" + parent.getType().name();
+                            info += ", attrId=" + parent.getAttrId();
+                            info += ", valueId=" + parentValueid;
+                            log.error(info);
+                            throw new AttributeValueException(info);
                         }
 
-                        ArrayList<Attribute<?>> nestedAttributes = ((Attribute<Attribute<?>>) parent).getValue();
+                        ArrayList<Attribute<?>> nestedAttributes = ((Attribute<Attribute<?>>) parent).getValueVector();
                         nestedAttributes.add(attribute);
                     } else {
                         // This attribute is not nested, so we associate attribute
@@ -780,7 +807,7 @@ public class Unit implements Cloneable {
 
     public <A> void withAttributeValue(String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
         withAttribute(name, expectedClass, createIfMissing, attr -> {
-            ArrayList<A> value = attr.getValue();
+            ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
     }
@@ -792,7 +819,7 @@ public class Unit implements Cloneable {
 
     public <A> void withAttributeValue(String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
         withAttribute(name, expectedClass, true, attr -> {
-            ArrayList<A> value = attr.getValue();
+            ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
     }
@@ -801,7 +828,7 @@ public class Unit implements Cloneable {
     public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Objects.requireNonNull(recordAttribute, "recordAttribute");
 
-        ArrayList<Attribute<?>> values = recordAttribute.getValue();
+        ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
         for (Attribute<?> attribute : values) {
             // This scales reasonably well with a 'reasonable' number of nested attributes :)
             if (attribute.getName().equals(name)) {
@@ -839,7 +866,7 @@ public class Unit implements Cloneable {
 
     public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
         withAttribute(recordAttribute, name, expectedClass, createIfMissing, attr -> {
-            ArrayList<A> value = attr.getValue();
+            ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
     }
@@ -850,7 +877,7 @@ public class Unit implements Cloneable {
 
     public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
         withAttribute(recordAttribute, name, expectedClass, true, attr -> {
-            ArrayList<A> value = attr.getValue();
+            ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
     }

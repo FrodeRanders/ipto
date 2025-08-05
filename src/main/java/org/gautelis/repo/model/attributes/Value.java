@@ -27,6 +27,8 @@ import org.slf4j.LoggerFactory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Map;
+import java.util.Optional;
 
 public abstract class Value<T> {
     static final Logger log = LoggerFactory.getLogger(Value.class);
@@ -54,8 +56,6 @@ public abstract class Value<T> {
      */
     protected Value(ArrayNode node) throws JsonProcessingException {
         isNew = false;
-
-        inflate(node);
 
         // Mark current status, so we can detect changes later...
         initialHashCode = values.hashCode();
@@ -147,24 +147,7 @@ public abstract class Value<T> {
             case DOUBLE -> new DoubleValue((ArrayNode) node.get(DoubleValue.COLUMN_NAME));
             case BOOLEAN -> new BooleanValue((ArrayNode) node.get(BooleanValue.COLUMN_NAME));
             case DATA -> new DataValue((ArrayNode) node.get(DataValue.COLUMN_NAME));
-
-            /*
-             case RECORD:
-                ArrayNode idArr  = (ArrayNode) aNode.get("ref_attrids");
-                ArrayNode valArr = (ArrayNode) aNode.get("ref_valueids");
-                List<CompoundRef> list = new ArrayList<>();
-                for (int i = 0; i < (idArr == null ? 0 : idArr.size()); i++) {
-                    int    rid = idArr.get(i).asInt();
-                    long   vid = valArr.get(i).isNull() ? -1
-                            : valArr.get(i).asLong();
-                    list.add(new CompoundRef(rid, vid));
-                }
-                attr = new Attribute<>(attrId, attrType, new CompoundValue(list));
-            }
-            //case RECORD -> new CompoundValue((ArrayNode) node.get(CompoundValue.COLUMN_NAME));
-            */
-            default ->
-                    throw new IllegalArgumentException("Value type not implemented: " + type);
+            case RECORD -> new RecordValue((ArrayNode) node.get(RecordValue.COLUMN_NAME));
         };
 
         //noinspection unchecked
@@ -308,7 +291,7 @@ public abstract class Value<T> {
     public abstract void set(T value);
 
     /* package accessible only */
-    abstract void injectJson(
+    abstract void toJson(
             ArrayNode attributes, ObjectNode attributeNode, boolean complete, boolean flat
     ) throws AttributeTypeException, AttributeValueException;
 

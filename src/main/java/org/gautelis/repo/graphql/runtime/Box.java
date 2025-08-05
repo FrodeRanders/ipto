@@ -54,7 +54,7 @@ public class Box {
             return null;
         }
 
-        ArrayList<?> values = attribute.getValue();
+        ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             return null;
         }
@@ -70,7 +70,7 @@ public class Box {
             return List.of();
         }
 
-        ArrayList<?> values = attribute.getValue();
+        ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             return List.of();
         }

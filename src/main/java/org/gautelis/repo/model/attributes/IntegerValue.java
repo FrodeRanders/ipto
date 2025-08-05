@@ -47,6 +47,7 @@ final class IntegerValue extends Value<Integer> {
      */
     IntegerValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -121,7 +122,7 @@ final class IntegerValue extends Value<Integer> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode ignored,
             ObjectNode attributeNode,
             boolean complete,

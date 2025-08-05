@@ -114,7 +114,14 @@ public class Attribute<T> {
     /**
      * Gets attribute value (vector).
      */
-    public ArrayList<T> getValue() {
+    public Value<T> getValue() {
+        return value;
+    }
+
+    /**
+     * Gets attribute value (vector).
+     */
+    public ArrayList<T> getValueVector() {
         return value.get();
     }
 
@@ -143,8 +150,7 @@ public class Attribute<T> {
         return id;
     }
 
-    /* package accessible only */
-    long getValueId() {
+    public long getValueId() {
         return valueId;
     }
 
@@ -174,7 +180,7 @@ public class Attribute<T> {
             attributes = attributeNode.putArray("attributes");
         }
 
-        value.injectJson(attributes, attributeNode, complete, flat);
+        value.toJson(attributes, attributeNode, complete, flat);
     }
 
     private void readEntry(JsonNode node) throws JsonProcessingException {

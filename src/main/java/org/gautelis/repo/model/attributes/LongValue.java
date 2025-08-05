@@ -47,6 +47,7 @@ final class LongValue extends Value<Long> {
      */
     LongValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -121,7 +122,7 @@ final class LongValue extends Value<Long> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode ignored,
             ObjectNode attributeNode,
             boolean complete,

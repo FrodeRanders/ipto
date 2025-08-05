@@ -40,6 +40,7 @@ final class StringValue extends Value<String> {
      */
     StringValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -115,7 +116,7 @@ final class StringValue extends Value<String> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode ignored,
             ObjectNode attributeNode,
             boolean complete,

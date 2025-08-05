@@ -46,6 +46,7 @@ final class BooleanValue extends Value<Boolean> {
      */
     BooleanValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -120,7 +121,7 @@ final class BooleanValue extends Value<Boolean> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode ignored,
             ObjectNode attributeNode,
             boolean complete,

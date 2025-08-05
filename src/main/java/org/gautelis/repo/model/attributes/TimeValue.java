@@ -48,6 +48,7 @@ final class TimeValue extends Value<Instant> {
      */
     TimeValue(ArrayNode node) throws JsonProcessingException {
         super(node);
+        inflate(node);
     }
 
     /**
@@ -126,7 +127,7 @@ final class TimeValue extends Value<Instant> {
     }
 
     /* package accessible only */
-    void injectJson(
+    void toJson(
             ArrayNode ignored,
             ObjectNode attributeNode,
             boolean complete,
