@@ -215,6 +215,7 @@ type Query {
     order(id : UnitIdentification!) : PurchaseOrder
     orderRaw(id : UnitIdentification!) : Bytes
     orders(filter: Filter!) : PurchaseOrderConnection!
+    ordersRaw(filter: Filter!) : Bytes
 }
 
 ##############  Mutations ###########################################

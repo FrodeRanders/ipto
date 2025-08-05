@@ -100,7 +100,7 @@ public final class UnitFactory {
 
         } else {
             // This pulls attributes as well as unit, as opposed to classic load, but saves
-            // the extra step of later having to pull attributes. 
+            // the extra step of later having to pull attributes.
             String sql = "SELECT export_unit_json(?, ?) AS unit_json";
 
             Unit[] unit = { null };

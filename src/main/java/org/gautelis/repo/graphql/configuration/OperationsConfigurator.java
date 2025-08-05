@@ -155,35 +155,55 @@ public class OperationsConfigurator {
 
                     //
                     case "Filter" -> {
-                        DataFetcher<?> unitByFilter = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'fieldName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
-                            Map<String, Object> args = env.getArguments();
-                            if (log.isTraceEnabled()) {
-                                log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, resultType.typeName());
-                            }
-                            // Query::units({filter={tenantId=1, where={attrExpr={attr=ORDER_ID, op=EQ, value=*order id 2*}}, first=20}}) : PurchaseOrderConnection
+                        if (resultType.typeName().equals("Bytes")) {
+                            DataFetcher<?> rawUnitsByFilter = env -> {
+                                //**** Executed at runtime **********************************
+                                // My mission in life is to resolve a specific query
+                                // (the current 'fieldName').
+                                // Everything needed at runtime is accessible right
+                                // now so it is captured for later.
+                                //***********************************************************
+                                Map<String, Object> args = env.getArguments();
+                                if (log.isTraceEnabled()) {
+                                    log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, resultType.typeName());
+                                }
 
-                            Filter filter = objectMapper.convertValue(env.getArgument(inputName), Filter.class);
-                            log.trace("ARGS: filter = {}", filter);
+                                Filter filter = objectMapper.convertValue(env.getArgument(inputName), Filter.class);
 
-                            List<Box> edges = repoService.search(filter);
-                            return Map.of(
-                                    "edges", edges,
-                                    "pageInfo", Map.of(
-                                            "hasNextPage", false,
-                                            "hasPreviousPage", false,
-                                            "startCursor", "0",
-                                            "endCursor", "0"
-                                    )
-                            );
-                        };
+                                return repoService.searchRaw(filter);
+                            };
 
-                        runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitByFilter));
+                            runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, rawUnitsByFilter));
+
+                        } else {
+                            DataFetcher<?> unitsByFilter = env -> {
+                                //**** Executed at runtime **********************************
+                                // My mission in life is to resolve a specific query
+                                // (the current 'fieldName').
+                                // Everything needed at runtime is accessible right
+                                // now so it is captured for later.
+                                //***********************************************************
+                                Map<String, Object> args = env.getArguments();
+                                if (log.isTraceEnabled()) {
+                                    log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, resultType.typeName());
+                                }
+
+                                Filter filter = objectMapper.convertValue(env.getArgument(inputName), Filter.class);
+
+                                List<Box> edges = repoService.search(filter);
+                                return Map.of(
+                                        "edges", edges,
+                                        "pageInfo", Map.of(
+                                                "hasNextPage", false,
+                                                "hasPreviousPage", false,
+                                                "startCursor", "0",
+                                                "endCursor", "0"
+                                        )
+                                );
+                            };
+
+                            runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitsByFilter));
+                        }
                         log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, resultType.typeName());
                     }
                 }

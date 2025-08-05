@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class RuntimeService {
@@ -102,7 +103,6 @@ public class RuntimeService {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
 
-            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
@@ -142,8 +142,6 @@ public class RuntimeService {
         children.forEach(attr -> {
             int childAttrId = attr.getAttrId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
-
-            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
             attributeMap.put(attributeMeta.attrId(), attr);
         });
 
@@ -154,11 +152,7 @@ public class RuntimeService {
         return getScalar(box, attrId,false);
     }
 
-    public List<Box> search(OperationsConfigurator.Filter filter) {
-        log.trace("RuntimeService::search");
-
-        int tenantId = filter.tenantId();
-
+    private Collection<Unit.Id> search0(OperationsConfigurator.Filter filter) {
         SearchExpression expr = assembleConstraints(filter);
 
         // Result set constraints (paging)
@@ -186,12 +180,19 @@ public class RuntimeService {
             return List.of();
         }
 
+        return ids;
+    }
+
+    public List<Box> search(OperationsConfigurator.Filter filter) {
+        log.trace("RuntimeService::search");
+
+        Collection<Unit.Id> ids = search0(filter);
+
         if (ids.isEmpty()) {
             return List.of();
         } else {
             List<Box> units = new ArrayList<>();
             for (Unit.Id id : ids) {
-                log.trace("Fetching unit {}", id);
                 try {
                     Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
                     if (_unit.isPresent()) {
@@ -199,7 +200,6 @@ public class RuntimeService {
                         Map<Integer, Attribute<?>> attributes = new HashMap<>(); // because organized by name in Unit (instead of attribute id)
 
                         for (Attribute<?> attr : unit.getAttributes()) {
-                            log.trace("Unit {} {}", id, attr);
                             attributes.put(attr.getAttrId(), attr);
                         }
                         units.add(new /* outermost */ Box(unit, attributes));
@@ -213,6 +213,36 @@ public class RuntimeService {
             }
             return units;
         }
+    }
+
+    public byte[] searchRaw(OperationsConfigurator.Filter filter) {
+        log.trace("RuntimeService::searchRaw");
+
+        Collection<Unit.Id> ids = search0(filter);
+
+        List<Unit> units = new ArrayList<>();
+        for (Unit.Id id : ids) {
+            try {
+                Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
+                if (_unit.isPresent()) {
+                    Unit unit = _unit.get();
+
+                    units.add(unit);
+
+                } else {
+                    log.error("Unknown unit: {}", id);
+                }
+            } catch (Throwable t) {
+                log.error(t.getMessage(), t);
+            }
+        }
+
+        String json = "[";
+        json += units.stream()
+                .map(unit -> unit.asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false))
+                .collect(Collectors.joining(", "));
+        json += "]";
+        return json.getBytes(StandardCharsets.UTF_8);
     }
 
     /****************** Search related ******************/

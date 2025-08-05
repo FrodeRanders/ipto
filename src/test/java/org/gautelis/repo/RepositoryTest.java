@@ -341,8 +341,71 @@ public class RepositoryTest extends TestCase {
         System.out.println("--------------------------------------------------------------");
     }
 
+    public void test4GraphQL() {
+        final int tenantId = 1;
+        final String specificString = "*order id 3*";
+        final long _unitId = createUnit(tenantId, specificString, Instant.now());
+
+        String query = """
+            query Units($filter: Filter!) {
+              ordersRaw(filter: $filter)
+            }
+            """;
+        log.info(query);
+        System.out.println(query);
+
+        Map<String, Object> where = Map.of(
+                "attrExpr", Map.of(
+                        "attr", "ORDER_ID",
+                        "op", "EQ",
+                        "value", specificString
+                )
+        );
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(
+                                Map.of(
+                                        "filter", Map.of(
+                                                "tenantId", 1,
+                                                "where", where
+                                        )
+                                )
+                        )
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            Map<String, String> map = result.getData();
+            String b64 = map.get("ordersRaw"); // name same as fieldname in query type
+
+            final Base64.Decoder DEC = Base64.getDecoder();
+            String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+
+            log.info("Result (base64 encoded): {}", b64);
+            log.info("Result (String/JSON): {}", json);
+
+            System.out.print("--> ");
+            System.out.println(json);
+
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
+        }
+        System.out.println("--------------------------------------------------------------");
+    }
+
     @SuppressWarnings("unchecked")
-    public void test4Record() {
+    public void test5Record() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
 
@@ -372,13 +435,13 @@ public class RepositoryTest extends TestCase {
         repo.storeUnit(unit);
     }
 
-    public void test4Repository() {
+    public void test6Repository() {
         Repository repo = RepositoryFactory.getRepository();
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 5000; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = 50; //
+        final int numberOfChildren = 10; //
 
         try {
             Instant firstParentCreated = null;
