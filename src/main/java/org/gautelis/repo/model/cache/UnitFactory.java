@@ -99,7 +99,8 @@ public final class UnitFactory {
             return Optional.ofNullable(unit[0]);
 
         } else {
-            // This takes almost double the time as going with resultsets (above)
+            // This pulls attributes as well as unit, as opposed to classic load, but saves
+            // the extra step of later having to pull attributes. 
             String sql = "SELECT export_unit_json(?, ?) AS unit_json";
 
             Unit[] unit = { null };
