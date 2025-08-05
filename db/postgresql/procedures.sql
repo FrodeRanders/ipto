@@ -163,6 +163,7 @@ WITH unit_hdr AS (
      attrs AS (
          SELECT av.attrid,
                 a.attrtype,
+                a.attrname,
                 av.valueid,
 
                 -- one array per primitive type (NULL when not applicable)
@@ -236,6 +237,7 @@ SELECT jsonb_build_object(
                            jsonb_build_object(
                                    'attrid',       attrid,
                                    'attrtype',     attrtype,
+                                   'attrname',     attrname,
                                    'valueid',      valueid,
                                    'string_val',   string_val,
                                    'time_val',     time_val,
@@ -267,7 +269,7 @@ RETURNS TABLE (
     attrid         INTEGER,
     attrtype       INTEGER,
     attrname       TEXT,
-    parent_valueid BIGINT,   -- parent record’s valueid (NULL = top-level)
+    parent_valueid BIGINT,   -- parent record’s valueid (NULL means top-level)
     record_idx     INTEGER,  -- ordinal inside parent record
     depth          INTEGER,
 
