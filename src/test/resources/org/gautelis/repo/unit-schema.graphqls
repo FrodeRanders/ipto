@@ -145,6 +145,8 @@ enum Attributes @attributeRegistry {
 
 ##############  object & unit types ##############################
 scalar DateTime
+scalar Long
+scalar Bytes    # Base-64 strings on the wire
 
 type Shipment @record(attribute: SHIPMENT) {
     orderId  : String    @use(attribute: ORDER_ID)
@@ -160,8 +162,6 @@ type PurchaseOrder @unit(id: 42) {
 }
 
 ##############  Query related ####################################
-scalar Long
-scalar Bytes    # Base-64 strings on the wire
 
 input UnitIdentification {
     tenantId : Int!
@@ -220,6 +220,6 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    order(tenantId : Int) : PurchaseOrder
+    order(data : Bytes) : PurchaseOrder
 }
 

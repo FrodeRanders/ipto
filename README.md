@@ -16,7 +16,7 @@ directive @datatypeRegistry on ENUM
 directive @datatype(id: Int!, type: String = null) on ENUM_VALUE
 
 directive @attributeRegistry on ENUM
-directive @attribute(id: Int!, datatype: DataTypes!, vector: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
+directive @attribute(id: Int!, datatype: DataTypes!, array: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
 
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
 directive @unit(id: Int!) on OBJECT
@@ -24,20 +24,20 @@ directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  type: "text")
-    TIME      @datatype(id: 2,  type: "timestamptz")
-    INTEGER   @datatype(id: 3,  type: "int")
-    LONG      @datatype(id: 4,  type: "bigint")
-    DOUBLE    @datatype(id: 5,  type: "double precision")
-    BOOLEAN   @datatype(id: 6,  type: "boolean")
-    DATA      @datatype(id: 7,  type: "bytea")
+    STRING    @datatype(id: 1,  basictype: "text")
+    TIME      @datatype(id: 2,  basictype: "timestamptz")
+    INTEGER   @datatype(id: 3,  basictype: "int")
+    LONG      @datatype(id: 4,  basictype: "bigint")
+    DOUBLE    @datatype(id: 5,  basictype: "double precision")
+    BOOLEAN   @datatype(id: 6,  basictype: "boolean")
+    DATA      @datatype(id: 7,  basictype: "bytea")
     RECORD    @datatype(id: 99)
 }
 
 ############## attributes ############################
 enum Attributes @attributeRegistry {
     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-    TITLE @attribute(id: 1, datatype: STRING, vector: false,
+    TITLE @attribute(id: 1, datatype: STRING, array: false,
         alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title"
    
     ... 
@@ -45,7 +45,7 @@ enum Attributes @attributeRegistry {
     # Domain specific attributes
     ORDER_ID  @attribute(id: 1001, datatype: STRING)
     DEADLINE  @attribute(id: 1002, datatype: TIME)
-    READING   @attribute(id: 1003, datatype: DOUBLE, vector: true)
+    READING   @attribute(id: 1003, datatype: DOUBLE, array: true)
     SHIPMENT  @attribute(id: 1099, datatype: RECORD)
 }
 
