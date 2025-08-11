@@ -600,3 +600,23 @@ fetch known attributes |      1 |    3,14 |     3,14 |     3,14 |      0,00 |   
             store unit | 505004 |    0,37 |   251,48 |     0,71 |     97,54 |      507882 | 8mins 27s 882ms
 
 
+2025-08-10 22:55:02.238: JSON load
+===================================================================================================
+OS: Mac OS X 15.6 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=54 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=51 MiB
+
+Units: total=1010010 locks=0 vectors=6010050
+Values: string=4030022 time=2000010 integer=0 long=0 double=2000020 boolean=0 data=0 record=3000030
+Assocs: internal=0 external=0
+
+2025-08-10 22:55:02.243: 
+-----------------------+--------+---------+----------+----------+-----------+-------------+-----------------
+           Measurement |  Count |     Min |      Max |  Average |  Variance |  Total time           i.e.
+-----------------------+--------+---------+----------+----------+-----------+-------------+-----------------
+        resurrect unit |     10 |    0,00 |    15,95 |     4,54 |    107,61 |          45 |            45ms
+         custom search |      3 |  286,62 |  1182,35 |   589,08 |     87,22 |        1767 |        1s 767ms
+fetch known attributes |      1 |    3,79 |     3,79 |     3,79 |      0,00 |           4 |             4ms
+            store unit | 505005 |    0,91 |   108,01 |     1,65 |     24,24 |      965672 | 16mins 5s 672ms
+
+

@@ -467,9 +467,8 @@ public class Unit implements Cloneable {
 
             // attributes
             if (attributes == null) {
-                attributes = new HashMap<>();
 
-                // Lookup table: valueid -> attribute
+                // Lookup: valueid -> attribute
                 Map<Long, Attribute<?>> valueIdToAttribute = new HashMap<>();
 
                 ArrayNode attributeNodes = (ArrayNode) root.path("attributes");
@@ -486,14 +485,21 @@ public class Unit implements Cloneable {
                                 Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
                                 if (null != referredAttribute) {
                                     recValue.set(referredAttribute);
-                                    rit.remove();
+                                    rit.remove(); // Reference is now resolved
+
+                                    // remove attribute from unit-level, since it belongs at record-level
+                                    valueIdToAttribute.remove(ref.refValueId());
                                 }
                             }
                         }
                     }
 
                     log.debug("Inflated {}", attribute);
+                }
 
+                // Lookup: attribute name -> attri ute
+                attributes = new HashMap<>();
+                for (Attribute<?> attribute : valueIdToAttribute.values()) {
                     // Associate attribute with name in hashtable
                     attributes.put(attribute.getName(), attribute);
                 }
