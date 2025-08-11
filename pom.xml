@@ -22,7 +22,7 @@
     <hikari.version>7.0.0</hikari.version>
     <log4j.version>2.25.1</log4j.version>
     <slf4j.version>2.0.17</slf4j.version>
-    <vopn.version>2.4-SNAPSHOT</vopn.version> <!-- sibling project -->
+    <vopn.version>3.0-SNAPSHOT</vopn.version> <!-- sibling project -->
   </properties>
 
   <dependencies>
