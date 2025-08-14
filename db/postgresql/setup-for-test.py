@@ -46,17 +46,33 @@ def start_postgres_container(container_name: str, postgres_password: str, host_p
         "-d",
         "postgres"
     ], check=True)
-    print("Container started.\n")
+
+    container_id = subprocess.check_output(
+        ["docker", "ps", "-qf", f"name={container_name}"], text=True
+    ).strip()
+
+    print(f"Container started: {container_id}\n")
+
+    return container_id
 
 
-def wait_for_container_startup(wait_seconds: int = 5):
+def wait_for_container_startup(container_id: str, indication: str, wait_seconds: int = 10):
     """
     Give the container some time to finish startup procedures.
     """
-    print(f"Waiting {wait_seconds} seconds for the database to initialize...")
-    time.sleep(wait_seconds)
-    print("Proceeding...\n")
+    print("Awaiting startup...")
 
+    shell_cmd = f"docker logs -f {container_id}"
+    child = pexpect.spawn(shell_cmd, encoding='utf-8', timeout=wait_seconds)
+    # child.logfile = sys.stdout
+    try:
+        child.expect(indication)
+    except pexpect.EOF:
+        print("Unexpected end of log.")
+    except pexpect.TIMEOUT:
+        print("Timeout waiting for setup to complete")
+    finally:
+        child.close()
 
 def run_psql_commands_in_container(
         container_name: str,
@@ -68,10 +84,10 @@ def run_psql_commands_in_container(
     """
     Spawns a docker run psql session (interactive) and executes SQL commands using pexpect.
     """
-    print("Entering container to run psql commands...")
-    shell_cmd = f"docker exec -it {container_name} psql -h {psql_host} -U {psql_user}"
+    print("Running psql commands in container...")
 
     # Spawn the psql session
+    shell_cmd = f"docker exec -it {container_name} psql -h {psql_host} -U {psql_user}"
     child = pexpect.spawn(shell_cmd, encoding="utf-8", timeout=5)
     # child.logfile = sys.stdout
 
@@ -141,10 +157,11 @@ def main():
     remove_existing_container(container_name)
 
     # Start the container
-    start_postgres_container(container_name, postgres_password, host_port)
+    container_id = start_postgres_container(container_name, postgres_password, host_port)
 
     # Wait for container to become ready
-    wait_for_container_startup(wait_seconds=10)
+    indication=r"listening on IPv4 address \"0.0.0.0\", port 5432"
+    wait_for_container_startup(container_id, indication, wait_seconds=10)
 
     # Commands to run as superuser
     commands = [

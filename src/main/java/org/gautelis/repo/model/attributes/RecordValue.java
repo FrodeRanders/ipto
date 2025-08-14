@@ -27,10 +27,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public final class RecordValue extends Value<Attribute<?>> {
-
-    /* package accessible only */
-    final static String COLUMN_NAME = "record_val";
-
     public record AttributeReference(int refAttrId, long refValueId) {}
     private final Collection<AttributeReference> initialReferences = new ArrayList<>();
 

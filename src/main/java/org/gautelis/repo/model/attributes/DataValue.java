@@ -32,10 +32,6 @@ import java.util.ArrayList;
 import java.util.Base64;
 
 final class DataValue extends Value<Object> {
-
-    /* package accessible only */
-    final static String COLUMN_NAME = "data_val";
-
     /**
      * Creates a <I>new</I> data value
      */
@@ -82,18 +78,19 @@ final class DataValue extends Value<Object> {
              * attrid, attrtype, attrname,    -- attribute
              * parent_valueid, record_idx,    -- records
              * depth,
-             * string_idx, string_val,  -- string value at index string_idx
-             * time_idx, time_val,      -- time value at index time_idx
-             * int_idx, int_val,        -- int value at index int_idx
-             * long_idx, long_val,      -- long value at index long_idx
-             * double_idx, double_val,  -- double value at index double_idx
-             * bool_idx, bool_val,      -- boolean value at index bool_idx
-             * data_idx, data_val       -- data value at index data_idx
-             * ----------------------------------------------------------- */
+             * idx,
+             * string_val,    -- string value at index idx
+             * time_val,      -- time value at index idx
+             * int_val,       -- int value at index idx
+             * long_val,      -- long value at index idx
+             * double_val,    -- double value at index idx
+             * bool_val,      -- boolean value at index idx
+             * data_val       -- data value at index idx
+            * ----------------------------------------------------------- */
             byte[] value;
             try {
                 // SQL Server: Works with the VARBINARY type
-                Blob data = rs.getBlob(COLUMN_NAME); // data_val
+                Blob data = rs.getBlob("data_val");
                 long length = data.length();
                 value = data.getBytes(1, (int) length);
 

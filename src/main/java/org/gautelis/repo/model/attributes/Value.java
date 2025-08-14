@@ -27,11 +27,12 @@ import org.slf4j.LoggerFactory;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
+
 
 public abstract class Value<T> {
     static final Logger log = LoggerFactory.getLogger(Value.class);
+
+    protected final static String COLUMN_NAME = "val";
 
     protected final ArrayList<T> values = new ArrayList<>();
     private int initialHashCode;

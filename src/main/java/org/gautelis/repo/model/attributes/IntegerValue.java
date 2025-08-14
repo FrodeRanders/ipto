@@ -31,10 +31,6 @@ import java.sql.*;
 import java.util.ArrayList;
 
 final class IntegerValue extends Value<Integer> {
-
-    /* package accessible only */
-    final static String COLUMN_NAME = "int_val";
-
     /**
      * Creates a <I>new</I> integer value
      */
@@ -70,15 +66,16 @@ final class IntegerValue extends Value<Integer> {
              * attrid, attrtype, attrname,    -- attribute
              * parent_valueid, record_idx,    -- records
              * depth,
-             * string_idx, string_val,  -- string value at index string_idx
-             * time_idx, time_val,      -- time value at index time_idx
-             * int_idx, int_val,        -- int value at index int_idx
-             * long_idx, long_val,      -- long value at index long_idx
-             * double_idx, double_val,  -- double value at index double_idx
-             * bool_idx, bool_val,      -- boolean value at index bool_idx
-             * data_idx, data_val       -- data value at index data_idx
+             * idx,
+             * string_val,    -- string value at index idx
+             * time_val,      -- time value at index idx
+             * int_val,       -- int value at index idx
+             * long_val,      -- long value at index idx
+             * double_val,    -- double value at index idx
+             * bool_val,      -- boolean value at index idx
+             * data_val       -- data value at index idx
              * ----------------------------------------------------------- */
-            Integer value = rs.getInt(COLUMN_NAME); // int_val
+            Integer value = rs.getInt("int_val");
             values.add(value);
 
         } catch (SQLException sqle) {
