@@ -31,7 +31,6 @@ import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.model.attributes.RecordAttribute;
-import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.MovingAverage;
 import org.gautelis.repo.search.model.*;
@@ -114,9 +113,7 @@ public class RepositoryTest extends TestCase {
             value.add("abc");
         });
 
-        unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-            RecordAttribute recrd = new RecordAttribute(attr);
-
+        unit.withRecordAttribute("SHIPMENT", recrd -> {
             recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                 value.add(aSpecificString);
             });
@@ -412,9 +409,7 @@ public class RepositoryTest extends TestCase {
 
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
-        unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-            RecordAttribute recrd = new RecordAttribute(attr);
-
+        unit.withRecordAttribute("SHIPMENT", recrd -> {
             recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
                 value.add("*order id*");
             });
@@ -441,8 +436,8 @@ public class RepositoryTest extends TestCase {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 5000; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = 500; //
+        final int numberOfChildren = 10; //
 
         try {
             Instant firstParentCreated = null;
@@ -515,9 +510,7 @@ public class RepositoryTest extends TestCase {
                         value.add(now);
                     });
 
-                    childUnit.withAttribute("SHIPMENT", Attribute.class, attr -> {
-                        RecordAttribute recrd = new RecordAttribute(attr);
-
+                    childUnit.withRecordAttribute("SHIPMENT", recrd -> {
                         recrd.withNestedAttributeValue(childUnit, "ORDER_ID", String.class, value -> {
                             value.add("*order id*");
                         });

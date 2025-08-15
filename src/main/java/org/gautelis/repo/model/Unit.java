@@ -791,7 +791,7 @@ public class Unit implements Cloneable {
     public <A> Attribute<A> withAttribute(String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Optional<Attribute<?>> _attribute = getAttribute(name, createIfMissing);
         if (!_attribute.isPresent()) {
-            throw new IllegalArgumentException("Unknown attribute " + name);
+            throw new IllegalArgumentException("Unknown attribute: " + name);
         } else {
             Attribute<?> attribute = _attribute.get();
 
@@ -855,7 +855,7 @@ public class Unit implements Cloneable {
             // ...and therefore we add it from pool of globally known attributes
             Optional<KnownAttributes.AttributeInfo> attributeInfo = KnownAttributes.getAttribute(ctx, name);
             if (attributeInfo.isEmpty()) {
-                throw new IllegalArgumentException("Attribute " + name + " is not defined in system");
+                throw new IllegalArgumentException("Attribute '" + name + "' is not defined in system");
             }
 
             Attribute<?> attribute = new Attribute<>(attributeInfo.get());
@@ -884,6 +884,21 @@ public class Unit implements Cloneable {
             ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
         });
+    }
+
+    public void withRecordAttribute(String name, RecordAttributeRunnable runnable) {
+        Optional<Attribute<?>> _attribute = getAttribute(name, /* create if missing? */ true);
+        if (!_attribute.isPresent()) {
+            throw new IllegalArgumentException("Unknown attribute: " + name);
+        } else {
+            Attribute<?> attribute = _attribute.get();
+
+            if (AttributeType.RECORD != attribute.getType()) {
+                throw new IllegalArgumentException("Not a record attribute: " + name);
+            }
+
+            runnable.run(new RecordAttribute(attribute));
+        }
     }
 
     public Optional<Attribute<?>> getAttribute(

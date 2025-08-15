@@ -18,11 +18,7 @@ package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.AssociationType;
-import org.gautelis.repo.model.associations.Association;
 import org.gautelis.repo.search.query.LeafExpression;
-
-import java.util.Locale;
-
 
 public abstract class AssociationSearchItem<T> extends SearchItem<T> {
 
@@ -31,19 +27,44 @@ public abstract class AssociationSearchItem<T> extends SearchItem<T> {
     }
 
     /**
-     * Generates constraint "association == value" for specified association.
+     * Generates constraint "Unit --external association--> {assocString}".
      * <p>
-     * This method will handle the various attribute types.
      */
-    public static LeafExpression<AssociationSearchItem<?>> constrainOnAssociationEQ(
-            Association association, String value, Locale locale
+    public static LeafExpression<AssociationSearchItem<?>> constrainOnRightExternalAssociation(
+            String assocString
     ) throws NumberFormatException, InvalidParameterException {
+        throw new InvalidParameterException("External associations are currently not custom searchable");
+    }
 
-        AssociationType type = association.getType();
+    /**
+     * Generates constraint "Unit <--external association-- {assocString}".
+     * <p>
+     */
+    public static LeafExpression<AssociationSearchItem<?>> constrainOnLeftExternalAssociation(
+            String assocString
+    ) throws NumberFormatException, InvalidParameterException {
+        throw new InvalidParameterException("External associations are currently not custom searchable");
+    }
 
-        //return switch (type) {
-        //    default -> throw new InvalidParameterException("Association type " + type + " is not searchable: " + attribute);
-        //};
-        throw new InvalidParameterException("Association type " + type + " is currently not searchable: " + association);
+    /**
+     * Generates constraint "Unit{tenantId, unitId} --internal relation--> Unit",
+     * e.g. corresponding to retrieving 'parents' of a specific 'child'
+     * <p>
+     */
+    public static LeafExpression<AssociationSearchItem<?>> constrainOnRightInternalRelation(
+            int tenantId, long unitId
+    ) throws NumberFormatException, InvalidParameterException {
+        throw new InvalidParameterException("Internal relations are currently not custom searchable");
+    }
+
+    /**
+     * Generates constraint "Unit <--internal relation-- Unit{tenantId, unitId}",
+     * e.g. corresponding to retrieving 'children' of a specific 'parent'.
+     * <p>
+     */
+    public static LeafExpression<AssociationSearchItem<?>> constrainOnLeftInternalRelation(
+            int tenantId, long unitId
+    ) throws NumberFormatException, InvalidParameterException {
+        throw new InvalidParameterException("Internal relations are currently not custom searchable");
     }
 }

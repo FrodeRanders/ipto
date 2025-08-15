@@ -30,11 +30,11 @@ public class RecordAttribute {
         if (attr.getType() != AttributeType.RECORD) {
             throw new IllegalArgumentException("attribute must be RECORD (i.e. Attribute<Attribute<?>>)");
         }
-        this.delegate = asCompound(attr);
+        this.delegate = asRecord(attr);
     }
 
     @SuppressWarnings("unchecked")
-    private static Attribute<Attribute<?>> asCompound(Attribute<?> attr) {
+    private static Attribute<Attribute<?>> asRecord(Attribute<?> attr) {
         return (Attribute<Attribute<?>>) attr;
     }
 
