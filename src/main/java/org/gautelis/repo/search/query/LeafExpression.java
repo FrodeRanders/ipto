@@ -36,7 +36,7 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
     protected static final Logger log = LoggerFactory.getLogger(LeafExpression.class);
 
     final T item;
-    private String reference = null;
+    private String label = null;
 
 
     public LeafExpression(T item) {
@@ -48,12 +48,12 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
         return item;
     }
 
-    public void setReference(String reference) {
-        this.reference = reference;
+    public void setLabel(String label) {
+        this.label = label;
     }
 
-    public Optional<String> getReference() {
-        return Optional.ofNullable(reference);
+    public Optional<String> getLabel() {
+        return Optional.ofNullable(label);
     }
 
     @Override
@@ -63,7 +63,7 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
     ) {
         StringBuilder sb = new StringBuilder();
         if (item instanceof AttributeSearchItem<?> asi) {
-            attributeConstraint(sb, reference, asi, usePrepare, commonConstraintValues);
+            attributeConstraint(sb, label, asi, usePrepare, commonConstraintValues);
         }
         else if (item instanceof UnitSearchItem<?> usi) {
             unitConstraint(sb, usi, usePrepare);
@@ -92,12 +92,12 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
 
     private void attributeConstraint(
             StringBuilder sb,
-            String reference,
+            String label,
             AttributeSearchItem<?> item,
             boolean usePrepare,
             Map<String, SearchItem<?>> commonConstraintValues
     ) {
-        sb.append(reference).append(" AS (");
+        sb.append(label).append(" AS (");
         sb.append("SELECT ").append(ATTRIBUTE_VALUE_TENANTID).append(", ").append(ATTRIBUTE_VALUE_UNITID).append(" ");
         sb.append("FROM ").append(ATTRIBUTE_VALUE).append(" ");
         sb.append("JOIN ");

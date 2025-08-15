@@ -98,7 +98,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
     /**
      * Separates constraints into unit- and attribute constraints,
-     * and enumerates the latter -- giving them unique names: c2, c2, c3, ...
+     * and enumerates the latter -- giving them unique names: c1, c2, c3, ...
      * <p>
      * @param expression
      * @param unitLeaves
@@ -119,8 +119,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                     unitLeaves.add(leaf);
                 } else if (leaf.getItem() instanceof AttributeSearchItem<?>) {
                     attributeLeaves.add(leaf);
-                    String reference = "c" + attributeLeaves.size();
-                    leaf.setReference(reference);
+                    String label = "c" + attributeLeaves.size();
+                    leaf.setLabel(label);
                 }
             }
             case NotExpression(SearchExpression inner) -> {
@@ -133,8 +133,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                 SearchExpression right = binExpr.getRight();
                 identifyConstraints(right, unitLeaves, attributeLeaves);
             }
-            default -> {
-            }
+            default -> {}
         }
     }
 
@@ -153,11 +152,11 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         switch (expression) {
             case LeafExpression<?> leaf -> {
                 if (leaf.getItem() instanceof AttributeSearchItem<?>) {
-                    Optional<String> reference = leaf.getReference();
-                    if (reference.isPresent()) {
-                        return Optional.of("(SELECT * FROM " + reference.get() + ")");
+                    Optional<String> label = leaf.getLabel();
+                    if (label.isPresent()) {
+                        return Optional.of("(SELECT * FROM " + label.get() + ")");
                     } else {
-                        String info = "Leaf expression must have a reference.";
+                        String info = "Leaf expression must have a label";
                         throw new IllegalArgumentException(info);
                     }
                 } else {
@@ -176,9 +175,9 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
                 boolean hasLeft = left.isPresent();
                 boolean hasRight = right.isPresent();
-                boolean hasCombination = hasLeft && hasRight;
+                boolean hasBoth = hasLeft && hasRight;
 
-                if (hasCombination) {
+                if (hasBoth) {
                     String sql = "(";
                     sql += left.get();
                     sql += switch (binExpr.operator()) {
@@ -195,8 +194,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                     return right;
                 }
             }
-            default -> {
-            }
+            default -> {}
         }
         return Optional.empty();
     }
@@ -245,8 +243,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                     return right;
                 }
             }
-            default -> {
-            }
+            default -> {}
         }
         return Optional.empty();
     }
@@ -419,7 +416,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                                 case DOUBLE -> pStmt.setDouble(++i, (Double) item.getValue());
                                 case BOOLEAN -> pStmt.setBoolean(++i, (Boolean) item.getValue());
                                 default -> {
-                                    throw new InvalidParameterException("Invalid attribute type: " + item.getType());
+                                    // DATA and RECORD are not searchable
+                                    throw new InvalidParameterException("Attribute type not searchable: " + item.getType());
                                 }
                             }
                         }
