@@ -32,6 +32,7 @@ import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.gautelis.repo.model.locks.Lock;
+import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.MovingAverage;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.DatabaseAdapter;
@@ -479,7 +480,7 @@ public class RepositoryTest extends TestCase {
 
                 if (false) {
                     // Works, but not part of test (at the moment)
-                    repo.lockUnit(parentUnit, Lock.Type.EXISTENCE, "test");
+                    repo.lockUnit(parentUnit, LockType.EXISTENCE, "test");
                 }
 
                 for (int i = 1; i < numberOfChildren + 1; i++) {

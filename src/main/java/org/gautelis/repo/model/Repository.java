@@ -26,6 +26,7 @@ import org.gautelis.repo.model.associations.InternalRelation;
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.graphql.configuration.Configurator;
+import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.query.DatabaseAdapter;
@@ -425,7 +426,7 @@ public class Repository {
      */
     public boolean lockUnit(
             Unit unit,
-            Lock.Type type,
+            LockType type,
             String purpose
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, InvalidParameterException, IllegalRequestException, ConfigurationException {
 

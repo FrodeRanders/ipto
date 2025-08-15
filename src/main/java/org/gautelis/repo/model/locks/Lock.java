@@ -33,14 +33,17 @@ public class Lock {
      * Purpose of lock
      */
     public final String purpose;
+
     /**
      * Lock type
      */
-    public final Type type;
+    public final LockType type;
+
     /**
      * Time when lock was placed
      */
     public final java.sql.Timestamp lockTime;
+
     /**
      * Time when lock expires if auto-unlock applies to unit
      */
@@ -49,7 +52,7 @@ public class Lock {
     /* package accessible only */
     Lock(
             String purpose,
-            Type type,
+            LockType type,
             java.sql.Timestamp lockTime,
             java.sql.Timestamp expireTime
     ) {
@@ -91,7 +94,7 @@ public class Lock {
             Context ctx,
             int tenantId,
             long unitId,
-            Type type,
+            LockType type,
             String purpose
     ) throws DatabaseConnectionException, DatabaseWriteException, DatabaseReadException, ConfigurationException {
 
@@ -140,7 +143,7 @@ public class Lock {
                 while (rs.next()) {
                     String purpose = rs.getString("purpose");
                     int _type = rs.getInt("type");
-                    Type type = Type.of(_type);
+                    LockType type = LockType.of(_type);
                     java.sql.Timestamp lockTime = rs.getTimestamp("locktime");
                     java.sql.Timestamp expireTime = rs.getTimestamp("expire");
 
@@ -182,7 +185,7 @@ public class Lock {
     /**
      * Get locktype
      */
-    public Type getType() {
+    public LockType getType() {
         return type;
     }
 
@@ -216,31 +219,6 @@ public class Lock {
         }
         info += ": " + purpose;
         return info;
-    }
-
-    public enum Type {
-        READ(1),
-        EXISTENCE(2),
-        WRITE(3);
-
-        private final int type;
-
-        Type(int type) {
-            this.type = type;
-        }
-
-        static Type of(int type) throws LockTypeException {
-            for (Type t : Type.values()) {
-                if (t.type == type) {
-                    return t;
-                }
-            }
-            throw new LockTypeException("Unknown lock type: " + type);
-        }
-
-        public int getType() {
-            return type;
-        }
     }
 }
 

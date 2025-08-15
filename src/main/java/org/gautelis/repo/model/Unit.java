@@ -25,6 +25,7 @@ import org.gautelis.repo.model.associations.*;
 import org.gautelis.repo.model.attributes.*;
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
+import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.utils.TimeHelper;
 import org.slf4j.Logger;
@@ -1248,7 +1249,7 @@ public class Unit implements Cloneable {
      * @return true if lock was successfully placed on unit, false otherwise
      */
     public boolean lock(
-            Lock.Type type,
+            LockType type,
             String purpose
     ) throws DatabaseConnectionException, DatabaseWriteException, DatabaseReadException, IllegalRequestException, ConfigurationException {
 
