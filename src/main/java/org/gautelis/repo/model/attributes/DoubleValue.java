@@ -19,13 +19,10 @@ package org.gautelis.repo.model.attributes;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.exceptions.AttributeValueException;
 import org.gautelis.repo.exceptions.DatabaseReadException;
-import org.gautelis.repo.exceptions.DatabaseWriteException;
-import org.gautelis.repo.model.Context;
-import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.AttributeType;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -90,8 +87,8 @@ final class DoubleValue extends Value<Double> {
     }
 
     @Override
-    public Type getType() {
-        return Type.DOUBLE;
+    public AttributeType getType() {
+        return AttributeType.DOUBLE;
     }
 
     @Override

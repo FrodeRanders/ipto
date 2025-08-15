@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AttributeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,7 +121,7 @@ public abstract class Value<T> {
      * Creates a <I>new</I> attribute value of type 'type'
      */
     /* package accessible only */
-    static <T> Value<T> createValue(Type type) throws AttributeTypeException {
+    static <T> Value<T> createValue(AttributeType type) throws AttributeTypeException {
         Value<?> value = switch (type) {
             case STRING -> new StringValue();
             case TIME -> new TimeValue();
@@ -137,7 +138,7 @@ public abstract class Value<T> {
     }
 
     protected static <T> Value<T> inflateValue(
-            Type type,
+            AttributeType type,
             JsonNode node
     ) throws AttributeTypeException, JsonProcessingException {
         Value<?> value = switch (type) {
@@ -163,7 +164,7 @@ public abstract class Value<T> {
      * nothing about the various value types (StringValue, ...)
      */
     protected static <T> Value<T> inflateValue(
-            Type type,
+            AttributeType type,
             ResultSet rs
     ) throws AttributeTypeException, DatabaseReadException {
         Value<?> value = switch (type) {
@@ -200,7 +201,7 @@ public abstract class Value<T> {
     /**
      * Gets type of attribute.
      */
-    public abstract Type getType();
+    public abstract AttributeType getType();
 
     /**
      * Gets concrete Java type of attribute.

@@ -23,8 +23,5 @@ import java.util.Map;
 public sealed interface SearchExpression
         permits LeafExpression, BinaryExpression, AndExpression, OrExpression, NotExpression {
 
-    /**
-     * Appends SQL into sb, using ? placeholders
-     */
     String toSql(boolean usePrepare, Map<String, SearchItem<?>> commonConstraintValues);
 }

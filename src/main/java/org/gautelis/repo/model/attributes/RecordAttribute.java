@@ -16,6 +16,7 @@
  */
 package org.gautelis.repo.model.attributes;
 
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Unit;
 
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public class RecordAttribute {
 
     public RecordAttribute(Attribute<?> attr) {
         Objects.requireNonNull(attr, "attr");
-        if (attr.getType() != Type.RECORD) {
+        if (attr.getType() != AttributeType.RECORD) {
             throw new IllegalArgumentException("attribute must be RECORD (i.e. Attribute<Attribute<?>>)");
         }
         this.delegate = asCompound(attr);

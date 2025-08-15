@@ -17,43 +17,33 @@
 package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.exceptions.InvalidParameterException;
-import org.gautelis.repo.model.attributes.Type;
-import org.gautelis.repo.model.attributes.Attribute;
+import org.gautelis.repo.model.AssociationType;
+import org.gautelis.repo.model.associations.Association;
 import org.gautelis.repo.search.query.LeafExpression;
 
-import java.text.ParseException;
 import java.util.Locale;
 
 
 public abstract class AssociationSearchItem<T> extends SearchItem<T> {
 
-    private final int attrId;
-
-    protected AssociationSearchItem(Type type, Operator operator, int attrId) {
-        super(Variant.ATTRIBUTE, type, operator);
-        this.attrId = attrId;
-    }
-
-    public int getAttrId() {
-        return attrId;
+    protected AssociationSearchItem(AssociationType type, Operator operator) {
+        super(Variant.ASSOCIATION, type, operator);
     }
 
     /**
-     * Generates constraint "attribute == value" for specified attribute.
+     * Generates constraint "association == value" for specified association.
      * <p>
      * This method will handle the various attribute types.
      */
     public static LeafExpression<AssociationSearchItem<?>> constrainOnAssociationEQ(
-            Attribute<?> attribute, String value, Locale locale
+            Association association, String value, Locale locale
     ) throws NumberFormatException, InvalidParameterException {
 
-        int attrId = attribute.getAttrId();
-        Type type = attribute.getType();
+        AssociationType type = association.getType();
 
-        // TODO
         //return switch (type) {
         //    default -> throw new InvalidParameterException("Association type " + type + " is not searchable: " + attribute);
         //};
-        throw new InvalidParameterException("Association type " + type + " is currently not searchable: " + attribute);
+        throw new InvalidParameterException("Association type " + type + " is currently not searchable: " + association);
     }
 }

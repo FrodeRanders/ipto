@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 public class IntegerAttributeSearchItem extends AttributeSearchItem<Integer> {
@@ -24,7 +24,7 @@ public class IntegerAttributeSearchItem extends AttributeSearchItem<Integer> {
     private final int value;
 
     public IntegerAttributeSearchItem(int attrId, Operator operator, int value) {
-        super(Type.INTEGER, operator, attrId);
+        super(AttributeType.INTEGER, operator, attrId);
         this.value = value;
     }
 

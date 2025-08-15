@@ -22,7 +22,6 @@ import org.gautelis.repo.exceptions.*;
 import org.gautelis.repo.listeners.ActionListener;
 import org.gautelis.repo.model.associations.ExternalAssociation;
 import org.gautelis.repo.model.associations.InternalRelation;
-import org.gautelis.repo.model.associations.Type;
 
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
@@ -293,7 +292,7 @@ public class Repository {
      * <p>
      */
     public void addRelation(
-            Unit unit, Type assocType, Unit otherUnit
+            Unit unit, AssociationType assocType, Unit otherUnit
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
 
         if (null == unit) {
@@ -328,7 +327,7 @@ public class Repository {
      * association.
      */
     public void removeRelation(
-            Unit unit, Type assocType, Unit otherUnit
+            Unit unit, AssociationType assocType, Unit otherUnit
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
 
         if (null == unit) {
@@ -364,7 +363,7 @@ public class Repository {
      * association.
      */
     public void addAssociation(
-            Unit unit, Type assocType, String reference
+            Unit unit, AssociationType assocType, String reference
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
 
         if (null == unit) {
@@ -399,7 +398,7 @@ public class Repository {
      * association.
      */
     public void removeAssociation(
-            Unit unit, Type assocType, String reference
+            Unit unit, AssociationType assocType, String reference
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
 
         if (null == unit) {

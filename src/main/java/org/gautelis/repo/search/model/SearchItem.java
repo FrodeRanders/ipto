@@ -16,18 +16,14 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.db.Column;
-import org.gautelis.repo.model.Unit;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.Type;
 import org.gautelis.repo.utils.TimeHelper;
 
 import java.sql.Timestamp;
 import java.text.ParseException;
-import java.time.Instant;
 import java.util.Calendar;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.Optional;
 
 /**
  * Handles individual criteria, specified on units and attributes.
@@ -36,7 +32,8 @@ public abstract class SearchItem<T> {
     //
     public enum Variant {
         UNIT,
-        ATTRIBUTE
+        ATTRIBUTE,
+        ASSOCIATION
     }
 
     //

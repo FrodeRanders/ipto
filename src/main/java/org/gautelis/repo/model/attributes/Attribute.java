@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.KnownAttributes;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +38,7 @@ public class Attribute<T> {
     private int id;
     private long valueId = -1L; // initially invalid
     private String name;
-    private Type type;
+    private AttributeType type;
     private Value<T> value = null;
 
     /**
@@ -50,7 +51,7 @@ public class Attribute<T> {
      */
     /* Should be package accessible only */
     public Attribute(
-            int attrId, String name, Type type
+            int attrId, String name, AttributeType type
     ) throws AttributeTypeException {
         this.id = attrId;
         this.name = name.trim();
@@ -62,7 +63,7 @@ public class Attribute<T> {
     public Attribute(
             KnownAttributes.AttributeInfo attributeInfo
     ) throws AttributeTypeException {
-        this(attributeInfo.id, attributeInfo.name, Type.of(attributeInfo.type));
+        this(attributeInfo.id, attributeInfo.name, AttributeType.of(attributeInfo.type));
     }
 
     /**
@@ -99,7 +100,7 @@ public class Attribute<T> {
     /**
      * Gets attribute type
      */
-    public Type getType() {
+    public AttributeType getType() {
         return value.getType();
     }
 
@@ -175,7 +176,7 @@ public class Attribute<T> {
         attributeNode.put("attrtype", type.getType());
         attributeNode.put("name", name);
 
-        if (!flat && Type.RECORD == type) {
+        if (!flat && AttributeType.RECORD == type) {
             // "hide" unit attributes with local array in record attribute
             attributes = attributeNode.putArray("attributes");
         }
@@ -189,7 +190,7 @@ public class Attribute<T> {
         id = node.path("attrid").asInt();
         valueId = node.path("valueid").asLong();
         name = node.path("attrname").asText();
-        type = Type.of(node.path("attrtype").asInt());
+        type = AttributeType.of(node.path("attrtype").asInt());
 
         // Continue with value vector
         value = Value.inflateValue(type, node);
@@ -215,7 +216,7 @@ public class Attribute<T> {
             id = rs.getInt("attrid");
             valueId = rs.getLong("valueid");
             name = rs.getString("attrname");
-            type = Type.of(rs.getInt("attrtype"));
+            type = AttributeType.of(rs.getInt("attrtype"));
 
             // Continue with value vector
             value = Value.inflateValue(type, rs);

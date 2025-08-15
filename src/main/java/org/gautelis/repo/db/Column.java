@@ -59,13 +59,13 @@ public enum Column {
     Column(String tableAlias,
            String columnName, boolean supportsOrderBy) {
         this.tableAlias = tableAlias;
-        this.columnName = columnName;
-        this.recrd = tableAlias + "." + columnName;
+        this.columnName = columnName; // unqualified name
+        this.recrd = tableAlias + "." + columnName; // qualified name
 
         this.supportsOrderBy = supportsOrderBy;
     }
 
-    private String getColumnName() {
+    public String plain() {
         return columnName;
     }
 

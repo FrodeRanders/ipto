@@ -660,3 +660,73 @@ fetch known attributes |      1 |    2,69 |    2,69 |     2,69 |      0,00 |    
             store unit | 505005 |    0,36 |  244,68 |     0,64 |     87,04 |      504319 | 8mins 24s 319ms
 
 
+2025-08-15 11:24:24.851: After varming caches and full vacuuming
+===================================================================================================
+OS: Mac OS X 15.6 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=18 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=120 MiB mem-free=47 MiB
+
+Units: total=606015 locks=0 vectors=3606075
+Values: string=2418033 time=1200015 integer=0 long=0 double=1200030 boolean=0 data=0 record=1800045
+Assocs: internal=0 external=0
+
+2025-08-15 11:24:24.855: 
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+           Measurement |  Count |     Min |     Max |  Average |  Variance |  Total time          i.e.
+-----------------------+--------+---------+---------+----------+-----------+-------------+----------------
+        resurrect unit |     14 |    0,00 |   15,91 |     3,43 |    126,06 |          48 |           48ms
+         custom search |      3 |  321,58 |  356,72 |   336,53 |      5,39 |        1010 |        1s 10ms
+fetch known attributes |      1 |    3,65 |    3,65 |     3,65 |      0,00 |           4 |            4ms
+            store unit |  50505 |    0,93 |   26,96 |     1,59 |     18,36 |       90652 | 1min 30s 652ms
+
+
+2025-08-15 14:57:12.937: 
+===================================================================================================
+OS: Mac OS X 15.6 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=10 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=90 MiB
+
+Units: total=1152637 locks=0 vectors=6843242
+Values: string=4595936 time=2276206 integer=0 long=0 double=2276266 boolean=0 data=0 record=3414399
+Assocs: internal=0 external=0
+
+2025-08-15 14:57:12.940: 
+-----------------------+--------+---------+----------+----------+-----------+-------------+------------------
+           Measurement |  Count |     Min |      Max |  Average |  Variance |  Total time            i.e.
+-----------------------+--------+---------+----------+----------+-----------+-------------+------------------
+        resurrect unit |     50 |    0,00 |    15,71 |     1,61 |    159,63 |          83 |             83ms
+         custom search |      3 |  374,25 |  1312,98 |   690,24 |     78,14 |        2070 |          2s 70ms
+fetch known attributes |      1 |    3,40 |     3,40 |     3,40 |      0,00 |           3 |              3ms
+            store unit | 505005 |    0,94 |   288,26 |     1,63 |     41,24 |      944804 | 15mins 44s 804ms
+
+
+2025-08-15 14:57:12.946: Index behaviour: 
+---------------------------+-----------------+-------------------+----------------+----------------
+                 Tablename |  Total seq scan |  Total index scan |  Rows in table |  Size of table
+---------------------------+-----------------+-------------------+----------------+----------------
+            repo_attribute |       3,537,920 |         3,305,573 |             19 |     8192 bytes
+repo_attribute_description |               5 |                 0 |              0 |        0 bytes
+      repo_attribute_value |              49 |        26,783,107 |      6,838,579 |         393 MB
+       repo_boolean_vector |              15 |                 0 |              0 |        0 bytes
+          repo_data_vector |              15 |                 0 |              0 |        0 bytes
+        repo_double_vector |              39 |               191 |      2,276,468 |         113 MB
+       repo_external_assoc |              21 |                 0 |              0 |        0 bytes
+       repo_integer_vector |              15 |                 0 |              0 |        0 bytes
+       repo_internal_assoc |              21 |                 0 |              0 |        0 bytes
+                 repo_lock |              15 |                 0 |              0 |        0 bytes
+                  repo_log |               5 |                 0 |              0 |        0 bytes
+          repo_long_vector |              15 |                 0 |              0 |        0 bytes
+            repo_namespace |               5 |                 0 |              1 |     8192 bytes
+      repo_record_template |              17 |                 0 |              3 |     8192 bytes
+        repo_record_vector |              49 |         2,308,610 |      3,413,805 |         177 MB
+        repo_string_vector |             115 |               466 |      4,593,877 |         238 MB
+    repo_template_elements |              17 |                 0 |              4 |     8192 bytes
+               repo_tenant |         597,136 |           555,510 |              2 |     8192 bytes
+          repo_time_vector |              45 |               243 |      2,275,683 |         113 MB
+                 repo_unit |              49 |         6,843,754 |      1,152,519 |         101 MB
+        repo_unit_template |              19 |                 4 |              1 |     8192 bytes
+
+Sequential scans of small tables, such as 'repo_tenant' (2 rows) and 'repo_attribute' (19 rows),
+are not alarming per se.
+
+

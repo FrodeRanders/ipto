@@ -17,6 +17,7 @@
 package org.gautelis.repo.search.query;
 
 import org.gautelis.repo.db.Database;
+import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.UnitSearch;
@@ -32,6 +33,7 @@ import java.util.*;
 
 import static org.gautelis.repo.db.Column.*;
 import static org.gautelis.repo.db.Table.*;
+import static org.gautelis.repo.model.AttributeType.*;
 import static org.gautelis.repo.utils.TimeHelper.instant2Timestamp;
 
 public abstract class CommonAdapter extends DatabaseAdapter {
@@ -275,9 +277,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
     /**
      *
-     * @param sd
-     * @return
-     * @throws IllegalArgumentException
+     * @param sd search tree with associated configuration
+     * @return generated SQL statement
      */
     protected GeneratedStatement generateStatement(
             UnitSearch sd
@@ -363,7 +364,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         }
         statement += "SELECT " + UNIT_TENANTID + ", " + UNIT_UNITID + ", " + UNIT_CREATED + " ";
         statement += "FROM " + UNIT + " ";
-        statement += "JOIN final f USING (tenantid, unitid) ";
+        statement += "JOIN final f USING (" + UNIT_TENANTID.plain() + ", " + UNIT_UNITID.plain() + ") ";
         if (!unitLeaves.isEmpty() && unitConstraints.isPresent()) {
             statement += "WHERE " + unitConstraints.get() + " ";
         }
@@ -417,6 +418,9 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                                 case LONG -> pStmt.setLong(++i, (Long) item.getValue());
                                 case DOUBLE -> pStmt.setDouble(++i, (Double) item.getValue());
                                 case BOOLEAN -> pStmt.setBoolean(++i, (Boolean) item.getValue());
+                                default -> {
+                                    throw new InvalidParameterException("Invalid attribute type: " + item.getType());
+                                }
                             }
                         }
                     },

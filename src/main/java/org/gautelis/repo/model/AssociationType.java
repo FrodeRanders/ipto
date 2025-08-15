@@ -1,8 +1,8 @@
-package org.gautelis.repo.model.associations;
+package org.gautelis.repo.model;
 
 import org.gautelis.repo.exceptions.AssociationTypeException;
 
-public enum Type {
+public enum AssociationType implements Type {
     INVALID(0, /* is relational? */ false, /* allows multiples? */ false),
     PARENT_CHILD_RELATION(1, /* is relational? */ true, /* allows multiples? */ true),
     CASE_ASSOCIATION(2, /* is relational? */ false, /* allows multiples? */ false),
@@ -16,14 +16,14 @@ public enum Type {
     // Does this association accept multiple associations/relations?
     private final boolean allowsMultiples;
 
-    Type(int type, boolean isRelational, boolean allowsMultiples) {
+    AssociationType(int type, boolean isRelational, boolean allowsMultiples) {
         this.type = type;
         this.isRelational = isRelational;
         this.allowsMultiples = allowsMultiples;
     }
 
-    static Type of(int type) throws AssociationTypeException {
-        for (Type t : Type.values()) {
+    public static AssociationType of(int type) throws AssociationTypeException {
+        for (AssociationType t : AssociationType.values()) {
             if (t.type == type) {
                 return t;
             }
@@ -35,11 +35,11 @@ public enum Type {
         return type;
     }
 
-    boolean isRelational() {
+    public boolean isRelational() {
         return isRelational;
     }
 
-    boolean allowsMultiples() {
+    public boolean allowsMultiples() {
         return allowsMultiples;
     }
 }

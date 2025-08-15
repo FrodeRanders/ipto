@@ -19,13 +19,10 @@ package org.gautelis.repo.model.attributes;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.exceptions.AttributeValueException;
 import org.gautelis.repo.exceptions.DatabaseReadException;
-import org.gautelis.repo.exceptions.DatabaseWriteException;
-import org.gautelis.repo.model.Context;
-import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.utils.TimeHelper;
 
 import java.sql.*;
@@ -94,8 +91,8 @@ final class TimeValue extends Value<Instant> {
     }
 
     @Override
-    public Type getType() {
-        return Type.TIME;
+    public AttributeType getType() {
+        return AttributeType.TIME;
     }
 
     @Override

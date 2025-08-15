@@ -28,7 +28,7 @@ import junit.framework.TestSuite;
 import org.gautelis.repo.exceptions.BaseException;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
-import org.gautelis.repo.model.associations.Type;
+import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.gautelis.repo.model.locks.Lock;
@@ -549,7 +549,7 @@ public class RepositoryTest extends TestCase {
                     if (false) {
                         // Works, but not part of test (at the moment)
                         // Add a relation to parent unit
-                        repo.addRelation(parentUnit, Type.PARENT_CHILD_RELATION, childUnit);
+                        repo.addRelation(parentUnit, AssociationType.PARENT_CHILD_RELATION, childUnit);
                     }
 
                 }
@@ -557,7 +557,7 @@ public class RepositoryTest extends TestCase {
 
                 if (false) {
                     System.out.println("Children of " + parentUnit.getName().orElse("parent") + " (" + parentUnit.getReference() + "):");
-                    parentUnit.getRelations(Type.PARENT_CHILD_RELATION).forEach(
+                    parentUnit.getRelations(AssociationType.PARENT_CHILD_RELATION).forEach(
                             relatedUnit -> System.out.println("  " + relatedUnit.getName().orElse("child") + " (" + relatedUnit.getReference() + ")")
                     );
                 }

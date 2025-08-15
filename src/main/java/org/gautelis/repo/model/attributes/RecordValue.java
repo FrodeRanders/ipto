@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AttributeType;
 
 import java.sql.*;
 import java.util.*;
@@ -94,8 +95,8 @@ public final class RecordValue extends Value<Attribute<?>> {
     }
 
     @Override
-    public Type getType() {
-        return Type.RECORD;
+    public AttributeType getType() {
+        return AttributeType.RECORD;
     }
 
     @SuppressWarnings("unchecked")

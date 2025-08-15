@@ -7,7 +7,7 @@ import org.gautelis.repo.model.KnownAttributes;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.UnitSearch;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.*;
@@ -92,7 +92,7 @@ public class RuntimeService {
             return null;
         }
 
-        if (!Type.RECORD.equals(attribute.getType())) {
+        if (!AttributeType.RECORD.equals(attribute.getType())) {
             return values;
         }
 
@@ -132,7 +132,7 @@ public class RuntimeService {
             return null;
         }
 
-        if (!Type.RECORD.equals(attribute.getType())) {
+        if (!AttributeType.RECORD.equals(attribute.getType())) {
             return values.getFirst();
         }
 
@@ -296,7 +296,7 @@ public class RuntimeService {
         KnownAttributes.AttributeInfo info = _info.get();
 
         int attrId = info.id;
-        Type attrType = Type.of(info.type);
+        AttributeType attrType = AttributeType.of(info.type);
         switch (attrType) {
             case STRING -> {
                 if (Objects.requireNonNull(op) == OperationsConfigurator.Operator.EQ) {

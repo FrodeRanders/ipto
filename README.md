@@ -13,7 +13,7 @@ schema {
 
 ##############  directive definitions ############################
 directive @datatypeRegistry on ENUM
-directive @datatype(id: Int!, type: String = null) on ENUM_VALUE
+directive @datatype(id: Int!, basictype: String = null) on ENUM_VALUE
 
 directive @attributeRegistry on ENUM
 directive @attribute(id: Int!, datatype: DataTypes!, array: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE

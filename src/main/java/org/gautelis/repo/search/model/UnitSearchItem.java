@@ -17,9 +17,7 @@
 package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.db.Column;
-import org.gautelis.repo.model.attributes.Type;
-
-import java.util.Optional;
+import org.gautelis.repo.model.AttributeType;
 
 /**
  *
@@ -28,7 +26,7 @@ public abstract class UnitSearchItem<T> extends SearchItem<T> {
 
     protected final Column column;
 
-    protected UnitSearchItem(Type type, Column column, Operator operator) {
+    protected UnitSearchItem(AttributeType type, Column column, Operator operator) {
         super(Variant.UNIT, type, operator);
         this.column = column;
     }

@@ -20,7 +20,7 @@ import org.gautelis.repo.db.Column;
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.model.*;
 
 import java.time.Instant;
@@ -149,14 +149,14 @@ public class QueryBuilder {
     /**
      * Generates constraint "attribute == value" for specified attribute.
      * <p>
-     * This method will handle the various attribute types.
+     * This method will handle the various attribute types, EXCEPT 'DATA' and 'RECORD'.
      */
     public static LeafExpression<? extends AttributeSearchItem<?>> constrainOnValueEQ(
             Attribute<?> attribute, String value, Locale locale
     ) throws NumberFormatException, InvalidParameterException {
 
         int attrId = attribute.getAttrId();
-        Type type = attribute.getType();
+        AttributeType type = attribute.getType();
 
         return switch (type) {
             case STRING -> StringAttributeSearchItem.constrainOnEQ(attrId, value);
@@ -171,14 +171,7 @@ public class QueryBuilder {
 
     /**
      * Generates constraint "unit has specific status", identified by
-     * one of the following constants:
-     * <UL>
-     * <LI>Unit.Status.PENDING_DELETION</LI>
-     * <LI>Unit.Status.PENDING_DISPOSITION</LI>
-     * <LI>Unit.Status.OBLITERATED</LI>
-     * <LI>Unit.Status.EFFECTIVE</LI>
-     * <LI>Unit.Status.ARCHIVED</LI>
-     * </UL>
+     * the enum Unit.Status.
      *
      * @param status
      * @return
@@ -202,7 +195,7 @@ public class QueryBuilder {
      }
 
      /**
-     * Generates a constraint "unit was created before"
+     * Generates a constraint "unit was created before" (strict less than)
      */
      public static LeafExpression<TimeUnitSearchItem> constrainToCreatedBefore(Instant instant) {
         Objects.requireNonNull(instant, "instant");

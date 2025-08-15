@@ -16,19 +16,14 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.exceptions.InvalidParameterException;
-import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.Type;
-
-import java.text.ParseException;
-import java.util.Locale;
+import org.gautelis.repo.model.AttributeType;
 
 
 public abstract class AttributeSearchItem<T> extends SearchItem<T> {
 
     private final int attrId;
 
-    protected AttributeSearchItem(Type type, Operator operator, int attrId) {
+    protected AttributeSearchItem(AttributeType type, Operator operator, int attrId) {
         super(Variant.ATTRIBUTE, type, operator);
         this.attrId = attrId;
     }

@@ -24,7 +24,7 @@ import org.gautelis.repo.model.Context;
 
 import java.sql.ResultSet;
 
-import static org.gautelis.repo.model.associations.Type.PARENT_CHILD_RELATION;
+import static org.gautelis.repo.model.AssociationType.PARENT_CHILD_RELATION;
 
 /**
  *

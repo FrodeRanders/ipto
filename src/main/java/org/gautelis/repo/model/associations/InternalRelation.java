@@ -18,6 +18,7 @@ package org.gautelis.repo.model.associations;
 
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.Context;
 import org.gautelis.repo.model.Unit;
 
@@ -41,7 +42,7 @@ public class InternalRelation extends Association {
             int tenantId = rs.getInt("tenantid");
             long unitId = rs.getLong("unitid");
             int _relationType = rs.getInt("assoctype");
-            Type relationType = Type.of(_relationType);
+            AssociationType relationType = AssociationType.of(_relationType);
             relationTenantId = rs.getInt("assoctenantid");
             relationUnitId = rs.getLong("assocunitid");
 
@@ -61,7 +62,7 @@ public class InternalRelation extends Association {
             Context ctx,
             int tenantId,
             long unitId,
-            Type relationType,
+            AssociationType relationType,
             int relationTenantId,
             long relationUnitId
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
@@ -69,7 +70,7 @@ public class InternalRelation extends Association {
         // Checking bounds against isRelationMap implicitly checks bounds
         // against allowMultipleMap since they are equilength (or definitely
         // should be)
-        if (Type.INVALID == relationType) {
+        if (AssociationType.INVALID == relationType) {
             throw new InvalidParameterException("Invalid relation type");
         }
 
@@ -144,12 +145,12 @@ public class InternalRelation extends Association {
             Context ctx,
             int tenantId,
             long unitId,
-            Type relationType,
+            AssociationType relationType,
             int relationTenantId,
             long relationUnitId
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
 
-        if (relationType == Type.INVALID) {
+        if (relationType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid relation type");
         }
 

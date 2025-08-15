@@ -20,7 +20,7 @@ import java.io.Reader;
 import java.sql.SQLException;
 import java.util.*;
 
-import static org.gautelis.repo.model.attributes.Type.of;
+import static org.gautelis.repo.model.AttributeType.of;
 
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);

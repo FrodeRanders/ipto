@@ -24,7 +24,7 @@ import org.gautelis.repo.model.Context;
 
 import java.sql.ResultSet;
 
-import static org.gautelis.repo.model.associations.Type.CASE_ASSOCIATION;
+import static org.gautelis.repo.model.AssociationType.CASE_ASSOCIATION;
 
 /**
  *

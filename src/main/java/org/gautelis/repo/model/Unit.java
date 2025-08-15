@@ -21,10 +21,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.uuid.Generators;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
-import org.gautelis.repo.model.associations.Association;
-import org.gautelis.repo.model.associations.AssociationManager;
-import org.gautelis.repo.model.associations.ExternalAssociation;
-import org.gautelis.repo.model.associations.InternalRelation;
+import org.gautelis.repo.model.associations.*;
 import org.gautelis.repo.model.attributes.*;
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
@@ -220,7 +217,7 @@ public class Unit implements Cloneable {
      * Returns references to external resources associated with this unit.
      */
     public Collection<String> getAssociations(
-            org.gautelis.repo.model.associations.Type assocType
+            AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
         Collection<Association> rightAssocs = TimedExecution.run(ctx.getTimingData(), "get right assocs", () ->
@@ -247,7 +244,7 @@ public class Unit implements Cloneable {
      * Returns references to external resources associated with this unit.
      */
     public Collection<Unit> getRelations(
-            org.gautelis.repo.model.associations.Type assocType
+            AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
         Collection<Association> rightAssocs = TimedExecution.run(ctx.getTimingData(), "get right relations", () ->
@@ -476,7 +473,7 @@ public class Unit implements Cloneable {
                     Attribute<?> attribute = new Attribute<>(node);
                     valueIdToAttribute.put(attribute.getValueId(), attribute);
 
-                    if (Type.RECORD.equals(attribute.getType())) {
+                    if (AttributeType.RECORD.equals(attribute.getType())) {
                         if (attribute.getValue() instanceof RecordValue recValue) {
                             Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
                             Iterator<RecordValue.AttributeReference> rit = refs.iterator();
@@ -655,7 +652,7 @@ public class Unit implements Cloneable {
                             log.error(info);
                             throw new AttributeValueException(info);
                         }
-                        if (parent.getType() != Type.RECORD) {
+                        if (parent.getType() != AttributeType.RECORD) {
                             // Unexpected
                             String info = "Parent attribute is not a record: type=" + parent.getType().name();
                             info += ", attrId=" + parent.getAttrId();
@@ -797,7 +794,7 @@ public class Unit implements Cloneable {
         } else {
             Attribute<?> attribute = _attribute.get();
 
-            if (Type.RECORD == attribute.getType()) {
+            if (AttributeType.RECORD == attribute.getType()) {
                 // TODO -- instantiate nested attributes?
             }
 
@@ -863,7 +860,7 @@ public class Unit implements Cloneable {
             Attribute<?> attribute = new Attribute<>(attributeInfo.get());
             values.add(attribute); // added to attribute's values
 
-            if (Type.RECORD == attribute.getType()) {
+            if (AttributeType.RECORD == attribute.getType()) {
                 // TODO -- instantiate nested attributes if not instantiated already?
             }
             runnable.run((Attribute<A>) attribute);
@@ -947,7 +944,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.STRING) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.STRING) {
             @SuppressWarnings("unchecked")
             Attribute<String> sAttr = (Attribute<String>) attr.get();
             return Optional.of(sAttr);
@@ -959,7 +956,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.STRING) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.STRING) {
             @SuppressWarnings("unchecked")
             Attribute<String> sAttr = (Attribute<String>) attr.get();
             return Optional.of(sAttr);
@@ -971,7 +968,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.INTEGER) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.INTEGER) {
             @SuppressWarnings("unchecked")
             Attribute<Integer> sAttr = (Attribute<Integer>) attr.get();
             return Optional.of(sAttr);
@@ -983,7 +980,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.INTEGER) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.INTEGER) {
             @SuppressWarnings("unchecked")
             Attribute<Integer> sAttr = (Attribute<Integer>) attr.get();
             return Optional.of(sAttr);
@@ -995,7 +992,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.LONG) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.LONG) {
             @SuppressWarnings("unchecked")
             Attribute<Long> sAttr = (Attribute<Long>) attr.get();
             return Optional.of(sAttr);
@@ -1007,7 +1004,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.LONG) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.LONG) {
             @SuppressWarnings("unchecked")
             Attribute<Long> sAttr = (Attribute<Long>) attr.get();
             return Optional.of(sAttr);
@@ -1019,7 +1016,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.DOUBLE) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.DOUBLE) {
             @SuppressWarnings("unchecked")
             Attribute<Double> sAttr = (Attribute<Double>) attr.get();
             return Optional.of(sAttr);
@@ -1031,7 +1028,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.DOUBLE) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.DOUBLE) {
             @SuppressWarnings("unchecked")
             Attribute<Double> sAttr = (Attribute<Double>) attr.get();
             return Optional.of(sAttr);
@@ -1043,7 +1040,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.BOOLEAN) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.BOOLEAN) {
             @SuppressWarnings("unchecked")
             Attribute<Boolean> sAttr = (Attribute<Boolean>) attr.get();
             return Optional.of(sAttr);
@@ -1055,7 +1052,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.BOOLEAN) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.BOOLEAN) {
             @SuppressWarnings("unchecked")
             Attribute<Boolean> sAttr = (Attribute<Boolean>) attr.get();
             return Optional.of(sAttr);
@@ -1067,7 +1064,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.TIME) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.TIME) {
             @SuppressWarnings("unchecked")
             Attribute<Instant> sAttr = (Attribute<Instant>) attr.get();
             return Optional.of(sAttr);
@@ -1079,7 +1076,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.TIME) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.TIME) {
             @SuppressWarnings("unchecked")
             Attribute<Instant> sAttr = (Attribute<Instant>) attr.get();
             return Optional.of(sAttr);
@@ -1091,7 +1088,7 @@ public class Unit implements Cloneable {
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.DATA) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.DATA) {
             @SuppressWarnings("unchecked")
             Attribute<Object> sAttr = (Attribute<Object>) attr.get();
             return Optional.of(sAttr);
@@ -1103,7 +1100,7 @@ public class Unit implements Cloneable {
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.DATA) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.DATA) {
             @SuppressWarnings("unchecked")
             Attribute<Object> sAttr = (Attribute<Object>) attr.get();
             return Optional.of(sAttr);
@@ -1111,11 +1108,11 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
-    public Optional<Attribute<Attribute<?>>> getCompoundAttribute(
+    public Optional<Attribute<Attribute<?>>> getRecordAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeName, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.RECORD) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.RECORD) {
             @SuppressWarnings("unchecked")
             Attribute<Attribute<?>> sAttr = (Attribute<Attribute<?>>) attr.get();
             return Optional.of(sAttr);
@@ -1123,11 +1120,11 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
-    public Optional<Attribute<Attribute<?>>> getCompoundAttribute(
+    public Optional<Attribute<Attribute<?>>> getRecordAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
         Optional<Attribute<?>> attr = getAttribute(attributeId, createIfMissing);
-        if (attr.isPresent() && attr.get().getType() == Type.RECORD) {
+        if (attr.isPresent() && attr.get().getType() == AttributeType.RECORD) {
             @SuppressWarnings("unchecked")
             Attribute<Attribute<?>> sAttr = (Attribute<Attribute<?>>) attr.get();
             return Optional.of(sAttr);

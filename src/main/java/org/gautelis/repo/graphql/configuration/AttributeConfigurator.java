@@ -5,6 +5,7 @@ import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql.runtime.RuntimeService;
 import org.gautelis.repo.model.Repository;
+import org.gautelis.repo.model.AttributeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.gautelis.repo.model.attributes.Type.RECORD;
+import static org.gautelis.repo.model.AttributeType.RECORD;
 
 class AttributeConfigurator {
     private static final Logger log = LoggerFactory.getLogger(AttributeConfigurator.class);
@@ -25,7 +26,7 @@ class AttributeConfigurator {
             StringBuilder sb = new StringBuilder("Existing attribute metadata for ");
             sb.append(qualName).append(" {");
             sb.append("alias=").append(attrName);
-            sb.append(", type=").append(org.gautelis.repo.model.attributes.Type.of(attrType));
+            sb.append(", type=").append(AttributeType.of(attrType));
             sb.append(", vector=").append(vector);
             sb.append("}");
             return sb.toString();
@@ -209,7 +210,7 @@ class AttributeConfigurator {
 
                                     ExistingAttributeMeta existingAttribute = existingAttributes.get(qualName);
                                     if (null != existingAttribute) {
-                                        log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, org.gautelis.repo.model.attributes.Type.of(attrType), isArray);
+                                        log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, AttributeType.of(attrType), isArray);
 
                                         // This attribute has already been loaded -- check similarity
                                         if (existingAttribute.vector != isArray) {
@@ -223,7 +224,7 @@ class AttributeConfigurator {
                                         }
 
                                         if (existingAttribute.attrType != attrType) {
-                                            log.warn("Failed to load attribute {}. New definition differs on existing 'attribute type' {} -- skipping", qualName, org.gautelis.repo.model.attributes.Type.of(existingAttribute.attrType));
+                                            log.warn("Failed to load attribute {}. New definition differs on existing 'attribute type' {} -- skipping", qualName, AttributeType.of(existingAttribute.attrType));
                                             continue;
                                         }
 

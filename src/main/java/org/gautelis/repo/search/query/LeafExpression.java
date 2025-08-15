@@ -16,6 +16,7 @@
  */
 package org.gautelis.repo.search.query;
 
+import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.search.model.AttributeSearchItem;
 import org.gautelis.repo.search.model.SearchItem;
 import org.gautelis.repo.search.model.UnitSearchItem;
@@ -28,6 +29,7 @@ import java.util.Optional;
 
 import static org.gautelis.repo.db.Column.*;
 import static org.gautelis.repo.db.Table.*;
+import static org.gautelis.repo.model.AttributeType.*;
 import static org.gautelis.repo.search.model.Operator.EQ;
 
 public final class LeafExpression<T extends SearchItem<?>> implements SearchExpression {
@@ -96,8 +98,8 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
             Map<String, SearchItem<?>> commonConstraintValues
     ) {
         sb.append(reference).append(" AS (");
-        sb.append("SELECT av.tenantid, av.unitid ");
-        sb.append("FROM repo_attribute_value av ");
+        sb.append("SELECT ").append(ATTRIBUTE_VALUE_TENANTID).append(", ").append(ATTRIBUTE_VALUE_UNITID).append(" ");
+        sb.append("FROM ").append(ATTRIBUTE_VALUE).append(" ");
         sb.append("JOIN ");
         switch(item.getType()) {
             case STRING ->  sb.append(ATTRIBUTE_STRING_VALUE_VECTOR);
@@ -106,6 +108,9 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
             case LONG ->    sb.append(ATTRIBUTE_LONG_VALUE_VECTOR);
             case DOUBLE ->  sb.append(ATTRIBUTE_DOUBLE_VALUE_VECTOR);
             case BOOLEAN -> sb.append(ATTRIBUTE_BOOLEAN_VALUE_VECTOR);
+            default -> {
+                throw new InvalidParameterException("Invalid attribute type: " + item.getType());
+            }
         }
         sb.append(" ON ").append(ATTRIBUTE_VALUE_VALUEID).append(" ");
         sb.append(EQ);

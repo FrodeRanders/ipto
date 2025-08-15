@@ -21,7 +21,8 @@ import org.gautelis.repo.search.model.SearchItem;
 import java.util.Map;
 
 public record NotExpression(SearchExpression inner) implements SearchExpression {
-    @Override public String toSql(boolean doPrepare, Map<String, SearchItem<?>> commonConstraintValues) {
+    @Override
+    public String toSql(boolean doPrepare, Map<String, SearchItem<?>> commonConstraintValues) {
         return "NOT (" + inner.toSql(doPrepare, commonConstraintValues) + ")";
     }
 }

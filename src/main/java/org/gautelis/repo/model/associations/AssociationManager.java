@@ -19,6 +19,7 @@ package org.gautelis.repo.model.associations;
 
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.Context;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,7 +99,7 @@ public class AssociationManager {
     private static Association resurrectAssoc(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
         try {
             int _assocType = rs.getInt("assoctype");
-            Type assocType = Type.of(_assocType);
+            AssociationType assocType = AssociationType.of(_assocType);
 
             Association assoc;
 
@@ -144,10 +145,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     static Association getRightAssociation(
-            Context ctx, int tenantId, long unitId, Type assocType
+            Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -191,10 +192,10 @@ public class AssociationManager {
      */
     /* Should be package accessible only */
     public static Collection<Association> getRightAssociations(
-            Context ctx, int tenantId, long unitId, Type assocType
+            Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -232,10 +233,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     static int countRightAssociations(
-            Context ctx, int tenantId, long unitId, Type assocType
+            Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -272,10 +273,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     static int countLeftAssociations(
-            Context ctx, Type assocType, int assocTenantId, long assocUnitId
+            Context ctx, AssociationType assocType, int assocTenantId, long assocUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -309,10 +310,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     static int countLeftAssociations(
-            Context ctx, Type assocType, String assocString
+            Context ctx, AssociationType assocType, String assocString
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -347,10 +348,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     Collection<Association> getLeftAssociations(
-            Context ctx, Type assocType, int assocTenantId, long assocUnitId
+            Context ctx, AssociationType assocType, int assocTenantId, long assocUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 
@@ -387,10 +388,10 @@ public class AssociationManager {
      */
     /* package accessible only */
     Collection<Association> getLeftAssociations(
-            Context ctx, Type assocType, String assocString
+            Context ctx, AssociationType assocType, String assocString
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 

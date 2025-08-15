@@ -17,7 +17,7 @@
 package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.db.Column;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 
 import java.time.Instant;
 
@@ -29,7 +29,7 @@ public class TimeUnitSearchItem extends UnitSearchItem<Instant> {
     private final Instant instant;
 
     public TimeUnitSearchItem(Column column, Operator operator, Instant instant) {
-        super(Type.TIME, column, operator);
+        super(AttributeType.TIME, column, operator);
         this.instant = instant;
     }
 

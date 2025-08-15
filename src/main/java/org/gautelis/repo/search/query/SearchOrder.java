@@ -68,23 +68,4 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
 
         return new SearchOrder(order, asc);
     }
-
-
-
-    /**
-     * Appends columns search order to buf.
-     * <p>
-     * An example could be the string ", ut.created" (including the leading comma).
-     *
-     * @param buf
-     */
-    public void appendColumns(StringBuilder buf) {
-        if (columns.length > 0) {
-            for (Column column : columns) {
-                buf.append(", ");
-                buf.append(column);
-            }
-            buf.append(" ");
-        }
-    }
 }

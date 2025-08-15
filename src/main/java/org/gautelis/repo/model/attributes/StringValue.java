@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AttributeType;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -83,8 +84,8 @@ final class StringValue extends Value<String> {
 
 
     @Override
-    public Type getType() {
-        return Type.STRING;
+    public AttributeType getType() {
+        return AttributeType.STRING;
     }
 
     @Override

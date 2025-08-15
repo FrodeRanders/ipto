@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 public class BooleanAttributeSearchItem extends AttributeSearchItem<Boolean> {
@@ -24,7 +24,7 @@ public class BooleanAttributeSearchItem extends AttributeSearchItem<Boolean> {
     private final boolean value;
 
     public BooleanAttributeSearchItem(int attrId, Operator operator, boolean value) {
-        super(Type.BOOLEAN, operator, attrId);
+        super(AttributeType.BOOLEAN, operator, attrId);
         this.value = value;
     }
 

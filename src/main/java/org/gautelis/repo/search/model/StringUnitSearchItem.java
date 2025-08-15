@@ -18,7 +18,7 @@ package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.db.Column;
 import org.gautelis.repo.exceptions.InvalidParameterException;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 import java.util.Objects;
@@ -34,7 +34,7 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
     public StringUnitSearchItem(
             Column column, Operator operator, String value
     ) {
-        super(Type.STRING, column, operator);
+        super(AttributeType.STRING, column, operator);
         this.value = value;
     }
 

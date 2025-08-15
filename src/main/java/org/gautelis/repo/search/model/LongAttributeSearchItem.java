@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 public class LongAttributeSearchItem extends AttributeSearchItem<Long> {
@@ -24,7 +24,7 @@ public class LongAttributeSearchItem extends AttributeSearchItem<Long> {
     private final long value;
 
     public LongAttributeSearchItem(int attrId, Operator operator, long value) {
-        super(Type.LONG, operator, attrId);
+        super(AttributeType.LONG, operator, attrId);
         this.value = value;
     }
 

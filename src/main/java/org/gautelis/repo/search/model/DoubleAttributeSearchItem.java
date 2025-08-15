@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 public class DoubleAttributeSearchItem extends AttributeSearchItem<Double> {
@@ -24,7 +24,7 @@ public class DoubleAttributeSearchItem extends AttributeSearchItem<Double> {
     private final double value;
 
     public DoubleAttributeSearchItem(int attrId, Operator operator, double value) {
-        super(Type.DOUBLE, operator, attrId);
+        super(AttributeType.DOUBLE, operator, attrId);
         this.value = value;
     }
 

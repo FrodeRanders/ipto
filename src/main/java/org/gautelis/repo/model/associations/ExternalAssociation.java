@@ -19,6 +19,7 @@ package org.gautelis.repo.model.associations;
 
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.Context;
 import org.gautelis.repo.model.Unit;
 
@@ -42,7 +43,7 @@ public class ExternalAssociation extends Association {
             int tenantId = rs.getInt("tenantid");
             long unitId = rs.getLong("unitid");
             int _assocType = rs.getInt("assoctype");
-            Type assocType = Type.of(_assocType);
+            AssociationType assocType = AssociationType.of(_assocType);
             assocString = rs.getString("assocstring");
             // ignore the assocId
 
@@ -62,14 +63,14 @@ public class ExternalAssociation extends Association {
             Context ctx,
             int tenantId,
             long unitId,
-            Type assocType,
+            AssociationType assocType,
             String assocString
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
 
         // Checking bounds against internalMap implicitly checks bounds
         // against multipleMap since they are equilength (or definitely
         // should be)
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Unknown association type: " + assocType);
         }
 
@@ -143,7 +144,7 @@ public class ExternalAssociation extends Association {
             Context ctx,
             int tenantId,
             long unitId,
-            Type assocType,
+            AssociationType assocType,
             String assocString
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
         Objects.requireNonNull(assocType, "assocType");
@@ -153,7 +154,7 @@ public class ExternalAssociation extends Association {
             throw new InvalidParameterException("Invalid empty association string");
         }
 
-        if (assocType == Type.INVALID) {
+        if (assocType == AssociationType.INVALID) {
             throw new InvalidParameterException("Invalid association type");
         }
 

@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 import org.gautelis.repo.utils.TimeHelper;
 
@@ -27,7 +27,7 @@ public class TimeAttributeSearchItem extends AttributeSearchItem<Instant> {
     private final Instant value;
 
     public TimeAttributeSearchItem(int attrId, Operator operator, Instant value) {
-        super(Type.TIME, operator, attrId);
+        super(AttributeType.TIME, operator, attrId);
         this.value = value;
     }
 

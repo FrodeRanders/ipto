@@ -18,9 +18,7 @@ package org.gautelis.repo.search.model;
 
 
 import org.gautelis.repo.db.Column;
-import org.gautelis.repo.model.Unit;
-import org.gautelis.repo.model.attributes.Type;
-import org.gautelis.repo.search.query.LeafExpression;
+import org.gautelis.repo.model.AttributeType;
 
 /**
  *
@@ -30,7 +28,7 @@ public class IntegerUnitSearchItem extends UnitSearchItem<Integer> {
     private final int value;
 
     public IntegerUnitSearchItem(Column column, Operator operator, int value) {
-        super(Type.INTEGER, column, operator);
+        super(AttributeType.INTEGER, column, operator);
         this.value = value;
     }
 

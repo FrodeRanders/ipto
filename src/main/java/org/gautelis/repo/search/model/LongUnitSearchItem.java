@@ -17,7 +17,7 @@
 package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.db.Column;
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 
 /**
  *
@@ -27,7 +27,7 @@ public class LongUnitSearchItem extends UnitSearchItem<Long> {
     private final long value;
 
     public LongUnitSearchItem(Column column, Operator operator, long value) {
-        super(Type.LONG, column, operator);
+        super(AttributeType.LONG, column, operator);
         this.value = value;
     }
 

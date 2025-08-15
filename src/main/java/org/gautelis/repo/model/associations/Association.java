@@ -16,6 +16,7 @@
  */
 package org.gautelis.repo.model.associations;
 
+import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,14 +38,14 @@ public abstract class Association {
 
     private int tenantId = -1; // invalid
     private long unitId = -1L; // invalid
-    private Type type = Type.INVALID;
+    private AssociationType type = AssociationType.INVALID;
 
     // Used when resurrecting association
     protected Association() {
     }
 
     // Used when resurrecting association
-    protected void inject(int tenantId, long unitId, Type type) {
+    protected void inject(int tenantId, long unitId, AssociationType type) {
         this.tenantId = tenantId;
         this.unitId = unitId;
         this.type = type;
@@ -62,7 +63,7 @@ public abstract class Association {
         return type.allowsMultiples();
     }
 
-    public Type getType() {
+    public AssociationType getType() {
         return type;
     }
 

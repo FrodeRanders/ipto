@@ -16,7 +16,7 @@
  */
 package org.gautelis.repo.search.model;
 
-import org.gautelis.repo.model.attributes.Type;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.query.LeafExpression;
 
 import java.util.Objects;
@@ -26,7 +26,7 @@ public class StringAttributeSearchItem extends AttributeSearchItem<String> {
     private final String value;
 
     public StringAttributeSearchItem(int attrId, Operator operator, String value) {
-        super(Type.STRING, operator, attrId);
+        super(AttributeType.STRING, operator, attrId);
         this.value = value;
     }
 
