@@ -41,13 +41,28 @@ public class Statistics {
                 .append("mem-total=").append(asHumanApproximate(runtime.totalMemory(), " ").replaceAll("\\u00a0"," ")).append(" ")
                 .append("mem-free=").append(asHumanApproximate(runtime.freeMemory(), " ").replaceAll("\\u00a0"," ")).append("\n");
 
-        buf.append("\n");
+        repo.withDataSource(dataSource -> {
+        });
+
 
         repo.withDataSource(dataSource -> {
             /*
+             * DB server version
+             */
+            String sql = "SELECT version()"; // PostgreSQL specific, certainly.
+
+            Database.useReadonlyStatement(dataSource, sql, rs -> {
+                if (rs.next()) {
+                    buf.append("DB: ")
+                            .append(rs.getString("version")).append("\n");
+                }
+            });
+            buf.append("\n");
+
+            /*
              * Count all units
              */
-            String sql = "SELECT COUNT(*) FROM repo_unit";
+            sql = "SELECT COUNT(*) FROM repo_unit";
 
             Database.useReadonlyStatement(dataSource, sql, rs -> {
                 if (rs.next()) {

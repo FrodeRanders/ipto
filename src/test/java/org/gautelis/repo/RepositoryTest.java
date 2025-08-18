@@ -436,8 +436,8 @@ public class RepositoryTest extends TestCase {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 500; //
-        final int numberOfChildren = 10; //
+        final int numberOfParents = 5000; //
+        final int numberOfChildren = 100; //
 
         try {
             Instant firstParentCreated = null;

@@ -489,6 +489,12 @@ public class Unit implements Cloneable {
                                     valueIdToAttribute.remove(ref.refValueId());
                                 }
                             }
+
+                            // All initial references should be resolved by now
+                            if (!refs.isEmpty()) {
+                                // Is our algorithm sound?
+                                log.error("There are unresolved attribute references in record: {}", attribute);
+                            }
                         }
                     }
 
