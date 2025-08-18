@@ -190,16 +190,7 @@ public class OperationsConfigurator {
 
                                 Filter filter = objectMapper.convertValue(env.getArgument(inputName), Filter.class);
 
-                                List<Box> edges = repoService.search(filter);
-                                return Map.of(
-                                        "edges", edges,
-                                        "pageInfo", Map.of(
-                                                "hasNextPage", false,
-                                                "hasPreviousPage", false,
-                                                "startCursor", "0",
-                                                "endCursor", "0"
-                                        )
-                                );
+                                return repoService.search(filter);
                             };
 
                             runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, unitsByFilter));

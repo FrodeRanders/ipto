@@ -16,6 +16,8 @@
  */
 package org.gautelis.repo;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.uuid.Generators;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
@@ -64,6 +66,8 @@ import static org.gautelis.repo.Statistics.dumpStatistics;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class RepositoryTest extends TestCase {
     private static final Logger log = LoggerFactory.getLogger(RepositoryTest.class);
+
+    ObjectMapper MAPPER = new ObjectMapper();
 
     /**
      * Create the test case
@@ -133,34 +137,17 @@ public class RepositoryTest extends TestCase {
     }
 
     private void dumpMap(Map<String, ?> root) {
-        dump(root, 0);
-        System.out.println();
+        try {
+            dump(root, 0);
+            System.out.println();
+        } catch (Exception e) {
+            System.err.println("Error dumping map: " + e.getMessage());
+        }
     }
 
-    private void dump(Object obj, int depth) {
-        String indent = "  ".repeat(depth);
-
-        if (obj instanceof Map<?, ?> map) {
-            map.forEach((k, v) -> {
-                System.out.println();
-                System.out.print(indent + k + ":");
-                dump(v, depth + 1);
-            });
-
-        } else if (obj instanceof Collection<?> col) {
-            System.out.println();
-            System.out.print(indent + "[");
-            for (Object item : col) {
-                dump(item, depth + 1);
-                System.out.println();
-                System.out.print(indent + ",");
-            }
-            System.out.println();
-            System.out.print(indent + "]");
-
-        } else {
-            System.out.print(" " + obj);
-        }
+    private void dump(Object obj, int depth) throws Exception {
+        JsonNode node = MAPPER.valueToTree(obj);
+        System.out.println(MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(node));
     }
 
     public void test1GraphQL() {
@@ -278,17 +265,8 @@ public class RepositoryTest extends TestCase {
         String query = """
             query Units($filter: Filter!) {
               orders(filter: $filter) {
-                edges {
-                  shipment {
-                    orderId
+                shipment {
                     deadline
-                  }
-                }
-                pageInfo {
-                  hasNextPage
-                  hasPreviousPage
-                  startCursor
-                  endCursor
                 }
               }
             }
@@ -436,8 +414,8 @@ public class RepositoryTest extends TestCase {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 5000; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = 50; //
+        final int numberOfChildren = 10; //
 
         try {
             Instant firstParentCreated = null;

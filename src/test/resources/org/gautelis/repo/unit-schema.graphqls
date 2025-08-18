@@ -197,24 +197,12 @@ input Filter {
     size: Int = 20
 }
 
-#
-type PurchaseOrderConnection {
-    edges      : [PurchaseOrder!]!
-    pageInfo   : PageInfo!
-}
-
-type PageInfo {
-    hasNextPage    : Boolean!
-    hasPreviousPage: Boolean!
-    startCursor    : String
-    endCursor      : String
-}
 
 ##############  Queries ###########################################
 type Query {
     order(id : UnitIdentification!) : PurchaseOrder
     orderRaw(id : UnitIdentification!) : Bytes
-    orders(filter: Filter!) : PurchaseOrderConnection!
+    orders(filter: Filter!) : [PurchaseOrder]
     ordersRaw(filter: Filter!) : Bytes
 }
 

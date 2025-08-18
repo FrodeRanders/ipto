@@ -71,17 +71,17 @@ public class TimingData extends HashMap<String, MovingAverage> {
         buf.append(String.format(hdrFormat.toString(), (Object[]) cols));
         buf.append(line);
 
-        String format = "";
-        format += "%" + colSize[0] + "s | ";
-        format += "%" + colSize[1] + "d | ";
-        format += "%" + colSize[2] + ".2f | ";
-        format += "%" + colSize[3] + ".2f | ";
-        format += "%" + colSize[4] + ".2f | ";
-        format += "%" + colSize[5] + ".2f | ";
-        format += "%" + colSize[6] + "d | ";
-        format += "%" + colSize[7] + "s\n";
+        final String format =
+            "%" + colSize[0] + "s | " +
+            "%" + colSize[1] + "d | " +
+            "%" + colSize[2] + ".2f | " +
+            "%" + colSize[3] + ".2f | " +
+            "%" + colSize[4] + ".2f | " +
+            "%" + colSize[5] + ".2f | " +
+            "%" + colSize[6] + "d | " +
+            "%" + colSize[7] + "s\n";
 
-        for (String key : keySet()) {
+        keySet().stream().sorted().forEach(key -> {
             MovingAverage ma = get(key);
             buf.append(String.format(
                     format, key,
@@ -92,7 +92,7 @@ public class TimingData extends HashMap<String, MovingAverage> {
                     ma.getCV().orElse(0.0),
                     ma.getTotal(),
                     TimeDelta.asHumanApproximate(ma.getTotal())));
-        }
+        });
         buf.append("\n");
         return buf.toString();
     }

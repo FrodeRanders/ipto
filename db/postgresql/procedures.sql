@@ -196,10 +196,10 @@ WITH unit_hdr AS (
                          FROM repo_record_vector rv
                          WHERE rv.valueid = av.valueid)
                END AS val
-         FROM   repo_attribute_value av
-         JOIN   repo_attribute a ON a.attrid = av.attrid
-         WHERE  av.tenantid = p_tenantid
-           AND  av.unitid   = p_unitid
+         FROM repo_attribute_value av
+         JOIN repo_attribute a ON a.attrid = av.attrid
+         WHERE av.tenantid = p_tenantid
+           AND av.unitid = p_unitid
      )
 SELECT jsonb_build_object(
            '@version', 1,
@@ -267,7 +267,7 @@ WITH RECURSIVE attr_tree AS (
            NULL::int    AS record_idx,
            0 AS depth
     FROM repo_attribute_value av
-           JOIN repo_attribute p ON p.attrid = av.attrid
+    JOIN repo_attribute p ON p.attrid = av.attrid
     WHERE av.tenantid = p_tenantid
       AND av.unitid = p_unitid
       AND NOT EXISTS (SELECT 1 FROM repo_record_vector cv WHERE cv.ref_valueid = av.valueid)

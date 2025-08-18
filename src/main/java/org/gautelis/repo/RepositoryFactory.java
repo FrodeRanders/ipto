@@ -110,12 +110,13 @@ public class RepositoryFactory {
         }
         */
 
+        // TODO -- go through this
         HikariConfig hConfig = new HikariConfig();
         String url = "jdbc:" + config.manager() + "://" + config.server() + ":" + config.port() +"/" + config.database();
         hConfig.setJdbcUrl(url);
         hConfig.setUsername(config.user());
         hConfig.setPassword(config.password());
-        hConfig.setMaximumPoolSize(20);
+        hConfig.setMaximumPoolSize(50);
         HikariDataSource dataSource = new HikariDataSource(hConfig);
 
         // For now -- TODO Fix Configurable to allow collection return values
@@ -159,6 +160,9 @@ public class RepositoryFactory {
     }
 
     public static Repository getRepository() {
+        if (null != repo) {
+            return repo;
+        }
         return getRepository(new PostgresDataSourcePreparer());
     }
 

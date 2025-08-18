@@ -16,6 +16,7 @@ import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.stream.IntStream;
 
 public class Statistics {
@@ -186,6 +187,17 @@ public class Statistics {
         });
     }
 
+    private record IndexData(String tablename, String totalseqscan, String totalindexscan, String tablerows, String tablesize) {}
+
+    private static class IndexDataComparator implements Comparator<IndexData> {
+        @Override
+        public int compare(final IndexData o1, final IndexData o2) {
+            String tableName1 = o1.tablename();
+            return tableName1.compareTo(o2.tablename());
+        }
+    }
+
+
     public static String dumpIndexUse(DataSource dataSource) {
         String sql = """
                 SELECT
@@ -198,7 +210,6 @@ public class Statistics {
                 ORDER BY relname ASC;
                 """;
 
-        record IndexData(String tablename, String totalseqscan, String totalindexscan, String tablerows, String tablesize) {}
         final Collection<IndexData> indexData = new ArrayList<>();
 
         Database.useReadonlyStatement(dataSource, sql, rs -> {
@@ -251,15 +262,15 @@ public class Statistics {
         buf.append(String.format(hdrFormat.toString(), (Object[]) cols));
         buf.append(line);
 
-        String format = "";
-        format += "%" + colSize[0] + "s | ";
-        format += "%" + colSize[1] + "s | ";
-        format += "%" + colSize[2] + "s | ";
-        format += "%" + colSize[3] + "s | ";
-        format += "%" + colSize[4] + "s\n";
+        final String format =
+            "%" + colSize[0] + "s | " +
+            "%" + colSize[1] + "s | " +
+            "%" + colSize[2] + "s | " +
+            "%" + colSize[3] + "s | " +
+            "%" + colSize[4] + "s\n";
 
         // Actual table data
-        for (IndexData idd : indexData) {
+        indexData.stream().sorted(new IndexDataComparator()).forEach(idd -> {
             buf.append(String.format(
                     format,
                     idd.tablename(),
@@ -268,7 +279,7 @@ public class Statistics {
                     idd.tablerows(),
                     idd.tablesize()
             ));
-        }
+        });
         buf.append("\n");
         return buf.toString();
     }
