@@ -137,27 +137,26 @@ enum Attributes @attributeRegistry {
         description: "Information om rättigheterna som innehas i och över resursen, såsom upphovsrättsstatus, licensvillkor eller åtkomstbegränsningar, vilket säkerställer korrekt användning och distribution.")
 
     # Some domain specific attributes (used in testing)
-    ORDER_ID  @attribute(id: 1001, datatype: STRING, array: false)
-    DEADLINE  @attribute(id: 1002, datatype: TIME, array: false)
-    READING   @attribute(id: 1003, datatype: DOUBLE, array: true) # is capable of handling arrays
-    SHIPMENT  @attribute(id: 1099, datatype: RECORD, array: false)
+    ORDER_ID    @attribute(id: 1001, datatype: STRING, array: false)
+    DEADLINE    @attribute(id: 1002, datatype: TIME, array: false)
+    READING     @attribute(id: 1003, datatype: DOUBLE, array: true) # i.e. capable of handling multiple values
+    SHIPMENT_ID @attribute(id: 1004, datatype: STRING)
+    SHIPMENT    @attribute(id: 1099, datatype: RECORD, array: false)
 }
 
 ##############  object & unit types ##############################
-scalar DateTime
 scalar Long
-scalar Bytes    # Base-64 strings on the wire
+scalar DateTime
+scalar Bytes    # Base-64 strings (JSON) on the wire
 
 type Shipment @record(attribute: SHIPMENT) {
-    orderId  : String    @use(attribute: ORDER_ID)
-    deadline : DateTime  @use(attribute: DEADLINE)
-    reading  : [Float!]  @use(attribute: READING) # so READING must be capable of handling arrays
+    shipmentId  : String  @use(attribute: SHIPMENT_ID)
+    deadline : DateTime   @use(attribute: DEADLINE)
+    reading  : [Float]    @use(attribute: READING)
 }
 
 type PurchaseOrder @unit(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
-    deadline : DateTime  @use(attribute: DEADLINE)
-    reading  : [Float!]  @use(attribute: READING)
     shipment : Shipment! @use(attribute: SHIPMENT)
 }
 
@@ -208,6 +207,6 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    order(data : Bytes) : PurchaseOrder
+    storeOrderRaw(data : Bytes) : PurchaseOrder
 }
 

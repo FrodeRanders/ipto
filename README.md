@@ -43,31 +43,30 @@ enum Attributes @attributeRegistry {
     ... 
         
     # Domain specific attributes
-    ORDER_ID  @attribute(id: 1001, datatype: STRING)
-    DEADLINE  @attribute(id: 1002, datatype: TIME)
-    READING   @attribute(id: 1003, datatype: DOUBLE, array: true)
-    SHIPMENT  @attribute(id: 1099, datatype: RECORD)
+    ORDER_ID    @attribute(id: 1001, datatype: STRING)
+    DEADLINE    @attribute(id: 1002, datatype: TIME)
+    READING     @attribute(id: 1003, datatype: DOUBLE, array: true)
+    SHIPMENT_ID @attribute(id: 1004, datatype: STRING)
+    SHIPMENT    @attribute(id: 1099, datatype: RECORD)
 }
 
 ##############  object & unit types ##############################
+scalar Long
 scalar DateTime
-scalar Bytes    # Base-64 strings on the wire
+scalar Bytes    # Base-64 strings (JSON) on the wire
 
 type Shipment @record(attribute: SHIPMENT) {
-    orderId  : String    @use(attribute: ORDER_ID)
-    deadline : DateTime  @use(attribute: DEADLINE)
-    reading  : [Float]   @use(attribute: READING)
+    shipmentId  : String  @use(attribute: SHIPMENT_ID)
+    deadline : DateTime   @use(attribute: DEADLINE)
+    reading  : [Float]    @use(attribute: READING)
 }
 
 type PurchaseOrder @unit(id: 42) {
     orderId  : String    @use(attribute: ORDER_ID)
-    deadline : DateTime  @use(attribute: DEADLINE)
-    reading  : [Float!]  @use(attribute: READING)
     shipment : Shipment! @use(attribute: SHIPMENT)
 }
 
 ##############  Query related ####################################
-scalar Long
 
 input UnitIdentification {
     tenantId : Int!
@@ -103,23 +102,12 @@ input Filter {
     size: Int = 20
 }
 
-#
-type PurchaseOrderConnection {
-    edges      : [PurchaseOrder!]!
-    pageInfo   : PageInfo!
-}
-
-type PageInfo {
-    hasNextPage    : Boolean!
-    hasPreviousPage: Boolean!
-    startCursor    : String
-    endCursor      : String
-}
-
 ##############  Queries ###########################################
 type Query {
     order(id : UnitIdentification!) : PurchaseOrder
-    orders(filter: Filter!) : PurchaseOrderConnection!
+    orderRaw(id : UnitIdentification!) : Bytes
+    orders(filter: Filter!) : [PurchaseOrder]
+    ordersRaw(filter: Filter!) : Bytes
 }
 ```
 
@@ -132,12 +120,6 @@ String query = """
           shipment {
             orderId
           }
-        }
-        pageInfo {
-          hasNextPage
-          hasPreviousPage
-          startCursor
-          endCursor
         }
       }
     }

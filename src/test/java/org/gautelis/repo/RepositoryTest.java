@@ -31,8 +31,6 @@ import org.gautelis.repo.exceptions.BaseException;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.AssociationType;
-import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.MovingAverage;
 import org.gautelis.repo.search.model.*;
@@ -117,8 +115,12 @@ public class RepositoryTest extends TestCase {
             value.add("abc");
         });
 
+        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+            value.add("*some order id*");
+        });
+
         unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
                 value.add(aSpecificString);
             });
 
@@ -152,13 +154,14 @@ public class RepositoryTest extends TestCase {
 
     public void test1GraphQL() {
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, "*order id 1*", Instant.now());
+        final long unitId = createUnit(tenantId, "*shipment id 1*", Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
               order(id: $id) {
+                orderId
                 shipment {
-                    orderId
+                    shipmentId
                     deadline
                     reading
                 }
@@ -205,7 +208,7 @@ public class RepositoryTest extends TestCase {
 
     public void test2GraphQL() {
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, "*order id 2*", Instant.now());
+        final long unitId = createUnit(tenantId, "*shipment id 2*", Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -259,7 +262,7 @@ public class RepositoryTest extends TestCase {
 
     public void test3GraphQL() {
         final int tenantId = 1;
-        final String specificString = "*order id 3*";
+        final String specificString = "*shipment id 3*";
         final long _unitId = createUnit(tenantId, specificString, Instant.now());
 
         String query = """
@@ -276,7 +279,7 @@ public class RepositoryTest extends TestCase {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "ORDER_ID",
+                        "attr", "SHIPMENT_ID",
                         "op", "EQ",
                         "value", specificString
                     )
@@ -319,7 +322,7 @@ public class RepositoryTest extends TestCase {
 
     public void test4GraphQL() {
         final int tenantId = 1;
-        final String specificString = "*order id 3*";
+        final String specificString = "*shipment id 4*";
         final long _unitId = createUnit(tenantId, specificString, Instant.now());
 
         String query = """
@@ -332,7 +335,7 @@ public class RepositoryTest extends TestCase {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "ORDER_ID",
+                        "attr", "SHIPMENT_ID",
                         "op", "EQ",
                         "value", specificString
                 )
@@ -387,9 +390,17 @@ public class RepositoryTest extends TestCase {
 
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
+        unit.withAttributeValue("dc:title", String.class, value -> {
+            value.add("Handling of " + "*some order id*");
+        });
+
+        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+            value.add("*some order id*");
+        });
+
         unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
-                value.add("*order id*");
+            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
+                value.add("*some shipment id*");
             });
 
             recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
@@ -400,10 +411,6 @@ public class RepositoryTest extends TestCase {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
-        });
-
-        unit.withAttributeValue("dc:title", String.class, value -> {
-            value.add("Handling of " + "*order id*");
         });
 
         repo.storeUnit(unit);
@@ -488,9 +495,13 @@ public class RepositoryTest extends TestCase {
                         value.add(now);
                     });
 
+                    childUnit.withAttributeValue("ORDER_ID", String.class, value -> {
+                        value.add("*some order id*");
+                    });
+
                     childUnit.withRecordAttribute("SHIPMENT", recrd -> {
-                        recrd.withNestedAttributeValue(childUnit, "ORDER_ID", String.class, value -> {
-                            value.add("*order id*");
+                        recrd.withNestedAttributeValue(childUnit, "SHIPMENT_ID", String.class, value -> {
+                            value.add("*some shipment id*");
                         });
 
                         recrd.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
