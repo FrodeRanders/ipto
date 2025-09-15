@@ -43,7 +43,7 @@ public final class UnitFactory {
     private final static Object mgrLock = new Object();
     private static UnitCacheManager cacheMgr = null;
 
-    private static final boolean CLASSIC_LOAD = false; // JSON load instead
+    private static final boolean CLASSIC_LOAD = false; // JSON load instead of classic
 
     /**
      * Checks existence of unit

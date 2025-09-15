@@ -1,5 +1,6 @@
 package org.gautelis.repo.graphql.runtime;
 
+import org.gautelis.repo.RepositoryFactory;
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.graphql.configuration.OperationsConfigurator;
@@ -38,6 +39,20 @@ public class RuntimeService {
         this.repo = repo;
         this.datatypes = datatypes; // empty at the moment
         this.attributesIptoView = attributesIptoView; // empty at the moment
+    }
+
+    public byte[] storeRawUnit(byte[] bytes) {
+
+        log.debug("Store raw unit bytes {}", bytes);
+
+        Repository repo = RepositoryFactory.getRepository();
+        int tenantId = 1; // TODO!!!
+        Unit unit = repo.createUnit(tenantId, null);
+
+        // TODO
+
+        String json = unit.asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false);
+        return json.getBytes(StandardCharsets.UTF_8);
     }
 
     public Box loadUnit(int tenantId, long unitId) {

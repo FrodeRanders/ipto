@@ -210,6 +210,43 @@ public class OperationsConfigurator {
             RuntimeWiring.Builder runtimeWiring,
             RuntimeService repoService
     ) {
+        for (FieldDefinition f : type.getFieldDefinitions()) {
+            // Operation name
+            final String fieldName = f.getName();
+            final TypeDefinition resultType = TypeDefinition.get(f.getType());
 
+            List<InputValueDefinition> inputs = f.getInputValueDefinitions();
+
+            if (!inputs.isEmpty()) {
+                InputValueDefinition input = inputs.getFirst();
+                String inputName = input.getName();
+                TypeDefinition typeDef = TypeDefinition.get(input.getType());
+
+                switch (typeDef.typeName()) {
+                     case "Bytes" -> {
+                        if (resultType.typeName().equals("Bytes")) {
+                            DataFetcher<?> storeRawUnit = env -> {
+                                //**** Executed at runtime **********************************
+                                // My mission in life is to resolve a specific query
+                                // (the current 'fieldName').
+                                // Everything needed at runtime is accessible right
+                                // now so it is captured for later.
+                                //***********************************************************
+                                Map<String, Object> args = env.getArguments();
+                                if (log.isTraceEnabled()) {
+                                    log.trace("{}::{}({}) : {}", type.getName(), fieldName, args, resultType.typeName());
+                                }
+
+                                byte[] json = (byte[]) args.get(inputName);
+                                return repoService.storeRawUnit(json);
+                            };
+
+                            runtimeWiring.type(type.getName(), t -> t.dataFetcher(fieldName, storeRawUnit));
+                        }
+                        log.info("Wiring: {}::{}(...) : {}", type.getName(), fieldName, resultType.typeName());
+                    }
+                }
+            }
+        }
     }
 }
