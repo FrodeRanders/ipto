@@ -32,9 +32,9 @@ public final class Records {
      *        ^                            ^
      *        | (a)                        | (b)
      *
-     * shipmentId  : String  @use(attribute: SHIPMENT_ID)
-     *     ^           ^                         ^
-     *     | (c)       | (d)                     | (e)
+     *    shipmentId  : String  @use(attribute: SHIPMENT_ID)
+     *        ^           ^                         ^
+     *        | (c)       | (d)                     | (e)
      */
     static Map<String, RecordDef> derive(TypeDefinitionRegistry registry, Map<String, AttributeDef> attributes) {
         Map<String, RecordDef>  records = new HashMap<>();
