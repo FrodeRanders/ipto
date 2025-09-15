@@ -81,7 +81,7 @@ public final class Units {
                                     int fieldAttributeId = fieldAttributeDef.attributeId();
 
                                     if (fieldAttributeDef.isArray() != fieldType.isArray()) {
-                                        String info = "Not a valid unit definition: " + unitName + ": " + fieldName + " type and attribute type differs regarding array capability";
+                                        String info = "Definition of field " + fieldName + " in unit " + unitName + " is invalid: " + f.getType() + " differs with respect to array capability from definition of attribute " + fieldAttributeName;
                                         log.error(info);
                                         System.out.println(info);
                                         throw new ConfigurationException(info);

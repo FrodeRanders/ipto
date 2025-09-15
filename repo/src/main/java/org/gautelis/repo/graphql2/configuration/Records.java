@@ -83,6 +83,13 @@ public final class Records {
                                         String fieldAttributeName = fieldAttributeDef.attributeName();
                                         int fieldAttributeId = fieldAttributeDef.attributeId();
 
+                                        if (fieldAttributeDef.isArray() != fieldType.isArray()) {
+                                            String info = "Definition of field " + fieldName + " in record " + recordName + " is invalid: " + f.getType() + " differs with respect to array capability from definition of attribute " + fieldAttributeName;
+                                            log.error(info);
+                                            System.out.println(info);
+                                            throw new ConfigurationException(info);
+                                        }
+
                                         recordFields.add(new TypeFieldDef(fieldName, fieldType, fieldAttributeName, fieldAttributeId));
                                         break; // In the unlikely case there are several @use
                                     }
