@@ -8,8 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.Reader;
 
-import static org.gautelis.repo.graphql2.configuration.SdlToIr.derive;
-
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
@@ -20,7 +18,13 @@ public class Configurator {
     }
 
     public ConfigIR load() {
-        return derive(registry);
-    }
+        var datatypes   = Datatypes.derive(registry);
+        var attributes  = Attributes.derive(registry, datatypes);
+        var records     = Records.derive(registry, attributes);
+        var units       = Units.derive(registry, attributes);
+        var operations  = Operations.derive(registry);
 
+        // Merge into a single immutable IR
+        return new ConfigIR(datatypes, attributes, records, units, operations);
+    }
 }
