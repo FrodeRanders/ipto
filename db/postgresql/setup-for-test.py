@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""Set up a local PostgreSQL instance in Docker, initialise
+it with schema and initial data.
+"""
 
 import subprocess
 import time

@@ -28,6 +28,8 @@ import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
 import org.gautelis.repo.exceptions.BaseException;
+import org.gautelis.repo.graphql2.configuration.Configurator;
+import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.AssociationType;
@@ -150,6 +152,50 @@ public class RepositoryTest extends TestCase {
     private void dump(Object obj, int depth) throws Exception {
         JsonNode node = MAPPER.valueToTree(obj);
         System.out.println(MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(node));
+    }
+
+    public void test0Configuration() throws IOException {
+        try (InputStreamReader sdl = new InputStreamReader(
+                Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
+        )) {
+            Configurator configurator = new Configurator(sdl);
+            ConfigIR ir = configurator.load();
+
+            System.out.println("Datatypes:");
+            Map<String, DataTypeDef> datatypes = ir.datatypes();
+            for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
+                System.out.println("  " + entry.getValue());
+            }
+            System.out.println();
+
+            System.out.println("Attributes:");
+            Map<String, AttributeDef> attributes = ir.attributes();
+            for (Map.Entry<String, AttributeDef> entry : attributes.entrySet()) {
+                System.out.println("  " + entry.getValue());
+            }
+            System.out.println();
+
+            System.out.println("Records:");
+            Map<String, RecordDef> records = ir.records();
+            for (Map.Entry<String, RecordDef> entry : records.entrySet()) {
+                System.out.println("  " + entry.getValue());
+            }
+            System.out.println();
+
+            System.out.println("Units:");
+            Map<String, UnitDef> units = ir.units();
+            for (Map.Entry<String, UnitDef> entry : units.entrySet()) {
+                System.out.println("  " + entry.getValue());
+            }
+            System.out.println();
+
+            System.out.println("Operations:");
+            Map<String, OperationDef> operations = ir.operations();
+            for (Map.Entry<String, OperationDef> entry : operations.entrySet()) {
+                System.out.println("  " + entry.getValue());
+            }
+            System.out.println();
+        }
     }
 
     public void test1GraphQL() {

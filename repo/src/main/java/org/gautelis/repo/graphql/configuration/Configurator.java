@@ -166,9 +166,9 @@ public class Configurator {
                     }
                 }
 
-                arg = enumValueDirective.getArgument("basictype");
+                arg = enumValueDirective.getArgument("backingtype");
                 if (null != arg) {
-                    // NOTE: 'RECORD' does not have a particular basictype,
+                    // NOTE: 'RECORD' does not have a particular backingtype,
                     // it being record of other attributes and all...
                     info += ", " + arg.getName();
                     StringValue _type = (StringValue) arg.getValue();

@@ -15,7 +15,7 @@ All of the following attributes are defined using these basic data types.
 directive @datatypeRegistry on ENUM
 directive @datatype(
     id: Int!
-    basictype: String = null
+    backingtype: String = null
 ) on ENUM_VALUE
 
 """
@@ -49,13 +49,13 @@ directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  basictype: "text")
-    TIME      @datatype(id: 2,  basictype: "timestamptz")
-    INTEGER   @datatype(id: 3,  basictype: "int")
-    LONG      @datatype(id: 4,  basictype: "bigint")
-    DOUBLE    @datatype(id: 5,  basictype: "double precision")
-    BOOLEAN   @datatype(id: 6,  basictype: "boolean")
-    DATA      @datatype(id: 7,  basictype: "bytea")
+    STRING    @datatype(id: 1,  backingtype: "text")
+    TIME      @datatype(id: 2,  backingtype: "timestamptz")
+    INTEGER   @datatype(id: 3,  backingtype: "int")
+    LONG      @datatype(id: 4,  backingtype: "bigint")
+    DOUBLE    @datatype(id: 5,  backingtype: "double precision")
+    BOOLEAN   @datatype(id: 6,  backingtype: "boolean")
+    DATA      @datatype(id: 7,  backingtype: "bytea")
     RECORD    @datatype(id: 99)
 }
 
@@ -207,6 +207,6 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    storeOrderRaw(data : Bytes) : PurchaseOrder
+    storeOrderRaw(data : Bytes!) : PurchaseOrder
 }
 
