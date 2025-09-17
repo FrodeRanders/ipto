@@ -202,8 +202,8 @@ WITH unit_hdr AS (
            AND av.unitid = p_unitid
      )
 SELECT jsonb_build_object(
-           '@version', 1,
            '@type', 'unit',
+           '@version', 1,
            'tenantid', u.tenantid,
            'unitid',   u.unitid,
            'corrid',   u.corrid,
@@ -221,7 +221,7 @@ SELECT jsonb_build_object(
                                    'val',          val
                            )
                    )
-                   ORDER BY attrid)
+            )
             FROM attrs)
        )
 FROM unit_hdr u;
