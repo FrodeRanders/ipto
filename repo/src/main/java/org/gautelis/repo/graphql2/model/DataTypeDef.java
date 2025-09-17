@@ -31,4 +31,8 @@ public record DataTypeDef(
         info += '}';
         return info;
     }
+
+    public boolean compare(@NotNull DataTypeDef other) {
+        return name.equals(other.name) && id == other.id;
+    }
 }

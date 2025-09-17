@@ -3,6 +3,7 @@ package org.gautelis.repo.graphql2.model;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 /*
  * type Shipment @record(attribute: SHIPMENT) {
@@ -37,5 +38,12 @@ public record RecordDef(
         }
         info += "]}";
         return info;
+    }
+
+    public boolean compare(@NotNull RecordDef other) {
+        return name.equals(other.name)
+                && attributeName.equals(other.attributeName)
+                && attributeId == other.attributeId;
+                // TODO compare fields
     }
 }

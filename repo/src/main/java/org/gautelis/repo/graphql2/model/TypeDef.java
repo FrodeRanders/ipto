@@ -19,7 +19,11 @@ import graphql.language.TypeName;
  *                   ^
  *                   | (a)
  */
-public record TypeDef(String typeName, boolean isArray, boolean isMandatory) {
+public record TypeDef(
+        String typeName,
+        boolean isArray,
+        boolean isMandatory
+) {
     public static TypeDef of(Type t) {
         boolean isArray = false;
         boolean isMandatory = false;

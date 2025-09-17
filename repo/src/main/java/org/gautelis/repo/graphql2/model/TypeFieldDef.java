@@ -44,4 +44,11 @@ public record TypeFieldDef(
         info += '}';
         return info;
     }
+
+    public boolean compare(@NotNull TypeFieldDef other) {
+        return name.equals(other.name)
+                && attributeName.equals(other.attributeName)
+                && attributeId == other.attributeId;
+                // Ignore type defs!
+    }
 }
