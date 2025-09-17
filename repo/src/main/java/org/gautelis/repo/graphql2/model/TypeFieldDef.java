@@ -25,18 +25,22 @@ import org.jetbrains.annotations.NotNull;
  *     | (c)       | (d)                     | (e)
  */
 public record TypeFieldDef(
-        String name,          /* (c) */
-        TypeDef typeDef,      /* (d) */
-        String attributeName, /* (e) referenced by name */
-        int attributeId
+        String name,          /* (c) GraphQL specific */
+        TypeDef typeDef,      /* (d) GraphQL specific */
+        String attributeName, /* (e) referenced by name, Ipto specific */
+        int attributeId       /* Ipto specific */
 ) {
     @NotNull
     @Override
     public String toString() {
         String info = "TypeFieldDef{";
-        info += "name='" + name + '\'';
-        info += ", type-definition=" + typeDef;
-        info += ", attribute='" + attributeName + "' (" + attributeId + ")";
+        if (null != name) {
+            info += "graphql-name='" + name + "', ";
+        }
+        if (null != typeDef) {
+            info += "graphql-type-definition=" + typeDef + ", ";
+        }
+        info += "ipto-attribute='" + attributeName + "' (" + attributeId + ")";
         info += '}';
         return info;
     }

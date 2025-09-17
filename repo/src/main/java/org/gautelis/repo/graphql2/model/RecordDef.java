@@ -6,27 +6,31 @@ import java.util.List;
 
 /*
  * type Shipment @record(attribute: SHIPMENT) {
- *    shipmentId  : String  @use(attribute: SHIPMENT_ID)
- *    deadline : DateTime   @use(attribute: DEADLINE)
- *    reading  : [Float]    @use(attribute: READING)
+ *    shipmentId : String    @use(attribute: SHIPMENT_ID)
+ *    deadline :   DateTime  @use(attribute: DEADLINE)
+ *    reading :    [Float]   @use(attribute: READING)
  * }
  *
  * type Shipment @record(attribute: SHIPMENT) {
  *        ^                            ^
  *        | (a)                        | (b)
+ *
+ * Details about individual fields are found in TypeFieldDef
  */
 public record RecordDef(
-        String name,            /* (a) */
-        String attributeName,   /* (b) referenced by name */
-        int attributeId,
+        String name,            /* (a) GraphQL specific */
+        String attributeName,   /* (b) referenced by name, Ipto specific */
+        int attributeId,        /* Ipto specific */
         List<TypeFieldDef> fields
 ) implements NodeDef {
     @NotNull
     @Override
     public String toString() {
         String info = "RecordDef{";
-        info += "name='" + name + '\'';
-        info += ", attribute='" + attributeName + "' (" + attributeId + ")";
+        if (null != name) {
+            info += "graphql-name='" + name + "', ";
+        }
+        info += "ipto-attribute='" + attributeName + "' (" +  attributeId + ")";
         info += ", fields=[";
         for (TypeFieldDef field : fields) {
             info += field + ", ";

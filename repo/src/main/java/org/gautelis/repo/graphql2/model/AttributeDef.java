@@ -16,32 +16,34 @@ import org.jetbrains.annotations.NotNull;
  *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
  */
 public record AttributeDef(
-        String attributeName,      /* (a) */
-        int attributeId,           /* (b) */
-        String attributeTypeName,  /* (c) */
-        int attributeTypeId,
-        boolean isArray,          /* (d) */
-        String alias,             /* (e) */
-        String qualifiedName,     /* (f) */
-        String description        /* (g) */
+        String attributeName,      /* (a) GraphQL specific */
+        int attributeId,           /* (b) Ipto specific */
+        String attributeTypeName,  /* (c) GraphQL and Ipto shared */
+        int attributeTypeId,       /* Ipto specific */
+        boolean isArray,           /* (d) GraphQL and Ipto shared */
+        String alias,              /* (e) Ipto specific */
+        String qualifiedName,      /* (f) Ipto specific */
+        String description         /* (g) Ipto specific */
 ) implements NodeDef {
     @NotNull
     @Override
     public String toString() {
         String info = "AttributeDef{";
-        info += "attribute-name='" + attributeName + '\'';
-        info += ", attribute-id=" + attributeId;
-        info += ", attribute-type='" + attributeTypeName + '\'';
-        info += ", attribute-type-id=" + attributeTypeId;
+        if (null != attributeName) {
+            info += "graphql-attribute-name='" + attributeName + "', ";
+        }
+        info += "ipto-attribute-id=" + attributeId;
+        info += ", graphql-attribute-type-name='" + attributeTypeName + '\'';
+        info += ", ipto-attribute-type-id=" + attributeTypeId;
         info += ", array=" + isArray;
         if (null != alias) {
-            info += ", alias='" + alias + '\'';
+            info += ", ipto-alias='" + alias + '\'';
         }
         if (null != qualifiedName) {
-            info += ", qualname='" + qualifiedName + '\'';
+            info += ", ipto-qualified-name='" + qualifiedName + '\'';
         }
         if (null != description) {
-            info += ", description='" + description + '\'';
+            info += ", ipto-description='" + description + '\'';
         }
         info += '}';
         return info;

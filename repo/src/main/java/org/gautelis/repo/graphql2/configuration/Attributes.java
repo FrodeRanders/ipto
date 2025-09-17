@@ -2,11 +2,16 @@ package org.gautelis.repo.graphql2.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql2.model.AttributeDef;
 import org.gautelis.repo.graphql2.model.DataTypeDef;
+import org.gautelis.repo.model.AttributeType;
+import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,7 +22,8 @@ import static org.gautelis.repo.model.AttributeType.RECORD;
 public final class Attributes {
     private static final Logger log = LoggerFactory.getLogger(Attributes.class);
 
-    private Attributes() {}
+    private Attributes() {
+    }
 
     /*
      * enum Attributes @attributeRegistry {
@@ -122,6 +128,44 @@ public final class Attributes {
                     }
                 }
             }
+        }
+
+        return attributes;
+    }
+
+    static Map<String, AttributeDef> read(Repository repository) {
+        Map<String, AttributeDef> attributes = new HashMap<>();
+
+        String sql = """
+                SELECT attrid, attrtype, scalar, attrname, qualname
+                FROM repo_attribute
+                """;
+
+        try {
+            repository.withConnection(conn -> {
+                Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            int attributeId = rs.getInt("attrid");
+                            int attributeType = rs.getInt("attrtype");
+                            boolean isArray = !rs.getBoolean("scalar"); // Note negation
+                            String attributeName = rs.getString("attrname");
+                            String qualifiedName = rs.getString("qualname");
+
+                             attributes.put(attributeName, new AttributeDef(
+                                     /* GraphQL specific name */ null,
+                                     /* Ipto specific attribute id */ attributeId,
+                                     AttributeType.of(attributeType).name(), attributeType,
+                                     isArray,
+                                     /* Ipto specific attribute name */ attributeName,
+                                     /* Ipto specific qualified name */ qualifiedName,
+                                     /* Ipto specific description */ null));
+                        }
+                    }
+                });
+            });
+        } catch (SQLException sqle) {
+            log.error("Failed to read attributes: {}", Database.squeeze(sqle));
         }
 
         return attributes;

@@ -15,8 +15,8 @@ import org.jetbrains.annotations.NotNull;
  *      | (a)                 | (b)              | (c)
  */
 public record DataTypeDef(
-        String name,       /* (a) */
-        int id,            /* (b) */
+        String name,       /* (a) GraphQL and Ipto shared */
+        int id,            /* (b) Ipto specific */
         String backingtype /* (c) */
 ) {
     @NotNull

@@ -3,10 +3,8 @@ package org.gautelis.repo.graphql2.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.ConfigurationException;
-import org.gautelis.repo.graphql2.model.AttributeDef;
-import org.gautelis.repo.graphql2.model.TypeDef;
-import org.gautelis.repo.graphql2.model.TypeFieldDef;
-import org.gautelis.repo.graphql2.model.UnitDef;
+import org.gautelis.repo.graphql2.model.*;
+import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,6 +95,14 @@ public final class Units {
                 }
             }
         }
+
+        return units;
+    }
+
+    static Map<String, UnitDef> read(Repository repository) {
+        Map<String, UnitDef> units = new HashMap<>();
+
+        // TODO
 
         return units;
     }

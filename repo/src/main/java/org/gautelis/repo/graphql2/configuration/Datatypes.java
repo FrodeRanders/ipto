@@ -4,6 +4,8 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.graphql2.model.DataTypeDef;
+import org.gautelis.repo.model.AttributeType;
+import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,6 +81,15 @@ public final class Datatypes {
             }
         }
 
+        return datatypes;
+    }
+
+    static Map<String, DataTypeDef> read(Repository _repository) {
+        Map<String, DataTypeDef> datatypes = new HashMap<>();
+        AttributeType[] attributeTypes = AttributeType.values();
+        for (AttributeType attributeType : attributeTypes) {
+            datatypes.put(attributeType.name(),  new DataTypeDef(attributeType.name(), attributeType.getType(), null));
+        }
         return datatypes;
     }
 }

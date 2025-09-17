@@ -2,24 +2,26 @@ package org.gautelis.repo.graphql2.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
+import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.ConfigurationException;
 import org.gautelis.repo.graphql2.model.AttributeDef;
 import org.gautelis.repo.graphql2.model.RecordDef;
 import org.gautelis.repo.graphql2.model.TypeDef;
 import org.gautelis.repo.graphql2.model.TypeFieldDef;
+import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.*;
 
 
 public final class Records {
     private static final Logger log = LoggerFactory.getLogger(Records.class);
 
-    private Records() {}
+    private Records() {
+    }
 
     /*
      * type Shipment @record(attribute: SHIPMENT) {
@@ -37,7 +39,7 @@ public final class Records {
      *        | (c)       | (d)                     | (e)
      */
     static Map<String, RecordDef> derive(TypeDefinitionRegistry registry, Map<String, AttributeDef> attributes) {
-        Map<String, RecordDef>  records = new HashMap<>();
+        Map<String, RecordDef> records = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             // --- (a) ---
@@ -105,6 +107,108 @@ public final class Records {
                     throw new ConfigurationException(info);
                 }
             }
+        }
+
+        return records;
+    }
+
+    public static final class IptoRecordDef {
+        public final String recordName;
+        public final int recordAttrId;
+        private final List<TypeFieldDef> fields = new ArrayList<>();
+
+        public IptoRecordDef(String recordName, int recordAttrid) {
+            this.recordName = recordName;
+            this.recordAttrId = recordAttrid;
+        }
+
+        public IptoRecordDef(int recordAttrid) {
+            this(null, recordAttrid);
+        }
+
+        public void add(TypeFieldDef field) {
+            fields.add(field);
+        }
+
+        public List<TypeFieldDef> attributes() {
+            return Collections.unmodifiableList(fields);
+        }
+
+        public RecordDef toRecordDef() {
+            return new RecordDef(
+                    /* GraphQL specific name */ null,
+                    /* Ipto specific attribute name */ recordName,
+                    /* Ipto specific attribute id */ recordAttrId,
+                    fields
+            );
+        }
+    }
+
+    static Map<String, RecordDef> read(Repository repository) {
+        Map<String, RecordDef> records = new HashMap<>();
+
+        // repo_record_template (
+        //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute
+        //    idx              INT  NOT NULL,
+        //    child_attrid     INT  NOT NULL,      -- sub-attribute
+        //    alias            TEXT NULL,
+        //    required         BOOLEAN NOT NULL DEFAULT FALSE,
+        // }
+        String sql = """
+                SELECT record_attrid, idx, child_attrid, alias, required
+                FROM repo_record_template
+                ORDER BY record_attrid, idx, child_attrid ASC
+                """;
+
+        try {
+            repository.withConnection(conn -> {
+                Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        List<IptoRecordDef> iptoRecords = new ArrayList<>();
+
+                        Integer currentId = null;
+                        IptoRecordDef currentRecord = null;
+
+                        while (rs.next()) {
+                            int recordAttrId = rs.getInt("record_attrid");
+                            int idx = rs.getInt("idx");
+                            int fieldAttrId = rs.getInt("child_attrid");
+                            String alias = rs.getString("alias");
+                            boolean required = rs.getBoolean("required");
+
+                            if (currentId == null || recordAttrId != currentId) {
+                                // boundary => flush previous
+                                if (currentRecord != null) iptoRecords.add(currentRecord);
+                                currentId = recordAttrId;
+
+                                Optional<String> iptoRecordName = repository.attributeIdToName(recordAttrId);
+                                if (iptoRecordName.isPresent()) {
+                                    currentRecord = new IptoRecordDef(iptoRecordName.get(), recordAttrId);
+                                } else {
+                                    log.error("Record attribute id " + recordAttrId + " not found");
+                                    currentRecord = null;
+                                    continue;
+                                }
+                            }
+
+                            currentRecord.add(new TypeFieldDef(
+                                            /* GraphQL specific name */ null,
+                                            /* GraphQL specific typeDef */ null,
+                                            /* Ipto specific attribute name */ alias,
+                                            /* Ipto specific attribugte id */ fieldAttrId
+                                    )
+                            );
+                        }
+                        if (currentRecord != null) iptoRecords.add(currentRecord); // flush last one
+
+                        for (IptoRecordDef iptoRecord : iptoRecords) {
+                            records.put(iptoRecord.recordName, iptoRecord.toRecordDef());
+                        }
+                    }
+                });
+            });
+        } catch (SQLException sqle) {
+            log.error("Failed to load existing record: {}", Database.squeeze(sqle));
         }
 
         return records;
