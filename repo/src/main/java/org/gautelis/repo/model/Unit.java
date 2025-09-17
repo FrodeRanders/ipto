@@ -465,15 +465,23 @@ public class Unit implements Cloneable {
 
             // attributes
             if (attributes == null) {
+                // Attributes that need some extra care in a subsequent step
+                Collection<Attribute<?>> recordAttributes = new ArrayList<>();
 
                 // Lookup: valueid -> attribute
                 Map<Long, Attribute<?>> valueIdToAttribute = new HashMap<>();
 
+                //
                 ArrayNode attributeNodes = (ArrayNode) root.path("attributes");
                 for (JsonNode node : attributeNodes) {
                     Attribute<?> attribute = new Attribute<>(node);
                     valueIdToAttribute.put(attribute.getValueId(), attribute);
 
+                    if (AttributeType.RECORD.equals(attribute.getType())) {
+                        recordAttributes.add(attribute);
+                    }
+
+                    /*
                     if (AttributeType.RECORD.equals(attribute.getType())) {
                         if (attribute.getValue() instanceof RecordValue recValue) {
                             Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
@@ -497,11 +505,39 @@ public class Unit implements Cloneable {
                             }
                         }
                     }
+                    */
 
                     log.debug("Inflated {}", attribute);
                 }
 
-                // Lookup: attribute name -> attri ute
+                Iterator<Attribute<?>> rait = recordAttributes.iterator();
+                while (rait.hasNext()) {
+                    Attribute<?> recordAttribute = rait.next();
+
+                    if (recordAttribute.getValue() instanceof RecordValue recValue) {
+                        Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
+                        Iterator<RecordValue.AttributeReference> rit = refs.iterator();
+                        while (rit.hasNext()) {
+                            RecordValue.AttributeReference ref = rit.next();
+                            Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
+                            if (null != referredAttribute) {
+                                recValue.set(referredAttribute);
+                                rit.remove(); // Reference is now resolved
+
+                                // remove attribute from unit-level, since it belongs at record-level
+                                valueIdToAttribute.remove(ref.refValueId());
+                            }
+                        }
+
+                        // All initial references should be resolved by now
+                        if (!refs.isEmpty()) {
+                            // Is our algorithm sound?
+                            log.error("There are unresolved attribute references in record: {}", recordAttribute);
+                        }
+                    }
+                }
+
+                // Lookup: attribute name -> attribute
                 attributes = new HashMap<>();
                 for (Attribute<?> attribute : valueIdToAttribute.values()) {
                     // Associate attribute with name in hashtable

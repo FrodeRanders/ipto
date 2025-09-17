@@ -140,8 +140,8 @@ enum Attributes @attributeRegistry {
     ORDER_ID    @attribute(id: 1001, datatype: STRING, array: false)
     DEADLINE    @attribute(id: 1002, datatype: TIME, array: false)
     READING     @attribute(id: 1003, datatype: DOUBLE, array: true) # i.e. capable of handling multiple values
-    SHIPMENT_ID @attribute(id: 1004, datatype: STRING)
     SHIPMENT    @attribute(id: 1099, datatype: RECORD, array: false)
+    SHIPMENT_ID @attribute(id: 2000, datatype: STRING)
 }
 
 ##############  object & unit types ##############################
