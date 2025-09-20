@@ -1,7 +1,5 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.jetbrains.annotations.NotNull;
-
 /*
  * enum Attributes @attributeRegistry {
  *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
@@ -25,7 +23,6 @@ public record AttributeDef(
         String qualifiedName,      /* (f) Ipto specific */
         String description         /* (g) Ipto specific */
 ) implements NodeDef {
-    @NotNull
     @Override
     public String toString() {
         String info = "AttributeDef{";
@@ -49,7 +46,7 @@ public record AttributeDef(
         return info;
     }
 
-    public boolean compare(@NotNull AttributeDef other) {
+    public boolean compare(AttributeDef other) {
 
 //        String attributeName,      /* (a) GraphQL specific */
 //        int attributeId,           /* (b) Ipto specific */

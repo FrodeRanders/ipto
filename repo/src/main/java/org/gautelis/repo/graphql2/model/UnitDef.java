@@ -1,9 +1,6 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.List;
-import java.util.Map;
 
 /*
  * type PurchaseOrder @unit(id: 42) {
@@ -22,7 +19,6 @@ public record UnitDef(
         int templateId,                /* (b) Ipto specific */
         List<TypeFieldDef> fields
 ) implements NodeDef {
-    @NotNull
     @Override
     public String toString() {
         String info = "UnitDef{";

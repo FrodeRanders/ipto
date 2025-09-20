@@ -1,7 +1,5 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.jetbrains.annotations.NotNull;
-
 /*
  * type Shipment @record(attribute: SHIPMENT) {
  *    shipmentId  : String  @use(attribute: SHIPMENT_ID)
@@ -30,7 +28,6 @@ public record TypeFieldDef(
         String attributeName, /* (e) referenced by name, Ipto specific */
         int attributeId       /* Ipto specific */
 ) {
-    @NotNull
     @Override
     public String toString() {
         String info = "TypeFieldDef{";
@@ -45,7 +42,7 @@ public record TypeFieldDef(
         return info;
     }
 
-    public boolean compare(@NotNull TypeFieldDef other) {
+    public boolean compare(TypeFieldDef other) {
         return name.equals(other.name)
                 && attributeName.equals(other.attributeName)
                 && attributeId == other.attributeId;

@@ -1,7 +1,5 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.jetbrains.annotations.NotNull;
-
 /*
  * enum DataTypes @datatypeRegistry {
  *    STRING    @datatype(id: 1,  backingtype: "text")
@@ -19,7 +17,6 @@ public record DataTypeDef(
         int id,            /* (b) Ipto specific */
         String backingtype /* (c) */
 ) {
-    @NotNull
     @Override
     public String toString() {
         String info = "DataTypeDef{";
@@ -32,7 +29,7 @@ public record DataTypeDef(
         return info;
     }
 
-    public boolean compare(@NotNull DataTypeDef other) {
+    public boolean compare(DataTypeDef other) {
         return name.equals(other.name) && id == other.id;
     }
 }

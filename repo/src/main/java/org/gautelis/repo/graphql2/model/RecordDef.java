@@ -1,9 +1,6 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.jetbrains.annotations.NotNull;
-
 import java.util.List;
-import java.util.function.Predicate;
 
 /*
  * type Shipment @record(attribute: SHIPMENT) {
@@ -24,7 +21,6 @@ public record RecordDef(
         int attributeId,        /* Ipto specific */
         List<TypeFieldDef> fields
 ) implements NodeDef {
-    @NotNull
     @Override
     public String toString() {
         String info = "RecordDef{";
@@ -40,7 +36,7 @@ public record RecordDef(
         return info;
     }
 
-    public boolean compare(@NotNull RecordDef other) {
+    public boolean compare(RecordDef other) {
         return name.equals(other.name)
                 && attributeName.equals(other.attributeName)
                 && attributeId == other.attributeId;
