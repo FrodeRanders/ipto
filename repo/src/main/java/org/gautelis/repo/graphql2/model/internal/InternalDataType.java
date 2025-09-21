@@ -1,4 +1,6 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql2.model.internal;
+
+import org.gautelis.repo.graphql2.model.DataType;
 
 /*
  * enum DataTypes @datatypeRegistry {
@@ -12,24 +14,23 @@ package org.gautelis.repo.graphql2.model;
  *      ^                     ^                  ^
  *      | (a)                 | (b)              | (c)
  */
-public record DataTypeDef(
-        String name,       /* (a) GraphQL and Ipto shared */
-        int id,            /* (b) Ipto specific */
-        String backingtype /* (c) */
-) {
+public class InternalDataType extends DataType {
+    public InternalDataType(String name, int id) {
+        super(name, id);
+    }
+
     @Override
     public String toString() {
-        String info = "DataTypeDef{";
+        String info = "InternalDataType{";
         info += "name='" + name + '\'';
         info += ", id=" + id;
-        if (null != backingtype) {
-            info += ", backingtype='" + backingtype + '\'';
-        }
         info += '}';
         return info;
     }
 
-    public boolean compare(DataTypeDef other) {
+    /*
+    public boolean compare(DataType other) {
         return name.equals(other.name) && id == other.id;
     }
+    */
 }

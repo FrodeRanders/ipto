@@ -22,7 +22,7 @@ public record AttributeDef(
         String alias,              /* (e) Ipto specific */
         String qualifiedName,      /* (f) Ipto specific */
         String description         /* (g) Ipto specific */
-) implements NodeDef {
+) {
     @Override
     public String toString() {
         String info = "AttributeDef{";
@@ -47,16 +47,6 @@ public record AttributeDef(
     }
 
     public boolean compare(AttributeDef other) {
-
-//        String attributeName,      /* (a) GraphQL specific */
-//        int attributeId,           /* (b) Ipto specific */
-//        String attributeTypeName,  /* (c) GraphQL and Ipto shared */
-//        int attributeTypeId,       /* Ipto specific */
-//        boolean isArray,           /* (d) GraphQL and Ipto shared */
-//        String alias,              /* (e) Ipto specific */
-//        String qualifiedName,      /* (f) Ipto specific */
-//        String description         /* (g) Ipto specific */
-
         return attributeName.equals(other.attributeName)
                 && attributeId == other.attributeId
                 && attributeTypeName.equals(other.attributeTypeName)

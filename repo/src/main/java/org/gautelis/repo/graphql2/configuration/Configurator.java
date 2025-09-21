@@ -16,27 +16,31 @@ public class Configurator {
     private Configurator() {
     }
 
-    public static ConfigIR loadFromFile(Reader reader) {
+    public static IntermediateRepresentation loadFromFile(Reader reader) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
 
-        Map<String, DataTypeDef> datatypes = Datatypes.derive(registry);
+        Map<String, DataType> datatypes = Datatypes.derive(registry);
         Map<String, AttributeDef> attributes = Attributes.derive(registry, datatypes);
         Map<String, RecordDef> records = Records.derive(registry, attributes);
         Map<String, UnitDef> units = Units.derive(registry, attributes);
         Map<String, OperationDef> operations  = Operations.derive(registry);
 
         // Merge into a single immutable IR
-        return new ConfigIR(datatypes, attributes, records, units, operations);
+        return new IntermediateRepresentation(datatypes, attributes, records, units, operations);
     }
 
-    public static ConfigIR loadFromDB(Repository repository) {
-        Map<String, DataTypeDef> datatypes = Datatypes.read(repository);
+    public static IntermediateRepresentation loadFromDB(Repository repository) {
+        Map<String, DataType> datatypes = Datatypes.read(repository);
         Map<String, AttributeDef> attributes = Attributes.read(repository);
         Map<String, RecordDef> records = Records.read(repository);
         Map<String, UnitDef> units = Units.read(repository);
         Map<String, OperationDef> operations = Map.of(); // This is a GraphQL thing...
 
         // Merge into a single immutable IR
-        return new ConfigIR(datatypes, attributes, records, units, operations);
+        return new IntermediateRepresentation(datatypes, attributes, records, units, operations);
+    }
+
+    public static IntermediateRepresentation reconcile(/* TODO */) {
+        return null;
     }
 }

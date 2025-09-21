@@ -18,7 +18,7 @@ public record UnitDef(
         String name,                   /* (a) GraphQL specific */
         int templateId,                /* (b) Ipto specific */
         List<TypeFieldDef> fields
-) implements NodeDef {
+) {
     @Override
     public String toString() {
         String info = "UnitDef{";

@@ -4,7 +4,7 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql2.model.AttributeDef;
-import org.gautelis.repo.graphql2.model.DataTypeDef;
+import org.gautelis.repo.graphql2.model.DataType;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ public final class Attributes {
      *   ^                  ^              ^              ^               ^                    ^                       ^
      *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
      */
-    static Map<String, AttributeDef> derive(TypeDefinitionRegistry registry, Map<String, DataTypeDef> datatypes) {
+    static Map<String, AttributeDef> derive(TypeDefinitionRegistry registry, Map<String, DataType> datatypes) {
         Map<String, AttributeDef> attributes = new HashMap<>();
 
         // Locate enums having a "attributeRegistry" directive
@@ -65,7 +65,7 @@ public final class Attributes {
                             arg = enumValueDirective.getArgument("datatype");
                             if (null != arg) {
                                 EnumValue datatype = (EnumValue) arg.getValue();
-                                DataTypeDef dataTypeDef = datatypes.get(datatype.getName());
+                                DataType dataTypeDef = datatypes.get(datatype.getName());
                                 if (null != dataTypeDef) {
                                     attrType = dataTypeDef.id();
                                 } else {
@@ -113,7 +113,7 @@ public final class Attributes {
                             }
 
                             if (/* VALID? */ attrId > 0) {
-                                for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
+                                for (Map.Entry<String, DataType> entry : datatypes.entrySet()) {
                                     if (entry.getValue().id() == attrType) {
                                         // --- (c) ---
                                         String attrTypeName = entry.getValue().name();

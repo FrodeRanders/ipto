@@ -20,7 +20,7 @@ public record RecordDef(
         String attributeName,   /* (b) referenced by name, Ipto specific */
         int attributeId,        /* Ipto specific */
         List<TypeFieldDef> fields
-) implements NodeDef {
+) {
     @Override
     public String toString() {
         String info = "RecordDef{";
