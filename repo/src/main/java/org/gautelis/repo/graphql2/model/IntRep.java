@@ -1,6 +1,5 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.gautelis.repo.graphql2.configuration.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
@@ -11,14 +10,17 @@ import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
 import java.util.HashMap;
 import java.util.Map;
 
-public class IntermediateRepresentation {
+/**
+ * Intermediate representation.
+ */
+public class IntRep {
     public final Map<String, DataTypeDef> datatypes;
     public final Map<String, AttributeDef> attributes;
     public final Map<String, RecordDef> records;
     public final Map<String, UnitDef> units;
     public final Map<String, OperationDef> operations;
 
-    public IntermediateRepresentation() {
+    public IntRep() {
         datatypes = new HashMap<>();
         attributes = new HashMap<>();
         records = new HashMap<>();
@@ -26,14 +28,14 @@ public class IntermediateRepresentation {
         operations = new HashMap<>();
     }
 
-    public static IntermediateRepresentation fromExternal(
+    public static IntRep fromExternal(
         Map<String, ExternalDataTypeDef> datatypes,
         Map<String, ExternalAttributeDef> attributes,
         Map<String, ExternalRecordDef> records,
         Map<String, UnitDef> units,
         Map<String, OperationDef> operations
     ) {
-        IntermediateRepresentation ir = new IntermediateRepresentation();
+        IntRep ir = new IntRep();
         ir.datatypes.putAll(datatypes);
         ir.attributes.putAll(attributes);
         ir.records.putAll(records);
@@ -42,13 +44,13 @@ public class IntermediateRepresentation {
         return ir;
     }
 
-    public static IntermediateRepresentation fromInternal(
+    public static IntRep fromInternal(
         Map<String, InternalDataTypeDef> datatypes,
         Map<String, InternalAttributeDef> attributes,
         Map<String, InternalRecordDef> records,
         Map<String, UnitDef> units
     ) {
-        IntermediateRepresentation ir = new IntermediateRepresentation();
+        IntRep ir = new IntRep();
         ir.datatypes.putAll(datatypes);
         ir.attributes.putAll(attributes);
         ir.records.putAll(records);

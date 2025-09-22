@@ -6,8 +6,6 @@ import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
-import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
-import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,7 +19,7 @@ public class Configurator {
     private Configurator() {
     }
 
-    public static IntermediateRepresentation loadFromFile(Reader reader) {
+    public static IntRep loadFromFile(Reader reader) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
 
         Map<String, ExternalDataTypeDef> datatypes = Datatypes.derive(registry);
@@ -31,14 +29,14 @@ public class Configurator {
         Map<String, OperationDef> operations  = Operations.derive(registry);
 
         // Merge into a single immutable IR
-        return IntermediateRepresentation.fromExternal(datatypes, attributes, records, units, operations);
+        return IntRep.fromExternal(datatypes, attributes, records, units, operations);
     }
 
-    public static IntermediateRepresentation loadFromDB(Repository repository) {
-        return IntermediateRepresentation.fromInternal(Datatypes.read(repository), Attributes.read(repository), Records.read(repository), Units.read(repository));
+    public static IntRep loadFromDB(Repository repository) {
+        return IntRep.fromInternal(Datatypes.read(repository), Attributes.read(repository), Records.read(repository), Units.read(repository));
     }
 
-    public static IntermediateRepresentation reconcile(/* TODO */) {
+    public static IntRep reconcile(/* TODO */) {
         return null;
     }
 }

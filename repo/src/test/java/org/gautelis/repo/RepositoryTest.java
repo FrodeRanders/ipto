@@ -154,7 +154,7 @@ public class RepositoryTest extends TestCase {
         System.out.println(MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(node));
     }
 
-    private void dumpIr(String source, IntermediateRepresentation ir) {
+    private void dumpIr(String source, IntRep ir) {
         System.out.println("===< " + source + " >===");
         System.out.println("--- Datatypes ---");
         Map<String, DataTypeDef> datatypes = ir.datatypes;
@@ -197,11 +197,11 @@ public class RepositoryTest extends TestCase {
         try (InputStreamReader sdl = new InputStreamReader(
                 Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
-            IntermediateRepresentation graphQLIr = Configurator.loadFromFile(sdl);
+            IntRep graphQLIr = Configurator.loadFromFile(sdl);
             dumpIr("GraphQL SDL", graphQLIr);
 
             Repository repo = RepositoryFactory.getRepository();
-            IntermediateRepresentation iptoIr = Configurator.loadFromDB(repo);
+            IntRep iptoIr = Configurator.loadFromDB(repo);
             dumpIr("IPTO", iptoIr);
         }
     }
