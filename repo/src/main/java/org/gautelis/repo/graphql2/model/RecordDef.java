@@ -1,5 +1,6 @@
 package org.gautelis.repo.graphql2.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -15,19 +16,27 @@ import java.util.List;
  *
  * Details about individual fields are found in TypeFieldDef
  */
-public record RecordDef(
-        String name,            /* (a) GraphQL specific */
-        String attributeName,   /* (b) referenced by name, Ipto specific */
-        int attributeId,        /* Ipto specific */
-        List<TypeFieldDef> fields
-) {
+public abstract class RecordDef {
+    public final String fieldName;       /* (a) GraphQL specific */
+    public final String attributeName;   /* (b) referenced by name, Ipto specific */
+    public final int attributeId;        /* Ipto specific */
+    public final List<TypeFieldDef> fields;
+
+    public RecordDef(String fieldName, String attributeName, int attributeId, List<TypeFieldDef> fields) {
+        this.fieldName = fieldName;
+        this.attributeName = attributeName;
+        this.attributeId = attributeId;
+        this.fields = fields;
+    }
+
     @Override
     public String toString() {
         String info = "RecordDef{";
-        if (null != name) {
-            info += "graphql-name='" + name + "', ";
+        if (null != fieldName) {
+            info += "field-name='" + fieldName + "', ";
         }
-        info += "ipto-attribute='" + attributeName + "' (" +  attributeId + ")";
+        info += "attribute-name='" + attributeName + "', ";
+        info += "attribute-id=" +  attributeId;
         info += ", fields=[";
         for (TypeFieldDef field : fields) {
             info += field + ", ";

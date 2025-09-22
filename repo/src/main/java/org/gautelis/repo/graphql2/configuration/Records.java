@@ -8,6 +8,7 @@ import org.gautelis.repo.graphql2.model.AttributeDef;
 import org.gautelis.repo.graphql2.model.RecordDef;
 import org.gautelis.repo.graphql2.model.TypeDef;
 import org.gautelis.repo.graphql2.model.TypeFieldDef;
+import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,7 @@ public final class Records {
      *        ^           ^                         ^
      *        | (c)       | (d)                     | (e)
      */
-    static Map<String, RecordDef> derive(TypeDefinitionRegistry registry, Map<String, AttributeDef> attributes) {
+    static Map<String, RecordDef> derive(TypeDefinitionRegistry registry, Map<String, ExternalAttributeDef> attributes) {
         Map<String, RecordDef> records = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
@@ -61,7 +62,7 @@ public final class Records {
                 if (null != recordAttributeName && !recordAttributeName.isEmpty()) {
                     AttributeDef recordAttributeDef = attributes.get(recordAttributeName);
                     if (null != recordAttributeDef) {
-                        final int recordAttributeId = recordAttributeDef.attributeId();
+                        final int recordAttributeId = recordAttributeDef.attributeId;
 
                         List<TypeFieldDef> recordFields = new ArrayList<>();
                         for (FieldDefinition f : type.getFieldDefinitions()) {
@@ -79,13 +80,13 @@ public final class Records {
                                     Argument arg = useDirective.getArgument("attribute");
                                     EnumValue value = (EnumValue) arg.getValue();
 
-                                    AttributeDef fieldAttributeDef = attributes.get(value.getName());
+                                    ExternalAttributeDef fieldAttributeDef = attributes.get(value.getName());
                                     if (null != fieldAttributeDef) {
                                         // --- (e) ---
-                                        String fieldAttributeName = fieldAttributeDef.attributeName();
-                                        int fieldAttributeId = fieldAttributeDef.attributeId();
+                                        String fieldAttributeName = fieldAttributeDef.attributeName;
+                                        int fieldAttributeId = fieldAttributeDef.attributeId;
 
-                                        if (fieldAttributeDef.isArray() != fieldType.isArray()) {
+                                        if (fieldAttributeDef.isArray != fieldType.isArray()) {
                                             String info = "Definition of field " + fieldName + " in record " + recordName + " is invalid: " + f.getType() + " differs with respect to array capability from definition of attribute " + fieldAttributeName;
                                             log.error(info);
                                             System.out.println(info);

@@ -1,6 +1,6 @@
 package org.gautelis.repo.graphql2.model.internal;
 
-import org.gautelis.repo.graphql2.model.DataType;
+import org.gautelis.repo.graphql2.model.DataTypeDef;
 
 /*
  * enum DataTypes @datatypeRegistry {
@@ -14,8 +14,8 @@ import org.gautelis.repo.graphql2.model.DataType;
  *      ^                     ^                  ^
  *      | (a)                 | (b)              | (c)
  */
-public class InternalDataType extends DataType {
-    public InternalDataType(String name, int id) {
+public class InternalDataTypeDef extends DataTypeDef {
+    public InternalDataTypeDef(String name, int id) {
         super(name, id);
     }
 

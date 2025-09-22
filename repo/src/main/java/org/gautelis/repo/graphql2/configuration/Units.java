@@ -4,6 +4,7 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.ConfigurationException;
 import org.gautelis.repo.graphql2.model.*;
+import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +34,7 @@ public final class Units {
      *     ^           ^                         ^
      *     | (c)       | (d)                     | (e)
      */
-    static Map<String, UnitDef> derive(TypeDefinitionRegistry registry, Map<String, AttributeDef> attributes) {
+    static Map<String, UnitDef> derive(TypeDefinitionRegistry registry, Map<String, ExternalAttributeDef> attributes) {
         Map<String, UnitDef> units = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
@@ -72,13 +73,13 @@ public final class Units {
                                 Argument arg = useDirective.getArgument("attribute");
                                 EnumValue value = (EnumValue) arg.getValue();
 
-                                AttributeDef fieldAttributeDef = attributes.get(value.getName());
+                                ExternalAttributeDef fieldAttributeDef = attributes.get(value.getName());
                                 if (null != fieldAttributeDef) {
                                     // --- (e) ---
-                                    String fieldAttributeName = fieldAttributeDef.attributeName();
-                                    int fieldAttributeId = fieldAttributeDef.attributeId();
+                                    String fieldAttributeName = fieldAttributeDef.attributeName;
+                                    int fieldAttributeId = fieldAttributeDef.attributeId;
 
-                                    if (fieldAttributeDef.isArray() != fieldType.isArray()) {
+                                    if (fieldAttributeDef.isArray != fieldType.isArray()) {
                                         String info = "Definition of field " + fieldName + " in unit " + unitName + " is invalid: " + f.getType() + " differs with respect to array capability from definition of attribute " + fieldAttributeName;
                                         log.error(info);
                                         System.out.println(info);

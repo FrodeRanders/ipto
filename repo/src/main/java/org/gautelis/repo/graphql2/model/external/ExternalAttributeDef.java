@@ -1,6 +1,6 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql2.model.external;
 
-/*
+import org.gautelis.repo.graphql2.model.AttributeDef;/*
  * enum Attributes @attributeRegistry {
  *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
  *     TITLE @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
@@ -13,22 +13,22 @@ package org.gautelis.repo.graphql2.model;
  *   ^                  ^              ^              ^               ^                    ^                       ^
  *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
  */
-public abstract class AttributeDef {
-    public final int attributeId;           /* (b) Ipto specific, but shared */
-    public final String attributeTypeName;  /* (c) GraphQL and Ipto shared */
-    public final boolean isArray;           /* (d) GraphQL and Ipto shared */
+public class ExternalAttributeDef extends AttributeDef {
+    public final String attributeName;       /* (a) GraphQL specific */
 
-    protected AttributeDef(int attributeId, String attributeTypeName, boolean isArray) {
-        this.attributeId = attributeId;
-        this.attributeTypeName = attributeTypeName;
-        this.isArray = isArray;
+    public ExternalAttributeDef(String attributeName, int attributeId, String attributeTypeName, boolean isArray) {
+        super(attributeId, attributeTypeName, isArray);
+        this.attributeName = attributeName;
     }
 
     @Override
     public String toString() {
-        String info = "attribute-id=" + attributeId;
-        info += ", attribute-type-name='" + attributeTypeName + '\'';
-        info += ", is-array=" + isArray;
+        String info = "ExternalAttributeDef{";
+        if (null != attributeName) {
+            info += "attribute-name='" + attributeName + "', ";
+        }
+        info += super.toString();
+        info += '}';
         return info;
     }
 

@@ -3,9 +3,9 @@ package org.gautelis.repo.graphql2.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.AttributeTypeException;
-import org.gautelis.repo.graphql2.model.DataType;
-import org.gautelis.repo.graphql2.model.external.ExternalDataType;
-import org.gautelis.repo.graphql2.model.internal.InternalDataType;
+import org.gautelis.repo.graphql2.model.DataTypeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -33,8 +33,8 @@ public final class Datatypes {
      *      ^                     ^
      *      | (a)                 | (b)
      */
-    static Map<String, DataType> derive(TypeDefinitionRegistry registry) {
-        Map<String, DataType> datatypes = new HashMap<>();
+    static Map<String, ExternalDataTypeDef> derive(TypeDefinitionRegistry registry) {
+        Map<String, ExternalDataTypeDef> datatypes = new HashMap<>();
 
         // Locate enums having a "datatypeRegistry" directive
         for (EnumTypeDefinition enumeration : registry.getTypes(EnumTypeDefinition.class)) {
@@ -75,7 +75,7 @@ public final class Datatypes {
                             }
 
                             if (/* VALID? */ id > 0) {
-                                datatypes.put(name, new ExternalDataType(name, id));
+                                datatypes.put(name, new ExternalDataTypeDef(name, id));
                             }
                         }
                     }
@@ -86,11 +86,11 @@ public final class Datatypes {
         return datatypes;
     }
 
-    static Map<String, DataType> read(Repository _repository) {
-        Map<String, DataType> datatypes = new HashMap<>();
+    static Map<String, InternalDataTypeDef> read(Repository _repository) {
+        Map<String, InternalDataTypeDef> datatypes = new HashMap<>();
         AttributeType[] attributeTypes = AttributeType.values();
         for (AttributeType attributeType : attributeTypes) {
-            datatypes.put(attributeType.name(),  new InternalDataType(attributeType.name(), attributeType.getType()));
+            datatypes.put(attributeType.name(),  new InternalDataTypeDef(attributeType.name(), attributeType.getType()));
         }
         return datatypes;
     }

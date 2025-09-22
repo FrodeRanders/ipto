@@ -1,6 +1,6 @@
 package org.gautelis.repo.graphql2.model.external;
 
-import org.gautelis.repo.graphql2.model.DataType;
+import org.gautelis.repo.graphql2.model.DataTypeDef;
 
 /*
  * enum DataTypes @datatypeRegistry {
@@ -14,8 +14,8 @@ import org.gautelis.repo.graphql2.model.DataType;
  *      ^                     ^
  *      | (a)                 | (b)
  */
-public class ExternalDataType extends DataType {
-    public ExternalDataType(String name, int id) {
+public class ExternalDataTypeDef extends DataTypeDef {
+    public ExternalDataTypeDef(String name, int id) {
         super(name, id);
     }
 

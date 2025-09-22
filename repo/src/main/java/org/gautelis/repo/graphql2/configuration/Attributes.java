@@ -4,7 +4,10 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql2.model.AttributeDef;
-import org.gautelis.repo.graphql2.model.DataType;
+import org.gautelis.repo.graphql2.model.DataTypeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -38,8 +41,8 @@ public final class Attributes {
      *   ^                  ^              ^              ^               ^                    ^                       ^
      *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
      */
-    static Map<String, AttributeDef> derive(TypeDefinitionRegistry registry, Map<String, DataType> datatypes) {
-        Map<String, AttributeDef> attributes = new HashMap<>();
+    static Map<String, ExternalAttributeDef> derive(TypeDefinitionRegistry registry, Map<String, ExternalDataTypeDef> datatypes) {
+        Map<String, ExternalAttributeDef> attributes = new HashMap<>();
 
         // Locate enums having a "attributeRegistry" directive
         for (EnumTypeDefinition enumeration : registry.getTypes(EnumTypeDefinition.class)) {
@@ -65,9 +68,9 @@ public final class Attributes {
                             arg = enumValueDirective.getArgument("datatype");
                             if (null != arg) {
                                 EnumValue datatype = (EnumValue) arg.getValue();
-                                DataType dataTypeDef = datatypes.get(datatype.getName());
+                                DataTypeDef dataTypeDef = datatypes.get(datatype.getName());
                                 if (null != dataTypeDef) {
-                                    attrType = dataTypeDef.id();
+                                    attrType = dataTypeDef.id;
                                 } else {
                                     log.error("Not a valid datatype: {}", datatype.getName());
                                 }
@@ -113,13 +116,13 @@ public final class Attributes {
                             }
 
                             if (/* VALID? */ attrId > 0) {
-                                for (Map.Entry<String, DataType> entry : datatypes.entrySet()) {
-                                    if (entry.getValue().id() == attrType) {
+                                for (Map.Entry<String, ExternalDataTypeDef> entry : datatypes.entrySet()) {
+                                    if (entry.getValue().id == attrType) {
                                         // --- (c) ---
-                                        String attrTypeName = entry.getValue().name();
+                                        String attrTypeName = entry.getValue().name;
 
                                         //
-                                        AttributeDef attributeDef = new AttributeDef(nameInSchema, attrId, attrTypeName, attrType, isArray, /* alias */ nameInIpto, qualName, description);
+                                        ExternalAttributeDef attributeDef = new ExternalAttributeDef(nameInSchema, attrId, attrTypeName, isArray);
                                         attributes.put(nameInSchema, attributeDef);
                                     }
                                 }
@@ -133,8 +136,8 @@ public final class Attributes {
         return attributes;
     }
 
-    static Map<String, AttributeDef> read(Repository repository) {
-        Map<String, AttributeDef> attributes = new HashMap<>();
+    static Map<String, InternalAttributeDef> read(Repository repository) {
+        Map<String, InternalAttributeDef> attributes = new HashMap<>();
 
         String sql = """
                 SELECT attrid, attrtype, scalar, attrname, qualname
@@ -147,19 +150,20 @@ public final class Attributes {
                     try (ResultSet rs = pStmt.executeQuery()) {
                         while (rs.next()) {
                             int attributeId = rs.getInt("attrid");
-                            int attributeType = rs.getInt("attrtype");
+                            int attributeTypeId = rs.getInt("attrtype");
                             boolean isArray = !rs.getBoolean("scalar"); // Note negation
                             String attributeName = rs.getString("attrname");
                             String qualifiedName = rs.getString("qualname");
 
-                             attributes.put(attributeName, new AttributeDef(
-                                     /* GraphQL specific name */ null,
-                                     /* Ipto specific attribute id */ attributeId,
-                                     AttributeType.of(attributeType).name(), attributeType,
-                                     isArray,
-                                     /* Ipto specific attribute name */ attributeName,
-                                     /* Ipto specific qualified name */ qualifiedName,
-                                     /* Ipto specific description */ null));
+                            attributes.put(attributeName, new InternalAttributeDef(
+                                attributeId,
+                                AttributeType.of(attributeTypeId).name(),
+                                attributeTypeId,
+                                isArray,
+                                attributeName,
+                                qualifiedName,
+                                null) // TODO
+                            );
                         }
                     }
                 });

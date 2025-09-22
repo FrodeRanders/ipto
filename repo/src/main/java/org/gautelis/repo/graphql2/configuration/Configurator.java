@@ -3,6 +3,10 @@ package org.gautelis.repo.graphql2.configuration;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.graphql2.model.*;
+import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
+import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,25 +23,18 @@ public class Configurator {
     public static IntermediateRepresentation loadFromFile(Reader reader) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
 
-        Map<String, DataType> datatypes = Datatypes.derive(registry);
-        Map<String, AttributeDef> attributes = Attributes.derive(registry, datatypes);
+        Map<String, ExternalDataTypeDef> datatypes = Datatypes.derive(registry);
+        Map<String, ExternalAttributeDef> attributes = Attributes.derive(registry, datatypes);
         Map<String, RecordDef> records = Records.derive(registry, attributes);
         Map<String, UnitDef> units = Units.derive(registry, attributes);
         Map<String, OperationDef> operations  = Operations.derive(registry);
 
         // Merge into a single immutable IR
-        return new IntermediateRepresentation(datatypes, attributes, records, units, operations);
+        return IntermediateRepresentation.fromExternal(datatypes, attributes, records, units, operations);
     }
 
     public static IntermediateRepresentation loadFromDB(Repository repository) {
-        Map<String, DataType> datatypes = Datatypes.read(repository);
-        Map<String, AttributeDef> attributes = Attributes.read(repository);
-        Map<String, RecordDef> records = Records.read(repository);
-        Map<String, UnitDef> units = Units.read(repository);
-        Map<String, OperationDef> operations = Map.of(); // This is a GraphQL thing...
-
-        // Merge into a single immutable IR
-        return new IntermediateRepresentation(datatypes, attributes, records, units, operations);
+        return IntermediateRepresentation.fromInternal(Datatypes.read(repository), Attributes.read(repository), Records.read(repository), Units.read(repository));
     }
 
     public static IntermediateRepresentation reconcile(/* TODO */) {

@@ -157,28 +157,28 @@ public class RepositoryTest extends TestCase {
     private void dumpIr(String source, IntermediateRepresentation ir) {
         System.out.println("===< " + source + " >===");
         System.out.println("--- Datatypes ---");
-        Map<String, DataType> datatypes = ir.datatypes();
-        for (Map.Entry<String, DataType> entry : datatypes.entrySet()) {
+        Map<String, DataTypeDef> datatypes = ir.datatypes;
+        for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
             System.out.println("  " + entry.getValue());
         }
         System.out.println();
 
         System.out.println("--- Attributes ---");
-        Map<String, AttributeDef> attributes = ir.attributes();
+        Map<String, AttributeDef> attributes = ir.attributes;
         for (Map.Entry<String, AttributeDef> entry : attributes.entrySet()) {
             System.out.println("  " + entry.getValue());
         }
         System.out.println();
 
         System.out.println("--- Records ---");
-        Map<String, RecordDef> records = ir.records();
+        Map<String, RecordDef> records = ir.records;
         for (Map.Entry<String, RecordDef> entry : records.entrySet()) {
             System.out.println("  " + entry.getValue());
         }
         System.out.println();
 
         System.out.println("--- Units ---");
-        Map<String, UnitDef> units = ir.units();
+        Map<String, UnitDef> units = ir.units;
         for (Map.Entry<String, UnitDef> entry : units.entrySet()) {
             System.out.println("  " + entry.getValue());
         }
@@ -186,7 +186,7 @@ public class RepositoryTest extends TestCase {
 
 
         System.out.println("--- Operations ---");
-        Map<String, OperationDef> operations = ir.operations();
+        Map<String, OperationDef> operations = ir.operations;
         for (Map.Entry<String, OperationDef> entry : operations.entrySet()) {
             System.out.println("  " + entry.getValue());
         }
