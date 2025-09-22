@@ -3,8 +3,10 @@ package org.gautelis.repo.graphql2.model;
 import org.gautelis.repo.graphql2.configuration.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
 import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
 import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +29,7 @@ public class IntermediateRepresentation {
     public static IntermediateRepresentation fromExternal(
         Map<String, ExternalDataTypeDef> datatypes,
         Map<String, ExternalAttributeDef> attributes,
-        Map<String, RecordDef> records,
+        Map<String, ExternalRecordDef> records,
         Map<String, UnitDef> units,
         Map<String, OperationDef> operations
     ) {
@@ -43,7 +45,7 @@ public class IntermediateRepresentation {
     public static IntermediateRepresentation fromInternal(
         Map<String, InternalDataTypeDef> datatypes,
         Map<String, InternalAttributeDef> attributes,
-        Map<String, RecordDef> records,
+        Map<String, InternalRecordDef> records,
         Map<String, UnitDef> units
     ) {
         IntermediateRepresentation ir = new IntermediateRepresentation();

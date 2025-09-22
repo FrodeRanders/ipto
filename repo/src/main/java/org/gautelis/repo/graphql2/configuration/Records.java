@@ -9,6 +9,8 @@ import org.gautelis.repo.graphql2.model.RecordDef;
 import org.gautelis.repo.graphql2.model.TypeDef;
 import org.gautelis.repo.graphql2.model.TypeFieldDef;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
+import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +41,8 @@ public final class Records {
      *        ^           ^                         ^
      *        | (c)       | (d)                     | (e)
      */
-    static Map<String, RecordDef> derive(TypeDefinitionRegistry registry, Map<String, ExternalAttributeDef> attributes) {
-        Map<String, RecordDef> records = new HashMap<>();
+    static Map<String, ExternalRecordDef> derive(TypeDefinitionRegistry registry, Map<String, ExternalAttributeDef> attributes) {
+        Map<String, ExternalRecordDef> records = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             // --- (a) ---
@@ -99,7 +101,7 @@ public final class Records {
                                 }
                             }
                         }
-                        records.put(recordName, new RecordDef(recordName, recordAttributeName, recordAttributeId, recordFields));
+                        records.put(recordName, new ExternalRecordDef(recordName, recordAttributeName, recordAttributeId, recordFields));
                     }
                 } else {
                     String info = "Not a valid record definition: " + recordName;
@@ -135,8 +137,8 @@ public final class Records {
             return Collections.unmodifiableList(fields);
         }
 
-        public RecordDef toRecordDef() {
-            return new RecordDef(
+        public InternalRecordDef toRecordDef() {
+            return new InternalRecordDef(
                     /* GraphQL specific name */ null,
                     /* Ipto specific attribute name */ recordName,
                     /* Ipto specific attribute id */ recordAttrId,
@@ -145,8 +147,8 @@ public final class Records {
         }
     }
 
-    static Map<String, RecordDef> read(Repository repository) {
-        Map<String, RecordDef> records = new HashMap<>();
+    static Map<String, InternalRecordDef> read(Repository repository) {
+        Map<String, InternalRecordDef> records = new HashMap<>();
 
         // repo_record_template (
         //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute

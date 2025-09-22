@@ -5,6 +5,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
 import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
 import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
 import org.gautelis.repo.model.Repository;
@@ -25,7 +26,7 @@ public class Configurator {
 
         Map<String, ExternalDataTypeDef> datatypes = Datatypes.derive(registry);
         Map<String, ExternalAttributeDef> attributes = Attributes.derive(registry, datatypes);
-        Map<String, RecordDef> records = Records.derive(registry, attributes);
+        Map<String, ExternalRecordDef> records = Records.derive(registry, attributes);
         Map<String, UnitDef> units = Units.derive(registry, attributes);
         Map<String, OperationDef> operations  = Operations.derive(registry);
 

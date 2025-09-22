@@ -46,7 +46,7 @@ public abstract class RecordDef {
     }
 
     public boolean compare(RecordDef other) {
-        return name.equals(other.name)
+        return fieldName.equals(other.fieldName)
                 && attributeName.equals(other.attributeName)
                 && attributeId == other.attributeId;
                 // TODO compare fields
