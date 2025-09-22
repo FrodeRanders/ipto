@@ -32,15 +32,9 @@ public abstract class AttributeDef {
         return info;
     }
 
-    /*
-    public boolean compare(AttributeDef other) {
-        return attributeName.equals(other.attributeName)
-                && attributeId == other.attributeId
+    public boolean equals(AttributeDef other) {
+        return attributeId == other.attributeId
                 && attributeTypeName.equals(other.attributeTypeName)
-                && attributeTypeId == other.attributeTypeId
-                && isArray == other.isArray
-                && alias.equals(other.alias)
-                && qualifiedName.equals(other.qualifiedName);
+                && isArray == other.isArray;
     }
-    */
 }

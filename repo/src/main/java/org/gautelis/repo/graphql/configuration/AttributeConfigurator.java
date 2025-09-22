@@ -20,14 +20,14 @@ import static org.gautelis.repo.model.AttributeType.RECORD;
 class AttributeConfigurator {
     private static final Logger log = LoggerFactory.getLogger(AttributeConfigurator.class);
 
-    private record ExistingAttributeMeta(int id, int attrType, boolean vector, String attrName, String qualName) {
+    private record ExistingAttributeMeta(int id, int attrType, boolean isArray, String attrName, String qualName) {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder("Existing attribute metadata for ");
             sb.append(qualName).append(" {");
             sb.append("alias=").append(attrName);
             sb.append(", type=").append(AttributeType.of(attrType));
-            sb.append(", vector=").append(vector);
+            sb.append(", is-array=").append(isArray);
             sb.append("}");
             return sb.toString();
         }
@@ -56,11 +56,11 @@ class AttributeConfigurator {
                         while (rs.next()) {
                             int attrId = rs.getInt("attrid");
                             int attrType = rs.getInt("attrtype");
-                            boolean vector = !rs.getBoolean("scalar"); // Note negation
+                            boolean isArray = !rs.getBoolean("scalar"); // Note negation
                             String attrName = rs.getString("attrname");
                             String qualName = rs.getString("qualname");
 
-                            ExistingAttributeMeta metadata = new ExistingAttributeMeta(attrId, attrType, vector, attrName, qualName);
+                            ExistingAttributeMeta metadata = new ExistingAttributeMeta(attrId, attrType, isArray, attrName, qualName);
                             existingAttributes.put(qualName, metadata);
                             log.trace(metadata.toString());
                         }
@@ -213,8 +213,8 @@ class AttributeConfigurator {
                                         log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, AttributeType.of(attrType), isArray);
 
                                         // This attribute has already been loaded -- check similarity
-                                        if (existingAttribute.vector != isArray) {
-                                            log.warn("Failed to load attribute {}. New definition differs on existing 'dimensionality' (vector) {} -- skipping", qualName, existingAttribute.vector);
+                                        if (existingAttribute.isArray != isArray) {
+                                            log.warn("Failed to load attribute {}. New definition differs on existing 'dimensionality' (vector) {} -- skipping", qualName, existingAttribute.isArray);
                                             continue;
                                         }
 

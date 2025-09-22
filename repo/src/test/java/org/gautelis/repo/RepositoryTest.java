@@ -154,55 +154,21 @@ public class RepositoryTest extends TestCase {
         System.out.println(MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(node));
     }
 
-    private void dumpIr(String source, IntRep ir) {
-        System.out.println("===< " + source + " >===");
-        System.out.println("--- Datatypes ---");
-        Map<String, DataTypeDef> datatypes = ir.datatypes;
-        for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
-            System.out.println("  " + entry.getValue());
-        }
-        System.out.println();
-
-        System.out.println("--- Attributes ---");
-        Map<String, AttributeDef> attributes = ir.attributes;
-        for (Map.Entry<String, AttributeDef> entry : attributes.entrySet()) {
-            System.out.println("  " + entry.getValue());
-        }
-        System.out.println();
-
-        System.out.println("--- Records ---");
-        Map<String, RecordDef> records = ir.records;
-        for (Map.Entry<String, RecordDef> entry : records.entrySet()) {
-            System.out.println("  " + entry.getValue());
-        }
-        System.out.println();
-
-        System.out.println("--- Units ---");
-        Map<String, UnitDef> units = ir.units;
-        for (Map.Entry<String, UnitDef> entry : units.entrySet()) {
-            System.out.println("  " + entry.getValue());
-        }
-        System.out.println();
-
-
-        System.out.println("--- Operations ---");
-        Map<String, OperationDef> operations = ir.operations;
-        for (Map.Entry<String, OperationDef> entry : operations.entrySet()) {
-            System.out.println("  " + entry.getValue());
-        }
-        System.out.println();
-    }
-
     public void test0Configuration() throws IOException {
         try (InputStreamReader sdl = new InputStreamReader(
                 Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
+            /*
             IntRep graphQLIr = Configurator.loadFromFile(sdl);
             dumpIr("GraphQL SDL", graphQLIr);
 
             Repository repo = RepositoryFactory.getRepository();
             IntRep iptoIr = Configurator.loadFromDB(repo);
             dumpIr("IPTO", iptoIr);
+            */
+
+            Repository repo = RepositoryFactory.getRepository();
+            Configurator.reconcile(sdl, repo);
         }
     }
 

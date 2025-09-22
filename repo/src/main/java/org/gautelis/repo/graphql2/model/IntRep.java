@@ -7,6 +7,8 @@ import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
 import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
 import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
 
+import java.io.PrintStream;
+import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -63,4 +65,37 @@ public class IntRep {
         return new IntermediateRepresentation(Map.of(), Map.of(), Map.of(), Map.of(), Map.of());
     }
     */
+
+    public void dumpIr(String source, PrintStream out) {
+        out.println("===< " + source + " >===");
+        out.println("--- Datatypes ---");
+        for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Attributes ---");
+        for (Map.Entry<String, AttributeDef> entry : attributes.entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Records ---");
+        for (Map.Entry<String, RecordDef> entry : records.entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Units ---");
+        for (Map.Entry<String, UnitDef> entry : units.entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Operations ---");
+        for (Map.Entry<String, OperationDef> entry : operations.entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+    }
 }

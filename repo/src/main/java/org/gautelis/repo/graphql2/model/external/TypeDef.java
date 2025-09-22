@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql2.model.external;
 
 import graphql.language.ListType;
 import graphql.language.NonNullType;

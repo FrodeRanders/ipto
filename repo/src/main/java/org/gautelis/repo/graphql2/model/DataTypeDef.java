@@ -20,4 +20,8 @@ public abstract class DataTypeDef {
         this.name = name;
         this.id = id;
     }
+
+    public boolean equals(DataTypeDef other) {
+        return name.equals(other.name) && id == other.id;
+    }
 }

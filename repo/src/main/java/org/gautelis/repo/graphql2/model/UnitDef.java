@@ -15,14 +15,14 @@ import java.util.List;
  * Details about individual fields are found in TypeFieldDef
  */
 public record UnitDef(
-        String name,                   /* (a) GraphQL specific */
+        String fieldName,              /* (a) GraphQL specific */
         int templateId,                /* (b) Ipto specific */
         List<TypeFieldDef> fields
 ) {
     @Override
     public String toString() {
         String info = "UnitDef{";
-        info += "graphql-name='" + name + '\'';
+        info += "field-name='" + fieldName + '\'';
         info += ", ipto-template-id=" + templateId;
         info += ", fields=[";
         for (TypeFieldDef field : fields) {

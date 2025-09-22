@@ -1,6 +1,5 @@
 package org.gautelis.repo.graphql2.model.internal;
 
-import org.gautelis.repo.graphql2.model.TypeDef;
 import org.gautelis.repo.graphql2.model.TypeFieldDef;
 
 /*

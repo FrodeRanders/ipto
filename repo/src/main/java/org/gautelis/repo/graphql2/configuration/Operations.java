@@ -3,7 +3,7 @@ package org.gautelis.repo.graphql2.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.graphql2.model.OperationDef;
-import org.gautelis.repo.graphql2.model.TypeDef;
+import org.gautelis.repo.graphql2.model.external.TypeDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

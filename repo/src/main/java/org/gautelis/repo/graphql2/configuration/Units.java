@@ -6,6 +6,7 @@ import org.gautelis.repo.exceptions.ConfigurationException;
 import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalTypeFieldDef;
+import org.gautelis.repo.graphql2.model.external.TypeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

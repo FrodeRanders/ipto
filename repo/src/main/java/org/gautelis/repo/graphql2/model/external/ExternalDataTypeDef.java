@@ -27,10 +27,4 @@ public class ExternalDataTypeDef extends DataTypeDef {
         info += '}';
         return info;
     }
-
-    /*
-    public boolean compare(DataType other) {
-        return name.equals(other.name);
-    }
-    */
 }

@@ -36,7 +36,41 @@ public class Configurator {
         return IntRep.fromInternal(Datatypes.read(repository), Attributes.read(repository), Records.read(repository), Units.read(repository));
     }
 
-    public static IntRep reconcile(/* TODO */) {
-        return null;
+    public static void reconcile(Reader reader, Repository repository) {
+        IntRep external = loadFromFile(reader);
+        external.dumpIr("GraphQL SDL", System.out);
+        IntRep internal = loadFromDB(repository);
+        internal.dumpIr("IPTO", System.out);
+
+        // Datatypes
+        for (String key : external.datatypes.keySet()) {
+            if (!internal.datatypes.containsKey(key)) {
+                log.warn("No matching internal datatype: {}", key);
+                System.out.println("No matching internal datatype: " + key);
+                continue;
+            }
+            DataTypeDef externalDataType = external.datatypes.get(key);
+            DataTypeDef internalDataType = internal.datatypes.get(key);
+            if (!externalDataType.equals(internalDataType)) {
+                log.warn("External and internal datatype do not match: {} != {}", externalDataType, internalDataType);
+                System.out.println("External and internal datatype do not match: " + externalDataType +  " != " + internalDataType);
+            }
+        }
+
+        // Attributes
+        for (String key : external.attributes.keySet()) {
+            if (!internal.attributes.containsKey(key)) {
+                log.warn("No matching internal attribute: {}", key);
+                System.out.println("No matching internal attribute: " + key);
+                continue;
+            }
+            AttributeDef externalAttribute = external.attributes.get(key);
+            AttributeDef internalAttribute = internal.attributes.get(key);
+            if (!externalAttribute.equals(internalAttribute)) {
+                log.warn("External and internal attribute do not match: {} != {}", externalAttribute, internalAttribute);
+                System.out.println("External and internal attribute do not match: " + externalAttribute +  " != " + internalAttribute);
+            }
+        }
+
     }
 }
