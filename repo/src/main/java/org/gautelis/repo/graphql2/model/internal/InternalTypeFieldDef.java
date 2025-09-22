@@ -1,4 +1,7 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql2.model.internal;
+
+import org.gautelis.repo.graphql2.model.TypeDef;
+import org.gautelis.repo.graphql2.model.TypeFieldDef;
 
 /*
  * type Shipment @record(attribute: SHIPMENT) {
@@ -22,19 +25,16 @@ package org.gautelis.repo.graphql2.model;
  *     ^           ^                         ^
  *     | (c)       | (d)                     | (e)
  */
-public abstract class TypeFieldDef {
-    public final String attributeName;  /* (e) referenced by name, Ipto specific */
-    public final int attributeId;       /* Ipto specific */
-
-    public TypeFieldDef(String attributeName, int attributeId) {
-        this.attributeName = attributeName;
-        this.attributeId = attributeId;
+public class InternalTypeFieldDef extends TypeFieldDef {
+    public InternalTypeFieldDef(String attributeName, int attributeId) {
+        super(attributeName, attributeId);
     }
-
+    
     @Override
     public String toString() {
-        String info = "attribute-name='" + attributeName + '\'';
-        info += ", attribute-id=" + attributeId;
+        String info = "InternalTypeFieldDef{";
+        info += super.toString();
+        info += '}';
         return info;
     }
 

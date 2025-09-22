@@ -17,13 +17,11 @@ import java.util.List;
  * Details about individual fields are found in TypeFieldDef
  */
 public abstract class RecordDef {
-    public final String fieldName;       /* (a) GraphQL specific */
     public final String attributeName;   /* (b) referenced by name, Ipto specific */
     public final int attributeId;        /* Ipto specific */
     public final List<TypeFieldDef> fields;
 
-    public RecordDef(String fieldName, String attributeName, int attributeId, List<TypeFieldDef> fields) {
-        this.fieldName = fieldName;
+    public RecordDef(String attributeName, int attributeId, List<TypeFieldDef> fields) {
         this.attributeName = attributeName;
         this.attributeId = attributeId;
         this.fields = fields;
@@ -31,24 +29,23 @@ public abstract class RecordDef {
 
     @Override
     public String toString() {
-        String info = "RecordDef{";
-        if (null != fieldName) {
-            info += "field-name='" + fieldName + "', ";
-        }
+        String info = "";
         info += "attribute-name='" + attributeName + "', ";
         info += "attribute-id=" +  attributeId;
         info += ", fields=[";
         for (TypeFieldDef field : fields) {
             info += field + ", ";
         }
-        info += "]}";
+        info += "]";
         return info;
     }
 
+    /*
     public boolean compare(RecordDef other) {
         return fieldName.equals(other.fieldName)
                 && attributeName.equals(other.attributeName)
                 && attributeId == other.attributeId;
                 // TODO compare fields
     }
+    */
 }

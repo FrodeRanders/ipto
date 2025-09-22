@@ -5,6 +5,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.ConfigurationException;
 import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
+import org.gautelis.repo.graphql2.model.external.ExternalTypeFieldDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -86,7 +87,7 @@ public final class Units {
                                         throw new ConfigurationException(info);
                                     }
 
-                                    unitFields.add(new TypeFieldDef(fieldName, fieldType, fieldAttributeName, fieldAttributeId));
+                                    unitFields.add(new ExternalTypeFieldDef(fieldName, fieldType, fieldAttributeName, fieldAttributeId));
                                     break; // In the unlikely case there are several @use
                                 }
                             }

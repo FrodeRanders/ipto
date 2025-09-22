@@ -1,4 +1,7 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql2.model.external;
+
+import org.gautelis.repo.graphql2.model.TypeDef;
+import org.gautelis.repo.graphql2.model.TypeFieldDef;
 
 /*
  * type Shipment @record(attribute: SHIPMENT) {
@@ -22,19 +25,23 @@ package org.gautelis.repo.graphql2.model;
  *     ^           ^                         ^
  *     | (c)       | (d)                     | (e)
  */
-public abstract class TypeFieldDef {
-    public final String attributeName;  /* (e) referenced by name, Ipto specific */
-    public final int attributeId;       /* Ipto specific */
+public class ExternalTypeFieldDef extends TypeFieldDef {
+    public final String fieldName;      /* (c) GraphQL specific */
+    public final TypeDef typeDef;       /* (d) GraphQL specific */
 
-    public TypeFieldDef(String attributeName, int attributeId) {
-        this.attributeName = attributeName;
-        this.attributeId = attributeId;
+    public ExternalTypeFieldDef(String fieldName, TypeDef typeDef, String attributeName, int attributeId) {
+        super(attributeName, attributeId);
+        this.fieldName = fieldName;
+        this.typeDef = typeDef;
     }
 
     @Override
     public String toString() {
-        String info = "attribute-name='" + attributeName + '\'';
-        info += ", attribute-id=" + attributeId;
+        String info = "ExternalTypeFieldDef{";
+        info += "field-name='" + fieldName + '\'';
+        info += ", type-definition=" + typeDef + ", ";
+        info += super.toString();
+        info += '}';
         return info;
     }
 

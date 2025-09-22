@@ -19,9 +19,11 @@ import java.util.List;
  * Details about individual fields are found in TypeFieldDef
  */
 public class ExternalRecordDef extends RecordDef {
+    public final String fieldName;       /* (a) GraphQL specific */
 
     public ExternalRecordDef(String fieldName, String attributeName, int attributeId, List<TypeFieldDef> fields) {
-        super(fieldName, attributeName, attributeId, fields);
+        super(attributeName, attributeId, fields);
+        this.fieldName = fieldName;
     }
 
     @Override

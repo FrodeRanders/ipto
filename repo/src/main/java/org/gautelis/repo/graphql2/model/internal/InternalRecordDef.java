@@ -20,13 +20,13 @@ import java.util.List;
  */
 public class InternalRecordDef extends RecordDef {
 
-    public InternalRecordDef(String fieldName, String attributeName, int attributeId, List<TypeFieldDef> fields) {
-        super(fieldName, attributeName, attributeId, fields);
+    public InternalRecordDef(String attributeName, int attributeId, List<TypeFieldDef> fields) {
+        super(attributeName, attributeId, fields);
     }
 
     @Override
     public String toString() {
-        String info = "ExternalRecordDef{";
+        String info = "InternalRecordDef{";
         info += super.toString();
         info += "}";
         return info;

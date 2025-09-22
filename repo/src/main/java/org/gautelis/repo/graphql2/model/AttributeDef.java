@@ -27,8 +27,8 @@ public abstract class AttributeDef {
     @Override
     public String toString() {
         String info = "attribute-id=" + attributeId;
-        info += ", attribute-type-name='" + attributeTypeName + '\'';
         info += ", is-array=" + isArray;
+        info += ", attribute-type-name='" + attributeTypeName + '\'';
         return info;
     }
 

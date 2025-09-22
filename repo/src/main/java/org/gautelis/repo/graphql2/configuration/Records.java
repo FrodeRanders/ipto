@@ -10,7 +10,9 @@ import org.gautelis.repo.graphql2.model.TypeDef;
 import org.gautelis.repo.graphql2.model.TypeFieldDef;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
+import org.gautelis.repo.graphql2.model.external.ExternalTypeFieldDef;
 import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
+import org.gautelis.repo.graphql2.model.internal.InternalTypeFieldDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,7 +97,7 @@ public final class Records {
                                             throw new ConfigurationException(info);
                                         }
 
-                                        recordFields.add(new TypeFieldDef(fieldName, fieldType, fieldAttributeName, fieldAttributeId));
+                                        recordFields.add(new ExternalTypeFieldDef(fieldName, fieldType, fieldAttributeName, fieldAttributeId));
                                         break; // In the unlikely case there are several @use
                                     }
                                 }
@@ -139,7 +141,6 @@ public final class Records {
 
         public InternalRecordDef toRecordDef() {
             return new InternalRecordDef(
-                    /* GraphQL specific name */ null,
                     /* Ipto specific attribute name */ recordName,
                     /* Ipto specific attribute id */ recordAttrId,
                     fields
@@ -175,7 +176,7 @@ public final class Records {
                         while (rs.next()) {
                             int recordAttrId = rs.getInt("record_attrid");
                             int idx = rs.getInt("idx");
-                            int fieldAttrId = rs.getInt("child_attrid");
+                            int recordFieldAttrId = rs.getInt("child_attrid");
                             String alias = rs.getString("alias");
                             boolean required = rs.getBoolean("required");
 
@@ -194,11 +195,9 @@ public final class Records {
                                 }
                             }
 
-                            currentRecord.add(new TypeFieldDef(
-                                            /* GraphQL specific name */ null,
-                                            /* GraphQL specific typeDef */ null,
+                            currentRecord.add(new InternalTypeFieldDef(
                                             /* Ipto specific attribute name */ alias,
-                                            /* Ipto specific attribugte id */ fieldAttrId
+                                            /* Ipto specific attribugte id */ recordFieldAttrId
                                     )
                             );
                         }
