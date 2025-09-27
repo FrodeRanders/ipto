@@ -6,11 +6,13 @@ import org.gautelis.repo.graphql2.model.*;
 import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
 import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
+import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Reader;
+import java.util.HashMap;
 import java.util.Map;
 
 public class Configurator {
@@ -42,7 +44,7 @@ public class Configurator {
         IntRep internal = loadFromDB(repository);
         internal.dumpIr("IPTO", System.out);
 
-        // Datatypes
+        // --- Datatypes ---
         for (String key : external.datatypes.keySet()) {
             if (!internal.datatypes.containsKey(key)) {
                 log.warn("No matching internal datatype: {}", key);
@@ -57,15 +59,32 @@ public class Configurator {
             }
         }
 
-        // Attributes
-        for (String key : external.attributes.keySet()) {
-            if (!internal.attributes.containsKey(key)) {
-                log.warn("No matching internal attribute: {}", key);
-                System.out.println("No matching internal attribute: " + key);
+        // --- Attributes ---
+        // Keys do not match between internal and external dictionaries.
+        // The external dictionary uses the field-name from the enum, while
+        // the internal uses qualified names + alias (the alias is used as
+        // key in this case).
+        // We need to compare on attribute ID.
+        Map<Integer, ExternalAttributeDef> externalAttributes = new HashMap<>();
+        for (AttributeDef externalAttribute : external.attributes.values()) {
+            externalAttributes.put(externalAttribute.attributeId, (ExternalAttributeDef) externalAttribute);
+        }
+
+        Map<Integer, InternalAttributeDef> internalAttributes = new HashMap<>();
+        for (AttributeDef internalAttribute : internal.attributes.values()) {
+            internalAttributes.put(internalAttribute.attributeId, (InternalAttributeDef) internalAttribute);
+        }
+
+        for (Integer attributeId : externalAttributes.keySet()) {
+            ExternalAttributeDef externalAttribute = externalAttributes.get(attributeId);
+
+            if (!internalAttributes.containsKey(attributeId)) {
+                log.warn("No matching internal attribute: {}", attributeId);
+                System.out.println("No matching internal attribute for " + externalAttribute);
                 continue;
             }
-            AttributeDef externalAttribute = external.attributes.get(key);
-            AttributeDef internalAttribute = internal.attributes.get(key);
+
+            InternalAttributeDef internalAttribute = internalAttributes.get(attributeId);
             if (!externalAttribute.equals(internalAttribute)) {
                 log.warn("External and internal attribute do not match: {} != {}", externalAttribute, internalAttribute);
                 System.out.println("External and internal attribute do not match: " + externalAttribute +  " != " + internalAttribute);

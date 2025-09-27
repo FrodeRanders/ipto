@@ -117,20 +117,20 @@ public class RepositoryTest extends TestCase {
             value.add("abc");
         });
 
-        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+        unit.withAttributeValue("dmoOrderId", String.class, value -> {
             value.add("*some order id*");
         });
 
-        unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
+        unit.withRecordAttribute("dmoShipment", recrd -> {
+            recrd.withNestedAttributeValue(unit, "dmoShipmentId", String.class, value -> {
                 value.add(aSpecificString);
             });
 
-            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
                 value.add(aSpecificInstant);
             });
 
-            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -299,7 +299,7 @@ public class RepositoryTest extends TestCase {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "SHIPMENT_ID",
+                        "attr", "dmoShipmentId",
                         "op", "EQ",
                         "value", specificString
                     )
@@ -355,7 +355,7 @@ public class RepositoryTest extends TestCase {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "SHIPMENT_ID",
+                        "attr", "dmoShipmentId",
                         "op", "EQ",
                         "value", specificString
                 )
@@ -414,20 +414,20 @@ public class RepositoryTest extends TestCase {
             value.add("Handling of " + "*some order id*");
         });
 
-        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+        unit.withAttributeValue("dmoOrderId", String.class, value -> {
             value.add("*some order id*");
         });
 
-        unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
+        unit.withRecordAttribute("dmoShipment", recrd -> {
+            recrd.withNestedAttributeValue(unit, "dmoShipmentId", String.class, value -> {
                 value.add("*some shipment id*");
             });
 
-            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
                 value.add(Instant.now());
             });
 
-            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -515,20 +515,20 @@ public class RepositoryTest extends TestCase {
                         value.add(now);
                     });
 
-                    childUnit.withAttributeValue("ORDER_ID", String.class, value -> {
+                    childUnit.withAttributeValue("dmoOrderId", String.class, value -> {
                         value.add("*some order id*");
                     });
 
-                    childUnit.withRecordAttribute("SHIPMENT", recrd -> {
-                        recrd.withNestedAttributeValue(childUnit, "SHIPMENT_ID", String.class, value -> {
+                    childUnit.withRecordAttribute("dmoShipment", recrd -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoShipmentId", String.class, value -> {
                             value.add("*some shipment id*");
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoDeadline", Instant.class, value -> {
                             value.add(now);
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "READING", Double.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoReading", Double.class, value -> {
                             value.add(Math.PI);
                             value.add(Math.E);
                         });
