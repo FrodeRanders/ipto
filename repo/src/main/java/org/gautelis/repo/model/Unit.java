@@ -1363,10 +1363,17 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Checks if this unit is new and if it has not been stored.
+     * Checks if this unit is new and if it has not yet been persisted.
      */
     public boolean isNew() {
         return isNew;
+    }
+
+    /**
+     * Checks if this unit is readonly.
+     */
+    public boolean isReadOnly() {
+        return isReadOnly;
     }
 
     /**

@@ -479,6 +479,13 @@ public class RepositoryTest extends TestCase {
                 }
 
                 if (false) {
+                    parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                        value.add("Replaced value");
+                    });
+                    repo.storeUnit(parentUnit);
+                }
+
+                if (false) {
                     // Works, but not part of test (at the moment)
                     repo.lockUnit(parentUnit, LockType.EXISTENCE, "test");
                 }

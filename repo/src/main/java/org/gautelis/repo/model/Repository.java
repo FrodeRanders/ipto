@@ -262,14 +262,12 @@ public class Repository {
         }
 
         // --- Applicability control ---
-        if (!unit.isNew()) {
+        if (unit.isReadOnly()) {
             throw new UnitReadOnlyException(
                     "Unit " + unit.getReference() + " is read only");
         }
 
-        if (false) {
-            // This is not relevant, since only _new_, i.e. not already stored, units can be
-            // stored and therefore cannot be locked.
+        if (!unit.isNew()) {
             if (unit.isLocked()) {
                 for (Lock lock : unit.getLocks()) {
                     throw new UnitLockedException(
