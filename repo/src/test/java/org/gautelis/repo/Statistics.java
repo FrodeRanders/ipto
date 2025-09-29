@@ -2,6 +2,7 @@ package org.gautelis.repo;
 
 import com.sun.management.OperatingSystemMXBean;
 import org.gautelis.repo.db.Database;
+import org.gautelis.repo.db.Table;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.utils.MovingAverage;
 import org.gautelis.vopn.lang.TimeDelta;
@@ -63,7 +64,7 @@ public class Statistics {
             /*
              * Count all units
              */
-            sql = "SELECT COUNT(*) FROM repo_unit";
+            sql = "SELECT COUNT(*) FROM " + Table.UNIT_KERNEL.getTableName();
 
             Database.useReadonlyStatement(dataSource, sql, rs -> {
                 if (rs.next()) {
@@ -74,7 +75,7 @@ public class Statistics {
             /*
              * Number of locks
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_lock", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.UNIT_LOCK.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("locks=").append(rs.getLong(1)).append(" ");
                 }
@@ -83,7 +84,7 @@ public class Statistics {
             /*
              * Number of mappings from units to attribute values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_attribute_value", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_VALUE.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("vectors=").append(rs.getLong(1)).append("\n");
                 }
@@ -94,7 +95,7 @@ public class Statistics {
             /*
              * Number of string values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_string_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_STRING_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("string=").append(rs.getLong(1)).append(" ");
                 }
@@ -103,7 +104,7 @@ public class Statistics {
             /*
              * Number of time values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_time_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_TIME_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("time=").append(rs.getLong(1)).append(" ");
                 }
@@ -112,7 +113,7 @@ public class Statistics {
             /*
              * Number of integer values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_integer_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("integer=").append(rs.getLong(1)).append(" ");
                 }
@@ -121,7 +122,7 @@ public class Statistics {
             /*
              * Number of long values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_long_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_LONG_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("long=").append(rs.getLong(1)).append(" ");
                 }
@@ -130,7 +131,7 @@ public class Statistics {
             /*
              * Number of double values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_double_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_DOUBLE_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("double=").append(rs.getLong(1)).append(" ");
                 }
@@ -139,7 +140,7 @@ public class Statistics {
             /*
              * Number of boolean values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_boolean_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_BOOLEAN_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("boolean=").append(rs.getLong(1)).append(" ");
                 }
@@ -148,7 +149,7 @@ public class Statistics {
             /*
              * Number of data values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_data_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_DATA_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("data=").append(rs.getLong(1)).append(" ");
                 }
@@ -157,7 +158,7 @@ public class Statistics {
             /*
              * Number of record values
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_record_vector", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.ATTRIBUTE_RECORD_VALUE_VECTOR.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("record=").append(rs.getLong(1)).append("\n");
                 }
@@ -166,7 +167,7 @@ public class Statistics {
             /*
              * Number of internal associations
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_internal_assoc", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.INTERNAL_ASSOCIATION.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("Assocs: internal=").append(rs.getLong(1)).append(" ");
                 }
@@ -175,7 +176,7 @@ public class Statistics {
             /*
              * Number of external associations
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM repo_external_assoc", rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.EXTERNAL_ASSOCIATION.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("external=").append(rs.getLong(1)).append("\n");
                 }

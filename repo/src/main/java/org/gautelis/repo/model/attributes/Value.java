@@ -293,8 +293,13 @@ public abstract class Value<T> {
     public abstract void set(T value);
 
     /* package accessible only */
-    abstract void toJson(
-            ArrayNode attributes, ObjectNode attributeNode, boolean complete, boolean flat
+    abstract void toInternalJson(
+            ArrayNode attributes, ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException;
+
+    /* package accessible only */
+    abstract void toExternalJson(
+            ArrayNode attributes, ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException;
 
     /**

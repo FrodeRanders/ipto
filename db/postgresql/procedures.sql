@@ -29,8 +29,9 @@ AS $$
 DECLARE
     v_tenantid   int         := (p_unit ->> 'tenantid')::int;
     v_corrid     uuid        := (p_unit ->> 'corrid')::uuid;
+    v_unitver    int         := (p_unit ->> 'unitver')::int;
     v_status     int         := (p_unit ->> 'status')::int;
-    v_name       text        :=  p_unit ->> 'name';
+    v_unitname   text        :=  p_unit ->> 'unitname';
 
     v_valueid    bigint;          -- last INSERT … RETURNING value
     attr         record;          -- loop variable
@@ -39,10 +40,13 @@ BEGIN
     --------------------------------------------------------------------
     -- 1. insert unit header row, capture unitid + created timestamp
     --------------------------------------------------------------------
-    INSERT INTO repo_unit (tenantid, corrid, status, name)
-    VALUES (v_tenantid, v_corrid, v_status, v_name)
+    INSERT INTO repo_unit_kernel (tenantid, corrid, status)
+    VALUES (v_tenantid, v_corrid, v_status)
     RETURNING unitid, created
         INTO  p_unitid, p_created;
+
+    INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname)
+    VALUES (v_tenantid, p_unitid, v_unitver, v_unitname);
 
     --------------------------------------------------------------------
     -- 2. single scan over attribute array (JSON)
@@ -52,12 +56,13 @@ BEGIN
         FROM jsonb_to_recordset(p_unit -> 'attributes') AS
                  (  attrid       int
                   , attrtype     int
+                  , attrver      int
                   , val          jsonb
                  )
         LOOP
             /* 2a. (tenantid,unitid,attrid) → repo_attribute_value → valueid ----*/
-            INSERT INTO repo_attribute_value (tenantid, unitid, attrid)
-            VALUES (v_tenantid, p_unitid, attr.attrid)
+            INSERT INTO repo_attribute_value (tenantid, unitid, attrid, attrver, unitverfrom, unitverto)
+            VALUES (v_tenantid, p_unitid, attr.attrid, attr.attrver, v_unitver, v_unitver)
             RETURNING valueid INTO v_valueid;
 
             /* 2b. vector tables by attrtype --------------------------------*/
@@ -143,20 +148,26 @@ CREATE OR REPLACE FUNCTION export_unit_json(
     LANGUAGE sql STABLE
 AS $func$
 WITH unit_hdr AS (
-    SELECT tenantid,
-           unitid,
-           corrid,
-           status,
-           name,
-           created
-    FROM   repo_unit
-    WHERE  tenantid = p_tenantid
-      AND  unitid   = p_unitid
+    SELECT uk.tenantid,
+           uk.unitid,
+           uv.unitver,
+           uk.corrid,
+           uk.status,
+           uk.created,
+           uv.modified,
+           uv.unitname
+    FROM repo_unit_kernel uk
+    JOIN repo_unit_version uv ON uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastversion = uv.unitver
+    WHERE uk.tenantid = p_tenantid
+      AND uk.unitid = p_unitid
 ),
      attrs AS (
          SELECT av.attrid,
                 a.attrtype,
                 a.attrname,
+                av.attrver,
+                av.unitverfrom,
+                av.unitverto,
                 av.valueid,
 
                 -- one array per primitive type (NULL when not applicable)
@@ -198,18 +209,23 @@ WITH unit_hdr AS (
                END AS val
          FROM repo_attribute_value av
          JOIN repo_attribute a ON a.attrid = av.attrid
-         WHERE av.tenantid = p_tenantid
+         JOIN repo_unit_kernel uk ON uk.tenantid = av.tenantid AND uk.unitid = av.unitid
+         WHERE uk.lastversion <= av.unitverto
+           AND uk.lastversion >= av.unitverfrom
+           AND av.tenantid = p_tenantid
            AND av.unitid = p_unitid
      )
 SELECT jsonb_build_object(
            '@type', 'unit',
-           '@version', 1,
+           '@version', 2,
            'tenantid', u.tenantid,
            'unitid',   u.unitid,
+           'unitver',  u.unitver,
            'corrid',   u.corrid,
            'status',   u.status,
-           'name',     u.name,
+           'unitname', u.unitname,
            'created',  u.created,
+           'modified', u.modified,
            'attributes',
            (SELECT jsonb_agg( -- array of attribute objects
                    jsonb_strip_nulls( -- omit NULL fields to keep size down?
@@ -217,6 +233,9 @@ SELECT jsonb_build_object(
                                    'attrid',       attrid,
                                    'attrtype',     attrtype,
                                    'attrname',     attrname,
+                                   'attrver',      attrver,
+                                   'unitverfrom',  unitverfrom,
+                                   'unitverto',    unitverto,
                                    'valueid',      valueid,
                                    'val',          val
                            )

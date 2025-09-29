@@ -50,7 +50,7 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
      */
     public static SearchOrder orderByCreation(boolean ascending) {
         Column[] order = new Column[1];
-        order[0] = Column.UNIT_CREATED;
+        order[0] = Column.UNIT_KERNEL_CREATED;
         boolean[] asc = new boolean[1];
         asc[0] = ascending;
 
@@ -62,7 +62,7 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
      */
     public static SearchOrder orderByUnitId(boolean ascending) {
         Column[] order = new Column[1];
-        order[0] = Column.UNIT_UNITID;
+        order[0] = Column.UNIT_KERNEL_UNITID;
         boolean[] asc = new boolean[1];
         asc[0] = ascending;
 

@@ -126,30 +126,26 @@ public final class RecordValue extends Value<Attribute<?>> {
     }
 
     /* package accessible only */
-    void toJson(
+    void toInternalJson(
             ArrayNode attributes,
-            ObjectNode attributeNode,
-            boolean complete,
-            boolean flat
+            ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode valueNode = null;
-        if (flat) {
-            valueNode = attributeNode.putArray(COLUMN_NAME);
-        }
+        valueNode = attributeNode.putArray(COLUMN_NAME);
 
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' either in 'unit' (if flat) or in
             // record parent attribute if not.
             ObjectNode nestedAttributeNode = attributes.addObject();
-            nestedAttribute.injectJson(attributes, nestedAttributeNode, complete, flat);
+            nestedAttribute.toInternalJson(attributes, nestedAttributeNode);
 
-            // If flat (and thus having the nested attribute in the unit), then
+            // Attributes are nested at unit level, so
             // we need to describe additional relations.
-            if (flat && null != valueNode) {
+            if (null != valueNode) {
                 // Add reference to that attribute within this record attribute
                 ObjectNode nestedAttributeRefNode = valueNode.addObject();
 
-                int attrId = nestedAttribute.getAttrId();
+                int attrId = nestedAttribute.getId();
                 nestedAttributeRefNode.put("ref_attrid", attrId);
 
                 long valueId = nestedAttribute.getValueId();
@@ -159,6 +155,17 @@ public final class RecordValue extends Value<Attribute<?>> {
                     nestedAttributeRefNode.putNull("ref_valueid");
                 }
             }
+        }
+    }
+
+    void toExternalJson(
+            ArrayNode attributes,
+            ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException {
+        for (Attribute<?> nestedAttribute : values) {
+            // 'attributes' are represented in record parent attribute.
+            ObjectNode nestedAttributeNode = attributes.addObject();
+            nestedAttribute.toExternalJson(attributes, nestedAttributeNode);
         }
     }
 

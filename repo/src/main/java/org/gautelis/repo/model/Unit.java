@@ -87,10 +87,12 @@ public class Unit implements Cloneable {
     // Unit information
     protected int tenantId;
     protected long unitId;
+    protected int unitVersion;
     protected UUID corrId;
-    protected String name = null;
-    protected Status status;
+    protected String unitName = null;
+    protected Status unitStatus;
     protected Instant createdTime = null;
+    protected Instant modifiedTime = null;
 
     // Attributes associated with this unit, organized by name (and not attribute id)
     private Map<String, Attribute<?>> attributes = null;
@@ -119,14 +121,15 @@ public class Unit implements Cloneable {
         //
         this.tenantId = tenantId;
         this.unitId = -1L; // assigned first when stored
+        this.unitVersion = 1;
         this.corrId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
-        this.name = null != name ? name.trim() : null;
-        this.status = Status.EFFECTIVE;
+        this.unitName = null != name ? name.trim() : null;
+        this.unitStatus = Status.EFFECTIVE;
 
         // Do not set any *Time since these are automatically
         // set when writing unit to database.
 
-        log.debug("Creating new unit: {}({})", id2String(tenantId, unitId), this.name);
+        log.debug("Creating new unit: {}({})", id2String(tenantId, unitId), this.unitName);
     }
 
     /**
@@ -214,6 +217,91 @@ public class Unit implements Cloneable {
         return "#NOID#";
     }
 
+    private ObjectNode asInternalJson() {
+        ObjectNode unitNode = MAPPER.createObjectNode();
+
+        if (false) {
+            unitNode.put("@type", "unit");
+            unitNode.put("@version", 2);
+        }
+
+        // unit itself
+        unitNode.put("tenantid", tenantId);
+        if (/* has been saved and thus is valid? */ unitId > 0) {
+            unitNode.put("unitid", unitId);
+        } else {
+            unitNode.putNull("unitid");
+        }
+        unitNode.put("unitver", unitVersion);
+        unitNode.put("corrid", corrId.toString());
+        unitNode.put("status", unitStatus.getStatus());
+        unitNode.put("unitname", unitName);
+        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
+        unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
+
+        // attributes array
+        ArrayNode attrs = MAPPER.createArrayNode();
+        unitNode.set("attributes", attrs);
+
+        fetchAttributes();
+
+        // attributes of unit
+        for (Attribute<?> attribute : attributes.values()) {
+            ObjectNode attributeNode = attrs.addObject();
+            attribute.toInternalJson(attrs, attributeNode);
+        }
+
+        return unitNode;
+    }
+
+
+    private ObjectNode asExternalJson() {
+        ObjectNode unitNode = MAPPER.createObjectNode();
+        unitNode.put("@type", "unit");
+        unitNode.put("@version", 2);
+
+        // unit itself
+        unitNode.put("tenantid", tenantId);
+        if (/* has been saved and thus is valid? */ unitId > 0) {
+            unitNode.put("id", unitId);
+        } else {
+            unitNode.putNull("id");
+        }
+        unitNode.put("version", unitVersion);
+        unitNode.put("corrid", corrId.toString());
+        unitNode.put("status", unitStatus.getStatus());
+        unitNode.put("name", unitName);
+        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
+        unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
+
+        // attributes array
+        ArrayNode attrs = MAPPER.createArrayNode();
+        unitNode.set("attributes", attrs);
+
+        fetchAttributes();
+
+        // attributes of unit
+        for (Attribute<?> attribute : attributes.values()) {
+            ObjectNode attributeNode = attrs.addObject();
+            attribute.toExternalJson(attrs, attributeNode);
+        }
+
+        return unitNode;
+    }
+
+    public String asJson(boolean pretty) {
+        try {
+            ObjectNode unitNode = asExternalJson();
+            if (pretty) {
+                return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
+            } else {
+                return unitNode.toString();
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Returns references to external resources associated with this unit.
      */
@@ -268,53 +356,6 @@ public class Unit implements Cloneable {
         }
         return v;
     }
-
-    public String asJson(boolean complete, boolean pretty, boolean flat) {
-        ObjectNode unitNode = MAPPER.createObjectNode();
-        if (complete) {
-            unitNode.put("@version", 1);
-            unitNode.put("@type", "unit");
-        }
-
-        // unit itself
-        unitNode.put("tenantid", tenantId);
-        if (/* has been saved and thus is valid? */ unitId > 0) {
-            unitNode.put("unitid", unitId);
-        } else {
-            unitNode.putNull("unitid");
-        }
-        unitNode.put("corrid", corrId.toString());
-        unitNode.put("status", status.getStatus());
-        unitNode.put("name",   name);
-        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
-
-        // attributes array
-        ArrayNode attrs = MAPPER.createArrayNode();
-        unitNode.set("attributes", attrs);
-
-        fetchAttributes();
-
-        // attributes of unit
-        for (Attribute<?> attribute : attributes.values()) {
-            ObjectNode attributeNode = attrs.addObject();
-            attribute.injectJson(attrs, attributeNode, complete, flat);
-        }
-
-        try {
-            if (pretty) {
-                return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
-            } else {
-                return unitNode.toString();
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String asJson() {
-        return asJson(/* complete? */ false, /* pretty? */ false, /* flat? */ false);
-    }
-
 
     /**
      * Stores unit to database.
@@ -374,9 +415,8 @@ public class Unit implements Cloneable {
         try (CallableStatement cs = conn.prepareCall(sql)) {
             var pgJson = new org.postgresql.util.PGobject();
             pgJson.setType("jsonb");
-            String json = asJson(/* complete? */ false, /* pretty? */ true, /* flat? */ true);
-
-            pgJson.setValue(json);
+            ObjectNode json = asInternalJson();
+            pgJson.setValue(json.toString());
 
             cs.setObject(1, pgJson);
             cs.registerOutParameter(2, Types.BIGINT);
@@ -435,11 +475,11 @@ public class Unit implements Cloneable {
             tenantId = rs.getInt("tenantid");
             unitId = rs.getLong("unitid");
             corrId = rs.getObject("corrid", UUID.class);
-            name = rs.getString("name");
+            unitName = rs.getString("name");
             if (rs.wasNull()) {
-                name = null; // to ensure we don't end up with 'NULL' names
+                unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            status = Status.of(rs.getInt("status"));
+            unitStatus = Status.of(rs.getInt("status"));
             createdTime = rs.getTimestamp("created").toInstant();
 
         } catch (SQLException sqle) {
@@ -454,14 +494,16 @@ public class Unit implements Cloneable {
             // unit
             tenantId = root.path("tenantid").asInt();
             unitId = root.path("unitid").asLong();
+            unitVersion = root.path("unitver").asInt();
             corrId = UUID.fromString(root.path("corrid").asText());
-            if (root.hasNonNull("name")) {
-                name = root.path("name").asText();
+            if (root.hasNonNull("unitname")) {
+                unitName = root.path("unitname").asText();
             } else {
-                name = null; // to ensure we don't end up with 'NULL' names
+                unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            status = Status.of(root.path("status").asInt());
+            unitStatus = Status.of(root.path("status").asInt());
             createdTime = TimeHelper.parseInstant(root.get("created").asText());
+            modifiedTime = TimeHelper.parseInstant(root.get("modified").asText());
 
             // attributes
             if (attributes == null) {
@@ -566,12 +608,12 @@ public class Unit implements Cloneable {
         }
 
         if (attributes.containsKey(attr.getName())) {
-            String info = "Unit " + this + " already has attribute " + attr.getAttrId();
+            String info = "Unit " + this + " already has attribute " + attr.getId();
             throw new IllegalRequestException(info);
         }
 
         Attribute<?> copy = new Attribute<>(attr);
-        log.debug("Adding attribute {}({}) to unit {}", copy.getAttrId(), copy.getName(), getReference());
+        log.debug("Adding attribute {}({}) to unit {}", copy.getId(), copy.getName(), getReference());
         attributes.put(copy.getName(), copy);
         return copy;
     }
@@ -698,7 +740,7 @@ public class Unit implements Cloneable {
                         if (parent.getType() != AttributeType.RECORD) {
                             // Unexpected
                             String info = "Parent attribute is not a record: type=" + parent.getType().name();
-                            info += ", attrId=" + parent.getAttrId();
+                            info += ", attrId=" + parent.getId();
                             info += ", valueId=" + parentValueid;
                             log.error(info);
                             throw new AttributeValueException(info);
@@ -977,7 +1019,7 @@ public class Unit implements Cloneable {
 
         Collection<Attribute<?>> myAttributes = attributes.values();
         for (Attribute<?> attribute : myAttributes) {
-            if (attribute.getAttrId() == attributeId) {
+            if (attribute.getId() == attributeId) {
                 return Optional.of(attribute);
             }
         }
@@ -1215,7 +1257,7 @@ public class Unit implements Cloneable {
      * @return String name of unit
      */
     public Optional<String> getName() {
-        return Optional.ofNullable(name);
+        return Optional.ofNullable(unitName);
     }
 
     /**
@@ -1227,10 +1269,10 @@ public class Unit implements Cloneable {
      * unique reference, use
      * {@link #getReference}.
      *
-     * @param name name of unit
+     * @param unitName name of unit
      */
-    public void setName(String name) {
-        this.name = name;
+    public void setName(String unitName) {
+        this.unitName = unitName;
     }
 
     /**
@@ -1455,7 +1497,7 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseWriteException, IllegalRequestException {
 
         if (isNew) {
-            status = requestedStatus;
+            unitStatus = requestedStatus;
         } else {
             TimedExecution.run(ctx.getTimingData(), "set status", () -> Database.usePreparedStatement(ctx.getDataSource(), ctx.getStatements().unitSetStatus(), pStmt -> {
                 int i = 0;
@@ -1508,7 +1550,7 @@ public class Unit implements Cloneable {
      * @return Returns created String
      */
     public String toString() {
-        String s = "Unit{" + getReference() + "(" + (null != name ? name : "") + ")" + (isNew ? "*" : "");
+        String s = "Unit{" + getReference() + "v" + unitVersion + "(" + (null != unitName ? unitName : "") + ")" + (isNew ? "*" : "");
         if (null != attributes) {
             for (Attribute<?> a : attributes.values()) {
                 s += "\n\t" + a.toString();

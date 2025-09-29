@@ -62,9 +62,9 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
         boolean useLIKE = (name.indexOf('%') >= 0 || name.indexOf('_') >= 0);  // Uses wildcard
 
         if (useLIKE) {
-            return new LeafExpression<>(new StringUnitSearchItem(Column.UNIT_NAME, Operator.LIKE, name));
+            return new LeafExpression<>(new StringUnitSearchItem(Column.UNIT_VERSION_UNITNAME, Operator.LIKE, name));
         } else {
-            return new LeafExpression<>(new StringUnitSearchItem(Column.UNIT_NAME, Operator.EQ, name));
+            return new LeafExpression<>(new StringUnitSearchItem(Column.UNIT_VERSION_UNITNAME, Operator.EQ, name));
         }
     }
 }

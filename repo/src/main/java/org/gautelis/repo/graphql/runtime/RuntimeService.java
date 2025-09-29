@@ -51,7 +51,7 @@ public class RuntimeService {
 
         // TODO
 
-        String json = unit.asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false);
+        String json = unit.asJson(/* pretty? */ false);
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -66,7 +66,7 @@ public class RuntimeService {
         Map<Integer, Attribute<?>> attributes = new HashMap<>();
 
         unit.get().getAttributes().forEach(attr -> {
-            int attrId = attr.getAttrId();
+            int attrId = attr.getId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
 
             //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
@@ -84,7 +84,7 @@ public class RuntimeService {
             return null;
         }
 
-        String json = unit.get().asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false);
+        String json = unit.get().asJson(/* pretty? */ false);
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -115,7 +115,7 @@ public class RuntimeService {
 
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
-            int childAttrId = attr.getAttrId();
+            int childAttrId = attr.getId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
 
             attributeMap.put(attributeMeta.attrId(), attr);
@@ -155,7 +155,7 @@ public class RuntimeService {
 
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
-            int childAttrId = attr.getAttrId();
+            int childAttrId = attr.getId();
             Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
             attributeMap.put(attributeMeta.attrId(), attr);
         });
@@ -215,7 +215,7 @@ public class RuntimeService {
                         Map<Integer, Attribute<?>> attributes = new HashMap<>(); // because organized by name in Unit (instead of attribute id)
 
                         for (Attribute<?> attr : unit.getAttributes()) {
-                            attributes.put(attr.getAttrId(), attr);
+                            attributes.put(attr.getId(), attr);
                         }
                         units.add(new /* outermost */ Box(unit, attributes));
 
@@ -254,7 +254,7 @@ public class RuntimeService {
 
         String json = "[";
         json += units.stream()
-                .map(unit -> unit.asJson(/* complete? */ true, /* pretty? */ false, /* flat? */ false))
+                .map(unit -> unit.asJson(/* pretty? */ false))
                 .collect(Collectors.joining(", "));
         json += "]";
         return json.getBytes(StandardCharsets.UTF_8);

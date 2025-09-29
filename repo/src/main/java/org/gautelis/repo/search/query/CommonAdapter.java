@@ -297,7 +297,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         for (LeafExpression<?> leaf : unitLeaves) {
             if (leaf.getItem() instanceof UnitSearchItem<?> usi) {
                 switch (usi.getColumn()) {
-                    case UNIT_TENANTID -> commonConstraintValues.put(UNIT_TENANTID.toString(), usi);
+                    case UNIT_KERNEL_TENANTID -> commonConstraintValues.put(UNIT_KERNEL_TENANTID.toString(), usi);
                 }
             }
         }
@@ -359,9 +359,9 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             statement += "WITH " + join(attributeConstraints, ", ") + ", ";
             statement += "final AS " + attributeConstraintLogic.get() + " ";
         }
-        statement += "SELECT " + UNIT_TENANTID + ", " + UNIT_UNITID + ", " + UNIT_CREATED + " ";
-        statement += "FROM " + UNIT + " ";
-        statement += "JOIN final f USING (" + UNIT_TENANTID.plain() + ", " + UNIT_UNITID.plain() + ") ";
+        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_KERNEL_CREATED + " ";
+        statement += "FROM " + UNIT_KERNEL + " ";
+        statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
         if (!unitLeaves.isEmpty() && unitConstraints.isPresent()) {
             statement += "WHERE " + unitConstraints.get() + " ";
         }
@@ -403,8 +403,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                         int i = 0;
                         for (SearchItem<?> item : preparedItems) {
                             if (item instanceof AttributeSearchItem<?>) {
-                                if (ccv.containsKey(UNIT_TENANTID.toString())) {
-                                    int tenantId = (Integer) ccv.get(UNIT_TENANTID.toString()).getValue();
+                                if (ccv.containsKey(UNIT_KERNEL_TENANTID.toString())) {
+                                    int tenantId = (Integer) ccv.get(UNIT_KERNEL_TENANTID.toString()).getValue();
                                     pStmt.setInt(++i, tenantId);
                                 }
                             }

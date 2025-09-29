@@ -17,8 +17,11 @@
 package org.gautelis.repo.db;
 
 public enum Table {
-    // [U]ni[t]
-    UNIT("repo_unit", "ut"),
+    // [U]nit [k]ernel
+    UNIT_KERNEL("repo_unit_kernel", "uk"),
+
+    // [U]nit [v]ersion
+    UNIT_VERSION("repo_unit_version", "uv"),
 
     // [I]nternal [a]ssociation
     INTERNAL_ASSOCIATION("repo_internal_assoc", "ia"),
@@ -36,7 +39,10 @@ public enum Table {
     ATTRIBUTE_TIME_VALUE_VECTOR("repo_time_vector", "vv"),
     ATTRIBUTE_DOUBLE_VALUE_VECTOR("repo_double_vector", "vv"),
     ATTRIBUTE_BOOLEAN_VALUE_VECTOR("repo_boolean_vector", "vv"),
-    ATTRIBUTE_RECORD_VALUE_VECTOR("repo_record_vector", "vv");
+    ATTRIBUTE_DATA_VALUE_VECTOR("repo_data_vector", "vv"),
+    ATTRIBUTE_RECORD_VALUE_VECTOR("repo_record_vector", "vv"),
+
+    UNIT_LOCK("repo_lock", "lk");
 
     private final String tableName;
     private final String tableAlias;
@@ -48,11 +54,11 @@ public enum Table {
         this.recrd = tableName + " " + tableAlias;
     }
 
-    private String getTableName() {
+    public String getTableName() {
         return tableName;
     }
 
-    private String getTableAlias() {
+    public String getTableAlias() {
         return tableAlias;
     }
 
