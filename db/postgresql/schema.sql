@@ -54,7 +54,7 @@ CREATE TABLE repo_unit_kernel (
 
     corrid       UUID      NOT NULL,                      -- UUID v7 (if not provided)
     status       INT       NOT NULL DEFAULT 30,           -- See Unit.Status
-    lastversion  INT       NOT NULL DEFAULT 1,            -- last version of this unit
+    lastver      INT       NOT NULL DEFAULT 1,            -- last version of this unit
     created      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT repo_unit_kernel_pk
@@ -228,7 +228,7 @@ CREATE TABLE repo_string_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value (serial)
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      TEXT,
+    value    TEXT,
 
     CONSTRAINT repo_string_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -239,12 +239,12 @@ CREATE TABLE repo_string_vector (
 
 -- Considering removing
 CREATE INDEX repo_sv_ind1 ON repo_string_vector (
-     LOWER(val) ASC
+     LOWER(value) ASC
 )
 ;
 
 CREATE INDEX repo_sv_ind2 ON repo_string_vector (
-     valueid ASC, LOWER(val) ASC
+     valueid ASC, LOWER(value) ASC
 )
 ;
 
@@ -267,7 +267,7 @@ CREATE TABLE repo_time_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      TIMESTAMP,
+    value    TIMESTAMP,
 
     CONSTRAINT repo_time_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -278,7 +278,7 @@ CREATE TABLE repo_time_vector (
 
 -- Relevant for range scans (x <= ?)
 CREATE INDEX repo_tiv_ind1 ON repo_time_vector (
-     val ASC
+     value ASC
 )
 ;
 
@@ -289,7 +289,7 @@ CREATE TABLE repo_integer_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      INT    ,
+    value    INT,
 
     CONSTRAINT repo_integer_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -305,7 +305,7 @@ CREATE TABLE repo_long_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      BIGINT,
+    value    BIGINT,
 
     CONSTRAINT repo_long_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -321,7 +321,7 @@ CREATE TABLE repo_double_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      DOUBLE PRECISION,
+    value    DOUBLE PRECISION,
 
     CONSTRAINT repo_double_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -337,7 +337,7 @@ CREATE TABLE repo_boolean_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      BOOLEAN,
+    value    BOOLEAN,
 
     CONSTRAINT repo_boolean_vector_pk
         PRIMARY KEY (valueid, idx),
@@ -353,7 +353,7 @@ CREATE TABLE repo_data_vector (
     valueid  BIGINT NOT NULL,           -- id of attribute value
     idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    val      BYTEA,
+    value    BYTEA,
 
     CONSTRAINT repo_data_vector_pk
         PRIMARY KEY (valueid, idx),

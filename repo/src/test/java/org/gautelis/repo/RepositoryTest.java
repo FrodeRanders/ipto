@@ -618,8 +618,7 @@ public class RepositoryTest extends TestCase {
                             Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
                             if (_unit.isPresent()) {
                                 Unit unit = _unit.get();
-                                System.out.println(unit);
-                                System.out.println("JSON: " + unit.asJson(/* pretty? */ true));
+                                System.out.println("--> " + unit.asJson(/* pretty? */ true));
                             } else {
                                 fail("Failed to resurrect unit that is known to exist");
                             }

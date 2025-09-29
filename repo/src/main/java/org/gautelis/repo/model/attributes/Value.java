@@ -33,7 +33,7 @@ import java.util.ArrayList;
 public abstract class Value<T> {
     static final Logger log = LoggerFactory.getLogger(Value.class);
 
-    protected final static String COLUMN_NAME = "val";
+    protected final static String VALUE_PROPERTY_NAME = "value";
 
     protected final ArrayList<T> values = new ArrayList<>();
     private int initialHashCode;
@@ -142,14 +142,14 @@ public abstract class Value<T> {
             JsonNode node
     ) throws AttributeTypeException, JsonProcessingException {
         Value<?> value = switch (type) {
-            case STRING -> new StringValue((ArrayNode) node.get(StringValue.COLUMN_NAME));
-            case TIME -> new TimeValue((ArrayNode) node.get(TimeValue.COLUMN_NAME));
-            case INTEGER -> new IntegerValue((ArrayNode) node.get(IntegerValue.COLUMN_NAME));
-            case LONG -> new LongValue((ArrayNode) node.get(LongValue.COLUMN_NAME));
-            case DOUBLE -> new DoubleValue((ArrayNode) node.get(DoubleValue.COLUMN_NAME));
-            case BOOLEAN -> new BooleanValue((ArrayNode) node.get(BooleanValue.COLUMN_NAME));
-            case DATA -> new DataValue((ArrayNode) node.get(DataValue.COLUMN_NAME));
-            case RECORD -> new RecordValue((ArrayNode) node.get(RecordValue.COLUMN_NAME));
+            case STRING -> new StringValue((ArrayNode) node.get(StringValue.VALUE_PROPERTY_NAME));
+            case TIME -> new TimeValue((ArrayNode) node.get(TimeValue.VALUE_PROPERTY_NAME));
+            case INTEGER -> new IntegerValue((ArrayNode) node.get(IntegerValue.VALUE_PROPERTY_NAME));
+            case LONG -> new LongValue((ArrayNode) node.get(LongValue.VALUE_PROPERTY_NAME));
+            case DOUBLE -> new DoubleValue((ArrayNode) node.get(DoubleValue.VALUE_PROPERTY_NAME));
+            case BOOLEAN -> new BooleanValue((ArrayNode) node.get(BooleanValue.VALUE_PROPERTY_NAME));
+            case DATA -> new DataValue((ArrayNode) node.get(DataValue.VALUE_PROPERTY_NAME));
+            case RECORD -> new RecordValue((ArrayNode) node.get(RecordValue.VALUE_PROPERTY_NAME));
         };
 
         //noinspection unchecked

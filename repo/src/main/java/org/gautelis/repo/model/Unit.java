@@ -99,6 +99,8 @@ public class Unit implements Cloneable {
 
     // Predicates
     protected boolean isNew; // true if not yet persisted
+    protected boolean isModified;
+    protected boolean isReadOnly;
 
     private Unit(Context ctx) {
         this.ctx = ctx;
@@ -115,8 +117,10 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
         this(ctx);
 
-        // Adjusting initial values
+        // Adjusting initial predicates
         isNew = true;
+        isModified = false;
+        isReadOnly = false;
 
         //
         this.tenantId = tenantId;
@@ -147,8 +151,10 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseWriteException, DatabaseReadException, UnitNotFoundException, ConfigurationException {
         this(ctx);
 
-        // Adjusting initial values
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         //
         if (log.isDebugEnabled())
@@ -179,8 +185,10 @@ public class Unit implements Cloneable {
     ) throws DatabaseReadException {
         this(ctx);
 
-        // Adjusting initial values reflecting reading an existing unit from database
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         readEntry(rs);
 
@@ -198,8 +206,10 @@ public class Unit implements Cloneable {
     ) {
         this(ctx);
 
-        // Adjusting initial values reflecting reading an existing unit from database
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         readEntry(json);
 
@@ -263,14 +273,14 @@ public class Unit implements Cloneable {
         // unit itself
         unitNode.put("tenantid", tenantId);
         if (/* has been saved and thus is valid? */ unitId > 0) {
-            unitNode.put("id", unitId);
+            unitNode.put("unitid", unitId);
         } else {
-            unitNode.putNull("id");
+            unitNode.putNull("unitid");
         }
-        unitNode.put("version", unitVersion);
+        unitNode.put("unitver", unitVersion);
         unitNode.put("corrid", corrId.toString());
         unitNode.put("status", unitStatus.getStatus());
-        unitNode.put("name", unitName);
+        unitNode.put("unitname", unitName);
         unitNode.put("created", createdTime != null ? createdTime.toString() : null);
         unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
 
@@ -362,7 +372,28 @@ public class Unit implements Cloneable {
      */
     /* package accessible only */
     void store() throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
-        if (!isNew) {
+        if (attributes == null) {
+            if (!isModified) {
+                return;
+
+            } else if (!isNew) {
+                // since attributes are not loaded and the unit already exists (in database)...
+                fetchAttributes();
+            }
+        } else {
+            // Check if attributes were modified
+            Collection<Attribute<?>> myAttributes = attributes.values();
+            for (Attribute<?> attribute : myAttributes) {
+                boolean attrIsModified = attribute.isModified();
+                isModified |= attrIsModified;
+
+                if (attrIsModified)
+                    break;
+            }
+        }
+
+        // Do not perform store if no modifications in unit
+        if (!isModified) {
             return;
         }
 
@@ -388,13 +419,14 @@ public class Unit implements Cloneable {
 
                 try {
                     conn.commit();
+
+                    // Predicates post store
+                    isNew = false;
+                    isModified = false;
                 }
                 catch (SQLException sqle) {
                     throw new DatabaseWriteException(sqle);
                 }
-
-                isNew = false;
-
             } catch (DatabaseWriteException dbwe) {
                 SQLException sqle = dbwe.getSQLException();
 
@@ -505,7 +537,10 @@ public class Unit implements Cloneable {
             createdTime = TimeHelper.parseInstant(root.get("created").asText());
             modifiedTime = TimeHelper.parseInstant(root.get("modified").asText());
 
-            // attributes
+            // Predicate
+            isReadOnly = root.path("isreadonly").asBoolean();
+
+            // Handle attributes
             if (attributes == null) {
                 // Attributes that need some extra care in a subsequent step
                 Collection<Attribute<?>> recordAttributes = new ArrayList<>();
@@ -557,7 +592,7 @@ public class Unit implements Cloneable {
                     Attribute<?> recordAttribute = rait.next();
 
                     if (recordAttribute.getValue() instanceof RecordValue recValue) {
-                        Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
+                        Collection<RecordValue.AttributeReference> refs = recValue.getClaimedReferences();
                         Iterator<RecordValue.AttributeReference> rit = refs.iterator();
                         while (rit.hasNext()) {
                             RecordValue.AttributeReference ref = rit.next();

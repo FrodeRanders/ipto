@@ -210,9 +210,9 @@ public class Attribute<T> {
         }
         attributeNode.put("@type", _type);
 
-        attributeNode.put("name", attributeName);
-        attributeNode.put("id", attributeId);
-        attributeNode.put("type", attributeType.name());
+        attributeNode.put("attrname", attributeName);
+        attributeNode.put("attrid", attributeId);
+        attributeNode.put("attrtype", attributeType.name());
 
         if (AttributeType.RECORD == attributeType) {
             // "hide" unit attributes with local array in record attribute

@@ -93,7 +93,7 @@ final class DataValue extends Value<Object> {
 
             } catch (Throwable ignore) {
                 // Oracle: Works with the RAW type
-                value = (byte[]) rs.getObject(COLUMN_NAME);
+                value = (byte[]) rs.getObject(VALUE_PROPERTY_NAME);
             }
             values.add(value);
 
@@ -153,7 +153,7 @@ final class DataValue extends Value<Object> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Object _value : values) {
             byte[] value = (byte[]) _value; // Assumption
             String b64 = Base64.getEncoder().encodeToString(value);
@@ -166,7 +166,7 @@ final class DataValue extends Value<Object> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Object _value : values) {
             byte[] value = (byte[]) _value; // Assumption
             String b64 = Base64.getEncoder().encodeToString(value);

@@ -31,7 +31,7 @@ import java.util.ArrayList;
 
 final class TimeValue extends Value<Instant> {
     /**
-     * Creates a <I>new</I> date value
+     * Creates a <I>new</I> time value
      */
     TimeValue() {
     }
@@ -125,7 +125,7 @@ final class TimeValue extends Value<Instant> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Instant value : values) {
             array.add(value.toString());
         }
@@ -136,7 +136,7 @@ final class TimeValue extends Value<Instant> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Instant value : values) {
             array.add(value.toString());
         }

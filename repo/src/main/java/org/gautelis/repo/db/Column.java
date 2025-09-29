@@ -59,7 +59,7 @@ public enum Column {
     ATTRIBUTE_VALUE_VECTOR_TENANTID(Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableAlias(), "tenantid", false),
     ATTRIBUTE_VALUE_VECTOR_UNITID(Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableAlias(), "unitid", false),
     ATTRIBUTE_VALUE_VECTOR_VALUEID(Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableAlias(), "valueid", false),
-    ATTRIBUTE_VALUE_VECTOR_ENTRY (Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableAlias(), "val", false);
+    ATTRIBUTE_VALUE_VECTOR_ENTRY (Table.ATTRIBUTE_INTEGER_VALUE_VECTOR.getTableAlias(), "value", false);
 
 
     private final String tableAlias;
@@ -67,12 +67,10 @@ public enum Column {
     private final String recrd;
     private final boolean supportsOrderBy;
 
-    Column(String tableAlias,
-           String columnName, boolean supportsOrderBy) {
+    Column(String tableAlias, String columnName,  boolean supportsOrderBy) {
         this.tableAlias = tableAlias;
         this.columnName = columnName; // unqualified name
         this.recrd = tableAlias + "." + columnName; // qualified name
-
         this.supportsOrderBy = supportsOrderBy;
     }
 

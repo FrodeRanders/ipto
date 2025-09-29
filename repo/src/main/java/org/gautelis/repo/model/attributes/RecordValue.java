@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
 
 public final class RecordValue extends Value<Attribute<?>> {
     public record AttributeReference(int refAttrId, long refValueId) {}
-    private final Collection<AttributeReference> initialReferences = new ArrayList<>();
+    private final Collection<AttributeReference> claimedReferences = new ArrayList<>();
 
     /**
-     * Creates a <I>new</I> long value
+     * Creates a <I>new</I> record value
      */
     RecordValue() {
         super();
@@ -53,8 +53,8 @@ public final class RecordValue extends Value<Attribute<?>> {
         super(rs);
     }
 
-    public Collection<AttributeReference> getInitialReferences() {
-        return initialReferences;
+    public Collection<AttributeReference> getClaimedReferences() {
+        return claimedReferences;
     }
 
     /**
@@ -90,7 +90,7 @@ public final class RecordValue extends Value<Attribute<?>> {
         for (JsonNode element : node) {
             int refAttrId = element.get("ref_attrid").asInt();
             long refValueId = element.get("ref_valueid").asLong();
-            initialReferences.add(new AttributeReference(refAttrId, refValueId));
+            claimedReferences.add(new AttributeReference(refAttrId, refValueId));
         }
     }
 
@@ -131,7 +131,7 @@ public final class RecordValue extends Value<Attribute<?>> {
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode valueNode = null;
-        valueNode = attributeNode.putArray(COLUMN_NAME);
+        valueNode = attributeNode.putArray(VALUE_PROPERTY_NAME);
 
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' either in 'unit' (if flat) or in
@@ -172,9 +172,9 @@ public final class RecordValue extends Value<Attribute<?>> {
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        if (!initialReferences.isEmpty()) {
+        if (!claimedReferences.isEmpty()) {
             result.append("[");
-            result.append(initialReferences.stream()
+            result.append(claimedReferences.stream()
                     .map(ref -> "#" + ref.refAttrId + ":" + ref.refValueId)
                     .collect(Collectors.joining(", ")));
             result.append("]+");

@@ -119,7 +119,7 @@ final class BooleanValue extends Value<Boolean> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Boolean value : values) {
             array.add(value);
         }
@@ -130,7 +130,7 @@ final class BooleanValue extends Value<Boolean> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Boolean value : values) {
             array.add(value);
         }

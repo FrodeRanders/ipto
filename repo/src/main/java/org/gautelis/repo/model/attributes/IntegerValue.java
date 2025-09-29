@@ -120,7 +120,7 @@ final class IntegerValue extends Value<Integer> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Integer value : values) {
             array.add(value);
         }
@@ -131,7 +131,7 @@ final class IntegerValue extends Value<Integer> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Integer value : values) {
             array.add(value);
         }

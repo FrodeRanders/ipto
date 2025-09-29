@@ -120,7 +120,7 @@ final class LongValue extends Value<Long> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Long value : values) {
             array.add(value);
         }
@@ -131,7 +131,7 @@ final class LongValue extends Value<Long> {
             ArrayNode ignored,
             ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Long value : values) {
             array.add(value);
         }

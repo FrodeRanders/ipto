@@ -57,7 +57,7 @@ BEGIN
                  (  attrid       int
                   , attrtype     int
                   , attrver      int
-                  , val          jsonb
+                  , value        jsonb
                  )
         LOOP
             /* 2a. (tenantid,unitid,attrid) → repo_attribute_value → valueid ----*/
@@ -68,46 +68,46 @@ BEGIN
             /* 2b. vector tables by attrtype --------------------------------*/
             CASE attr.attrtype
                 WHEN 1 THEN  -- STRING
-                    INSERT INTO repo_string_vector(valueid, idx, val)
+                    INSERT INTO repo_string_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 2 THEN  -- TIME
-                    INSERT INTO repo_time_vector(valueid, idx, val)
+                    INSERT INTO repo_time_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem::timestamp
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 3 THEN  -- INT
-                    INSERT INTO repo_integer_vector(valueid, idx, val)
+                    INSERT INTO repo_integer_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem::int
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 4 THEN  -- LONG
-                    INSERT INTO repo_long_vector(valueid, idx, val)
+                    INSERT INTO repo_long_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem::bigint
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 5 THEN  -- DOUBLE
-                    INSERT INTO repo_double_vector(valueid, idx, val)
+                    INSERT INTO repo_double_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem::double precision
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 6 THEN  -- BOOLEAN
-                    INSERT INTO repo_boolean_vector(valueid, idx, val)
+                    INSERT INTO repo_boolean_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, elem::boolean
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 7 THEN  -- DATA / BLOB (base-64)
-                    INSERT INTO repo_data_vector(valueid, idx, val)
+                    INSERT INTO repo_data_vector(valueid, idx, value)
                     SELECT v_valueid, ord-1, decode(elem,'base64')
-                    FROM jsonb_array_elements_text(attr.val) WITH ORDINALITY AS t(elem, ord);
+                    FROM jsonb_array_elements_text(attr.value) WITH ORDINALITY AS t(elem, ord);
 
                 WHEN 99 THEN -- RECORD  (placeholder ref_valueid NULL)
                     has_record_attribs := true;
                     INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid)
                     SELECT v_valueid, ord-1, t.ref_attrid, NULL
                     FROM ROWS FROM (
-                        jsonb_to_recordset(attr.val) AS (ref_attrid int, ref_valueid bigint)
+                        jsonb_to_recordset(attr.value) AS (ref_attrid int, ref_valueid bigint)
                     ) WITH ORDINALITY AS t(ref_attrid, ref_valueid, ord);
 
                 ELSE
@@ -151,13 +151,14 @@ WITH unit_hdr AS (
     SELECT uk.tenantid,
            uk.unitid,
            uv.unitver,
+           uk.lastver,
            uk.corrid,
            uk.status,
            uk.created,
            uv.modified,
            uv.unitname
     FROM repo_unit_kernel uk
-    JOIN repo_unit_version uv ON uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastversion = uv.unitver
+    JOIN repo_unit_version uv ON uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver
     WHERE uk.tenantid = p_tenantid
       AND uk.unitid = p_unitid
 ),
@@ -173,31 +174,31 @@ WITH unit_hdr AS (
                 -- one array per primitive type (NULL when not applicable)
                 CASE a.attrtype
                     WHEN 1  -- STRING
-                         THEN (SELECT jsonb_agg(sv.val ORDER BY sv.idx)
+                         THEN (SELECT jsonb_agg(sv.value ORDER BY sv.idx)
                                FROM repo_string_vector sv
                                WHERE sv.valueid = av.valueid)
                     WHEN 2  -- TIME
-                         THEN (SELECT jsonb_agg(tv.val ORDER BY tv.idx)
+                         THEN (SELECT jsonb_agg(tv.value ORDER BY tv.idx)
                                FROM repo_time_vector tv
                                WHERE tv.valueid = av.valueid)
                     WHEN 3  -- INTEGER
-                         THEN (SELECT jsonb_agg(iv.val ORDER BY iv.idx)
+                         THEN (SELECT jsonb_agg(iv.value ORDER BY iv.idx)
                                FROM repo_integer_vector iv
                                WHERE iv.valueid = av.valueid)
                     WHEN 4  -- LONG
-                         THEN (SELECT jsonb_agg(lv.val ORDER BY lv.idx)
+                         THEN (SELECT jsonb_agg(lv.value ORDER BY lv.idx)
                                FROM repo_long_vector lv
                                WHERE lv.valueid = av.valueid)
                     WHEN 5  -- DOUBLE
-                         THEN (SELECT jsonb_agg(dv.val ORDER BY dv.idx)
+                         THEN (SELECT jsonb_agg(dv.value ORDER BY dv.idx)
                                FROM repo_double_vector dv
                                WHERE dv.valueid = av.valueid)
                     WHEN 6  -- BOOLEAN
-                         THEN (SELECT jsonb_agg(bv.val ORDER BY bv.idx)
+                         THEN (SELECT jsonb_agg(bv.value ORDER BY bv.idx)
                                FROM repo_boolean_vector bv
                                WHERE bv.valueid = av.valueid)
                     WHEN 7  -- DATA / BLOB
-                         THEN (SELECT jsonb_agg( encode(dat.val, 'base64') ORDER BY dat.idx )
+                         THEN (SELECT jsonb_agg( encode(dat.value, 'base64') ORDER BY dat.idx )
                                FROM repo_data_vector dat
                                WHERE dat.valueid = av.valueid)
                     WHEN 99 -- RECORD
@@ -206,12 +207,12 @@ WITH unit_hdr AS (
                              'ref_valueid', rv.ref_valueid) ORDER BY rv.idx)
                          FROM repo_record_vector rv
                          WHERE rv.valueid = av.valueid)
-               END AS val
+               END AS value
          FROM repo_attribute_value av
          JOIN repo_attribute a ON a.attrid = av.attrid
          JOIN repo_unit_kernel uk ON uk.tenantid = av.tenantid AND uk.unitid = av.unitid
-         WHERE uk.lastversion <= av.unitverto
-           AND uk.lastversion >= av.unitverfrom
+         WHERE uk.lastver <= av.unitverto
+           AND uk.lastver >= av.unitverfrom
            AND av.tenantid = p_tenantid
            AND av.unitid = p_unitid
      )
@@ -226,6 +227,7 @@ SELECT jsonb_build_object(
            'unitname', u.unitname,
            'created',  u.created,
            'modified', u.modified,
+           'isreadonly', u.lastver > u.unitver,
            'attributes',
            (SELECT jsonb_agg( -- array of attribute objects
                    jsonb_strip_nulls( -- omit NULL fields to keep size down?
@@ -237,7 +239,7 @@ SELECT jsonb_build_object(
                                    'unitverfrom',  unitverfrom,
                                    'unitverto',    unitverto,
                                    'valueid',      valueid,
-                                   'val',          val
+                                   'value',        value
                            )
                    )
             )
@@ -314,13 +316,13 @@ SELECT
 
     COALESCE(sv.idx, tv.idx, iv.idx, lv.idx, dov.idx, bv.idx, dv.idx) AS idx,
 
-    sv.val  AS string_val,
-    tv.val  AS time_val,
-    iv.val  AS int_val,
-    lv.val  AS long_val,
-    dov.val AS double_val,
-    bv.val  AS bool_val,
-    dv.val  AS data_val
+    sv.value  AS string_val,
+    tv.value  AS time_val,
+    iv.value  AS int_val,
+    lv.value  AS long_val,
+    dov.value AS double_val,
+    bv.value  AS bool_val,
+    dv.value  AS data_val
 FROM attr_tree t
        LEFT JOIN repo_string_vector  sv  ON t.attrtype = 1 AND t.valueid = sv.valueid
        LEFT JOIN repo_time_vector    tv  ON t.attrtype = 2 AND t.valueid = tv.valueid
