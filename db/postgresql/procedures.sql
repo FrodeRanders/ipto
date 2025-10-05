@@ -19,16 +19,32 @@
 -- Writes a primitive (string, integer, long, ...) attribute value row and its value vector
 --
 CREATE OR REPLACE FUNCTION repo_write_vector(
-    p_tenantid int, p_unitid bigint,
-    p_attrid int, p_attrver int,
+    p_tenantid int, p_unitid bigint, p_attrid int,
     p_from int, p_to int,
     p_attrtype int, p_value jsonb
 ) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE v_valueid bigint;
 BEGIN
-    INSERT INTO repo_attribute_value(tenantid, unitid, attrid, attrver, unitverfrom, unitverto)
-    VALUES (p_tenantid,p_unitid,p_attrid,p_attrver,p_from,p_to)
+    INSERT INTO repo_attribute_value(tenantid, unitid, attrid, unitverfrom, unitverto)
+    VALUES (p_tenantid,p_unitid,p_attrid,p_from,p_to)
     RETURNING valueid INTO v_valueid;
+
+    INSERT INTO repo_attribute_current_value(tenantid, unitid, attrid, valueid)
+    VALUES (p_tenantid, p_unitid, p_attrid, v_valueid)
+    ON CONFLICT ON CONSTRAINT repo_attribute_current_value_pk
+        DO UPDATE SET valueid = v_valueid;
+
+    /* alternatively...
+    MERGE INTO repo_attribute_current_value AS racv
+    USING (VALUES (p_tenantid, p_unitid, p_attrid, v_valueid))
+        AS vals (tenantid, unitid, attrid, valueid)
+    ON racv.tenantid = vals.tenantid AND racv.unitid = vals.unitid AND racv.attrid = vals.attrid
+    WHEN matched THEN
+        UPDATE SET valueid = vals.valueid
+    WHEN NOT matched THEN
+        INSERT (tenantid, unitid, attrid, valueid)
+        VALUES (p_tenantid, p_unitid, p_attrid, v_valueid);
+    */
 
     CASE p_attrtype
         WHEN 1 THEN  -- STRING
@@ -82,15 +98,14 @@ CREATE TYPE record_element AS (
 );
 
 CREATE OR REPLACE FUNCTION repo_write_record(
-    p_tenantid int, p_unitid bigint,
-    p_attrid int, p_attrver int,
+    p_tenantid int, p_unitid bigint, p_attrid int,
     p_from int, p_to int,
     p_elems record_element[]
 ) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE v_valueid bigint;
 BEGIN
-    INSERT INTO repo_attribute_value(tenantid, unitid, attrid, attrver, unitverfrom, unitverto)
-    VALUES (p_tenantid,p_unitid,p_attrid,p_attrver,p_from,p_to)
+    INSERT INTO repo_attribute_value(tenantid, unitid, attrid, unitverfrom, unitverto)
+    VALUES (p_tenantid,p_unitid,p_attrid,p_from,p_to)
     RETURNING valueid INTO v_valueid;
 
     INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid)
@@ -120,9 +135,7 @@ DECLARE
     attr         record;     -- loop variable
     has_record_attribs boolean := false;
 BEGIN
-    --------------------------------------------------------------------
-    -- 1. insert unit header row, capture unitid + created timestamp
-    --------------------------------------------------------------------
+    -- Insert unit header row, capture unitid + created timestamp
     INSERT INTO repo_unit_kernel (tenantid, corrid, status)
     VALUES (v_tenantid, v_corrid, v_status)
     RETURNING lastver, unitid, created
@@ -133,24 +146,24 @@ BEGIN
     RETURNING modified
          INTO p_modified;
 
-    --------------------------------------------------------------------
-    -- 2. single scan over attribute array (JSON)
-    --------------------------------------------------------------------
+    -- Single scan over attribute array (JSON)
     FOR attr IN
         SELECT *
         FROM jsonb_to_recordset(p_unit -> 'attributes') AS
                  (  attrid       int
                   , attrtype     int
-                  , attrver      int
                   , value        jsonb
                  )
         LOOP
-            /* 2a. (tenantid,unitid,attrid) → repo_attribute_value → valueid ----*/
-            INSERT INTO repo_attribute_value (tenantid, unitid, attrid, attrver, unitverfrom, unitverto)
-            VALUES (v_tenantid, p_unitid, attr.attrid, attr.attrver, p_unitver, p_unitver)
+            -- Write attribute value row, and retrieve new valueid
+            INSERT INTO repo_attribute_value (tenantid, unitid, attrid, unitverfrom, unitverto)
+            VALUES (v_tenantid, p_unitid, attr.attrid, p_unitver, p_unitver)
             RETURNING valueid INTO v_valueid;
 
-            /* 2b. vector tables by attrtype --------------------------------*/
+            INSERT INTO repo_attribute_current_value (tenantid, unitid, attrid, valueid)
+            VALUES (v_tenantid, p_unitid, attr.attrid, v_valueid);
+
+            -- Write corresponding value vector
             CASE attr.attrtype
                 WHEN 1 THEN  -- STRING
                     INSERT INTO repo_string_vector(valueid, idx, value)
@@ -190,7 +203,7 @@ BEGIN
                 WHEN 99 THEN -- RECORD  (placeholder ref_valueid NULL)
                     has_record_attribs := true;
                     INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid)
-                    SELECT v_valueid, ord-1, t.ref_attrid, NULL
+                    SELECT v_valueid, ord-1, t.ref_attrid, NULL -- placeholder
                     FROM ROWS FROM (
                         jsonb_to_recordset(attr.value) AS (ref_attrid int, ref_valueid bigint)
                     ) WITH ORDINALITY AS t(ref_attrid, ref_valueid, ord);
@@ -202,9 +215,7 @@ BEGIN
                 END CASE;
         END LOOP;
 
-    --------------------------------------------------------------------
-    -- 3. resolve record placeholders
-    --------------------------------------------------------------------
+    -- Resolve record placeholders (where ref_valued was set to NULL previously)
     IF has_record_attribs THEN
         UPDATE repo_record_vector cv
         SET    ref_valueid = child.valueid
@@ -250,15 +261,13 @@ BEGIN
     CREATE TEMP TABLE in_attrs (
        attrid      int,
        attrtype    int,
-       attrver     int,
        ismodified  boolean DEFAULT false,
        value       jsonb
     ) ON COMMIT DROP;
 
-    INSERT INTO in_attrs(attrid, attrtype, attrver, ismodified, value)
+    INSERT INTO in_attrs(attrid, attrtype, ismodified, value)
     SELECT (a->>'attrid')::int,
            (a->>'attrtype')::int,
-           COALESCE((a->>'attrver')::int, 1),
            COALESCE((a->>'ismodified')::boolean, false),
            a->'value'
     FROM jsonb_array_elements(p_unit->'attributes') a;
@@ -270,15 +279,16 @@ BEGIN
     DECLARE
         r_prim  RECORD;
     BEGIN
-        FOR r_prim IN SELECT attrid, ismodified, attrver, attrtype, value FROM in_prim
+        FOR r_prim IN SELECT attrid, ismodified, attrtype, value FROM in_prim
             LOOP
                 BEGIN
                     IF r_prim.ismodified THEN
-                        -- attribute was modified, insert new row and value vector
-                        PERFORM repo_write_vector(v_tenantid, v_unitid, r_prim.attrid, r_prim.attrver,
-                                                  p_unitver, p_unitver, r_prim.attrtype, r_prim.value);
+                        -- Since attribute was modified, insert new value and corresponding value vector
+                        PERFORM repo_write_vector(v_tenantid, v_unitid, r_prim.attrid,
+                                                  p_unitver, p_unitver, r_prim.attrtype,
+                                                  r_prim.value);
                     ELSE
-                        -- attribute was unchanged, extend range of attribute value vector to new version
+                        -- Since attribute was unchanged, extend range of attribute value to new version
                         UPDATE repo_attribute_value
                         SET unitverto = p_unitver
                         WHERE tenantid = v_tenantid
@@ -314,8 +324,8 @@ BEGIN
     FROM in_rec ir,
          LATERAL jsonb_array_elements(ir.value) WITH ORDINALITY AS t(elem, ord);
 
-    -- Resolve each child ref to its *current* valueid at the new version
-    -- noinspection SqlUpdateWithoutWhere since temporary table
+    -- Resolve each child ref to its *current* valueid at the new version.
+    -- noinspection SqlUpdateWithoutWhere (since operating on temporary table)
     UPDATE in_record_elems e
     SET ref_valueid = (
         SELECT av.valueid
@@ -328,7 +338,7 @@ BEGIN
         LIMIT 1
     );
 
-    -- ensure no unresolved children remain
+    -- Ensure that no unresolved children remain
     IF EXISTS (SELECT 1 FROM in_record_elems WHERE ref_valueid IS NULL) THEN
         RAISE EXCEPTION 'Record references attribute(s) without an effective value at %.%v%', v_tenantid, v_unitid, p_unitver
             USING ERRCODE = '22023';
@@ -355,7 +365,7 @@ BEGIN
                     LIMIT 1;
 
                     IF prev_parent_valueid IS NULL THEN
-                        -- new record
+                        -- New record
                         DECLARE v_elems record_element[];
                         BEGIN
                             SELECT array_agg((idx, ref_attrid, ref_valueid)::record_element ORDER BY idx)
@@ -367,7 +377,7 @@ BEGIN
                                                       p_unitver, p_unitver, v_elems);
                         END;
                     ELSE
-                        -- compare ordered pairs (ref_attrid, ref_valueid)
+                        -- Compare ordered pairs (ref_attrid, ref_valueid)
                         SELECT
                             (SELECT array_agg(row(e.ref_attrid, e.ref_valueid) ORDER BY e.idx)
                              FROM in_record_elems e WHERE e.parent_attrid = record_id)
@@ -385,7 +395,7 @@ BEGIN
                               AND unitverfrom <= prev_ver
                               AND unitverto   >= prev_ver;
                         ELSE
-                            -- insert record row + its elements
+                            -- Insert record row + its elements
                             DECLARE v_elems record_element[];
                             BEGIN
                                 SELECT array_agg((idx, ref_attrid, ref_valueid)::record_element ORDER BY idx)
@@ -431,7 +441,6 @@ WITH unit_hdr AS (
          SELECT av.attrid,
                 a.attrtype,
                 a.attrname,
-                av.attrver,
                 av.unitverfrom,
                 av.unitverto,
                 av.valueid,
@@ -500,7 +509,6 @@ SELECT jsonb_build_object(
                                    'attrid',       attrid,
                                    'attrtype',     attrtype,
                                    'attrname',     attrname,
-                                   'attrver',      attrver,
                                    'unitverfrom',  unitverfrom,
                                    'unitverto',    unitverto,
                                    'valueid',      valueid,
@@ -528,7 +536,6 @@ CREATE OR REPLACE FUNCTION load_unit_vectors (
     parent_valueid BIGINT,   -- parent record’s valueid (NULL means top-level)
     record_idx     INTEGER,  -- ordinal inside parent record
     depth          INTEGER,
-
     idx            INTEGER,
     string_val     TEXT,
     time_val       TIMESTAMP,
@@ -573,9 +580,7 @@ SELECT
     t.parent_valueid,
     t.record_idx,
     t.depth,
-
     COALESCE(sv.idx, tv.idx, iv.idx, lv.idx, dov.idx, bv.idx, dv.idx) AS idx,
-
     sv.value  AS string_val,
     tv.value  AS time_val,
     iv.value  AS int_val,

@@ -614,9 +614,11 @@ public class RepositoryTest extends TestCase {
                         int j = 0;
                         int _tenantId = rs.getInt(++j);
                         long _unitId = rs.getLong(++j);
+                        int _unitVer = rs.getInt(++j);
                         Timestamp _created = rs.getTimestamp(++j);
+                        Timestamp _modified = rs.getTimestamp(++j);
 
-                        System.out.println("\nFound: tenantId=" + _tenantId + " unitId=" + _unitId + " created=" + _created);
+                        System.out.println("\nFound: unit=" + _tenantId + "." + _unitId + "v" + _unitVer + " created=" + _created + " modified=" + _modified);
                         unitId.add(new Unit.Id(_tenantId, _unitId));
                     }
                 }));

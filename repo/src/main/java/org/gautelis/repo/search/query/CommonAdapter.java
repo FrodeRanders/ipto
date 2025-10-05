@@ -359,11 +359,14 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             statement += "WITH " + join(attributeConstraints, ", ") + ", ";
             statement += "final AS " + attributeConstraintLogic.get() + " ";
         }
-        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_KERNEL_CREATED + " ";
-        statement += "FROM " + UNIT_KERNEL + " ";
+        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
+        statement += "FROM " + UNIT_KERNEL + ", " + UNIT_VERSION + " ";
         statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
+        statement += "WHERE " + UNIT_KERNEL_TENANTID + " = " + UNIT_VERSION_TENANTID + " ";
+        statement += "AND " + UNIT_KERNEL_UNITID + " = " + UNIT_VERSION_UNITID + " ";
+        statement += "AND " + UNIT_KERNEL_LASTVER + " = " + UNIT_VERSION_UNITVER + " ";
         if (!unitLeaves.isEmpty() && unitConstraints.isPresent()) {
-            statement += "WHERE " + unitConstraints.get() + " ";
+            statement += "AND " + unitConstraints.get() + " ";
         }
         if (!orderBy.isEmpty()) {
             statement += "ORDER BY " + orderBy + " ";

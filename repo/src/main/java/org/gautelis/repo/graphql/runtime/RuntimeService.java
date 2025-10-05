@@ -184,9 +184,11 @@ public class RuntimeService {
                     int j = 0;
                     int _tenantId = rs.getInt(++j);
                     long _unitId = rs.getLong(++j);
+                    int _unitVer = rs.getInt(++j);
                     Timestamp _created = rs.getTimestamp(++j);
+                    Timestamp _modified = rs.getTimestamp(++j);
 
-                    log.debug("Found: tenantId=" + _tenantId + " unitId=" + _unitId + " created=" + _created);
+                    log.debug("Found: unit=" + _tenantId + "." + _unitId + "v" + _unitVer + " created=" + _created + " modified=" + _modified);
                     ids.add(new Unit.Id(_tenantId, _unitId));
                 }
             }));

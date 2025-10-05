@@ -23,7 +23,7 @@ public enum Column {
     UNIT_KERNEL_UNITID(Table.UNIT_KERNEL.getTableAlias(), "unitid", false),
     UNIT_KERNEL_CORRID(Table.UNIT_KERNEL.getTableAlias(), "corrid", true),
     UNIT_KERNEL_STATUS(Table.UNIT_KERNEL.getTableAlias(), "status", true),
-    UNIT_KERNEL_LASTVERSION(Table.UNIT_KERNEL.getTableAlias(), "lastversion", false),
+    UNIT_KERNEL_LASTVER(Table.UNIT_KERNEL.getTableAlias(), "lastver", false),
     UNIT_KERNEL_CREATED(Table.UNIT_KERNEL.getTableAlias(), "created", true),
 
     // [U]nit [v]ersion columns

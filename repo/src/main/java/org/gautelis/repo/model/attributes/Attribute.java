@@ -38,7 +38,6 @@ public class Attribute<T> {
     private int attributeId;
     private String attributeName;
     private AttributeType attributeType;
-    private int attributeVersion;
     private int unitVersionFrom = 1;
     private int unitVersionTo = 1;
     private long valueId = -1L; // initially invalid
@@ -59,7 +58,6 @@ public class Attribute<T> {
         this.attributeId = id;
         this.attributeName = name.trim();
         this.attributeType = type;
-        this.attributeVersion = 0;
 
         value = Value.createValue(type);
     }
@@ -155,16 +153,6 @@ public class Attribute<T> {
         return attributeId;
     }
 
-    /**
-     * Gets attribute version.
-     *
-     * @return int version of attribute
-     */
-    public int getVersion() {
-        return attributeVersion;
-    }
-
-
     public long getValueId() {
         return valueId;
     }
@@ -181,15 +169,11 @@ public class Attribute<T> {
         }
 
         boolean _isModified = isModified();
-        if (_isModified) {
-            attributeVersion++; // OBSERVE: This is done in preparation of storing.
-        }
 
         attributeNode.put("ismodified", _isModified);
         attributeNode.put("attrname", attributeName);
         attributeNode.put("attrid", attributeId);
         attributeNode.put("attrtype", attributeType.getType());
-        attributeNode.put("attrver", attributeVersion);
         attributeNode.put("untverfrom", unitVersionFrom);
         attributeNode.put("untverto", unitVersionTo);
 
@@ -226,7 +210,6 @@ public class Attribute<T> {
     private void readEntry(JsonNode node) throws JsonProcessingException {
         // Get attribute information
         attributeId = node.path("attrid").asInt();
-        attributeVersion = node.path("attrver").asInt();
         unitVersionFrom = node.path("unitverfrom").asInt();
         unitVersionTo = node.path("unitverto").asInt();
         valueId = node.path("valueid").asLong();
@@ -289,7 +272,7 @@ public class Attribute<T> {
      */
     @Override
     public String toString() {
-        return "Attribute{" + attributeId + "v" + attributeVersion + "(" + attributeName + ")[" +
+        return "Attribute{" + attributeId + "(" + attributeName + ")[" +
                 unitVersionFrom + "-" + unitVersionTo + "]:" +
                 attributeType.name() +
                 (value.isNew() ? "*" : "") +

@@ -713,7 +713,6 @@ public class Unit implements Cloneable {
      * Fetch attributes from database if they are not fetched already.
      */
     private Map<String, Attribute<?>> fetchAttributes() throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
-
         // Ignore request if we have already loaded our attributes
         if (attributes == null) {
             if (isNew) {
@@ -824,7 +823,7 @@ public class Unit implements Cloneable {
                         nestedAttributes.add(attribute);
                     } else {
                         // This attribute is not nested, so we associate attribute
-                        // with name top-leven in unit attribute hashtable
+                        // with name, at top-level in unit attribute hashtable
                         attributes.put(attribute.getName(), attribute);
                     }
 
