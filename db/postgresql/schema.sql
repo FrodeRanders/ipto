@@ -68,7 +68,8 @@ CREATE TABLE repo_unit_kernel (
 
 CREATE INDEX repo_uk_ind1 ON repo_unit_kernel (
     tenantid, status, created DESC
-) INCLUDE (unitid);
+) INCLUDE (unitid)
+;
 
 CREATE TABLE repo_unit_version (
     tenantid     INT          NOT NULL,  -- id of tenant

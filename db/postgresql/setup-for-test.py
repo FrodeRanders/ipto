@@ -15,8 +15,11 @@ def pull_postgres_image():
     Pull the latest postgres image from Docker Hub.
     """
     print("Pulling the latest 'postgres' image from Docker Hub...")
-    subprocess.run(["docker", "pull", "postgres"], check=True)
-    print("Image pulled successfully.\n")
+    result = subprocess.run(["docker", "pull", "postgres"], check=False)
+    if result.returncode == 0:
+        print("Image pulled successfully.\n")
+    else:
+        print("Could not pull image. Possibly reusing current image.\n")
 
 
 def remove_existing_container(container_name: str):

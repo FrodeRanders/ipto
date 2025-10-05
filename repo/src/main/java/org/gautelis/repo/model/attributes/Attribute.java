@@ -180,11 +180,12 @@ public class Attribute<T> {
             attributeNode.put("@type", _type);
         }
 
-        // OBSERVE: This is only done in preparation of storing.
-        if (isModified()) {
-            attributeVersion++;
+        boolean _isModified = isModified();
+        if (_isModified) {
+            attributeVersion++; // OBSERVE: This is done in preparation of storing.
         }
 
+        attributeNode.put("ismodified", _isModified);
         attributeNode.put("attrname", attributeName);
         attributeNode.put("attrid", attributeId);
         attributeNode.put("attrtype", attributeType.getType());
@@ -277,6 +278,10 @@ public class Attribute<T> {
 
     public boolean isNew() {
         return value.isNew() || valueId <= 0;
+    }
+
+    public void setStored() {
+        value.setStored();
     }
 
     /**

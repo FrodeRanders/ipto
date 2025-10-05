@@ -58,6 +58,28 @@ public final class RecordValue extends Value<Attribute<?>> {
     }
 
     /**
+     * Have any values been modified?
+     * TODO! NOT SURE IF THIS IS NEEDED.
+    public boolean isModified() {
+        // The generic 'isModified()' in superclass 'Value' only checks structure.
+        // In this case it means that it does not check if individual attributes
+        // in record 'values' has been modified.
+        boolean _isModified = super.isModified();
+        if (_isModified) {
+            return true;
+        }
+
+        // Specialisation for record values
+        for (Attribute<?> value : values) {
+            if (value.isModified()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    */
+
+    /**
      * Inflate an <I>existing</I> string value from a result set.
      * <p>
      * Called from the Value constructor.
@@ -84,7 +106,8 @@ public final class RecordValue extends Value<Attribute<?>> {
          *
          * Therefore, there is nothing to be done and
          * the values have to be "injected" one-by-one
-         * as they are later instantiated.
+         * as they are later instantiated. So, we 'claim'
+         * these attributes for this record.
          */
 
         for (JsonNode element : node) {

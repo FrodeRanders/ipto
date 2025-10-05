@@ -403,8 +403,11 @@ public class Unit implements Cloneable {
             try {
                 try {
                     try {
-                        store(conn);
-
+                        if (isNew) {
+                            store_new_unit(conn);
+                        } else {
+                            store_new_version(conn);
+                        }
                     } catch (DatabaseWriteException dbwe) {
                         SQLException sqle = dbwe.getSQLException();
                         log.error("Transaction rollback due to: {}", Database.squeeze(sqle));
@@ -423,6 +426,10 @@ public class Unit implements Cloneable {
                     // Predicates post store
                     isNew = false;
                     isModified = false;
+
+                    for (Attribute<?> attribute : attributes.values()) {
+                        attribute.setStored();
+                    }
                 }
                 catch (SQLException sqle) {
                     throw new DatabaseWriteException(sqle);
@@ -439,10 +446,10 @@ public class Unit implements Cloneable {
     }
 
 
-    private void store(
+    private void store_new_unit(
             Connection conn
     ) throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
-        String sql = "CALL ingest_unit_json(?, ?, ?)";
+        String sql = "CALL ingest_new_unit_json(?, ?, ?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
             var pgJson = new org.postgresql.util.PGobject();
@@ -452,15 +459,47 @@ public class Unit implements Cloneable {
 
             cs.setObject(1, pgJson);
             cs.registerOutParameter(2, Types.BIGINT);
+            cs.registerOutParameter(3, Types.INTEGER);
+            cs.registerOutParameter(4, Types.TIMESTAMP);
+            cs.registerOutParameter(5, Types.TIMESTAMP);
+            cs.execute();
+
+            //
+            unitId = cs.getLong(2); // Must match registered out parameter
+            unitVersion = cs.getInt(3);
+            createdTime = cs.getTimestamp(4).toInstant();
+            modifiedTime = cs.getTimestamp(5).toInstant();
+
+        } catch (SQLException sqle) {
+            String info = "Failed to store new unit: " + Database.squeeze(sqle);
+            log.error(info, sqle);
+            throw new DatabaseWriteException(info, sqle);
+        }
+    }
+
+    private void store_new_version(
+            Connection conn
+    ) throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
+        String sql = "CALL ingest_new_version_json(?, ?, ?)";
+
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            var pgJson = new org.postgresql.util.PGobject();
+            pgJson.setType("jsonb");
+            ObjectNode json = asInternalJson();
+            //log.trace("JSON: {}", json); // TODO REMOVE
+            pgJson.setValue(json.toString());
+
+            cs.setObject(1, pgJson);
+            cs.registerOutParameter(2, Types.INTEGER);
             cs.registerOutParameter(3, Types.TIMESTAMP);
             cs.execute();
 
             //
-            unitId = cs.getLong(2); // OBS: Same as registered out parameter
-            createdTime = cs.getTimestamp(3).toInstant();
+            unitVersion = cs.getInt(2); // Must match registered out parameter
+            modifiedTime = cs.getTimestamp(3).toInstant();
 
         } catch (SQLException sqle) {
-            String info = "Failed to store new unit: " + Database.squeeze(sqle);
+            String info = "Failed to store new version: " + Database.squeeze(sqle);
             log.error(info, sqle);
             throw new DatabaseWriteException(info, sqle);
         }

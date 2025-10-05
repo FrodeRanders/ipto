@@ -470,6 +470,9 @@ public class RepositoryTest extends TestCase {
                     value.add("Second value");
                     value.add("Third value");
                 });
+                parentUnit.withAttributeValue("dc:description", String.class, value -> {
+                    value.add("A test unit");
+                });
                 repo.storeUnit(parentUnit);
 
                 averageTPI.update(startTime, /* endTime */ Instant.now());
@@ -478,8 +481,9 @@ public class RepositoryTest extends TestCase {
                     firstParentCreated = parentUnit.getCreationTime().get();
                 }
 
-                if (false) {
+                if (true) {
                     parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                        value.clear();
                         value.add("Replaced value");
                     });
                     repo.storeUnit(parentUnit);

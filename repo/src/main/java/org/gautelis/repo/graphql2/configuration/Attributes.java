@@ -63,7 +63,7 @@ public final class Attributes {
                                 attrId = _id.getValue().intValue();
                             }
 
-                            // --- (c*) type and not name, converted later ---
+                            // --- (c*) type, converted to name later ---
                             int attrType = -1; // INVALID
                             arg = enumValueDirective.getArgument("datatype");
                             if (null != arg) {
