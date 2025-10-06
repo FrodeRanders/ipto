@@ -19,7 +19,11 @@ def pull_postgres_image():
     if result.returncode == 0:
         print("Image pulled successfully.\n")
     else:
-        print("Could not pull image. Possibly reusing current image.\n")
+        print("\n")
+        print("*********************************************************\n")
+        print("* Could not pull image. Possibly reusing current image. *\n")
+        print("*********************************************************\n")
+        print("\n")
 
 
 def remove_existing_container(container_name: str):
