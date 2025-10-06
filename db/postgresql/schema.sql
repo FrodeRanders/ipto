@@ -194,15 +194,21 @@ CREATE INDEX repo_av_ind2
     INCLUDE (valueid)
 ;
 
+/*
+ * If we anticipate a lot of versions of units with multiple
+ * attribute (value) modifications, the cost of keeping a 'current'
+ * representation of attribute values becomes more palatable
+ *
 CREATE TABLE repo_attribute_current_value (
-    tenantid int NOT NULL,
-    unitid   bigint NOT NULL,
-    attrid   int NOT NULL,
-    valueid  bigint NOT NULL,
+tenantid int NOT NULL,
+unitid   bigint NOT NULL,
+attrid   int NOT NULL,
+valueid  bigint NOT NULL,
 
-    CONSTRAINT repo_attribute_current_value_pk
-        PRIMARY KEY (tenantid, unitid, attrid)
+CONSTRAINT repo_attribute_current_value_pk
+    PRIMARY KEY (tenantid, unitid, attrid)
 );
+ */
 
 ---------------------------------------------------------------
 -- Metadata-table: Unit-template lookup table.
@@ -210,28 +216,28 @@ CREATE TABLE repo_attribute_current_value (
 -- Records  are handled separately in 'repo_record_template'
 --
 CREATE TABLE repo_unit_template (
-    templateid INT  NOT NULL,   -- from @unit(id: …)
+templateid INT  NOT NULL,   -- from @unit(id: …)
 
-    name       TEXT NOT NULL,   -- type name
+name       TEXT NOT NULL,   -- type name
 
-    CONSTRAINT repo_unit_template_pk
-        PRIMARY KEY (templateid),
-    CONSTRAINT repo_unit_template_name_uq
-        UNIQUE (name)
+CONSTRAINT repo_unit_template_pk
+    PRIMARY KEY (templateid),
+CONSTRAINT repo_unit_template_name_uq
+    UNIQUE (name)
 )
 ;
 
 CREATE TABLE repo_template_elements (
-    templateid INT  NOT NULL,   -- from @unit(id: …)
-    attrid     INT  NOT NULL,   -- global attribute id
+templateid INT  NOT NULL,   -- from @unit(id: …)
+attrid     INT  NOT NULL,   -- global attribute id
 
-    alias      TEXT NOT NULL,   -- field name inside unit (template)
-    idx        INT  NOT NULL,   -- order / display position
+alias      TEXT NOT NULL,   -- field name inside unit (template)
+idx        INT  NOT NULL,   -- order / display position
 
-    CONSTRAINT repo_template_elements_pk
-        PRIMARY KEY (templateid, attrid),
-    CONSTRAINT repo_template_elements_tmp_ex
-        FOREIGN KEY (templateid) REFERENCES repo_unit_template (templateid)
+CONSTRAINT repo_template_elements_pk
+    PRIMARY KEY (templateid, attrid),
+CONSTRAINT repo_template_elements_tmp_ex
+    FOREIGN KEY (templateid) REFERENCES repo_unit_template (templateid)
 )
 ;
 
@@ -239,18 +245,18 @@ CREATE TABLE repo_template_elements (
 -- Metadata-table: Template for records
 --
 CREATE TABLE repo_record_template (
-    record_attrid  INT  NOT NULL,      -- from @record(attribute: …)
-    idx            INT  NOT NULL,
+record_attrid  INT  NOT NULL,      -- from @record(attribute: …)
+idx            INT  NOT NULL,
 
-    child_attrid   INT  NOT NULL,      -- sub-attribute
-    alias          TEXT NULL,
-    required       BOOLEAN NOT NULL DEFAULT FALSE,
+child_attrid   INT  NOT NULL,      -- sub-attribute
+alias          TEXT NULL,
+required       BOOLEAN NOT NULL DEFAULT FALSE,
 
-    CONSTRAINT repo_record_template_pk
-        PRIMARY KEY (record_attrid, idx),
-    CONSTRAINT repo_record_template_attr_ex
-        FOREIGN KEY (record_attrid)
-            REFERENCES repo_attribute(attrid)
+CONSTRAINT repo_record_template_pk
+    PRIMARY KEY (record_attrid, idx),
+CONSTRAINT repo_record_template_attr_ex
+    FOREIGN KEY (record_attrid)
+        REFERENCES repo_attribute(attrid)
 )
 ;
 
@@ -261,25 +267,25 @@ CREATE TABLE repo_record_template (
 -- String values
 --
 CREATE TABLE repo_string_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value (serial)
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value (serial)
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    TEXT,
+value    TEXT,
 
-    CONSTRAINT repo_string_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_string_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_string_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_string_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
 -- Considering removing
 CREATE INDEX repo_sv_ind1
-    ON repo_string_vector (LOWER(value) ASC)
+ON repo_string_vector (LOWER(value) ASC)
 ;
 
 CREATE INDEX repo_sv_ind2
-    ON repo_string_vector (valueid ASC, LOWER(value) ASC)
+ON repo_string_vector (valueid ASC, LOWER(value) ASC)
 ;
 
 
@@ -298,36 +304,36 @@ CREATE INDEX repo_sv_ind2
 -- Date values
 --
 CREATE TABLE repo_time_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    TIMESTAMP,
+value    TIMESTAMP,
 
-    CONSTRAINT repo_time_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_time_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_time_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_time_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
 -- Relevant for range scans (x <= ?)
 CREATE INDEX repo_tiv_ind1
-    ON repo_time_vector (value ASC)
+ON repo_time_vector (value ASC)
 ;
 
 --
 -- Integer values
 --
 CREATE TABLE repo_integer_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    INT,
+value    INT,
 
-    CONSTRAINT repo_integer_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_integer_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_integer_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_integer_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
@@ -335,15 +341,15 @@ CREATE TABLE repo_integer_vector (
 -- Long values
 --
 CREATE TABLE repo_long_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    BIGINT,
+value    BIGINT,
 
-    CONSTRAINT repo_long_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_long_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_long_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_long_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
@@ -351,15 +357,15 @@ CREATE TABLE repo_long_vector (
 -- Double values
 --
 CREATE TABLE repo_double_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    DOUBLE PRECISION,
+value    DOUBLE PRECISION,
 
-    CONSTRAINT repo_double_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_double_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_double_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_double_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
@@ -367,15 +373,15 @@ CREATE TABLE repo_double_vector (
 -- Boolean values
 --
 CREATE TABLE repo_boolean_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    BOOLEAN,
+value    BOOLEAN,
 
-    CONSTRAINT repo_boolean_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_boolean_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_boolean_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_boolean_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
@@ -383,15 +389,15 @@ CREATE TABLE repo_boolean_vector (
 -- Binary values
 --
 CREATE TABLE repo_data_vector (
-    valueid  BIGINT NOT NULL,           -- id of attribute value
-    idx      INT    NOT NULL DEFAULT 0, -- index of value
+valueid  BIGINT NOT NULL,           -- id of attribute value
+idx      INT    NOT NULL DEFAULT 0, -- index of value
 
-    value    BYTEA,
+value    BYTEA,
 
-    CONSTRAINT repo_data_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_data_v_value_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_data_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_data_v_value_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
@@ -399,32 +405,32 @@ CREATE TABLE repo_data_vector (
 -- Records
 -- TODO: Considering adding ref_attrid to PK, if the same sub-vector appears more than once in parent.
 CREATE TABLE repo_record_vector (
-    valueid     BIGINT NOT NULL,           -- parent value vector
-    idx         INT    NOT NULL DEFAULT 0, -- position within parent
+valueid     BIGINT NOT NULL,           -- parent value vector
+idx         INT    NOT NULL DEFAULT 0, -- position within parent
 
-    ref_attrid  INT    NOT NULL,
-    ref_valueid BIGINT NULL,               -- initially null when first written, later updated
+ref_attrid  INT    NOT NULL,
+ref_valueid BIGINT NULL,               -- initially null when first written, later updated
 
-    CONSTRAINT repo_record_vector_pk
-        PRIMARY KEY (valueid, idx),
-    CONSTRAINT repo_record_vec_parent_ex
-        FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE,
-    CONSTRAINT repo_record_vec_child_ex
-        FOREIGN KEY (ref_valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
+CONSTRAINT repo_record_vector_pk
+    PRIMARY KEY (valueid, idx),
+CONSTRAINT repo_record_vec_parent_ex
+    FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE,
+CONSTRAINT repo_record_vec_child_ex
+    FOREIGN KEY (ref_valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
 )
 ;
 
 -- Relevant when resolving placeholders (child -> parent),
 -- i.e. when querying "WHERE ref_valueid = ?child?"
 CREATE INDEX repo_rv_ind1
-    ON repo_record_vector (ref_valueid)
-    WITH (fillfactor = 80) -- 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
+ON repo_record_vector (ref_valueid)
+WITH (fillfactor = 80) -- 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
 ;
 
 
 -- Relevant when deleting a child, validating schema, adding a composite
 CREATE INDEX repo_rv_ind2
-    ON repo_record_vector (valueid, ref_attrid)
+ON repo_record_vector (valueid, ref_attrid)
 ;
 
 
@@ -432,18 +438,18 @@ CREATE INDEX repo_rv_ind2
 -- The log
 --
 CREATE TABLE repo_log (
-    tenantid  INT       NOT NULL,
-    unitid    BIGINT    NOT NULL,
-    unitver   INTEGER   NOT NULL,
-    event     INT       NOT NULL, -- defined in org.gautelis.repo.model.ActionEvent
-    logentry  TEXT      NOT NULL,
-    logtime   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+tenantid  INT       NOT NULL,
+unitid    BIGINT    NOT NULL,
+unitver   INTEGER   NOT NULL,
+event     INT       NOT NULL, -- defined in org.gautelis.repo.model.ActionEvent
+logentry  TEXT      NOT NULL,
+logtime   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 )
 ;
 
 -- When searching for all events for a certain unit
 CREATE INDEX repo_log_ind1
-    ON repo_log (tenantid, unitid)
+ON repo_log (tenantid, unitid)
 ;
 
 
@@ -459,19 +465,19 @@ CREATE INDEX repo_log_ind1
 -- Severity/guarantee: 1 < 2 < 3
 --
 CREATE TABLE repo_lock (
-    tenantid INT        NOT NULL,
-    unitid   BIGINT     NOT NULL,
-    lockid   BIGINT GENERATED ALWAYS AS IDENTITY,
+tenantid INT        NOT NULL,
+unitid   BIGINT     NOT NULL,
+lockid   BIGINT GENERATED ALWAYS AS IDENTITY,
 
-    purpose  TEXT       NOT NULL,
-    locktype INT        NOT NULL,
-    expire   TIMESTAMP,
-    locktime TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+purpose  TEXT       NOT NULL,
+locktype INT        NOT NULL,
+expire   TIMESTAMP,
+locktime TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT repo_lock_pk
-        PRIMARY KEY (tenantid, unitid, lockid),
-    CONSTRAINT repo_lock_unit_exists
-        FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
+CONSTRAINT repo_lock_pk
+    PRIMARY KEY (tenantid, unitid, lockid),
+CONSTRAINT repo_lock_unit_exists
+    FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
 )
 ;
 
@@ -487,46 +493,46 @@ CREATE TABLE repo_lock (
 -- uniquely identified by a string.
 --
 CREATE TABLE repo_internal_assoc (
-    tenantid      INT    NOT NULL,
-    unitid        BIGINT NOT NULL,
-    assoctype     INT    NOT NULL,
-    assoctenantid INT    NOT NULL,
-    assocunitid   BIGINT NOT NULL,
+tenantid      INT    NOT NULL,
+unitid        BIGINT NOT NULL,
+assoctype     INT    NOT NULL,
+assoctenantid INT    NOT NULL,
+assocunitid   BIGINT NOT NULL,
 
-    CONSTRAINT repo_internal_assoc_pk
-        PRIMARY KEY (tenantid, unitid, assoctype, assoctenantid, assocunitid),
-    CONSTRAINT repo_ia_left_unit_exists
-        FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE,
-    CONSTRAINT repo_ia_right_unit_exists
-        FOREIGN KEY (assoctenantid, assocunitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
+CONSTRAINT repo_internal_assoc_pk
+    PRIMARY KEY (tenantid, unitid, assoctype, assoctenantid, assocunitid),
+CONSTRAINT repo_ia_left_unit_exists
+    FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE,
+CONSTRAINT repo_ia_right_unit_exists
+    FOREIGN KEY (assoctenantid, assocunitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
 )
 ;
 
 CREATE INDEX repo_iassoc_idx1
-    ON repo_internal_assoc (assoctype, assoctenantid, assocunitid)
+ON repo_internal_assoc (assoctype, assoctenantid, assocunitid)
 ;
 
 CREATE INDEX repo_iassoc_idx2
-    ON repo_internal_assoc (tenantid, unitid, assoctype)
+ON repo_internal_assoc (tenantid, unitid, assoctype)
 ;
 
 CREATE TABLE repo_external_assoc (
-    tenantid    INT    NOT NULL,
-    unitid      BIGINT NOT NULL,
-    assoctype   INT    NOT NULL,
-    assocstring TEXT   NOT NULL,
+tenantid    INT    NOT NULL,
+unitid      BIGINT NOT NULL,
+assoctype   INT    NOT NULL,
+assocstring TEXT   NOT NULL,
 
-    CONSTRAINT repo_external_assoc_pk
-        PRIMARY KEY (tenantid, unitid, assoctype, assocstring),
-    CONSTRAINT repo_ea_left_unit_exists
-        FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
+CONSTRAINT repo_external_assoc_pk
+    PRIMARY KEY (tenantid, unitid, assoctype, assocstring),
+CONSTRAINT repo_ea_left_unit_exists
+    FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
 )
 ;
 
 CREATE INDEX repo_eassoc_idx1
-    ON repo_external_assoc (assoctype, assocstring)
+ON repo_external_assoc (assoctype, assocstring)
 ;
 
 CREATE INDEX repo_eassoc_idx2
-    ON repo_external_assoc (tenantid, unitid, assoctype)
+ON repo_external_assoc (tenantid, unitid, assoctype)
 ;

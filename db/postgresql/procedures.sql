@@ -29,22 +29,16 @@ BEGIN
     VALUES (p_tenantid,p_unitid,p_attrid,p_from,p_to)
     RETURNING valueid INTO v_valueid;
 
+    /*
+     * If we anticipate a lot of versions of units with multiple
+     * attribute (value) modifications, the cost of keeping a 'current'
+     * representation of attribute values becomes more palatable
+     *
     INSERT INTO repo_attribute_current_value(tenantid, unitid, attrid, valueid)
     VALUES (p_tenantid, p_unitid, p_attrid, v_valueid)
     ON CONFLICT ON CONSTRAINT repo_attribute_current_value_pk
         DO UPDATE SET valueid = v_valueid;
-
-    /* alternatively...
-    MERGE INTO repo_attribute_current_value AS racv
-    USING (VALUES (p_tenantid, p_unitid, p_attrid, v_valueid))
-        AS vals (tenantid, unitid, attrid, valueid)
-    ON racv.tenantid = vals.tenantid AND racv.unitid = vals.unitid AND racv.attrid = vals.attrid
-    WHEN matched THEN
-        UPDATE SET valueid = vals.valueid
-    WHEN NOT matched THEN
-        INSERT (tenantid, unitid, attrid, valueid)
-        VALUES (p_tenantid, p_unitid, p_attrid, v_valueid);
-    */
+     */
 
     CASE p_attrtype
         WHEN 1 THEN  -- STRING
@@ -160,8 +154,14 @@ BEGIN
             VALUES (v_tenantid, p_unitid, attr.attrid, p_unitver, p_unitver)
             RETURNING valueid INTO v_valueid;
 
+            /*
+             * If we anticipate a lot of versions of units with multiple
+             * attribute (value) modifications, the cost of keeping a 'current'
+             * representation of attribute values becomes more palatable
+             *
             INSERT INTO repo_attribute_current_value (tenantid, unitid, attrid, valueid)
             VALUES (v_tenantid, p_unitid, attr.attrid, v_valueid);
+             */
 
             -- Write corresponding value vector
             CASE attr.attrtype
