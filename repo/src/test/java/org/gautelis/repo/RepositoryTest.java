@@ -34,7 +34,7 @@ import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.locks.LockType;
-import org.gautelis.repo.model.utils.MovingAverage;
+import org.gautelis.repo.model.utils.RunningStatistics;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.DatabaseAdapter;
 import org.gautelis.repo.search.query.QueryBuilder;
@@ -459,7 +459,7 @@ public class RepositoryTest extends TestCase {
             System.out.println("Generating " + (numberOfParents * numberOfChildren) + " units...");
             System.out.flush();
 
-            MovingAverage averageTPI = new MovingAverage(); // Average timer per iteration
+            RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration
 
             for (int j = 1; j < numberOfParents + 1; j++) {
                 Instant startTime = Instant.now();
@@ -475,7 +475,7 @@ public class RepositoryTest extends TestCase {
                 });
                 repo.storeUnit(parentUnit);
 
-                averageTPI.update(startTime, /* endTime */ Instant.now());
+                averageTPI.addSample(startTime, /* endTime */ Instant.now());
 
                 if (null == firstParentCreated) {
                     firstParentCreated = parentUnit.getCreationTime().get();
@@ -498,7 +498,7 @@ public class RepositoryTest extends TestCase {
                     long count = (j-1)*numberOfChildren + i;
                     if (count % 1000 == 0) { // depends on parameters (numberOfParents and numberOfChildren) > 1000
                         long iterationsLeft = (numberOfParents * numberOfChildren) - count;
-                        double timeLeft = iterationsLeft * averageTPI.getAverage();
+                        double timeLeft = iterationsLeft * averageTPI.getMean();
 
                         String approxTimeLeft = TimeDelta.asHumanApproximate(BigInteger.valueOf(Math.round(timeLeft)));
                         System.out.print(
@@ -558,7 +558,7 @@ public class RepositoryTest extends TestCase {
 
                     //
                     repo.storeUnit(childUnit);
-                    averageTPI.update(startTime, /* endTime */ Instant.now());
+                    averageTPI.addSample(startTime, /* endTime */ Instant.now());
 
                     if (false) {
                         // Works, but not part of test (at the moment)

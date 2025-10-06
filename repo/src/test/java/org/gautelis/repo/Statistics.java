@@ -4,8 +4,6 @@ import com.sun.management.OperatingSystemMXBean;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.db.Table;
 import org.gautelis.repo.model.Repository;
-import org.gautelis.repo.model.utils.MovingAverage;
-import org.gautelis.vopn.lang.TimeDelta;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
