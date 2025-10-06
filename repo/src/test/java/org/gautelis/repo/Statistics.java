@@ -44,10 +44,6 @@ public class Statistics {
                 .append("mem-free=").append(asHumanApproximate(runtime.freeMemory(), " ").replaceAll("\\u00a0"," ")).append("\n");
 
         repo.withDataSource(dataSource -> {
-        });
-
-
-        repo.withDataSource(dataSource -> {
             /*
              * DB server version
              */

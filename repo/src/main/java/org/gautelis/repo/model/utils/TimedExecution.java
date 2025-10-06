@@ -20,7 +20,7 @@ public class TimedExecution {
 
     private TimedExecution() {}
 
-    public static <T> T run(final MovingAverage movingAverage, RepoRunnable<T> task) {
+    public static <T> T run(final RunningStatistics rs, RepoRunnable<T> task) {
         long t0 = System.nanoTime();
         try {
             return task.run();
@@ -29,16 +29,16 @@ public class TimedExecution {
 
             // double elapsedMicros = elapsedNanos / 1_000.0;
             double elapsedMillis = elapsedNanos / 1_000_000.0;
-            movingAverage.update(elapsedMillis);
+            rs.addSample(elapsedMillis);
         }
     }
 
     public static <T> T run(final TimingData timingData, String timing, RepoRunnable<T> task) {
-        MovingAverage ma = timingData.computeIfAbsent(timing, k -> new MovingAverage());
-        return run(ma, task);
+        RunningStatistics rs = timingData.computeIfAbsent(timing, k -> new RunningStatistics());
+        return run(rs, task);
     }
 
-    public static void run(final MovingAverage movingAverage, Runnable task) {
+    public static void run(final RunningStatistics rs, Runnable task) {
         long t0 = System.nanoTime();
         try {
             task.run();
@@ -47,12 +47,12 @@ public class TimedExecution {
 
             // double elapsedMicros = elapsedNanos / 1_000.0;
             double elapsedMillis = elapsedNanos / 1_000_000.0;
-            movingAverage.update(elapsedMillis);
+            rs.addSample(elapsedMillis);
         }
     }
 
     public static void run(final TimingData timingData, String timing, Runnable task) {
-        MovingAverage ma = timingData.computeIfAbsent(timing, k -> new MovingAverage());
-        run(ma, task);
+        RunningStatistics rs = timingData.computeIfAbsent(timing, k -> new RunningStatistics());
+        run(rs, task);
     }
 }
