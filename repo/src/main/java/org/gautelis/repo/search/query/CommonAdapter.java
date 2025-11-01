@@ -154,7 +154,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                 if (leaf.getItem() instanceof AttributeSearchItem<?>) {
                     Optional<String> label = leaf.getLabel();
                     if (label.isPresent()) {
-                        return Optional.of("(SELECT * FROM " + label.get() + ")");
+                        return Optional.of("(SELECT " + UNIT_VERSION_TENANTID.plain() + ", " + UNIT_VERSION_UNITID.plain() + " FROM " + label.get() + ")");
                     } else {
                         String info = "Leaf expression must have a label";
                         throw new IllegalArgumentException(info);
