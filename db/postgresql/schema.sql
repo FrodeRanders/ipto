@@ -76,12 +76,12 @@ CREATE INDEX repo_uk_ind2
 ;
 
 CREATE TABLE repo_unit_version (
-    tenantid     INT          NOT NULL,  -- id of tenant
-    unitid       BIGINT       NOT NULL,  -- id of unit
-    unitver      INTEGER      NOT NULL,  -- version of unit
+    tenantid     INT        NOT NULL,  -- id of tenant
+    unitid       BIGINT     NOT NULL,  -- id of unit
+    unitver      INTEGER    NOT NULL,  -- version of unit
 
     unitname     VARCHAR(255) NOT NULL,  -- name of unit
-    modified     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    modified     TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT repo_unit_version_pk
         PRIMARY KEY (tenantid, unitid, unitver),
@@ -248,7 +248,7 @@ CREATE TABLE repo_record_template (
 record_attrid  INT  NOT NULL,      -- from @record(attribute: …)
 idx            INT  NOT NULL,
 
-child_attrid   INT  NOT NULL,      -- sub-attribute
+field_attrid   INT  NOT NULL,      -- sub-attribute
 alias          TEXT NULL,
 required       BOOLEAN NOT NULL DEFAULT FALSE,
 
@@ -493,11 +493,12 @@ CONSTRAINT repo_lock_unit_exists
 -- uniquely identified by a string.
 --
 CREATE TABLE repo_internal_assoc (
-tenantid      INT    NOT NULL,
-unitid        BIGINT NOT NULL,
-assoctype     INT    NOT NULL,
-assoctenantid INT    NOT NULL,
-assocunitid   BIGINT NOT NULL,
+tenantid      INT       NOT NULL,
+unitid        BIGINT    NOT NULL,
+assoctype     INT       NOT NULL,
+assoctenantid INT       NOT NULL,
+assocunitid   BIGINT    NOT NULL,
+created       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 CONSTRAINT repo_internal_assoc_pk
     PRIMARY KEY (tenantid, unitid, assoctype, assoctenantid, assocunitid),
@@ -517,10 +518,11 @@ ON repo_internal_assoc (tenantid, unitid, assoctype)
 ;
 
 CREATE TABLE repo_external_assoc (
-tenantid    INT    NOT NULL,
-unitid      BIGINT NOT NULL,
-assoctype   INT    NOT NULL,
-assocstring TEXT   NOT NULL,
+tenantid    INT       NOT NULL,
+unitid      BIGINT    NOT NULL,
+assoctype   INT       NOT NULL,
+assocstring TEXT      NOT NULL,
+created     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
 CONSTRAINT repo_external_assoc_pk
     PRIMARY KEY (tenantid, unitid, assoctype, assocstring),

@@ -1,14 +1,6 @@
 package org.gautelis.repo.graphql2.model;
 
-import org.gautelis.repo.graphql2.model.external.ExternalAttributeDef;
-import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
-import org.gautelis.repo.graphql2.model.external.ExternalRecordDef;
-import org.gautelis.repo.graphql2.model.internal.InternalAttributeDef;
-import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
-import org.gautelis.repo.graphql2.model.internal.InternalRecordDef;
-
 import java.io.PrintStream;
-import java.io.Writer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -16,11 +8,11 @@ import java.util.Map;
  * Intermediate representation.
  */
 public class IntRep {
-    public final Map<String, DataTypeDef> datatypes;
-    public final Map<String, AttributeDef> attributes;
-    public final Map<String, RecordDef> records;
-    public final Map<String, UnitDef> units;
-    public final Map<String, OperationDef> operations;
+    public final Map<String, GqlDataTypeShape> datatypes;
+    public final Map<String, GqlAttributeShape> attributes;
+    public final Map<String, GqlRecordShape> records;
+    public final Map<String, GqlUnitShape> units;
+    public final Map<String, GqlOperationShape> operations;
 
     public IntRep() {
         datatypes = new HashMap<>();
@@ -30,12 +22,12 @@ public class IntRep {
         operations = new HashMap<>();
     }
 
-    public static IntRep fromExternal(
-        Map<String, ExternalDataTypeDef> datatypes,
-        Map<String, ExternalAttributeDef> attributes,
-        Map<String, ExternalRecordDef> records,
-        Map<String, UnitDef> units,
-        Map<String, OperationDef> operations
+    public static IntRep fromGql(
+        Map<String, GqlDataTypeShape> datatypes,
+        Map<String, GqlAttributeShape> attributes,
+        Map<String, GqlRecordShape> records,
+        Map<String, GqlUnitShape> units,
+        Map<String, GqlOperationShape> operations
     ) {
         IntRep ir = new IntRep();
         ir.datatypes.putAll(datatypes);
@@ -47,16 +39,16 @@ public class IntRep {
     }
 
     public static IntRep fromInternal(
-        Map<String, InternalDataTypeDef> datatypes,
-        Map<String, InternalAttributeDef> attributes,
-        Map<String, InternalRecordDef> records,
-        Map<String, UnitDef> units
+        //Map<String, InternalDataTypeDef> datatypes,
+        //Map<String, InternalAttributeDef> attributes
+        //Map<String, InternalRecordDef> records,
+        //Map<String, UnitDef> units
     ) {
         IntRep ir = new IntRep();
-        ir.datatypes.putAll(datatypes);
-        ir.attributes.putAll(attributes);
-        ir.records.putAll(records);
-        ir.units.putAll(units);
+        //ir.datatypes.putAll(datatypes);
+        //ir.attributes.putAll(attributes);
+        //ir.records.putAll(records);
+        //ir.units.putAll(units);
         return ir;
     }
 
@@ -69,31 +61,31 @@ public class IntRep {
     public void dumpIr(String source, PrintStream out) {
         out.println("===< " + source + " >===");
         out.println("--- Datatypes ---");
-        for (Map.Entry<String, DataTypeDef> entry : datatypes.entrySet()) {
+        for (Map.Entry<String, GqlDataTypeShape> entry : datatypes.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Attributes ---");
-        for (Map.Entry<String, AttributeDef> entry : attributes.entrySet()) {
+        for (Map.Entry<String, GqlAttributeShape> entry : attributes.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Records ---");
-        for (Map.Entry<String, RecordDef> entry : records.entrySet()) {
+        for (Map.Entry<String, GqlRecordShape> entry : records.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Units ---");
-        for (Map.Entry<String, UnitDef> entry : units.entrySet()) {
+        for (Map.Entry<String, GqlUnitShape> entry : units.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Operations ---");
-        for (Map.Entry<String, OperationDef> entry : operations.entrySet()) {
+        for (Map.Entry<String, GqlOperationShape> entry : operations.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();

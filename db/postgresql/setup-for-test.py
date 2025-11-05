@@ -176,8 +176,7 @@ def main():
     # Commands to run as superuser
     commands = [
         "CREATE USER repo WITH PASSWORD '" + repo_password + "';",
-        "CREATE DATABASE repo OWNER repo;",
-        "CREATE EXTENSION pg_stat_statements;"
+        "CREATE DATABASE repo OWNER repo;"
     ]
 
     # Run commands in the container (as superuser)

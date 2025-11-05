@@ -3,9 +3,8 @@ package org.gautelis.repo.graphql2.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.AttributeTypeException;
-import org.gautelis.repo.graphql2.model.DataTypeDef;
-import org.gautelis.repo.graphql2.model.external.ExternalDataTypeDef;
-import org.gautelis.repo.graphql2.model.internal.InternalDataTypeDef;
+import org.gautelis.repo.graphql2.model.CatalogDatatype;
+import org.gautelis.repo.graphql2.model.GqlDataTypeShape;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -33,8 +32,8 @@ public final class Datatypes {
      *      ^                     ^
      *      | (a)                 | (b)
      */
-    static Map<String, ExternalDataTypeDef> derive(TypeDefinitionRegistry registry) {
-        Map<String, ExternalDataTypeDef> datatypes = new HashMap<>();
+    static Map<String, GqlDataTypeShape> derive(TypeDefinitionRegistry registry) {
+        Map<String, GqlDataTypeShape> datatypes = new HashMap<>();
 
         // Locate enums having a "datatypeRegistry" directive
         for (EnumTypeDefinition enumeration : registry.getTypes(EnumTypeDefinition.class)) {
@@ -64,18 +63,8 @@ public final class Datatypes {
                                 }
                             }
 
-                            // --- (c) ---
-                            String backingtype = null;
-                            arg = enumValueDirective.getArgument("backingtype");
-                            if (null != arg) {
-                                // NOTE: 'RECORD' does not have a particular basictype,
-                                // it being record of other attributes and all...
-                                StringValue _type = (StringValue) arg.getValue();
-                                backingtype = _type.getValue();
-                            }
-
                             if (/* VALID? */ id > 0) {
-                                datatypes.put(name, new ExternalDataTypeDef(name, id));
+                                datatypes.put(name, new GqlDataTypeShape(name, id));
                             }
                         }
                     }
@@ -86,11 +75,11 @@ public final class Datatypes {
         return datatypes;
     }
 
-    static Map<String, InternalDataTypeDef> read(Repository _repository) {
-        Map<String, InternalDataTypeDef> datatypes = new HashMap<>();
+    static Map<String, CatalogDatatype> read(Repository _repository) {
+        Map<String, CatalogDatatype> datatypes = new HashMap<>();
         AttributeType[] attributeTypes = AttributeType.values();
         for (AttributeType attributeType : attributeTypes) {
-            datatypes.put(attributeType.name(),  new InternalDataTypeDef(attributeType.name(), attributeType.getType()));
+            datatypes.put(attributeType.name(),  new CatalogDatatype(attributeType.getType(), attributeType.name()));
         }
         return datatypes;
     }

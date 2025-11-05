@@ -44,7 +44,7 @@ various ways to represent compounds, such as an address. Records
 are used to define units.
 """
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @unit(id: Int!) on OBJECT
+directive @unit(id: Int, name: String) on OBJECT # either id or name
 directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################

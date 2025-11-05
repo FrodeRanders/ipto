@@ -1,14 +1,14 @@
-package org.gautelis.repo.graphql.runtime;
+package org.gautelis.repo.graphql2.runtime;
 
 import org.gautelis.repo.RepositoryFactory;
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.graphql.configuration.OperationsConfigurator;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.KnownAttributes;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.UnitSearch;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.*;
@@ -320,9 +320,9 @@ public class RuntimeService {
                     value = value.replace('*', '%');
                     boolean useLIKE = value.indexOf('%') >= 0 || value.indexOf('_') >= 0;  // Uses wildcard
                     if (useLIKE) {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, org.gautelis.repo.search.model.Operator.LIKE, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.LIKE, value));
                     } else {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, org.gautelis.repo.search.model.Operator.EQ, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.EQ, value));
                     }
                 }
                 return new LeafExpression<>(new StringAttributeSearchItem(attrId, op.iptoOp(), value));

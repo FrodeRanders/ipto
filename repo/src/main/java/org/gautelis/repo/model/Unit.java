@@ -137,7 +137,7 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Fetches an <I>existing</I> unit.
+     * Fetches latest version of an <I>existing</I> unit.
      * <p>
      * Observe that no new unit is created. We will use the
      * information provided in order to find this unit in
@@ -160,7 +160,7 @@ public class Unit implements Cloneable {
         if (log.isDebugEnabled())
             log.debug("Fetching unit {}", Unit.id2String(tenantId, unitId));
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGetLatest(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
@@ -1381,6 +1381,15 @@ public class Unit implements Cloneable {
     }
 
     /**
+     * Gets version.
+     *
+     * @return int version of unit
+     */
+    public int getVersion() {
+        return unitVersion;
+    }
+
+    /**
      * Gets the correlation id of this unit
      */
     public UUID getCorrId() {
@@ -1630,7 +1639,7 @@ public class Unit implements Cloneable {
      * @return Returns created String
      */
     public String toString() {
-        String s = "Unit{" + getReference() + "v" + unitVersion + "(" + (null != unitName ? unitName : "") + ")" + (isNew ? "*" : "");
+        String s = "Unit{" + getReference() + ":" + unitVersion + "(" + (null != unitName ? unitName : "") + ")" + (isNew ? "*" : "");
         if (null != attributes) {
             for (Attribute<?> a : attributes.values()) {
                 s += "\n\t" + a.toString();

@@ -35,8 +35,11 @@ import java.util.ArrayList;
 public class Attribute<T> {
     private static final Logger log = LoggerFactory.getLogger(Attribute.class);
 
+    public record Reference(int id, String name) {}
+
     private int attributeId;
     private String attributeName;
+
     private AttributeType attributeType;
     private int unitVersionFrom = 1;
     private int unitVersionTo = 1;

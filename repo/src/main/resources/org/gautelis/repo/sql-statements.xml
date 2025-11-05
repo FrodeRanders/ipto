@@ -40,13 +40,29 @@
     <entry key="sql.unit.get_status">
         SELECT status FROM repo_unit WHERE (tenantid=? AND unitid=?)
     </entry>
-    
+
+    <!--
+      Get latest version of unit.
+      Call with: (tenantId, unitId, unitVersion)
+    -->
+    <entry key="sql.unit.get">
+        SELECT tenantid, unitid, corrid, status, lastver, created, unitver, unitname, modified
+        FROM repo_unit_kernel uk
+        INNER JOIN repo_unit_version uv
+            ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid)
+        WHERE (uk.tenantid=? AND uk.unitid=? AND uv.unitver=?)
+    </entry>
+
     <!--
       Get latest version of unit.
       Call with: (tenantId, unitId)
     -->
-    <entry key="sql.unit.get">
-        SELECT * FROM repo_unit WHERE (tenantid=? AND unitid=?)
+    <entry key="sql.unit.get_latest">
+        SELECT tenantid, unitid, corrid, status, lastver, created, unitver, unitname, modified
+        FROM repo_unit_kernel uk
+        INNER JOIN repo_unit_version uv
+            ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.latestver = uv.unitver)
+        WHERE (uk.tenantid=? AND uk.unitid=?)
     </entry>
 
     <!--

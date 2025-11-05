@@ -1,6 +1,6 @@
-package org.gautelis.repo.graphql2.model.external;
+package org.gautelis.repo.graphql2.model;
 
-import org.gautelis.repo.graphql2.model.AttributeDef;/*
+/*
  * enum Attributes @attributeRegistry {
  *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
  *     TITLE @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
@@ -13,34 +13,35 @@ import org.gautelis.repo.graphql2.model.AttributeDef;/*
  *   ^                  ^              ^              ^               ^                    ^                       ^
  *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
  */
-public class ExternalAttributeDef extends AttributeDef {
-    public final String attributeName;       /* (a) GraphQL specific */
+public class GqlAttributeShape {
+    public final String attributeName;      /* (a) GraphQL specific */
+    public final int attributeId;           /* (b) Ipto specific, but shared */
+    public final String attributeTypeName;  /* (c) GraphQL and Ipto shared */
+    public final boolean isArray;           /* (d) GraphQL and Ipto shared */
 
-    public ExternalAttributeDef(String attributeName, int attributeId, String attributeTypeName, boolean isArray) {
-        super(attributeId, attributeTypeName, isArray);
+    public GqlAttributeShape(String attributeName, int attributeId, String attributeTypeName, boolean isArray) {
         this.attributeName = attributeName;
+        this.attributeId = attributeId;
+        this.attributeTypeName = attributeTypeName;
+        this.isArray = isArray;
     }
 
     @Override
     public String toString() {
-        String info = "ExternalAttributeDef{";
+        String info = "GqlAttributeShape{";
         if (null != attributeName) {
             info += "attribute-name='" + attributeName + "', ";
         }
-        info += super.toString();
+        info += "attribute-id=" + attributeId;
+        info += ", is-array=" + isArray;
+        info += ", attribute-type-name='" + attributeTypeName + '\'';
         info += '}';
         return info;
     }
 
-    /*
-    public boolean compare(AttributeDef other) {
-        return attributeName.equals(other.attributeName)
-                && attributeId == other.attributeId
+    public boolean equals(GqlAttributeShape other) {
+        return attributeId == other.attributeId
                 && attributeTypeName.equals(other.attributeTypeName)
-                && attributeTypeId == other.attributeTypeId
-                && isArray == other.isArray
-                && alias.equals(other.alias)
-                && qualifiedName.equals(other.qualifiedName);
+                && isArray == other.isArray;
     }
-    */
 }

@@ -158,17 +158,19 @@ public class RepositoryTest extends TestCase {
         try (InputStreamReader sdl = new InputStreamReader(
                 Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
-            /*
             IntRep graphQLIr = Configurator.loadFromFile(sdl);
-            dumpIr("GraphQL SDL", graphQLIr);
+            graphQLIr.dumpIr("GraphQL SDL", System.out);
 
             Repository repo = RepositoryFactory.getRepository();
+            Configurator.loadFromCatalog(repo);
+
+            /*
             IntRep iptoIr = Configurator.loadFromDB(repo);
             dumpIr("IPTO", iptoIr);
             */
 
-            Repository repo = RepositoryFactory.getRepository();
-            Configurator.reconcile(sdl, repo);
+            //Repository repo = RepositoryFactory.getRepository();
+            //Configurator.reconcile(sdl, repo);
         }
     }
 
@@ -618,7 +620,7 @@ public class RepositoryTest extends TestCase {
                         Timestamp _created = rs.getTimestamp(++j);
                         Timestamp _modified = rs.getTimestamp(++j);
 
-                        System.out.println("\nFound: unit=" + _tenantId + "." + _unitId + "v" + _unitVer + " created=" + _created + " modified=" + _modified);
+                        System.out.println("\nFound: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
                         unitId.add(new Unit.Id(_tenantId, _unitId));
                     }
                 }));

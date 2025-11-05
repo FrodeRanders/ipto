@@ -212,6 +212,24 @@ public class Repository {
         return unit;
     }
 
+    /**
+     * Fetch an existing unit of specific version.
+     */
+    public Optional<Unit> getUnit(
+            int tenantId,
+            long unitId,
+            int unitVersion
+    ) throws DatabaseConnectionException, DatabaseReadException {
+
+        Optional<Unit> unit = TimedExecution.run(context.getTimingData(), "resurrect unit", () -> UnitFactory.resurrectUnit(context, tenantId, unitId, unitVersion));
+        unit.ifPresent(_unit -> generateActionEvent(
+                _unit,
+                ActionEvent.Type.ACCESSED,
+                "Unit accessed"
+        ));
+        return unit;
+    }
+
 
     /**
      * Fetches an existing unit from resultset.

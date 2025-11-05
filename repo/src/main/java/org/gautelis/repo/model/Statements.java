@@ -34,6 +34,9 @@ public interface Statements {
     @Configurable(property = "sql.unit.get")
     String unitGet();
 
+    @Configurable(property = "sql.unit.get_latest")
+    String unitGetLatest();
+
     @Configurable(property = "sql.unit.insert_new")
     String unitInsertNew();
 
