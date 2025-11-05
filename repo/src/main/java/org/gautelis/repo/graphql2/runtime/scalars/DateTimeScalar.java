@@ -1,10 +1,15 @@
 package org.gautelis.repo.graphql2.runtime.scalars;
 
+import graphql.GraphQLContext;
+import graphql.execution.CoercedVariables;
 import graphql.language.StringValue;
+import graphql.language.Value;
 import graphql.schema.*;
+import org.jspecify.annotations.NonNull;
 
 import java.time.DateTimeException;
 import java.time.Instant;
+import java.util.Locale;
 
 public final class DateTimeScalar {
 
@@ -15,14 +20,23 @@ public final class DateTimeScalar {
                     .coercing(new Coercing<Instant, String>() {
 
                         @Override
-                        public String serialize(Object dataFetcherResult) throws CoercingSerializeException {
-                            if (dataFetcherResult instanceof Instant i)
-                                return i.toString();      // 2025-06-24T12:34:56Z
+                        public String serialize(
+                                @NonNull Object dataFetcherResult,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingSerializeException {
+                            if (dataFetcherResult instanceof Instant i) {
+                                return i.toString();
+                                }
                             throw new CoercingSerializeException("Expected Instant");
                         }
 
                         @Override
-                        public Instant parseValue(Object input) throws CoercingParseValueException {
+                        public Instant parseValue(
+                                @NonNull Object input,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingParseValueException {
                             try {
                                 return Instant.parse(input.toString());
                             } catch (DateTimeException dte) {
@@ -31,9 +45,14 @@ public final class DateTimeScalar {
                         }
 
                         @Override
-                        public Instant parseLiteral(Object input) throws CoercingParseLiteralException {
+                        public Instant parseLiteral(
+                                @NonNull Value<?> input,
+                                @NonNull CoercedVariables variables,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingParseLiteralException {
                             if (input instanceof StringValue sv) {
-                                return parseValue(sv.getValue());
+                                return parseValue(sv.getValue(),  graphQLContext, locale);
                             }
                             throw new CoercingParseLiteralException("Expected StringValue");
                         }

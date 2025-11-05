@@ -1,9 +1,14 @@
 package org.gautelis.repo.graphql.runtime.scalars;
 
+import graphql.GraphQLContext;
+import graphql.execution.CoercedVariables;
 import graphql.language.StringValue;
+import graphql.language.Value;
 import graphql.schema.*;
+import org.jspecify.annotations.NonNull;
 
 import java.util.Base64;
+import java.util.Locale;
 
 public final class BytesScalar {
 
@@ -17,14 +22,23 @@ public final class BytesScalar {
                     .coercing(new Coercing<byte[], String>() {
 
                         @Override
-                        public String serialize(Object dataFetcherResult) throws CoercingSerializeException {
-                            if (dataFetcherResult instanceof byte[] b)
+                        public String serialize(
+                                @NonNull Object dataFetcherResult,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingSerializeException {
+                            if (dataFetcherResult instanceof byte[] b) {
                                 return ENC.encodeToString(b);
+                            }
                             throw new CoercingSerializeException("Expected byte[]");
                         }
 
                         @Override
-                        public byte[] parseValue(Object input) throws CoercingParseValueException {
+                        public byte[] parseValue(
+                                @NonNull Object input,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingParseValueException {
                             try {
                                 return DEC.decode(input.toString());
                             } catch (IllegalArgumentException iae) {
@@ -33,9 +47,15 @@ public final class BytesScalar {
                         }
 
                         @Override
-                        public byte[] parseLiteral(Object input) throws CoercingParseLiteralException {
-                            if (input instanceof StringValue sv)
-                                return parseValue(sv.getValue());
+                        public byte[] parseLiteral(
+                                @NonNull Value<?> input,
+                                @NonNull CoercedVariables variables,
+                                @NonNull GraphQLContext graphQLContext,
+                                @NonNull Locale locale
+                        ) throws CoercingParseLiteralException {
+                            if (input instanceof StringValue sv) {
+                                return parseValue(sv.getValue(), graphQLContext, locale);
+                            }
                             throw new CoercingParseLiteralException("Expected StringValue");
                         }
                     })
