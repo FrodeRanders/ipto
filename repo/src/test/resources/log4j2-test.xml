@@ -35,7 +35,7 @@
     <Loggers>
         <logger name="org.gautelis.vopn" level="WARN" />
         <logger name="org.gautelis.repo" level="INFO" />
-        <logger name="org.gautelis.repo.RepositoryTest" level="DEBUG" />
+        <logger name="org.gautelis.repo.GraphQLTest" level="DEBUG" />
         <logger name="org.gautelis.repo.search.query.CommonAdapter" level="DEBUG" />
         <logger name="org.gautelis.repo.model.cache.UnitFactory" level="TRACE" />
         <logger name="org.gautelis.repo.graphql" level="TRACE" />

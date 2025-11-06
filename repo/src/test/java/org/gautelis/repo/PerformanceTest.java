@@ -1,0 +1,278 @@
+/*
+ * Copyright (C) 2024-2025 Frode Randers
+ * All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package org.gautelis.repo;
+
+import com.fasterxml.uuid.Generators;
+import org.gautelis.repo.exceptions.BaseException;
+import org.gautelis.repo.model.AssociationType;
+import org.gautelis.repo.model.Repository;
+import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.locks.LockType;
+import org.gautelis.repo.model.utils.RunningStatistics;
+import org.gautelis.repo.search.UnitSearch;
+import org.gautelis.repo.search.model.Operator;
+import org.gautelis.repo.search.model.SearchItem;
+import org.gautelis.repo.search.model.StringAttributeSearchItem;
+import org.gautelis.repo.search.model.TimeAttributeSearchItem;
+import org.gautelis.repo.search.query.DatabaseAdapter;
+import org.gautelis.repo.search.query.QueryBuilder;
+import org.gautelis.repo.search.query.SearchExpression;
+import org.gautelis.repo.search.query.SearchOrder;
+import org.gautelis.vopn.lang.TimeDelta;
+import org.junit.jupiter.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.math.BigInteger;
+import java.sql.Timestamp;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.*;
+
+import static org.gautelis.repo.Statistics.dumpStatistics;
+import static org.junit.jupiter.api.Assertions.fail;
+
+/**
+ *
+ */
+@Tag("performance")
+public class PerformanceTest {
+    private static final Logger log = LoggerFactory.getLogger(PerformanceTest.class);
+
+    @BeforeAll
+    public static void setUp() throws IOException {
+        CommonSetup.setUp();
+    }
+
+    @Test
+    public void test() {
+        Repository repo = RepositoryFactory.getRepository();
+
+        final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
+
+        final int numberOfParents = 500; //
+        final int numberOfChildren = 100; //
+
+        try {
+            Instant firstParentCreated = null;
+            Instant someInstant = null;
+            String someSpecificString = Generators.timeBasedEpochGenerator().generate().toString();
+            int numberOfUnitsToHaveSpecificString = 1;
+
+            // With resultset paging, we want to skip the first 'pageOffset' results and
+            // acquire the 'pageSize' next results. 'pageOffset' and 'pageSize' has precedence over
+            // 'selectionSize' (which counts from the first result).
+            int pageOffset = 5;  // skip 'pageOffset' first results
+            int pageSize = 5;    // pick next 'pageSize' results
+
+            System.out.println("Generating " + (numberOfParents * numberOfChildren) + " units...");
+            System.out.flush();
+
+            RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration
+
+            for (int j = 1; j < numberOfParents + 1; j++) {
+                Instant startTime = Instant.now();
+
+                Unit parentUnit = repo.createUnit(tenantId, "parent-" + j);
+                parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                    value.add("First value");
+                    value.add("Second value");
+                    value.add("Third value");
+                });
+                parentUnit.withAttributeValue("dc:description", String.class, value -> {
+                    value.add("A test unit");
+                });
+                repo.storeUnit(parentUnit);
+
+                averageTPI.addSample(startTime, /* endTime */ Instant.now());
+
+                if (null == firstParentCreated) {
+                    firstParentCreated = parentUnit.getCreationTime().get();
+                }
+
+                if (true) {
+                    parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                        value.clear();
+                        value.add("Replaced value");
+                    });
+                    repo.storeUnit(parentUnit);
+                }
+
+                if (false) {
+                    // Works, but not part of test (at the moment)
+                    repo.lockUnit(parentUnit, LockType.EXISTENCE, "test");
+                }
+
+                for (int i = 1; i < numberOfChildren + 1; i++) {
+                    long count = (j-1)*numberOfChildren + i;
+                    if (count % 1000 == 0) { // depends on parameters (numberOfParents and numberOfChildren) > 1000
+                        long iterationsLeft = (numberOfParents * numberOfChildren) - count;
+                        double timeLeft = iterationsLeft * averageTPI.getMean();
+
+                        String approxTimeLeft = TimeDelta.asHumanApproximate(BigInteger.valueOf(Math.round(timeLeft)));
+                        System.out.print(
+                                "\r  " + count
+                                + "   [ETL: "
+                                + approxTimeLeft + "]                         \r"); // trailing needed
+                        System.out.flush();
+                    }
+
+                    startTime = Instant.now();
+                    Unit childUnit = repo.createUnit(tenantId, "child-" + j + "-" + i);
+
+                    //
+                    parentUnit.withAttribute("dc:title", String.class, attr -> {
+                        try {
+                            childUnit.addAttribute(attr);
+                        } catch (BaseException be) {
+                            System.err.println("Failed to add attribute: " + be.getMessage());
+                        }
+                    });
+
+                    final Instant now = Instant.now();
+
+                    childUnit.withAttributeValue("dc:date", Instant.class, value -> {
+                        value.add(now);
+                    });
+
+                    childUnit.withAttributeValue("ORDER_ID", String.class, value -> {
+                        value.add("*some order id*");
+                    });
+
+                    childUnit.withRecordAttribute("SHIPMENT", recrd -> {
+                        recrd.withNestedAttributeValue(childUnit, "SHIPMENT_ID", String.class, value -> {
+                            value.add("*some shipment id*");
+                        });
+
+                        recrd.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
+                            value.add(now);
+                        });
+
+                        recrd.withNestedAttributeValue(childUnit, "READING", Double.class, value -> {
+                            value.add(Math.PI);
+                            value.add(Math.E);
+                        });
+                    });
+
+                    // Some unique unit will get unique attribute
+                    if (/* i within page, that we will search for later down under */
+                            i > pageOffset && i == pageOffset + pageSize && numberOfUnitsToHaveSpecificString-- > 0
+                    ) {
+                        childUnit.withAttributeValue("dc:title", String.class, value -> {
+                            value.add(someSpecificString);
+                        });
+
+                        someInstant = now.minus(Duration.ofHours(2)); // For testing purposes
+                    }
+
+                    //
+                    repo.storeUnit(childUnit);
+                    averageTPI.addSample(startTime, /* endTime */ Instant.now());
+
+                    if (false) {
+                        // Works, but not part of test (at the moment)
+                        // Add a relation to parent unit
+                        repo.addRelation(parentUnit, AssociationType.PARENT_CHILD_RELATION, childUnit);
+                    }
+
+                }
+                System.out.flush();
+
+                if (false) {
+                    System.out.println("Children of " + parentUnit.getName().orElse("parent") + " (" + parentUnit.getReference() + "):");
+                    parentUnit.getRelations(AssociationType.PARENT_CHILD_RELATION).forEach(
+                            relatedUnit -> System.out.println("  " + relatedUnit.getName().orElse("child") + " (" + relatedUnit.getReference() + ")")
+                    );
+                }
+            }
+
+            // In order to search here in test, we will need some "internal" objects,
+            // such as Context, DataSource, etc.
+            {
+                // Unit constraints
+                SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
+                expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
+                expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
+
+                // First attribute constraint
+                Optional<Integer> _timeAttributeId = repo.attributeNameToId("dc:date");
+                int[] timeAttributeId = { 0 };
+                _timeAttributeId.ifPresent(attrId -> timeAttributeId[0] = attrId);
+
+                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem(timeAttributeId[0], Operator.GEQ, someInstant);
+                expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
+
+                // Second attribute constraint
+                Optional<Integer> _stringAttributeId = repo.attributeNameToId("dc:title");
+                int[] stringAttributeId = { 0 };
+                _stringAttributeId.ifPresent(attrId -> stringAttributeId[0] = attrId);
+
+                SearchItem<String> stringSearchItem = new StringAttributeSearchItem(stringAttributeId[0], Operator.EQ, someSpecificString);
+                expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
+
+                // Result set constraints (paging)
+                SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
+                UnitSearch usd = new UnitSearch(expr, order, /* selectionSize */ 5);
+
+                // Build SQL statement for search
+                DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
+
+                Collection<Unit.Id> unitId = new ArrayList<>();
+                repo.withConnection(conn -> searchAdapter.search(conn, usd, repo.getTimingData(), rs -> {
+                    while (rs.next()) {
+                        int j = 0;
+                        int _tenantId = rs.getInt(++j);
+                        long _unitId = rs.getLong(++j);
+                        int _unitVer = rs.getInt(++j);
+                        Timestamp _created = rs.getTimestamp(++j);
+                        Timestamp _modified = rs.getTimestamp(++j);
+
+                        System.out.println("\nFound: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
+                        unitId.add(new Unit.Id(_tenantId, _unitId));
+                    }
+                }));
+
+                if (unitId.isEmpty()) {
+                    fail("Failed to find known unit corresponding to search");
+                } else {
+                    for (Unit.Id id : unitId) {
+                        try {
+                            Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
+                            if (_unit.isPresent()) {
+                                Unit unit = _unit.get();
+                                System.out.println("--> " + unit.asJson(/* pretty? */ true));
+                            } else {
+                                fail("Failed to resurrect unit that is known to exist");
+                            }
+                        } catch (Throwable t) {
+                            log.error(t.getMessage(), t);
+                        }
+                    }
+                }
+            }
+
+            dumpStatistics(repo);
+
+        } catch (Throwable t) {
+            String info = t.getMessage();
+            log.error(info, t);
+
+            fail(info);
+        }
+    }
+}
