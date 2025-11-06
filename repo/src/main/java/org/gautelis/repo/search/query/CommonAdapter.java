@@ -361,7 +361,9 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         }
         statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
         statement += "FROM " + UNIT_KERNEL + ", " + UNIT_VERSION + " ";
-        statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
+        if (!attributeLeaves.isEmpty() && attributeConstraintLogic.isPresent()) {
+            statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
+        }
         statement += "WHERE " + UNIT_KERNEL_TENANTID + " = " + UNIT_VERSION_TENANTID + " ";
         statement += "AND " + UNIT_KERNEL_UNITID + " = " + UNIT_VERSION_UNITID + " ";
         statement += "AND " + UNIT_KERNEL_LASTVER + " = " + UNIT_VERSION_UNITVER + " ";

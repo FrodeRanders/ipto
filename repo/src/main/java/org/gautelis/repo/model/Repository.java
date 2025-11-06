@@ -27,6 +27,7 @@ import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.locks.LockType;
+import org.gautelis.repo.model.utils.RepoRunnable;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.query.DatabaseAdapter;
@@ -138,6 +139,12 @@ public class Repository {
             if (printProgress) {
                 writer.println(" * chunk of " + count + " were removed");
                 writer.flush();
+            }
+
+            if (count == 0) {
+                writer.println(" ! ending");
+                writer.flush();
+                break;
             }
             result = getDisposedUnits(tenantId, /* low */ 0, /* high */ MAX_HITS, MAX_HITS);
         }
@@ -715,7 +722,10 @@ public class Repository {
 
         ActionEvent event = new ActionEvent(source, actionType, description);
         for (ActionListener l : actionListeners.values()) {
-            l.actionPerformed(event);
+            TimedExecution.run(context.getTimingData(), "event action", () -> {
+                l.actionPerformed(event);
+                return null;
+            });
         }
     }
 

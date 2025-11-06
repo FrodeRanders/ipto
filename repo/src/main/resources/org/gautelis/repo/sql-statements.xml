@@ -22,7 +22,7 @@
       Call with: (tenantId, unitId)
     -->
     <entry key="sql.unit.delete">
-        DELETE FROM repo_unit WHERE (tenantid=? AND unitid=?)
+        DELETE FROM repo_unit_kernel WHERE (tenantid=? AND unitid=?)
     </entry>
     
     <!--
@@ -30,7 +30,7 @@
       Call with: (tenantId, unitId)
     -->
     <entry key="sql.unit.exists">
-        SELECT tenantid, unitid FROM repo_unit WHERE (tenantid=? AND unitid=?)
+        SELECT tenantid, unitid FROM repo_unit_kernel WHERE (tenantid=? AND unitid=?)
     </entry>
 
     <!--
@@ -38,7 +38,7 @@
       Call with: (tenantId, unitId)
     -->
     <entry key="sql.unit.get_status">
-        SELECT status FROM repo_unit WHERE (tenantid=? AND unitid=?)
+        SELECT status FROM repo_unit_kernel WHERE (tenantid=? AND unitid=?)
     </entry>
 
     <!--
@@ -66,20 +66,11 @@
     </entry>
 
     <!--
-      Store a new unit. Let database assign modification time.
-      Call with: (tenantId, corrId, status, name)
-      A unitId will be generated.
-    -->
-    <entry key="sql.unit.insert_new">
-        INSERT INTO repo_unit (tenantid,corrid,status,name) VALUES (?,?,?,?)
-    </entry>
-
-    <!--
       Set/update status of unit.
       Call with: (status, tenantId, unitId)
     -->
     <entry key="sql.unit.set_status">
-        UPDATE repo_unit SET status=? WHERE (tenantid=? AND unitid=?)
+        UPDATE repo_unit_kernel SET status=? WHERE (tenantid=? AND unitid=?)
     </entry>
 
     <!--
@@ -113,62 +104,6 @@
     -->
     <entry key="sql.attribute.get_all">
         SELECT attrid, attrname, attrtype, scalar, created FROM repo_attribute
-    </entry>
-
-    <!--
-      Store a date attribute value.
-      Call with: (valueId, <index>, <date value>)
-    -->
-    <entry key="sql.value.date_insert">
-        INSERT INTO repo_time_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store a double attribute value.
-      Call with: (valueId, <index>, <float value>)
-    -->
-    <entry key="sql.value.double_insert">
-        INSERT INTO repo_double_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store a boolean attribute value.
-      Call with: (valueId, <index>, <boolean value>)
-    -->
-    <entry key="sql.value.boolean_insert">
-        INSERT INTO repo_boolean_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store a string attribute value.
-      Call with: (valueId, <index>, <string value>)
-    -->
-    <entry key="sql.value.string_insert">
-        INSERT INTO repo_string_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store a data (BLOB) attribute value.
-      Call with: (valueId, <index>, <data value>)
-    -->
-    <entry key="sql.value.data_insert">
-        INSERT INTO repo_data_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store an integer attribute value.
-      Call with: (valueId, <index>, <integer value>)
-    -->
-    <entry key="sql.value.integer_insert">
-        INSERT INTO repo_integer_vector (valueid, idx, val) VALUES (?,?,?)
-    </entry>
-
-    <!--
-      Store a long attribute value.
-      Call with: (valueId, <index>, <long value>)
-    -->
-    <entry key="sql.value.long_insert">
-        INSERT INTO repo_long_vector (valueid, idx, val) VALUES (?,?,?)
     </entry>
 
     <!--

@@ -37,9 +37,6 @@ public interface Statements {
     @Configurable(property = "sql.unit.get_latest")
     String unitGetLatest();
 
-    @Configurable(property = "sql.unit.insert_new")
-    String unitInsertNew();
-
     @Configurable(property = "sql.unit.set_status")
     String unitSetStatus();
 
@@ -54,27 +51,6 @@ public interface Statements {
 
     @Configurable(property = "sql.attribute.get_all")
     String attributeGetAll();
-
-    @Configurable(property = "sql.value.date_insert")
-    String valueDateInsert();
-
-    @Configurable(property = "sql.value.double_insert")
-    String valueDoubleInsert();
-
-    @Configurable(property = "sql.value.boolean_insert")
-    String valueBooleanInsert();
-
-    @Configurable(property = "sql.value.string_insert")
-    String valueStringInsert();
-
-    @Configurable(property = "sql.value.data_insert")
-    String valueDataInsert();
-
-    @Configurable(property = "sql.value.integer_insert")
-    String valueIntegerInsert();
-
-    @Configurable(property = "sql.value.long_insert")
-    String valueLongInsert();
 
     @Configurable(property = "sql.lock.delete_all")
     String lockDeleteAll();

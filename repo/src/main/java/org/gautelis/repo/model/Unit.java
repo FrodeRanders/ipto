@@ -231,8 +231,8 @@ public class Unit implements Cloneable {
         ObjectNode unitNode = MAPPER.createObjectNode();
 
         if (false) {
-            unitNode.put("@type", "unit");
-            unitNode.put("@version", 2);
+            unitNode.put("@type", "internal:unit");
+            unitNode.put("@version", 1);
         }
 
         // unit itself
@@ -253,9 +253,9 @@ public class Unit implements Cloneable {
         ArrayNode attrs = MAPPER.createArrayNode();
         unitNode.set("attributes", attrs);
 
+        // attributes of unit
         fetchAttributes();
 
-        // attributes of unit
         for (Attribute<?> attribute : attributes.values()) {
             ObjectNode attributeNode = attrs.addObject();
             attribute.toInternalJson(attrs, attributeNode);
@@ -267,7 +267,8 @@ public class Unit implements Cloneable {
 
     private ObjectNode asExternalJson() {
         ObjectNode unitNode = MAPPER.createObjectNode();
-        unitNode.put("@type", "unit");
+
+        unitNode.put("@type", "ipto:unit");
         unitNode.put("@version", 2);
 
         // unit itself
@@ -288,9 +289,9 @@ public class Unit implements Cloneable {
         ArrayNode attrs = MAPPER.createArrayNode();
         unitNode.set("attributes", attrs);
 
+        // attributes of unit
         fetchAttributes();
 
-        // attributes of unit
         for (Attribute<?> attribute : attributes.values()) {
             ObjectNode attributeNode = attrs.addObject();
             attribute.toExternalJson(attrs, attributeNode);
