@@ -1,6 +1,6 @@
-# IPTO - A metadata management framework
+# IPTO - A data management framework
 
-A metadata management system around 'units'. Units are immutable entities that can encapsulate dynamic sets of metadata.
+A data management system around 'units', which encapsulate dynamic sets of data.
 
 See end of README for instructions on how to setup test.
 
@@ -48,6 +48,8 @@ enum Attributes @attributeRegistry {
 }
 
 ##############  object & unit types ##############################
+scalar Long
+scalar DateTime
 scalar Bytes    # Base-64 strings (JSON) on the wire
 
 type Shipment @record(attribute: dmoShipment) {
@@ -125,7 +127,7 @@ Map<String, Object> filter = Map.of(
                 "tenantId", 1,
                 "where", Map.of(
                         "attrExpr", Map.of(
-                                "attr", "ORDER_ID",
+                                "attr", "dmoOrderId",
                                 "op", "EQ",
                                 "value", "*order id 2*"
                         )
@@ -160,7 +162,7 @@ Result:
             value.add("Shipment information for *order id*");
         });
     
-        unit.withAttribute("shipment", Attribute.class, attr -> {
+        unit.withAttribute("dmoShipment", Attribute.class, attr -> {
             RecordAttribute recrd = new RecordAttribute(attr);
 
             recrd.withNestedAttributeValue(unit, "dmoOrderId", String.class, value -> {
