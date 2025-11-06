@@ -15,8 +15,15 @@ def pull_postgres_image():
     Pull the latest postgres image from Docker Hub.
     """
     print("Pulling the latest 'postgres' image from Docker Hub...")
-    subprocess.run(["docker", "pull", "postgres"], check=True)
-    print("Image pulled successfully.\n")
+    result = subprocess.run(["docker", "pull", "postgres"], check=False)
+    if result.returncode == 0:
+        print("Image pulled successfully.\n")
+    else:
+        print("\n")
+        print("*********************************************************\n")
+        print("* Could not pull image. Possibly reusing current image. *\n")
+        print("*********************************************************\n")
+        print("\n")
 
 
 def remove_existing_container(container_name: str):
@@ -169,8 +176,7 @@ def main():
     # Commands to run as superuser
     commands = [
         "CREATE USER repo WITH PASSWORD '" + repo_password + "';",
-        "CREATE DATABASE repo OWNER repo;",
-        "CREATE EXTENSION pg_stat_statements;"
+        "CREATE DATABASE repo OWNER repo;"
     ]
 
     # Run commands in the container (as superuser)

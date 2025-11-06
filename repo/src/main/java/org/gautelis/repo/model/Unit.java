@@ -87,16 +87,20 @@ public class Unit implements Cloneable {
     // Unit information
     protected int tenantId;
     protected long unitId;
+    protected int unitVersion;
     protected UUID corrId;
-    protected String name = null;
-    protected Status status;
+    protected String unitName = null;
+    protected Status unitStatus;
     protected Instant createdTime = null;
+    protected Instant modifiedTime = null;
 
     // Attributes associated with this unit, organized by name (and not attribute id)
     private Map<String, Attribute<?>> attributes = null;
 
     // Predicates
     protected boolean isNew; // true if not yet persisted
+    protected boolean isModified;
+    protected boolean isReadOnly;
 
     private Unit(Context ctx) {
         this.ctx = ctx;
@@ -113,24 +117,27 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
         this(ctx);
 
-        // Adjusting initial values
+        // Adjusting initial predicates
         isNew = true;
+        isModified = false;
+        isReadOnly = false;
 
         //
         this.tenantId = tenantId;
         this.unitId = -1L; // assigned first when stored
+        this.unitVersion = 1;
         this.corrId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
-        this.name = null != name ? name.trim() : null;
-        this.status = Status.EFFECTIVE;
+        this.unitName = null != name ? name.trim() : null;
+        this.unitStatus = Status.EFFECTIVE;
 
         // Do not set any *Time since these are automatically
         // set when writing unit to database.
 
-        log.debug("Creating new unit: {}({})", id2String(tenantId, unitId), this.name);
+        log.debug("Creating new unit: {}({})", id2String(tenantId, unitId), this.unitName);
     }
 
     /**
-     * Fetches an <I>existing</I> unit.
+     * Fetches latest version of an <I>existing</I> unit.
      * <p>
      * Observe that no new unit is created. We will use the
      * information provided in order to find this unit in
@@ -144,14 +151,16 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseWriteException, DatabaseReadException, UnitNotFoundException, ConfigurationException {
         this(ctx);
 
-        // Adjusting initial values
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         //
         if (log.isDebugEnabled())
             log.debug("Fetching unit {}", Unit.id2String(tenantId, unitId));
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGetLatest(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
@@ -176,8 +185,10 @@ public class Unit implements Cloneable {
     ) throws DatabaseReadException {
         this(ctx);
 
-        // Adjusting initial values reflecting reading an existing unit from database
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         readEntry(rs);
 
@@ -195,8 +206,10 @@ public class Unit implements Cloneable {
     ) {
         this(ctx);
 
-        // Adjusting initial values reflecting reading an existing unit from database
+        // Adjusting initial predicates
         isNew = false;
+        isModified = false;
+        // isReadOnly is set later in readEntry(.)
 
         readEntry(json);
 
@@ -212,6 +225,92 @@ public class Unit implements Cloneable {
             return tenantId + "." + unitId;
         }
         return "#NOID#";
+    }
+
+    private ObjectNode asInternalJson() {
+        ObjectNode unitNode = MAPPER.createObjectNode();
+
+        if (false) {
+            unitNode.put("@type", "internal:unit");
+            unitNode.put("@version", 1);
+        }
+
+        // unit itself
+        unitNode.put("tenantid", tenantId);
+        if (/* has been saved and thus is valid? */ unitId > 0) {
+            unitNode.put("unitid", unitId);
+        } else {
+            unitNode.putNull("unitid");
+        }
+        unitNode.put("unitver", unitVersion);
+        unitNode.put("corrid", corrId.toString());
+        unitNode.put("status", unitStatus.getStatus());
+        unitNode.put("unitname", unitName);
+        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
+        unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
+
+        // attributes array
+        ArrayNode attrs = MAPPER.createArrayNode();
+        unitNode.set("attributes", attrs);
+
+        // attributes of unit
+        fetchAttributes();
+
+        for (Attribute<?> attribute : attributes.values()) {
+            ObjectNode attributeNode = attrs.addObject();
+            attribute.toInternalJson(attrs, attributeNode);
+        }
+
+        return unitNode;
+    }
+
+
+    private ObjectNode asExternalJson() {
+        ObjectNode unitNode = MAPPER.createObjectNode();
+
+        unitNode.put("@type", "ipto:unit");
+        unitNode.put("@version", 2);
+
+        // unit itself
+        unitNode.put("tenantid", tenantId);
+        if (/* has been saved and thus is valid? */ unitId > 0) {
+            unitNode.put("unitid", unitId);
+        } else {
+            unitNode.putNull("unitid");
+        }
+        unitNode.put("unitver", unitVersion);
+        unitNode.put("corrid", corrId.toString());
+        unitNode.put("status", unitStatus.getStatus());
+        unitNode.put("unitname", unitName);
+        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
+        unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
+
+        // attributes array
+        ArrayNode attrs = MAPPER.createArrayNode();
+        unitNode.set("attributes", attrs);
+
+        // attributes of unit
+        fetchAttributes();
+
+        for (Attribute<?> attribute : attributes.values()) {
+            ObjectNode attributeNode = attrs.addObject();
+            attribute.toExternalJson(attrs, attributeNode);
+        }
+
+        return unitNode;
+    }
+
+    public String asJson(boolean pretty) {
+        try {
+            ObjectNode unitNode = asExternalJson();
+            if (pretty) {
+                return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
+            } else {
+                return unitNode.toString();
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     /**
@@ -269,59 +368,33 @@ public class Unit implements Cloneable {
         return v;
     }
 
-    public String asJson(boolean complete, boolean pretty, boolean flat) {
-        ObjectNode unitNode = MAPPER.createObjectNode();
-        if (complete) {
-            unitNode.put("@version", 1);
-            unitNode.put("@type", "unit");
-        }
-
-        // unit itself
-        unitNode.put("tenantid", tenantId);
-        if (/* has been saved and thus is valid? */ unitId > 0) {
-            unitNode.put("unitid", unitId);
-        } else {
-            unitNode.putNull("unitid");
-        }
-        unitNode.put("corrid", corrId.toString());
-        unitNode.put("status", status.getStatus());
-        unitNode.put("name",   name);
-        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
-
-        // attributes array
-        ArrayNode attrs = MAPPER.createArrayNode();
-        unitNode.set("attributes", attrs);
-
-        fetchAttributes();
-
-        // attributes of unit
-        for (Attribute<?> attribute : attributes.values()) {
-            ObjectNode attributeNode = attrs.addObject();
-            attribute.injectJson(attrs, attributeNode, complete, flat);
-        }
-
-        try {
-            if (pretty) {
-                return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
-            } else {
-                return unitNode.toString();
-            }
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public String asJson() {
-        return asJson(/* complete? */ false, /* pretty? */ false, /* flat? */ false);
-    }
-
-
     /**
      * Stores unit to database.
      */
     /* package accessible only */
     void store() throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
-        if (!isNew) {
+        if (attributes == null) {
+            if (!isModified) {
+                return;
+
+            } else if (!isNew) {
+                // since attributes are not loaded and the unit already exists (in database)...
+                fetchAttributes();
+            }
+        } else {
+            // Check if attributes were modified
+            Collection<Attribute<?>> myAttributes = attributes.values();
+            for (Attribute<?> attribute : myAttributes) {
+                boolean attrIsModified = attribute.isModified();
+                isModified |= attrIsModified;
+
+                if (attrIsModified)
+                    break;
+            }
+        }
+
+        // Do not perform store if no modifications in unit
+        if (!isModified) {
             return;
         }
 
@@ -331,8 +404,11 @@ public class Unit implements Cloneable {
             try {
                 try {
                     try {
-                        store(conn);
-
+                        if (isNew) {
+                            store_new_unit(conn);
+                        } else {
+                            store_new_version(conn);
+                        }
                     } catch (DatabaseWriteException dbwe) {
                         SQLException sqle = dbwe.getSQLException();
                         log.error("Transaction rollback due to: {}", Database.squeeze(sqle));
@@ -347,13 +423,18 @@ public class Unit implements Cloneable {
 
                 try {
                     conn.commit();
+
+                    // Predicates post store
+                    isNew = false;
+                    isModified = false;
+
+                    for (Attribute<?> attribute : attributes.values()) {
+                        attribute.setStored();
+                    }
                 }
                 catch (SQLException sqle) {
                     throw new DatabaseWriteException(sqle);
                 }
-
-                isNew = false;
-
             } catch (DatabaseWriteException dbwe) {
                 SQLException sqle = dbwe.getSQLException();
 
@@ -366,29 +447,60 @@ public class Unit implements Cloneable {
     }
 
 
-    private void store(
+    private void store_new_unit(
             Connection conn
     ) throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
-        String sql = "CALL ingest_unit_json(?, ?, ?)";
+        String sql = "CALL ingest_new_unit_json(?, ?, ?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
             var pgJson = new org.postgresql.util.PGobject();
             pgJson.setType("jsonb");
-            String json = asJson(/* complete? */ false, /* pretty? */ true, /* flat? */ true);
-
-            pgJson.setValue(json);
+            ObjectNode json = asInternalJson();
+            pgJson.setValue(json.toString());
 
             cs.setObject(1, pgJson);
             cs.registerOutParameter(2, Types.BIGINT);
+            cs.registerOutParameter(3, Types.INTEGER);
+            cs.registerOutParameter(4, Types.TIMESTAMP);
+            cs.registerOutParameter(5, Types.TIMESTAMP);
+            cs.execute();
+
+            //
+            unitId = cs.getLong(2); // Must match registered out parameter
+            unitVersion = cs.getInt(3);
+            createdTime = cs.getTimestamp(4).toInstant();
+            modifiedTime = cs.getTimestamp(5).toInstant();
+
+        } catch (SQLException sqle) {
+            String info = "Failed to store new unit: " + Database.squeeze(sqle);
+            log.error(info, sqle);
+            throw new DatabaseWriteException(info, sqle);
+        }
+    }
+
+    private void store_new_version(
+            Connection conn
+    ) throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
+        String sql = "CALL ingest_new_version_json(?, ?, ?)";
+
+        try (CallableStatement cs = conn.prepareCall(sql)) {
+            var pgJson = new org.postgresql.util.PGobject();
+            pgJson.setType("jsonb");
+            ObjectNode json = asInternalJson();
+            //log.trace("JSON: {}", json); // TODO REMOVE
+            pgJson.setValue(json.toString());
+
+            cs.setObject(1, pgJson);
+            cs.registerOutParameter(2, Types.INTEGER);
             cs.registerOutParameter(3, Types.TIMESTAMP);
             cs.execute();
 
             //
-            unitId = cs.getLong(2); // OBS: Same as registered out parameter
-            createdTime = cs.getTimestamp(3).toInstant();
+            unitVersion = cs.getInt(2); // Must match registered out parameter
+            modifiedTime = cs.getTimestamp(3).toInstant();
 
         } catch (SQLException sqle) {
-            String info = "Failed to store new unit: " + Database.squeeze(sqle);
+            String info = "Failed to store new version: " + Database.squeeze(sqle);
             log.error(info, sqle);
             throw new DatabaseWriteException(info, sqle);
         }
@@ -431,16 +543,29 @@ public class Unit implements Cloneable {
 
     private void readEntry(ResultSet rs) throws DatabaseReadException {
         try {
-            // Read kernel information
+            // Kernel information
             tenantId = rs.getInt("tenantid");
             unitId = rs.getLong("unitid");
             corrId = rs.getObject("corrid", UUID.class);
-            name = rs.getString("name");
-            if (rs.wasNull()) {
-                name = null; // to ensure we don't end up with 'NULL' names
-            }
-            status = Status.of(rs.getInt("status"));
+            unitStatus = Status.of(rs.getInt("status"));
+            int lastVersion = rs.getInt("lastver");
             createdTime = rs.getTimestamp("created").toInstant();
+
+            // Version information
+            unitVersion = rs.getInt("unitver");
+            unitName = rs.getString("unitname");
+            if (rs.wasNull()) {
+                unitName = null; // to ensure we don't end up with 'NULL' names
+            }
+            modifiedTime = rs.getTimestamp("modified").toInstant();
+
+            // Predicates
+            isReadOnly = lastVersion > unitVersion;
+
+            // In this context (i.e. with CLASSIC_LOAD == true in
+            // org.gautelis.repo.model.cache.UnitFactory), when inflating
+            // units from a result set, attributes are loaded later when
+            // first accessed.
 
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
@@ -451,19 +576,29 @@ public class Unit implements Cloneable {
         try {
             JsonNode root = MAPPER.readTree(json);
 
-            // unit
+            // Kernel information
             tenantId = root.path("tenantid").asInt();
             unitId = root.path("unitid").asLong();
             corrId = UUID.fromString(root.path("corrid").asText());
-            if (root.hasNonNull("name")) {
-                name = root.path("name").asText();
-            } else {
-                name = null; // to ensure we don't end up with 'NULL' names
-            }
-            status = Status.of(root.path("status").asInt());
+            unitStatus = Status.of(root.path("status").asInt());
             createdTime = TimeHelper.parseInstant(root.get("created").asText());
 
-            // attributes
+            // Version information
+            unitVersion = root.path("unitver").asInt();
+            if (root.hasNonNull("unitname")) {
+                unitName = root.path("unitname").asText();
+            } else {
+                unitName = null; // to ensure we don't end up with 'NULL' names
+            }
+            modifiedTime = TimeHelper.parseInstant(root.get("modified").asText());
+
+            // Predicates
+            isReadOnly = root.path("isreadonly").asBoolean();
+
+            // In this context (i.e. with CLASSIC_LOAD == false in
+            // org.gautelis.repo.model.cache.UnitFactory), when inflating
+            // units from JSON, attributes are already read and returned
+            // in the JSON, so we continue with preparing them now
             if (attributes == null) {
                 // Attributes that need some extra care in a subsequent step
                 Collection<Attribute<?>> recordAttributes = new ArrayList<>();
@@ -481,32 +616,6 @@ public class Unit implements Cloneable {
                         recordAttributes.add(attribute);
                     }
 
-                    /*
-                    if (AttributeType.RECORD.equals(attribute.getType())) {
-                        if (attribute.getValue() instanceof RecordValue recValue) {
-                            Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
-                            Iterator<RecordValue.AttributeReference> rit = refs.iterator();
-                            while (rit.hasNext()) {
-                                RecordValue.AttributeReference ref = rit.next();
-                                Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
-                                if (null != referredAttribute) {
-                                    recValue.set(referredAttribute);
-                                    rit.remove(); // Reference is now resolved
-
-                                    // remove attribute from unit-level, since it belongs at record-level
-                                    valueIdToAttribute.remove(ref.refValueId());
-                                }
-                            }
-
-                            // All initial references should be resolved by now
-                            if (!refs.isEmpty()) {
-                                // Is our algorithm sound?
-                                log.error("There are unresolved attribute references in record: {}", attribute);
-                            }
-                        }
-                    }
-                    */
-
                     log.debug("Inflated {}", attribute);
                 }
 
@@ -515,7 +624,7 @@ public class Unit implements Cloneable {
                     Attribute<?> recordAttribute = rait.next();
 
                     if (recordAttribute.getValue() instanceof RecordValue recValue) {
-                        Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
+                        Collection<RecordValue.AttributeReference> refs = recValue.getClaimedReferences();
                         Iterator<RecordValue.AttributeReference> rit = refs.iterator();
                         while (rit.hasNext()) {
                             RecordValue.AttributeReference ref = rit.next();
@@ -566,12 +675,12 @@ public class Unit implements Cloneable {
         }
 
         if (attributes.containsKey(attr.getName())) {
-            String info = "Unit " + this + " already has attribute " + attr.getAttrId();
+            String info = "Unit " + this + " already has attribute " + attr.getId();
             throw new IllegalRequestException(info);
         }
 
         Attribute<?> copy = new Attribute<>(attr);
-        log.debug("Adding attribute {}({}) to unit {}", copy.getAttrId(), copy.getName(), getReference());
+        log.debug("Adding attribute {}({}) to unit {}", copy.getId(), copy.getName(), getReference());
         attributes.put(copy.getName(), copy);
         return copy;
     }
@@ -597,7 +706,6 @@ public class Unit implements Cloneable {
      * Fetch attributes from database if they are not fetched already.
      */
     private Map<String, Attribute<?>> fetchAttributes() throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
-
         // Ignore request if we have already loaded our attributes
         if (attributes == null) {
             if (isNew) {
@@ -698,7 +806,7 @@ public class Unit implements Cloneable {
                         if (parent.getType() != AttributeType.RECORD) {
                             // Unexpected
                             String info = "Parent attribute is not a record: type=" + parent.getType().name();
-                            info += ", attrId=" + parent.getAttrId();
+                            info += ", attrId=" + parent.getId();
                             info += ", valueId=" + parentValueid;
                             log.error(info);
                             throw new AttributeValueException(info);
@@ -708,7 +816,7 @@ public class Unit implements Cloneable {
                         nestedAttributes.add(attribute);
                     } else {
                         // This attribute is not nested, so we associate attribute
-                        // with name top-leven in unit attribute hashtable
+                        // with name, at top-level in unit attribute hashtable
                         attributes.put(attribute.getName(), attribute);
                     }
 
@@ -977,7 +1085,7 @@ public class Unit implements Cloneable {
 
         Collection<Attribute<?>> myAttributes = attributes.values();
         for (Attribute<?> attribute : myAttributes) {
-            if (attribute.getAttrId() == attributeId) {
+            if (attribute.getId() == attributeId) {
                 return Optional.of(attribute);
             }
         }
@@ -1215,7 +1323,7 @@ public class Unit implements Cloneable {
      * @return String name of unit
      */
     public Optional<String> getName() {
-        return Optional.ofNullable(name);
+        return Optional.ofNullable(unitName);
     }
 
     /**
@@ -1227,10 +1335,10 @@ public class Unit implements Cloneable {
      * unique reference, use
      * {@link #getReference}.
      *
-     * @param name name of unit
+     * @param unitName name of unit
      */
-    public void setName(String name) {
-        this.name = name;
+    public void setName(String unitName) {
+        this.unitName = unitName;
     }
 
     /**
@@ -1266,6 +1374,15 @@ public class Unit implements Cloneable {
     }
 
     /**
+     * Gets version.
+     *
+     * @return int version of unit
+     */
+    public int getVersion() {
+        return unitVersion;
+    }
+
+    /**
      * Gets the correlation id of this unit
      */
     public UUID getCorrId() {
@@ -1286,10 +1403,17 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Checks if this unit is new and if it has not been stored.
+     * Checks if this unit is new and if it has not yet been persisted.
      */
     public boolean isNew() {
         return isNew;
+    }
+
+    /**
+     * Checks if this unit is readonly.
+     */
+    public boolean isReadOnly() {
+        return isReadOnly;
     }
 
     /**
@@ -1455,7 +1579,7 @@ public class Unit implements Cloneable {
     ) throws DatabaseConnectionException, DatabaseWriteException, IllegalRequestException {
 
         if (isNew) {
-            status = requestedStatus;
+            unitStatus = requestedStatus;
         } else {
             TimedExecution.run(ctx.getTimingData(), "set status", () -> Database.usePreparedStatement(ctx.getDataSource(), ctx.getStatements().unitSetStatus(), pStmt -> {
                 int i = 0;
@@ -1508,7 +1632,7 @@ public class Unit implements Cloneable {
      * @return Returns created String
      */
     public String toString() {
-        String s = "Unit{" + getReference() + "(" + (null != name ? name : "") + ")" + (isNew ? "*" : "");
+        String s = "Unit{" + getReference() + ":" + unitVersion + "(" + (null != unitName ? unitName : "") + ")" + (isNew ? "*" : "");
         if (null != attributes) {
             for (Attribute<?> a : attributes.values()) {
                 s += "\n\t" + a.toString();

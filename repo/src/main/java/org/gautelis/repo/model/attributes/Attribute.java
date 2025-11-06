@@ -35,10 +35,15 @@ import java.util.ArrayList;
 public class Attribute<T> {
     private static final Logger log = LoggerFactory.getLogger(Attribute.class);
 
-    private int id;
+    public record Reference(int id, String name) {}
+
+    private int attributeId;
+    private String attributeName;
+
+    private AttributeType attributeType;
+    private int unitVersionFrom = 1;
+    private int unitVersionTo = 1;
     private long valueId = -1L; // initially invalid
-    private String name;
-    private AttributeType type;
     private Value<T> value = null;
 
     /**
@@ -51,11 +56,11 @@ public class Attribute<T> {
      */
     /* Should be package accessible only */
     public Attribute(
-            int attrId, String name, AttributeType type
+            int id, String name, AttributeType type
     ) throws AttributeTypeException {
-        this.id = attrId;
-        this.name = name.trim();
-        this.type = type;
+        this.attributeId = id;
+        this.attributeName = name.trim();
+        this.attributeType = type;
 
         value = Value.createValue(type);
     }
@@ -93,7 +98,7 @@ public class Attribute<T> {
      */
     @SuppressWarnings("CopyConstructorMissesField")
     public Attribute(Attribute<T> other) {
-        this(other.getAttrId(), other.getName(), other.getType());
+        this(other.getId(), other.getName(), other.getType());
         value.copy(other.value);
     }
 
@@ -139,7 +144,7 @@ public class Attribute<T> {
      * @return String name of attribute
      */
     public String getName() {
-        return name;
+        return attributeName;
     }
 
     /**
@@ -147,17 +152,17 @@ public class Attribute<T> {
      *
      * @return int id of attribute
      */
-    public int getAttrId() {
-        return id;
+    public int getId() {
+        return attributeId;
     }
 
     public long getValueId() {
         return valueId;
     }
 
-    public void injectJson(ArrayNode attributes, ObjectNode attributeNode, boolean complete, boolean flat) {
-        if (complete) {
-            String _type = type.name().toLowerCase();
+    public void toInternalJson(ArrayNode attributes, ObjectNode attributeNode) {
+        if (false) {
+            String _type = attributeType.name().toLowerCase();
             if (value.isScalar()) {
                 _type += "-scalar";
             } else {
@@ -166,34 +171,56 @@ public class Attribute<T> {
             attributeNode.put("@type", _type);
         }
 
-        attributeNode.put("attrid",   id);
-        if (/* has been saved and thus is valid? */ valueId > 0) {
-            attributeNode.put("valueid", valueId);
+        boolean _isModified = isModified();
+
+        attributeNode.put("ismodified", _isModified);
+        attributeNode.put("attrname", attributeName);
+        attributeNode.put("attrid", attributeId);
+        attributeNode.put("attrtype", attributeType.getType());
+        attributeNode.put("untverfrom", unitVersionFrom);
+        attributeNode.put("untverto", unitVersionTo);
+
+        // if (/* has been saved and thus is valid? */ valueId > 0) {
+        //     attributeNode.put("valueid", valueId);
+        // } else {
+        //     attributeNode.putNull("valueid");
+        // }
+
+        value.toInternalJson(attributes, attributeNode);
+    }
+
+    public void toExternalJson(ArrayNode attributes, ObjectNode attributeNode) {
+        String _type = attributeType.name().toLowerCase();
+        if (value.isScalar()) {
+            _type += "-scalar";
         } else {
-            attributeNode.putNull("valueid");
+            _type += "-vector";
         }
+        attributeNode.put("@type", _type);
 
-        attributeNode.put("attrtype", type.getType());
-        attributeNode.put("name", name);
+        attributeNode.put("attrname", attributeName);
+        attributeNode.put("attrid", attributeId);
+        attributeNode.put("attrtype", attributeType.name());
 
-        if (!flat && AttributeType.RECORD == type) {
+        if (AttributeType.RECORD == attributeType) {
             // "hide" unit attributes with local array in record attribute
             attributes = attributeNode.putArray("attributes");
         }
 
-        value.toJson(attributes, attributeNode, complete, flat);
+        value.toExternalJson(attributes, attributeNode);
     }
 
     private void readEntry(JsonNode node) throws JsonProcessingException {
-        // TODO -- needs an overhaul to accommodate record attributes
         // Get attribute information
-        id = node.path("attrid").asInt();
+        attributeId = node.path("attrid").asInt();
+        unitVersionFrom = node.path("unitverfrom").asInt();
+        unitVersionTo = node.path("unitverto").asInt();
         valueId = node.path("valueid").asLong();
-        name = node.path("attrname").asText();
-        type = AttributeType.of(node.path("attrtype").asInt());
+        attributeName = node.path("attrname").asText();
+        attributeType = AttributeType.of(node.path("attrtype").asInt());
 
         // Continue with value vector
-        value = Value.inflateValue(type, node);
+        value = Value.inflateValue(attributeType, node);
     }
 
     private void readEntry(ResultSet rs) throws DatabaseReadException, AttributeTypeException {
@@ -213,13 +240,13 @@ public class Attribute<T> {
              * ----------------------------------------------------------- */
 
             // Get attribute information
-            id = rs.getInt("attrid");
+            attributeId = rs.getInt("attrid");
             valueId = rs.getLong("valueid");
-            name = rs.getString("attrname");
-            type = AttributeType.of(rs.getInt("attrtype"));
+            attributeName = rs.getString("attrname");
+            attributeType = AttributeType.of(rs.getInt("attrtype"));
 
             // Continue with value vector
-            value = Value.inflateValue(type, rs);
+            value = Value.inflateValue(attributeType, rs);
 
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
@@ -239,12 +266,18 @@ public class Attribute<T> {
         return value.isNew() || valueId <= 0;
     }
 
+    public void setStored() {
+        value.setStored();
+    }
+
     /**
      * Overridden method from {@link Object }
      */
     @Override
     public String toString() {
-        return "Attribute{" + id + "(" + name + ")" +
+        return "Attribute{" + attributeId + "(" + attributeName + ")[" +
+                unitVersionFrom + "-" + unitVersionTo + "]:" +
+                attributeType.name() +
                 (value.isNew() ? "*" : "") +
                 (value.isModified() ? "~" : "") +
                 "=" + value.toString() + "}";

@@ -66,6 +66,33 @@ public class Lock {
      * Is unit locked?
      */
     /* Should be package accessible only */
+    public static boolean isLocked(Context ctx, int tenantId, long unitId, LockType lockLevel) throws DatabaseConnectionException, DatabaseReadException {
+
+        boolean[] locked = {false};
+
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().lockGetAll(), pStmt -> {
+            int _lockLevel = lockLevel.getType();
+
+            int i = 0;
+            pStmt.setInt(++i, tenantId);
+            pStmt.setLong(++i, unitId);
+            try (ResultSet rs = Database.executeQuery(pStmt)) {
+                while (rs.next()) {
+                    int lockType = rs.getInt("locktype");
+                    if (lockType >= _lockLevel) {
+                        locked[0] = true;
+                        break;
+                    }
+                }
+            }
+        });
+        return locked[0];
+    }
+
+    /**
+     * Is unit locked?
+     */
+    /* Should be package accessible only */
     public static boolean isLocked(Context ctx, int tenantId, long unitId) throws DatabaseConnectionException, DatabaseReadException {
 
         boolean[] locked = {false};
@@ -98,7 +125,6 @@ public class Lock {
             String purpose
     ) throws DatabaseConnectionException, DatabaseWriteException, DatabaseReadException, ConfigurationException {
 
-
         if (isLocked(ctx, tenantId, unitId)) {
             // NOT CURRENTLY IMPLEMENTED SINCE WE ONLY
             // SUPPORT LOCKS THAT NEVER EXPIRE AT THE MOMENT.
@@ -112,7 +138,11 @@ public class Lock {
                 int i = 0;
                 pStmt.setInt(++i, tenantId);
                 pStmt.setLong(++i, unitId);
-                pStmt.setString(++i, purpose);
+                if (null != purpose) {
+                    pStmt.setString(++i, purpose);
+                } else {
+                    pStmt.setNull(++i, java.sql.Types.VARCHAR);
+                }
                 pStmt.setInt(++i, type.getType());
                 pStmt.setNull(++i, java.sql.Types.TIMESTAMP); // ignore -- lock is infinite
                 Database.executeUpdate(pStmt);
@@ -142,7 +172,7 @@ public class Lock {
 
                 while (rs.next()) {
                     String purpose = rs.getString("purpose");
-                    int _type = rs.getInt("type");
+                    int _type = rs.getInt("locktype");
                     LockType type = LockType.of(_type);
                     java.sql.Timestamp lockTime = rs.getTimestamp("locktime");
                     java.sql.Timestamp expireTime = rs.getTimestamp("expire");

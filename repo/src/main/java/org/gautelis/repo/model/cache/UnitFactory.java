@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import java.lang.ref.SoftReference;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.SQLType;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -70,11 +71,16 @@ public final class UnitFactory {
      * Fetch a unit
      */
     public static Optional<Unit> resurrectUnit(
-            Context ctx, int tenantId, long unitId
+            Context ctx, int tenantId, long unitId, int unitVersion
     ) throws DatabaseConnectionException, DatabaseReadException {
         // First, check cache
-        {
-            Optional<Unit> unit = cacheLookup(ctx, tenantId, unitId);
+        if (unitVersion > 0) {
+            Optional<Unit> unit = cacheLookup(tenantId, unitId, unitVersion);
+            if (unit.isPresent()) {
+                return unit;
+            }
+        } else {
+            Optional<Unit> unit = cacheLookup(tenantId, unitId);
             if (unit.isPresent()) {
                 return unit;
             }
@@ -83,31 +89,52 @@ public final class UnitFactory {
         if (CLASSIC_LOAD) {
             // Not in cache, continue reading from database
             Unit[] unit = { null };
-            Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
-                int i = 0;
-                pStmt.setInt(++i, tenantId);
-                pStmt.setLong(++i, unitId);
+            if (unitVersion > 0) {
+                Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
+                    int i = 0;
+                    pStmt.setInt(++i, tenantId);
+                    pStmt.setLong(++i, unitId);
+                    pStmt.setInt(++i, unitVersion);
 
-                try (ResultSet rs = Database.executeQuery(pStmt)) {
-                    if (rs.next()) {
-                        unit[0] = resurrect(ctx, rs);
-                        cacheStore(ctx, unit[0]);
+                    try (ResultSet rs = Database.executeQuery(pStmt)) {
+                        if (rs.next()) {
+                            unit[0] = resurrect(ctx, rs);
+                            cacheStore(ctx, unit[0]);
+                        }
                     }
-                }
-            });
+                });
+            } else {
+                Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGetLatest(), pStmt -> {
+                    int i = 0;
+                    pStmt.setInt(++i, tenantId);
+                    pStmt.setLong(++i, unitId);
+
+                    try (ResultSet rs = Database.executeQuery(pStmt)) {
+                        if (rs.next()) {
+                            unit[0] = resurrect(ctx, rs);
+                            cacheStore(ctx, unit[0]);
+                        }
+                    }
+                });
+            }
 
             return Optional.ofNullable(unit[0]);
 
         } else {
             // This pulls attributes as well as unit, as opposed to classic load, but saves
             // the extra step of later having to pull attributes.
-            String sql = "SELECT export_unit_json(?, ?) AS unit_json";
+            String sql = "SELECT extract_unit_json(?, ?, ?) AS unit_json";
 
             Unit[] unit = { null };
             Database.useReadonlyPreparedStatement(ctx.getDataSource(), sql, pStmt -> {
                 int i = 0;
                 pStmt.setInt(++i, tenantId);
                 pStmt.setLong(++i, unitId);
+                if (unitVersion > 0) {
+                    pStmt.setInt(++i, unitVersion);
+                } else {
+                    pStmt.setNull(++i, java.sql.Types.INTEGER);
+                }
 
                 try (ResultSet rs = Database.executeQuery(pStmt)) {
                     if (rs.next()) {
@@ -122,6 +149,15 @@ public final class UnitFactory {
 
             return Optional.ofNullable(unit[0]);
         }
+    }
+
+    /**
+     * Fetch a unit
+     */
+    public static Optional<Unit> resurrectUnit(
+            Context ctx, int tenantId, long unitId
+    ) throws DatabaseConnectionException, DatabaseReadException {
+        return resurrectUnit(ctx, tenantId, unitId, 0);
     }
 
     /**
@@ -202,12 +238,12 @@ public final class UnitFactory {
     }
 
     /**
-     * Looks up some unit in cache. Since 'unitVer' may not refer to
+     * Looks up some unit in cache. Since 'unitVersion' may not refer to
      * the latest version and only the latest version is cached, this
      * lookup is likely to fail
      */
     private static Optional<Unit> cacheLookup(
-            int tenantId, long unitId, int unitVer
+            int tenantId, long unitId, int unitVersion
     ) {
         String key = Unit.id2String(tenantId, unitId);
 
@@ -228,6 +264,13 @@ public final class UnitFactory {
                 unitCache.remove(key); // since cached unit was garbage collected
                 if (log.isTraceEnabled()) {
                     log.trace("Unit {} was garbage collected - removed entry from cache", key);
+                }
+                return Optional.empty();
+            }
+
+            if (entry.getVersion() != unitVersion) {
+                if (log.isTraceEnabled()) {
+                    log.trace("Cached unit {} not of version {}", key, unitVersion);
                 }
                 return Optional.empty();
             }
@@ -242,7 +285,7 @@ public final class UnitFactory {
      * Looks up unit. If it exists in cache, it is returned.
      */
     private static Optional<Unit> cacheLookup(
-            Context ctx, int tenantId, long unitId
+            int tenantId, long unitId
     ) {
         String key = Unit.id2String(tenantId, unitId);
 
@@ -266,6 +309,7 @@ public final class UnitFactory {
                 }
                 return Optional.empty();
             }
+
 
             // This is a cache hit!
             entry.touch();

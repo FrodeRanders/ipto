@@ -31,7 +31,7 @@ import java.util.ArrayList;
 
 final class TimeValue extends Value<Instant> {
     /**
-     * Creates a <I>new</I> date value
+     * Creates a <I>new</I> time value
      */
     TimeValue() {
     }
@@ -121,13 +121,22 @@ final class TimeValue extends Value<Instant> {
     }
 
     /* package accessible only */
-    void toJson(
+    void toInternalJson(
             ArrayNode ignored,
-            ObjectNode attributeNode,
-            boolean complete,
-            boolean flat
+            ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
+        for (Instant value : values) {
+            array.add(value.toString());
+        }
+    }
+
+    /* package accessible only */
+    void toExternalJson(
+            ArrayNode ignored,
+            ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException {
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Instant value : values) {
             array.add(value.toString());
         }

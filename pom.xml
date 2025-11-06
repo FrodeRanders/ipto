@@ -11,7 +11,7 @@
 
     <modules>
         <module>repo</module>
-        <module>udf</module>
+        <!--DB2-related <module>udf</module>-->
     </modules>
 
     <profiles>

@@ -117,13 +117,22 @@ final class DoubleValue extends Value<Double> {
     }
 
     /* package accessible only */
-    void toJson(
+    void toInternalJson(
             ArrayNode ignored,
-            ObjectNode attributeNode,
-            boolean complete,
-            boolean flat
+            ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
+        for (Double value : values) {
+            array.add(value);
+        }
+    }
+
+    /* package accessible only */
+    void toExternalJson(
+            ArrayNode ignored,
+            ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException {
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Double value : values) {
             array.add(value);
         }

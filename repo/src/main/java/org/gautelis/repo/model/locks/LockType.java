@@ -3,9 +3,9 @@ package org.gautelis.repo.model.locks;
 import org.gautelis.repo.exceptions.LockTypeException;
 
 public enum LockType {
-    READ(1),
-    EXISTENCE(2),
-    WRITE(3);
+    READ(10),
+    EXISTENCE(20),
+    WRITE(30);
 
     private final int type;
 

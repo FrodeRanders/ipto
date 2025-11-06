@@ -27,6 +27,7 @@ import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.locks.LockType;
+import org.gautelis.repo.model.utils.RepoRunnable;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.query.DatabaseAdapter;
@@ -92,10 +93,7 @@ public class Repository {
     }
 
     /**
-     * Searches for <B>all</B> units with status 'pending disposal',
-     * <I>optionally</I> for a specific type.
-     * <p>
-     * Provide 'null' values for optional constraints if not applicable.
+     * Searches for <B>all</B> units with unit status 'PENDING_DISPOSITION'.
      */
     private SearchResult getDisposedUnits(
             int tenantId,
@@ -142,6 +140,12 @@ public class Repository {
                 writer.println(" * chunk of " + count + " were removed");
                 writer.flush();
             }
+
+            if (count == 0) {
+                writer.println(" ! ending");
+                writer.flush();
+                break;
+            }
             result = getDisposedUnits(tenantId, /* low */ 0, /* high */ MAX_HITS, MAX_HITS);
         }
     }
@@ -150,7 +154,7 @@ public class Repository {
     /**
      * Dispose all objects marked as 'pending disposition'.
      * <p>
-     * Only objects with status of <B>INTERNAL_STATUS_PENDING_DISPOSITION</B>
+     * Only objects with unit status of <B>PENDING_DISPOSITION</B>
      * are disposed.
      *
      * @param writer an (optional) writer onto which progress information is printed
@@ -171,8 +175,7 @@ public class Repository {
 
 
     /**
-     * Searches for <B>all</B> units with specified status,
-     * <I>optionally</I> for a specific type.
+     * Searches for <B>all</B> units with specified status.
      */
     private SearchResult getUnits(
             Unit.Status status,
@@ -204,6 +207,24 @@ public class Repository {
     ) throws DatabaseConnectionException, DatabaseReadException {
 
         Optional<Unit> unit = TimedExecution.run(context.getTimingData(), "resurrect unit", () -> UnitFactory.resurrectUnit(context, tenantId, unitId));
+        unit.ifPresent(_unit -> generateActionEvent(
+                _unit,
+                ActionEvent.Type.ACCESSED,
+                "Unit accessed"
+        ));
+        return unit;
+    }
+
+    /**
+     * Fetch an existing unit of specific version.
+     */
+    public Optional<Unit> getUnit(
+            int tenantId,
+            long unitId,
+            int unitVersion
+    ) throws DatabaseConnectionException, DatabaseReadException {
+
+        Optional<Unit> unit = TimedExecution.run(context.getTimingData(), "resurrect unit", () -> UnitFactory.resurrectUnit(context, tenantId, unitId, unitVersion));
         unit.ifPresent(_unit -> generateActionEvent(
                 _unit,
                 ActionEvent.Type.ACCESSED,
@@ -262,14 +283,12 @@ public class Repository {
         }
 
         // --- Applicability control ---
-        if (!unit.isNew()) {
+        if (unit.isReadOnly()) {
             throw new UnitReadOnlyException(
                     "Unit " + unit.getReference() + " is read only");
         }
 
-        if (false) {
-            // This is not relevant, since only _new_, i.e. not already stored, units can be
-            // stored and therefore cannot be locked.
+        if (!unit.isNew()) {
             if (unit.isLocked()) {
                 for (Lock lock : unit.getLocks()) {
                     throw new UnitLockedException(
@@ -394,9 +413,6 @@ public class Repository {
      * This information is not persisted to database though. You
      * should be aware of the fact that you may have a <B>modified</B>
      * unit after this call.</I>
-     * <p>
-     * Currently only accepts the Association.CASE_ASSOCIATION
-     * association.
      */
     public void removeAssociation(
             Unit unit, AssociationType assocType, String reference
@@ -433,12 +449,8 @@ public class Repository {
         if (null == unit) {
             throw new InvalidParameterException("no unit");
         }
-        if (null == purpose || purpose.isEmpty()) {
-            purpose = "unspecified";
-        }
 
-        String _purpose = purpose;
-        boolean success = TimedExecution.run(context.getTimingData(), "lock unit", () -> unit.lock(type, _purpose));
+        boolean success = TimedExecution.run(context.getTimingData(), "lock unit", () -> unit.lock(type, purpose));
         if (success) {
             generateActionEvent(
                     unit,
@@ -461,9 +473,7 @@ public class Repository {
         }
 
         if (unit.isLocked()) {
-            for (Lock lock : unit.getLocks()) {
-                TimedExecution.run(context.getTimingData(), "unlock unit", unit::unlock);
-            }
+            TimedExecution.run(context.getTimingData(), "unlock unit", unit::unlock);
 
             generateActionEvent(
                     unit,
@@ -712,7 +722,10 @@ public class Repository {
 
         ActionEvent event = new ActionEvent(source, actionType, description);
         for (ActionListener l : actionListeners.values()) {
-            l.actionPerformed(event);
+            TimedExecution.run(context.getTimingData(), "event action", () -> {
+                l.actionPerformed(event);
+                return null;
+            });
         }
     }
 

@@ -116,17 +116,17 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
         sb.append(EQ);
         sb.append(" ").append(ATTRIBUTE_VALUE_VECTOR_VALUEID).append(" ");
         sb.append("WHERE ");
-        if (commonConstraintValues.containsKey(UNIT_TENANTID.toString())) {
+        if (commonConstraintValues.containsKey(UNIT_KERNEL_TENANTID.toString())) {
             //--------------------------------------------------------------------
             // Has *UNIT*_TENANTID specified (ut.tenantid), so we constrain
             // ATTRIBUTE_VERSION_TENANTID accordingly!!
             //--------------------------------------------------------------------
-            SearchItem<?> unitItem = commonConstraintValues.get(UNIT_TENANTID.toString());
+            SearchItem<?> unitItem = commonConstraintValues.get(UNIT_KERNEL_TENANTID.toString());
             if (usePrepare) {
                 sb.append(ATTRIBUTE_VALUE_TENANTID).append(" ").append(unitItem.getOperator()).append(" ? AND ");
             } else {
                 sb.append(ATTRIBUTE_VALUE_TENANTID).append(" ").append(unitItem.getOperator()).append(" ");
-                sb.append(commonConstraintValues.get(UNIT_TENANTID.toString()).getValue());
+                sb.append(commonConstraintValues.get(UNIT_KERNEL_TENANTID.toString()).getValue());
                 sb.append(" AND ");
             }
         }

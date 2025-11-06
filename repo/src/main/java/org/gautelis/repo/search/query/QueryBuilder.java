@@ -155,7 +155,7 @@ public class QueryBuilder {
             Attribute<?> attribute, String value, Locale locale
     ) throws NumberFormatException, InvalidParameterException {
 
-        int attrId = attribute.getAttrId();
+        int attrId = attribute.getId();
         AttributeType type = attribute.getType();
 
         return switch (type) {
@@ -177,21 +177,21 @@ public class QueryBuilder {
      * @return
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToSpecificStatus(Unit.Status status) {
-        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_STATUS, Operator.EQ, status.getStatus()));
+        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_STATUS, Operator.EQ, status.getStatus()));
      }
 
      /**
      * Generates constraint "unit has specific tenant", identified by tenantId.
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToSpecificTenant(int tenantId) {
-        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_TENANTID, Operator.EQ, tenantId));
+        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_TENANTID, Operator.EQ, tenantId));
      }
 
      /**
      * Generates constraint "unit is effective/operative/in use"
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToEffective() {
-        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_STATUS, Operator.GEQ, Unit.Status.EFFECTIVE.getStatus()));
+        return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_STATUS, Operator.GEQ, Unit.Status.EFFECTIVE.getStatus()));
      }
 
      /**
@@ -199,7 +199,7 @@ public class QueryBuilder {
      */
      public static LeafExpression<TimeUnitSearchItem> constrainToCreatedBefore(Instant instant) {
         Objects.requireNonNull(instant, "instant");
-        return new LeafExpression<>(new TimeUnitSearchItem(Column.UNIT_CREATED, Operator.LT, instant));
+        return new LeafExpression<>(new TimeUnitSearchItem(Column.UNIT_KERNEL_CREATED, Operator.LT, instant));
      }
 
      /**
@@ -207,7 +207,7 @@ public class QueryBuilder {
      */
      public static LeafExpression<TimeUnitSearchItem> constrainToCreatedAfter(Instant instant) {
         Objects.requireNonNull(instant, "instant");
-        return new LeafExpression<>(new TimeUnitSearchItem(Column.UNIT_CREATED, Operator.GEQ, instant));
+        return new LeafExpression<>(new TimeUnitSearchItem(Column.UNIT_KERNEL_CREATED, Operator.GEQ, instant));
      }
 }
 

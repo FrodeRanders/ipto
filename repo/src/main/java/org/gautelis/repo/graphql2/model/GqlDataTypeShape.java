@@ -12,16 +12,25 @@ package org.gautelis.repo.graphql2.model;
  *      ^                     ^
  *      | (a)                 | (b)
  */
-public abstract class DataTypeDef {
+public class GqlDataTypeShape {
     public final String name;       /* (a) GraphQL and Ipto shared */
     public final int id;            /* (b) Ipto specific */
 
-    public DataTypeDef(String name, int id) {
+    public GqlDataTypeShape(String name, int id) {
         this.name = name;
         this.id = id;
     }
 
-    public boolean equals(DataTypeDef other) {
+    public boolean equals(GqlDataTypeShape other) {
         return name.equals(other.name) && id == other.id;
+    }
+
+    @Override
+    public String toString() {
+        String info = "GqlDataTypeShape{";
+        info += "name='" + name + '\'';
+        info += ", id=" + id;
+        info += '}';
+        return info;
     }
 }

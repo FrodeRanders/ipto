@@ -826,3 +826,52 @@ repo_attribute_description |               9 |                 0 |              
         repo_unit_template |              22 |                 4 |              1 |     8192 bytes
 
 
+2025-11-05 01:50:55.573: 
+===================================================================================================
+OS: Mac OS X 26.0.1 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=77 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.8+9-LTS) mem-total=64 MiB mem-free=31 MiB
+DB: PostgreSQL 18.0 (Debian 18.0-1.pgdg13+3) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+
+Units: total=54390 locks=0 vectors=377290
+Values: string=164878 time=107040 integer=0 long=0 double=107080 boolean=0 data=0 record=160620
+Assocs: internal=0 external=0
+
+2025-11-05 01:50:55.577: 
+-----------------------+--------+--------+--------+--------+--------+-------------+-----------
+           Measurement |  Count |    Min |    Max |   Mean |  CV(%) |  Total time     i.e.
+-----------------------+--------+--------+--------+--------+--------+-------------+-----------
+         custom search |      3 |   6,46 |  31,18 |  17,17 |  73,89 |          51 |      51ms
+fetch known attributes |      1 |  38,37 |  38,37 |  38,37 |    NaN |          38 |      38ms
+        resurrect unit |     19 |   0,82 |  10,54 |   2,75 |  96,91 |          51 |      51ms
+            store unit |  51005 |   0,44 |  36,60 |   0,78 |  69,38 |       52442 | 52s 442ms
+
+
+2025-11-05 01:50:55.582: Index behaviour: 
+---------------------------+-----------------+-------------------+----------------+----------------
+                 Tablename |  Total seq scan |  Total index scan |  Rows in table |  Size of table
+---------------------------+-----------------+-------------------+----------------+----------------
+            repo_attribute |              49 |           371,239 |             20 |     8192 bytes
+repo_attribute_description |               1 |                 0 |              0 |        0 bytes
+      repo_attribute_value |              13 |         1,164,676 |        373,907 |          25 MB
+       repo_boolean_vector |               8 |                 0 |              0 |        0 bytes
+          repo_data_vector |               8 |                 0 |              0 |        0 bytes
+        repo_double_vector |               8 |                77 |        106,560 |        5464 kB
+       repo_external_assoc |              10 |                 0 |              0 |        0 bytes
+       repo_integer_vector |               8 |                 0 |              0 |        0 bytes
+       repo_internal_assoc |              10 |                 0 |              0 |        0 bytes
+                 repo_lock |               8 |               841 |              0 |        0 bytes
+                  repo_log |               1 |                 0 |              0 |        0 bytes
+          repo_long_vector |               8 |                 0 |              0 |        0 bytes
+            repo_namespace |               1 |                 0 |              1 |     8192 bytes
+      repo_record_template |              15 |                 0 |              3 |     8192 bytes
+        repo_record_vector |              10 |            77,006 |        160,061 |        8888 kB
+        repo_string_vector |              22 |               885 |        163,771 |        9696 kB
+    repo_template_elements |              23 |                 0 |              2 |     8192 bytes
+               repo_tenant |               2 |            53,453 |              2 |     8192 bytes
+          repo_time_vector |              15 |               598 |        106,466 |        5456 kB
+          repo_unit_kernel |              11 |            55,395 |         53,603 |        4080 kB
+        repo_unit_template |              24 |                 2 |              1 |     8192 bytes
+         repo_unit_version |               2 |           743,076 |         54,487 |        3992 kB
+
+

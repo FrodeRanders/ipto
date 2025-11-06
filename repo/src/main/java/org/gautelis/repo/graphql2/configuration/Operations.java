@@ -2,8 +2,8 @@ package org.gautelis.repo.graphql2.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import org.gautelis.repo.graphql2.model.OperationDef;
-import org.gautelis.repo.graphql2.model.external.TypeDef;
+import org.gautelis.repo.graphql2.model.GqlOperationShape;
+import org.gautelis.repo.graphql2.model.TypeDef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,6 +11,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.gautelis.repo.graphql2.configuration.Operations.SchemaOperation.MUTATION;
+import static org.gautelis.repo.graphql2.configuration.Operations.SchemaOperation.QUERY;
 
 
 public final class Operations {
@@ -20,7 +23,7 @@ public final class Operations {
 
     enum SchemaOperation {QUERY, MUTATION}
 
-    static Map<String, OperationDef> derive(TypeDefinitionRegistry registry) {
+    static Map<String, GqlOperationShape> derive(TypeDefinitionRegistry registry) {
         Map<String, SchemaOperation> operationTypes = new HashMap<>();
 
         Optional<SchemaDefinition> _schemaDefinition = registry.schemaDefinition();
@@ -31,7 +34,7 @@ public final class Operations {
             for (OperationTypeDefinition otd : otds) {
                 switch (otd.getName()) {
                     case "query" -> {
-                        operationTypes.put(otd.getTypeName().getName(), SchemaOperation.QUERY);
+                        operationTypes.put(otd.getTypeName().getName(), QUERY);
                     }
                     case "mutation" -> {
                         operationTypes.put(otd.getTypeName().getName(), SchemaOperation.MUTATION);
@@ -40,7 +43,7 @@ public final class Operations {
             }
         }
 
-        Map<String, OperationDef> operations = new HashMap<>();
+        Map<String, GqlOperationShape> operations = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             List<Directive> directives = type.getDirectives();
@@ -68,7 +71,7 @@ public final class Operations {
         return operations;
     }
 
-    private static void deriveQueryOperations(ObjectTypeDefinition type, Map<String, OperationDef> operations) {
+    private static void deriveQueryOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
         for (FieldDefinition f : type.getFieldDefinitions()) {
             // Operation name
             final String fieldName = f.getName();
@@ -82,11 +85,11 @@ public final class Operations {
                 TypeDef typeDef = TypeDef.of(input.getType());
             }
 
-            operations.put(/* operation name */ fieldName, new OperationDef(fieldName, null, null)); // TODO
+            operations.put(/* operation name */ fieldName, new GqlOperationShape(fieldName, QUERY.name(), resultType.typeName()));
         }
     }
 
-    private static void deriveMutationOperations(ObjectTypeDefinition type, Map<String, OperationDef> operations) {
+    private static void deriveMutationOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
         for (FieldDefinition f : type.getFieldDefinitions()) {
             // Operation name
             final String fieldName = f.getName();
@@ -100,7 +103,7 @@ public final class Operations {
                 TypeDef typeDef = TypeDef.of(input.getType());
             }
 
-            operations.put(/* operation name */ fieldName, new OperationDef(fieldName, null, null)); // TODO
+            operations.put(/* operation name */ fieldName, new GqlOperationShape(fieldName, MUTATION.name(), resultType.typeName()));
         }
     }
 }

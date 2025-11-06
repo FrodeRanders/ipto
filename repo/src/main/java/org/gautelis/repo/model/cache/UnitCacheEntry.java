@@ -29,6 +29,7 @@ final class UnitCacheEntry {
 
     private final int tenantId;
     private final long unitId;
+    private final int unitVersion;
     private final String key;
     private final SoftReference<Unit> unit;
     private Date date = new Date();
@@ -42,6 +43,7 @@ final class UnitCacheEntry {
         //
         tenantId = _unit.getTenantId();
         unitId = _unit.getUnitId();
+        unitVersion = _unit.getVersion();
 
         //
         key = _key;
@@ -55,6 +57,7 @@ final class UnitCacheEntry {
         //
         tenantId = _unit.getTenantId();
         unitId = _unit.getUnitId();
+        unitVersion = _unit.getVersion();
 
         //
         key = _key;
@@ -167,5 +170,12 @@ final class UnitCacheEntry {
      */
     long getUnitId() {
         return unitId;
+    }
+
+    /**
+     * Gets version of contained unit.
+     */
+    int getVersion() {
+        return unitVersion;
     }
 }

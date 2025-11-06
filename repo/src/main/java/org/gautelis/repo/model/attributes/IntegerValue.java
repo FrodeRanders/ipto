@@ -116,13 +116,22 @@ final class IntegerValue extends Value<Integer> {
     }
 
     /* package accessible only */
-    void toJson(
+    void toInternalJson(
             ArrayNode ignored,
-            ObjectNode attributeNode,
-            boolean complete,
-            boolean flat
+            ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(COLUMN_NAME);
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
+        for (Integer value : values) {
+            array.add(value);
+        }
+    }
+
+    /* package accessible only */
+    void toExternalJson(
+            ArrayNode ignored,
+            ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException {
+        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Integer value : values) {
             array.add(value);
         }

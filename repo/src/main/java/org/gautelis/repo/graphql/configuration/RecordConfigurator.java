@@ -47,14 +47,14 @@ class RecordConfigurator {
         // repo_record_template (
         //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute
         //    idx              INT  NOT NULL,
-        //    child_attrid     INT  NOT NULL,      -- sub-attribute
+        //    field_attrid     INT  NOT NULL,      -- sub-attribute
         //    alias            TEXT NULL,
         //    required         BOOLEAN NOT NULL DEFAULT FALSE,
         // }
         String sql = """
-                SELECT record_attrid, idx, child_attrid, alias, required
+                SELECT record_attrid, idx, field_attrid, alias, required
                 FROM repo_record_template
-                ORDER BY record_attrid, idx, child_attrid ASC
+                ORDER BY record_attrid, idx, field_attrid ASC
                 """;
 
         try {
@@ -65,7 +65,7 @@ class RecordConfigurator {
 
                             int recordAttrid = rs.getInt("record_attrid");
                             int idx = rs.getInt("idx");
-                            int childAttrId = rs.getInt("child_attrid");
+                            int childAttrId = rs.getInt("field_attrid");
                             String alias = rs.getString("alias");
                             boolean required = rs.getBoolean("required");
 
@@ -112,12 +112,12 @@ class RecordConfigurator {
             // repo_record_template (
             //    record_attrid  INT  NOT NULL,      -- attrId of the RECORD attribute
             //    idx              INT  NOT NULL,
-            //    child_attrid     INT  NOT NULL,      -- sub-attribute
+            //    field_attrid     INT  NOT NULL,      -- sub-attribute
             //    alias            TEXT NULL,
             //    required         BOOLEAN NOT NULL DEFAULT FALSE,
             // }
             String sql = """
-                    INSERT INTO repo_record_template (record_attrid, idx, child_attrid, alias, required)
+                    INSERT INTO repo_record_template (record_attrid, idx, field_attrid, alias, required)
                     VALUES (?,?,?,?,?)
                     """;
 

@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
 
 public final class RecordValue extends Value<Attribute<?>> {
     public record AttributeReference(int refAttrId, long refValueId) {}
-    private final Collection<AttributeReference> initialReferences = new ArrayList<>();
+    private final Collection<AttributeReference> claimedReferences = new ArrayList<>();
 
     /**
-     * Creates a <I>new</I> long value
+     * Creates a <I>new</I> record value
      */
     RecordValue() {
         super();
@@ -53,9 +53,31 @@ public final class RecordValue extends Value<Attribute<?>> {
         super(rs);
     }
 
-    public Collection<AttributeReference> getInitialReferences() {
-        return initialReferences;
+    public Collection<AttributeReference> getClaimedReferences() {
+        return claimedReferences;
     }
+
+    /**
+     * Have any values been modified?
+     * TODO! NOT SURE IF THIS IS NEEDED.
+    public boolean isModified() {
+        // The generic 'isModified()' in superclass 'Value' only checks structure.
+        // In this case it means that it does not check if individual attributes
+        // in record 'values' has been modified.
+        boolean _isModified = super.isModified();
+        if (_isModified) {
+            return true;
+        }
+
+        // Specialisation for record values
+        for (Attribute<?> value : values) {
+            if (value.isModified()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    */
 
     /**
      * Inflate an <I>existing</I> string value from a result set.
@@ -84,13 +106,14 @@ public final class RecordValue extends Value<Attribute<?>> {
          *
          * Therefore, there is nothing to be done and
          * the values have to be "injected" one-by-one
-         * as they are later instantiated.
+         * as they are later instantiated. So, we 'claim'
+         * these attributes for this record.
          */
 
         for (JsonNode element : node) {
             int refAttrId = element.get("ref_attrid").asInt();
             long refValueId = element.get("ref_valueid").asLong();
-            initialReferences.add(new AttributeReference(refAttrId, refValueId));
+            claimedReferences.add(new AttributeReference(refAttrId, refValueId));
         }
     }
 
@@ -126,30 +149,26 @@ public final class RecordValue extends Value<Attribute<?>> {
     }
 
     /* package accessible only */
-    void toJson(
+    void toInternalJson(
             ArrayNode attributes,
-            ObjectNode attributeNode,
-            boolean complete,
-            boolean flat
+            ObjectNode attributeNode
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode valueNode = null;
-        if (flat) {
-            valueNode = attributeNode.putArray(COLUMN_NAME);
-        }
+        valueNode = attributeNode.putArray(VALUE_PROPERTY_NAME);
 
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' either in 'unit' (if flat) or in
             // record parent attribute if not.
             ObjectNode nestedAttributeNode = attributes.addObject();
-            nestedAttribute.injectJson(attributes, nestedAttributeNode, complete, flat);
+            nestedAttribute.toInternalJson(attributes, nestedAttributeNode);
 
-            // If flat (and thus having the nested attribute in the unit), then
+            // Attributes are nested at unit level, so
             // we need to describe additional relations.
-            if (flat && null != valueNode) {
+            if (null != valueNode) {
                 // Add reference to that attribute within this record attribute
                 ObjectNode nestedAttributeRefNode = valueNode.addObject();
 
-                int attrId = nestedAttribute.getAttrId();
+                int attrId = nestedAttribute.getId();
                 nestedAttributeRefNode.put("ref_attrid", attrId);
 
                 long valueId = nestedAttribute.getValueId();
@@ -162,12 +181,23 @@ public final class RecordValue extends Value<Attribute<?>> {
         }
     }
 
+    void toExternalJson(
+            ArrayNode attributes,
+            ObjectNode attributeNode
+    ) throws AttributeTypeException, AttributeValueException {
+        for (Attribute<?> nestedAttribute : values) {
+            // 'attributes' are represented in record parent attribute.
+            ObjectNode nestedAttributeNode = attributes.addObject();
+            nestedAttribute.toExternalJson(attributes, nestedAttributeNode);
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder result = new StringBuilder();
-        if (!initialReferences.isEmpty()) {
+        if (!claimedReferences.isEmpty()) {
             result.append("[");
-            result.append(initialReferences.stream()
+            result.append(claimedReferences.stream()
                     .map(ref -> "#" + ref.refAttrId + ":" + ref.refValueId)
                     .collect(Collectors.joining(", ")));
             result.append("]+");

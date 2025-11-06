@@ -27,7 +27,7 @@ import javax.sql.DataSource;
 
 public final class LoggingActionListener implements ActionListener {
     private static final Logger log = LoggerFactory.getLogger(LoggingActionListener.class);
-    private static final String LOG_STATEMENT = "INSERT INTO repo_log (tenantid,unitid,event,logentry) VALUES (?,?,?,?)";
+    private static final String LOG_STATEMENT = "INSERT INTO repo_log (tenantid,unitid,unitver,event,logentry) VALUES (?,?,?,?,?)";
     private DataSource ds;
 
     public LoggingActionListener() {
@@ -46,6 +46,7 @@ public final class LoggingActionListener implements ActionListener {
                     int i = 0;
                     pStmt.setInt(++i, unit.getTenantId());
                     pStmt.setLong(++i, unit.getUnitId());
+                    pStmt.setInt(++i, unit.getVersion());
                     pStmt.setInt(++i, e.getActionType().getLevel()); // event
                     pStmt.setString(++i, e.getDescription()); // logentry
 

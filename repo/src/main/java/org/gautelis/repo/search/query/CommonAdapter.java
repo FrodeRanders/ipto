@@ -154,7 +154,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                 if (leaf.getItem() instanceof AttributeSearchItem<?>) {
                     Optional<String> label = leaf.getLabel();
                     if (label.isPresent()) {
-                        return Optional.of("(SELECT * FROM " + label.get() + ")");
+                        return Optional.of("(SELECT " + UNIT_VERSION_TENANTID.plain() + ", " + UNIT_VERSION_UNITID.plain() + " FROM " + label.get() + ")");
                     } else {
                         String info = "Leaf expression must have a label";
                         throw new IllegalArgumentException(info);
@@ -297,7 +297,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         for (LeafExpression<?> leaf : unitLeaves) {
             if (leaf.getItem() instanceof UnitSearchItem<?> usi) {
                 switch (usi.getColumn()) {
-                    case UNIT_TENANTID -> commonConstraintValues.put(UNIT_TENANTID.toString(), usi);
+                    case UNIT_KERNEL_TENANTID -> commonConstraintValues.put(UNIT_KERNEL_TENANTID.toString(), usi);
                 }
             }
         }
@@ -359,11 +359,16 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             statement += "WITH " + join(attributeConstraints, ", ") + ", ";
             statement += "final AS " + attributeConstraintLogic.get() + " ";
         }
-        statement += "SELECT " + UNIT_TENANTID + ", " + UNIT_UNITID + ", " + UNIT_CREATED + " ";
-        statement += "FROM " + UNIT + " ";
-        statement += "JOIN final f USING (" + UNIT_TENANTID.plain() + ", " + UNIT_UNITID.plain() + ") ";
+        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
+        statement += "FROM " + UNIT_KERNEL + ", " + UNIT_VERSION + " ";
+        if (!attributeLeaves.isEmpty() && attributeConstraintLogic.isPresent()) {
+            statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
+        }
+        statement += "WHERE " + UNIT_KERNEL_TENANTID + " = " + UNIT_VERSION_TENANTID + " ";
+        statement += "AND " + UNIT_KERNEL_UNITID + " = " + UNIT_VERSION_UNITID + " ";
+        statement += "AND " + UNIT_KERNEL_LASTVER + " = " + UNIT_VERSION_UNITVER + " ";
         if (!unitLeaves.isEmpty() && unitConstraints.isPresent()) {
-            statement += "WHERE " + unitConstraints.get() + " ";
+            statement += "AND " + unitConstraints.get() + " ";
         }
         if (!orderBy.isEmpty()) {
             statement += "ORDER BY " + orderBy + " ";
@@ -403,8 +408,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                         int i = 0;
                         for (SearchItem<?> item : preparedItems) {
                             if (item instanceof AttributeSearchItem<?>) {
-                                if (ccv.containsKey(UNIT_TENANTID.toString())) {
-                                    int tenantId = (Integer) ccv.get(UNIT_TENANTID.toString()).getValue();
+                                if (ccv.containsKey(UNIT_KERNEL_TENANTID.toString())) {
+                                    int tenantId = (Integer) ccv.get(UNIT_KERNEL_TENANTID.toString()).getValue();
                                     pStmt.setInt(++i, tenantId);
                                 }
                             }

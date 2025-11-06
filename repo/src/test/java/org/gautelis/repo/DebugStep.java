@@ -2,7 +2,6 @@ package org.gautelis.repo;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.GraphQL;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
 import org.gautelis.repo.model.Repository;
@@ -19,10 +18,10 @@ public class DebugStep {
 
     public static void main(String... args) {
         try (InputStreamReader sdl = new InputStreamReader(
-                Objects.requireNonNull(RepositoryTest.class.getResourceAsStream("unit-schema.graphqls"))
+                Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            Optional<GraphQL> _graphQL = repo.loadConfiguration(sdl);
+            Optional<graphql.GraphQL> _graphQL = repo.loadConfiguration(sdl);
             if (_graphQL.isEmpty()) {
                 log.error("Could not load configuration");
                 System.exit(1);
@@ -52,7 +51,7 @@ public class DebugStep {
                 }
                 """;
 
-            GraphQL graphQL = _graphQL.get();
+            graphql.GraphQL graphQL = _graphQL.get();
             ExecutionResult result = graphQL.execute(
                     ExecutionInput.newExecutionInput()
                             .query(query)
