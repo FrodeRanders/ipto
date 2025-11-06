@@ -13,57 +13,52 @@ schema {
 
 ##############  directive definitions ############################
 directive @datatypeRegistry on ENUM
-directive @datatype(id: Int!, basictype: String = null) on ENUM_VALUE
-
+directive @datatype(id: Int!) on ENUM_VALUE
 directive @attributeRegistry on ENUM
-directive @attribute(id: Int!, datatype: DataTypes!, array: Boolean = false, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
-
+directive @attribute(id: Int!, datatype: DataTypes!, array: Boolean = true, alias: String = null, uri: String = null, description: String = null) on ENUM_VALUE
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @unit(id: Int!) on OBJECT
+directive @unit(id: Int, name: String) on OBJECT # either id or name
 directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  basictype: "text")
-    TIME      @datatype(id: 2,  basictype: "timestamptz")
-    INTEGER   @datatype(id: 3,  basictype: "int")
-    LONG      @datatype(id: 4,  basictype: "bigint")
-    DOUBLE    @datatype(id: 5,  basictype: "double precision")
-    BOOLEAN   @datatype(id: 6,  basictype: "boolean")
-    DATA      @datatype(id: 7,  basictype: "bytea")
+    STRING    @datatype(id: 1)
+    TIME      @datatype(id: 2)
+    INTEGER   @datatype(id: 3)
+    LONG      @datatype(id: 4)
+    DOUBLE    @datatype(id: 5)
+    BOOLEAN   @datatype(id: 6)
+    DATA      @datatype(id: 7)
     RECORD    @datatype(id: 99)
 }
 
 ############## attributes ############################
 enum Attributes @attributeRegistry {
     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-    TITLE @attribute(id: 1, datatype: STRING, array: false,
-        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title"
-   
-    ... 
-        
-    # Domain specific attributes
-    ORDER_ID    @attribute(id: 1001, datatype: STRING)
-    DEADLINE    @attribute(id: 1002, datatype: TIME)
-    READING     @attribute(id: 1003, datatype: DOUBLE, array: true)
-    SHIPMENT_ID @attribute(id: 1004, datatype: STRING)
-    SHIPMENT    @attribute(id: 1099, datatype: RECORD)
+    dcTitle @attribute(id: 1, datatype: STRING, array: false,
+        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title"   
+    ...
+
+    # Some domain specific attributes (used in demo)
+    dmoOrderId    @attribute(id: 1001, datatype: STRING, array: false)
+    dmoDeadline   @attribute(id: 1002, datatype: TIME, array: false)
+    dmoReading    @attribute(id: 1003, datatype: DOUBLE, array: true) # i.e. capable of handling multiple values
+    dmoShipment   @attribute(id: 1099, datatype: RECORD, array: false)
+    dmoShipmentId @attribute(id: 2000, datatype: STRING)
 }
 
 ##############  object & unit types ##############################
-scalar Long
-scalar DateTime
 scalar Bytes    # Base-64 strings (JSON) on the wire
 
-type Shipment @record(attribute: SHIPMENT) {
-    shipmentId  : String  @use(attribute: SHIPMENT_ID)
-    deadline : DateTime   @use(attribute: DEADLINE)
-    reading  : [Float]    @use(attribute: READING)
+type Shipment @record(attribute: dmoShipment) {
+    shipmentId  : String  @use(attribute: dmoShipmentId)
+    deadline : DateTime   @use(attribute: dmoDeadline)
+    reading  : [Float]    @use(attribute: dmoReading)
 }
 
 type PurchaseOrder @unit(id: 42) {
-    orderId  : String    @use(attribute: ORDER_ID)
-    shipment : Shipment! @use(attribute: SHIPMENT)
+    orderId  : String    @use(attribute: dmoOrderId)
+    shipment : Shipment! @use(attribute: dmoShipment)
 }
 
 ##############  Query related ####################################
@@ -165,18 +160,18 @@ Result:
             value.add("Shipment information for *order id*");
         });
     
-        unit.withAttribute("SHIPMENT", Attribute.class, attr -> {
+        unit.withAttribute("shipment", Attribute.class, attr -> {
             RecordAttribute recrd = new RecordAttribute(attr);
 
-            recrd.withNestedAttributeValue(unit, "ORDER_ID", String.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoOrderId", String.class, value -> {
                 value.add("*order id*");
             });
 
-            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
                 value.add(Instant.now()); // brutal :)
             });
 
-            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -195,7 +190,7 @@ Result:
         expr = SearchExpression.assembleAnd(expr, SearchItem.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         // Constrain to specific string attribute, in this case 'order ID'
-        attributeId = getAttributeId("ORDER_ID", repo);
+        attributeId = getAttributeId("dmoOrderId", repo);
         SearchItem<String> stringSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, "*order id*");
         expr = SearchExpression.assembleAnd(expr, stringSearchItem);
 

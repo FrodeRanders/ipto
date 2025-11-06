@@ -150,20 +150,20 @@ public class PerformanceTest {
                         value.add(now);
                     });
 
-                    childUnit.withAttributeValue("ORDER_ID", String.class, value -> {
+                    childUnit.withAttributeValue("dmoOrderId", String.class, value -> {
                         value.add("*some order id*");
                     });
 
-                    childUnit.withRecordAttribute("SHIPMENT", recrd -> {
-                        recrd.withNestedAttributeValue(childUnit, "SHIPMENT_ID", String.class, value -> {
+                    childUnit.withRecordAttribute("dmoShipment", recrd -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoShipmentId", String.class, value -> {
                             value.add("*some shipment id*");
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "DEADLINE", Instant.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoDeadline", Instant.class, value -> {
                             value.add(now);
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "READING", Double.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmoReading", Double.class, value -> {
                             value.add(Math.PI);
                             value.add(Math.E);
                         });

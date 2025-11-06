@@ -51,20 +51,20 @@ public class RecordsTest {
             value.add("Handling of " + "*some order id*");
         });
 
-        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+        unit.withAttributeValue("dmoOrderId", String.class, value -> {
             value.add("*some order id*");
         });
 
-        unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
+        unit.withRecordAttribute("dmoShipment", recrd -> {
+            recrd.withNestedAttributeValue(unit, "dmoShipmentId", String.class, value -> {
                 value.add("*some shipment id*");
             });
 
-            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
                 value.add(Instant.now());
             });
 
-            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });

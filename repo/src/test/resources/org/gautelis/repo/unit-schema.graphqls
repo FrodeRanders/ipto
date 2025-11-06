@@ -13,10 +13,7 @@ the system -- but they need to be referable in the schema.
 All of the following attributes are defined using these basic data types.
 """
 directive @datatypeRegistry on ENUM
-directive @datatype(
-    id: Int!
-    backingtype: String = null
-) on ENUM_VALUE
+directive @datatype(id: Int) on ENUM_VALUE
 
 """
 @attributeRegistry annotates an enum, marking it as being definitions
@@ -49,13 +46,13 @@ directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
-    STRING    @datatype(id: 1,  backingtype: "text")
-    TIME      @datatype(id: 2,  backingtype: "timestamptz")
-    INTEGER   @datatype(id: 3,  backingtype: "int")
-    LONG      @datatype(id: 4,  backingtype: "bigint")
-    DOUBLE    @datatype(id: 5,  backingtype: "double precision")
-    BOOLEAN   @datatype(id: 6,  backingtype: "boolean")
-    DATA      @datatype(id: 7,  backingtype: "bytea")
+    STRING    @datatype(id: 1)
+    TIME      @datatype(id: 2)
+    INTEGER   @datatype(id: 3)
+    LONG      @datatype(id: 4)
+    DOUBLE    @datatype(id: 5)
+    BOOLEAN   @datatype(id: 6)
+    DATA      @datatype(id: 7)
     RECORD    @datatype(id: 99)
 }
 

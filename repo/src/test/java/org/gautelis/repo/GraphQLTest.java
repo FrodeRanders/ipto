@@ -64,20 +64,20 @@ public class GraphQLTest {
             value.add("abc");
         });
 
-        unit.withAttributeValue("ORDER_ID", String.class, value -> {
+        unit.withAttributeValue("dmoOrderId", String.class, value -> {
             value.add("*some order id*");
         });
 
-        unit.withRecordAttribute("SHIPMENT", recrd -> {
-            recrd.withNestedAttributeValue(unit, "SHIPMENT_ID", String.class, value -> {
+        unit.withRecordAttribute("dmoShipment", recrd -> {
+            recrd.withNestedAttributeValue(unit, "dmoShipmentId", String.class, value -> {
                 value.add(aSpecificString);
             });
 
-            recrd.withNestedAttributeValue(unit, "DEADLINE", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
                 value.add(aSpecificInstant);
             });
 
-            recrd.withNestedAttributeValue(unit, "READING", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -256,7 +256,7 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "SHIPMENT_ID",
+                        "attr", "dmoShipmentId",
                         "op", "EQ",
                         "value", specificString
                     )
@@ -314,7 +314,7 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "SHIPMENT_ID",
+                        "attr", "dmoShipmentId",
                         "op", "EQ",
                         "value", specificString
                 )
