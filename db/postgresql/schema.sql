@@ -458,11 +458,11 @@ ON repo_log (tenantid, unitid)
 -- Unit locks
 --
 -- The 'type' may have one of these values
---   1 - read lock
---   2 - existence lock
---   3 - write lock
+--   10 - read lock
+--   20 - existence lock
+--   30 - write lock
 --
--- Severity/guarantee: 1 < 2 < 3
+-- Severity/guarantee: 10 < 20 < 30
 --
 CREATE TABLE repo_lock (
 tenantid INT        NOT NULL,
