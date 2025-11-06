@@ -86,7 +86,7 @@ CREATE TABLE repo_unit_version (
     CONSTRAINT repo_unit_version_pk
         PRIMARY KEY (tenantid, unitid, unitver),
     CONSTRAINT repo_unit_version_krnl_exists
-        FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid)
+        FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
 )
 ;
 
@@ -178,9 +178,9 @@ CREATE TABLE repo_attribute_value (
     CONSTRAINT repo_attribute_value_attr_ex
         FOREIGN KEY (attrid) REFERENCES repo_attribute (attrid),
     CONSTRAINT repo_attribute_value_unit_ex1
-        FOREIGN KEY (tenantid, unitid, unitverfrom) REFERENCES repo_unit_version (tenantid, unitid, unitver),
+        FOREIGN KEY (tenantid, unitid, unitverfrom) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE,
     CONSTRAINT repo_attribute_value_unit_ex2
-        FOREIGN KEY (tenantid, unitid, unitverto) REFERENCES repo_unit_version (tenantid, unitid, unitver)
+        FOREIGN KEY (tenantid, unitid, unitverto) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE
 )
 ;
 
