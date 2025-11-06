@@ -542,16 +542,29 @@ public class Unit implements Cloneable {
 
     private void readEntry(ResultSet rs) throws DatabaseReadException {
         try {
-            // Read kernel information
+            // Kernel information
             tenantId = rs.getInt("tenantid");
             unitId = rs.getLong("unitid");
             corrId = rs.getObject("corrid", UUID.class);
-            unitName = rs.getString("name");
+            unitStatus = Status.of(rs.getInt("status"));
+            int lastVersion = rs.getInt("lastver");
+            createdTime = rs.getTimestamp("created").toInstant();
+
+            // Version information
+            unitVersion = rs.getInt("unitver");
+            unitName = rs.getString("unitname");
             if (rs.wasNull()) {
                 unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            unitStatus = Status.of(rs.getInt("status"));
-            createdTime = rs.getTimestamp("created").toInstant();
+            modifiedTime = rs.getTimestamp("modified").toInstant();
+
+            // Predicates
+            isReadOnly = lastVersion > unitVersion;
+
+            // In this context (i.e. with CLASSIC_LOAD == true in
+            // org.gautelis.repo.model.cache.UnitFactory), when inflating
+            // units from a result set, attributes are loaded later when
+            // first accessed.
 
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
@@ -562,24 +575,29 @@ public class Unit implements Cloneable {
         try {
             JsonNode root = MAPPER.readTree(json);
 
-            // unit
+            // Kernel information
             tenantId = root.path("tenantid").asInt();
             unitId = root.path("unitid").asLong();
-            unitVersion = root.path("unitver").asInt();
             corrId = UUID.fromString(root.path("corrid").asText());
+            unitStatus = Status.of(root.path("status").asInt());
+            createdTime = TimeHelper.parseInstant(root.get("created").asText());
+
+            // Version information
+            unitVersion = root.path("unitver").asInt();
             if (root.hasNonNull("unitname")) {
                 unitName = root.path("unitname").asText();
             } else {
                 unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            unitStatus = Status.of(root.path("status").asInt());
-            createdTime = TimeHelper.parseInstant(root.get("created").asText());
             modifiedTime = TimeHelper.parseInstant(root.get("modified").asText());
 
-            // Predicate
+            // Predicates
             isReadOnly = root.path("isreadonly").asBoolean();
 
-            // Handle attributes
+            // In this context (i.e. with CLASSIC_LOAD == false in
+            // org.gautelis.repo.model.cache.UnitFactory), when inflating
+            // units from JSON, attributes are already read and returned
+            // in the JSON, so we continue with preparing them now
             if (attributes == null) {
                 // Attributes that need some extra care in a subsequent step
                 Collection<Attribute<?>> recordAttributes = new ArrayList<>();
@@ -596,32 +614,6 @@ public class Unit implements Cloneable {
                     if (AttributeType.RECORD.equals(attribute.getType())) {
                         recordAttributes.add(attribute);
                     }
-
-                    /*
-                    if (AttributeType.RECORD.equals(attribute.getType())) {
-                        if (attribute.getValue() instanceof RecordValue recValue) {
-                            Collection<RecordValue.AttributeReference> refs = recValue.getInitialReferences();
-                            Iterator<RecordValue.AttributeReference> rit = refs.iterator();
-                            while (rit.hasNext()) {
-                                RecordValue.AttributeReference ref = rit.next();
-                                Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
-                                if (null != referredAttribute) {
-                                    recValue.set(referredAttribute);
-                                    rit.remove(); // Reference is now resolved
-
-                                    // remove attribute from unit-level, since it belongs at record-level
-                                    valueIdToAttribute.remove(ref.refValueId());
-                                }
-                            }
-
-                            // All initial references should be resolved by now
-                            if (!refs.isEmpty()) {
-                                // Is our algorithm sound?
-                                log.error("There are unresolved attribute references in record: {}", attribute);
-                            }
-                        }
-                    }
-                    */
 
                     log.debug("Inflated {}", attribute);
                 }

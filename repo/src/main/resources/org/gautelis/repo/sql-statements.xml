@@ -46,7 +46,7 @@
       Call with: (tenantId, unitId, unitVersion)
     -->
     <entry key="sql.unit.get">
-        SELECT tenantid, unitid, corrid, status, lastver, created, unitver, unitname, modified
+        SELECT uk.tenantid, uk.unitid, uk.corrid, uk.status, uk.lastver, uk.created, uv.unitver, uv.unitname, uv.modified
         FROM repo_unit_kernel uk
         INNER JOIN repo_unit_version uv
             ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid)
@@ -58,10 +58,10 @@
       Call with: (tenantId, unitId)
     -->
     <entry key="sql.unit.get_latest">
-        SELECT tenantid, unitid, corrid, status, lastver, created, unitver, unitname, modified
+        SELECT uk.tenantid, uk.unitid, uk.corrid, uk.status, uk.lastver, uk.created, uv.unitver, uv.unitname, uv.modified
         FROM repo_unit_kernel uk
         INNER JOIN repo_unit_version uv
-            ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.latestver = uv.unitver)
+            ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver)
         WHERE (uk.tenantid=? AND uk.unitid=?)
     </entry>
 

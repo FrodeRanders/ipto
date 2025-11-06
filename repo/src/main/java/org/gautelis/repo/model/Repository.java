@@ -92,10 +92,7 @@ public class Repository {
     }
 
     /**
-     * Searches for <B>all</B> units with status 'pending disposal',
-     * <I>optionally</I> for a specific type.
-     * <p>
-     * Provide 'null' values for optional constraints if not applicable.
+     * Searches for <B>all</B> units with unit status 'PENDING_DISPOSITION'.
      */
     private SearchResult getDisposedUnits(
             int tenantId,
@@ -150,7 +147,7 @@ public class Repository {
     /**
      * Dispose all objects marked as 'pending disposition'.
      * <p>
-     * Only objects with status of <B>INTERNAL_STATUS_PENDING_DISPOSITION</B>
+     * Only objects with unit status of <B>PENDING_DISPOSITION</B>
      * are disposed.
      *
      * @param writer an (optional) writer onto which progress information is printed
@@ -171,8 +168,7 @@ public class Repository {
 
 
     /**
-     * Searches for <B>all</B> units with specified status,
-     * <I>optionally</I> for a specific type.
+     * Searches for <B>all</B> units with specified status.
      */
     private SearchResult getUnits(
             Unit.Status status,
@@ -410,9 +406,6 @@ public class Repository {
      * This information is not persisted to database though. You
      * should be aware of the fact that you may have a <B>modified</B>
      * unit after this call.</I>
-     * <p>
-     * Currently only accepts the Association.CASE_ASSOCIATION
-     * association.
      */
     public void removeAssociation(
             Unit unit, AssociationType assocType, String reference
@@ -449,12 +442,8 @@ public class Repository {
         if (null == unit) {
             throw new InvalidParameterException("no unit");
         }
-        if (null == purpose || purpose.isEmpty()) {
-            purpose = "unspecified";
-        }
 
-        String _purpose = purpose;
-        boolean success = TimedExecution.run(context.getTimingData(), "lock unit", () -> unit.lock(type, _purpose));
+        boolean success = TimedExecution.run(context.getTimingData(), "lock unit", () -> unit.lock(type, purpose));
         if (success) {
             generateActionEvent(
                     unit,
@@ -477,9 +466,7 @@ public class Repository {
         }
 
         if (unit.isLocked()) {
-            for (Lock lock : unit.getLocks()) {
-                TimedExecution.run(context.getTimingData(), "unlock unit", unit::unlock);
-            }
+            TimedExecution.run(context.getTimingData(), "unlock unit", unit::unlock);
 
             generateActionEvent(
                     unit,

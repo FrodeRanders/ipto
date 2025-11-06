@@ -112,7 +112,11 @@ public class Lock {
                 int i = 0;
                 pStmt.setInt(++i, tenantId);
                 pStmt.setLong(++i, unitId);
-                pStmt.setString(++i, purpose);
+                if (null != purpose) {
+                    pStmt.setString(++i, purpose);
+                } else {
+                    pStmt.setNull(++i, java.sql.Types.VARCHAR);
+                }
                 pStmt.setInt(++i, type.getType());
                 pStmt.setNull(++i, java.sql.Types.TIMESTAMP); // ignore -- lock is infinite
                 Database.executeUpdate(pStmt);
