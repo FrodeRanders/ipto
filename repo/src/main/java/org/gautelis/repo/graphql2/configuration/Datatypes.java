@@ -4,7 +4,7 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.graphql2.model.CatalogDatatype;
-import org.gautelis.repo.graphql2.model.GqlDataTypeShape;
+import org.gautelis.repo.graphql2.model.GqlDatatypeShape;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -32,8 +32,8 @@ public final class Datatypes {
      *      ^                     ^
      *      | (a)                 | (b)
      */
-    static Map<String, GqlDataTypeShape> derive(TypeDefinitionRegistry registry) {
-        Map<String, GqlDataTypeShape> datatypes = new HashMap<>();
+    static Map<String, GqlDatatypeShape> derive(TypeDefinitionRegistry registry) {
+        Map<String, GqlDatatypeShape> datatypes = new HashMap<>();
 
         // Locate enums having a "datatypeRegistry" directive
         for (EnumTypeDefinition enumeration : registry.getTypes(EnumTypeDefinition.class)) {
@@ -64,7 +64,7 @@ public final class Datatypes {
                             }
 
                             if (/* VALID? */ id > 0) {
-                                datatypes.put(name, new GqlDataTypeShape(name, id));
+                                datatypes.put(name, new GqlDatatypeShape(name, id));
                             }
                         }
                     }

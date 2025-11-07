@@ -103,7 +103,7 @@
       Get all available attributes.
     -->
     <entry key="sql.attribute.get_all">
-        SELECT attrid, attrname, attrtype, scalar, created FROM repo_attribute
+        SELECT attrid, qualname, attrname, alias, attrtype, scalar, created FROM repo_attribute
     </entry>
 
     <!--

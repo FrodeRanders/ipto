@@ -65,8 +65,8 @@ public class PerformanceTest {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 500; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = 50; //
+        final int numberOfChildren = 10; //
 
         try {
             Instant firstParentCreated = null;
@@ -150,20 +150,20 @@ public class PerformanceTest {
                         value.add(now);
                     });
 
-                    childUnit.withAttributeValue("dmoOrderId", String.class, value -> {
+                    childUnit.withAttributeValue("dmo:orderId", String.class, value -> {
                         value.add("*some order id*");
                     });
 
-                    childUnit.withRecordAttribute("dmoShipment", recrd -> {
-                        recrd.withNestedAttributeValue(childUnit, "dmoShipmentId", String.class, value -> {
+                    childUnit.withRecordAttribute("dmo:shipment", recrd -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmo:shipmentId", String.class, value -> {
                             value.add("*some shipment id*");
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "dmoDeadline", Instant.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmo:deadline", Instant.class, value -> {
                             value.add(now);
                         });
 
-                        recrd.withNestedAttributeValue(childUnit, "dmoReading", Double.class, value -> {
+                        recrd.withNestedAttributeValue(childUnit, "dmo:reading", Double.class, value -> {
                             value.add(Math.PI);
                             value.add(Math.E);
                         });

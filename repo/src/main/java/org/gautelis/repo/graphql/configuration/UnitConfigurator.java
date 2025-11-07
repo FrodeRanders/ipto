@@ -20,11 +20,11 @@ import java.util.Map;
 class UnitConfigurator {
     private static final Logger log = LoggerFactory.getLogger(UnitConfigurator.class);
 
-    private record ExistingUnitMeta(int templateId, String name, int attrId, String alias, int idx) {
+    private record ExistingUnitMeta(int templateId, String nameInSchema, int attrId, String alias, int idx) {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder("Existing unit template for ");
-            sb.append(name).append(" {");
+            sb.append(nameInSchema).append(" {");
             sb.append("attrId=").append(templateId);
             sb.append(", attr-attrId=").append(attrId);
             sb.append(", alias=").append(alias);
@@ -102,10 +102,10 @@ class UnitConfigurator {
         }
 
         if (/* VALID? */ templateId > 0) {
-            final String unitName = type.getName();
+            final String nameInSchema = type.getName();
             final int _templateId = templateId;
 
-            runtimeWiring.type(unitName, builder -> {
+            runtimeWiring.type(nameInSchema, builder -> {
                 // ----------------------------------------------------------------------
                 // Store
                 // ----------------------------------------------------------------------
@@ -137,7 +137,7 @@ class UnitConfigurator {
                             Database.usePreparedStatement(conn, templateSql, templateStmt -> {
                                 try {
                                     templateStmt.setInt(1, _templateId);
-                                    templateStmt.setString(2, unitName);
+                                    templateStmt.setString(2, nameInSchema);
 
                                     Database.execute(templateStmt);
 
@@ -147,7 +147,7 @@ class UnitConfigurator {
 
                                     if (sqlState.startsWith("23")) {
                                         // 23505 : duplicate key value violates unique constraint "repo_unit_template_pk"
-                                        log.info("Unit template {} seems to already have been loaded", unitName);
+                                        log.info("Unit template {} seems to already have been loaded", nameInSchema);
                                     } else {
                                         throw sqle;
                                     }
@@ -187,17 +187,17 @@ class UnitConfigurator {
                                                 // ----------------------------------------------------------------------
                                                 // First check whether this unit template already exists in local database
                                                 // ----------------------------------------------------------------------
-                                                final String key = unitName + "." + fieldName;
+                                                final String key = nameInSchema + "." + fieldName;
                                                 ExistingUnitMeta existingTemplate = existingTemplates.get(key);
                                                 if (null != existingTemplate) {
                                                     // Already known
-                                                    if (existingTemplate.attrId != attrId) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", unitName, fieldName, existingTemplate.attrId);
+                                                    if (existingTemplate.attrId() != attrId) {
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'attribute' {} -- skipping", nameInSchema, fieldName, existingTemplate.attrId);
                                                         return;
                                                     }
 
-                                                    if (existingTemplate.idx != idx) {
-                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", unitName, fieldName, existingTemplate.idx);
+                                                    if (existingTemplate.idx() != idx) {
+                                                        log.warn("Will not load unit template {}.{}. New definition differs on existing 'index' {} -- skipping", nameInSchema, fieldName, existingTemplate.idx);
                                                         return;
                                                     }
 
@@ -233,7 +233,7 @@ class UnitConfigurator {
                                                         return null;
                                                     }
 
-                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", fieldType.isArray() ? fieldName + "[]" : fieldName, unitName, box.getTenantId(), box.getUnitId());
+                                                    log.trace("Fetching attribute {} from unit {}: {}.{}", fieldType.isArray() ? fieldName + "[]" : fieldName, nameInSchema, box.getTenantId(), box.getUnitId());
 
                                                     if (fieldType.isArray()) {
                                                         return repoService.getArray(box, attrId);
@@ -242,7 +242,7 @@ class UnitConfigurator {
                                                     }
                                                 };
                                                 builder.dataFetcher(fieldName, fetcher);
-                                                log.info("Wiring: {}>{}", unitName, fieldName);
+                                                log.info("Wiring: {} > {}", nameInSchema, fieldName);
 
                                                 //
                                                 if (identical) {

@@ -59,7 +59,7 @@ public final class Records {
                 if (null != recordAttributeName && !recordAttributeName.isEmpty()) {
                     GqlAttributeShape recordAttributeDef = attributes.get(recordAttributeName);
                     if (null != recordAttributeDef) {
-                        final int recordAttributeId = recordAttributeDef.attributeId;
+                        final int recordAttributeId = recordAttributeDef.attrId;
 
                         List<GqlFieldShape> recordFields = new ArrayList<>();
                         for (FieldDefinition f : type.getFieldDefinitions()) {
@@ -80,7 +80,7 @@ public final class Records {
                                     GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
                                     if (null != fieldAttributeDef) {
                                         // --- (e) ---
-                                        String fieldAttributeName = fieldAttributeDef.attributeName;
+                                        String fieldAttributeName = fieldAttributeDef.name;
 
                                         recordFields.add(new GqlFieldShape(recordName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
                                         break; // In the unlikely case there are several @use

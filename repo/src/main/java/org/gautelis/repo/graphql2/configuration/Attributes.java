@@ -5,7 +5,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.graphql2.model.CatalogAttribute;
 import org.gautelis.repo.graphql2.model.GqlAttributeShape;
-import org.gautelis.repo.graphql2.model.GqlDataTypeShape;
+import org.gautelis.repo.graphql2.model.GqlDatatypeShape;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -29,17 +29,17 @@ public final class Attributes {
     /*
      * enum Attributes @attributeRegistry {
      *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-     *     TITLE @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
+     *     dcTitle @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
      *     ...
-     *     SHIPMENT_ID @attribute(id: 1004, datatype: STRING)
-     *     SHIPMENT    @attribute(id: 1099, datatype: RECORD, array: false)
+     *     shipmentId  @attribute(id: 1004, datatype: STRING)
+     *     shipment    @attribute(id: 1099, datatype: RECORD, array: false)
      * }
      *
-     * TITLE @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", qualname: "http:...", description: "...")
-     *   ^                  ^              ^              ^               ^                    ^                       ^
-     *   | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
+     * dcTitle @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", qualname: "http:...", description: "...")
+     *     ^                  ^              ^              ^               ^                    ^                       ^
+     *     | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
      */
-    static Map<String, GqlAttributeShape> derive(TypeDefinitionRegistry registry, Map<String, GqlDataTypeShape> datatypes) {
+    static Map<String, GqlAttributeShape> derive(TypeDefinitionRegistry registry, Map<String, GqlDatatypeShape> datatypes) {
         Map<String, GqlAttributeShape> attributes = new HashMap<>();
 
         // Locate enums having a "attributeRegistry" directive
@@ -49,7 +49,7 @@ public final class Attributes {
                 if ("attributeRegistry".equals(directive.getName())) {
                     for (EnumValueDefinition enumValueDefinition : enumeration.getEnumValueDefinitions()) {
                         // --- (a) ---
-                        String nameInSchema = enumValueDefinition.getName();
+                        String fieldNameInSchema = enumValueDefinition.getName();
 
                         List<Directive> enumValueDirectives = enumValueDefinition.getDirectives();
                         for (Directive enumValueDirective : enumValueDirectives) {
@@ -66,7 +66,7 @@ public final class Attributes {
                             arg = enumValueDirective.getArgument("datatype");
                             if (null != arg) {
                                 EnumValue datatype = (EnumValue) arg.getValue();
-                                GqlDataTypeShape dataTypeDef = datatypes.get(datatype.getName());
+                                GqlDatatypeShape dataTypeDef = datatypes.get(datatype.getName());
                                 if (null != dataTypeDef) {
                                     attrType = dataTypeDef.id;
                                 } else {
@@ -86,15 +86,15 @@ public final class Attributes {
                                 isArray = vector.isValue();
                             }
 
-                            // --- (e) attribute name in ipto (i.e. an alias) ---
+                            // --- (e) attribute name in ipto ---
                             String nameInIpto;
-                            arg = enumValueDirective.getArgument("alias");
+                            arg = enumValueDirective.getArgument("name");
                             if (null != arg) {
                                 StringValue alias = (StringValue) arg.getValue();
                                 nameInIpto = alias.getValue();
                             } else {
                                 // field name will have to do
-                                nameInIpto = nameInSchema;
+                                nameInIpto = fieldNameInSchema;
                             }
 
                             // --- (f) ---
@@ -103,6 +103,9 @@ public final class Attributes {
                             if (null != arg) {
                                 StringValue uri = (StringValue) arg.getValue();
                                 qualName = uri.getValue();
+                            } else {
+                                // attribute name will have to do
+                                qualName = nameInIpto;
                             }
 
                             // --- (g) ---
@@ -114,14 +117,18 @@ public final class Attributes {
                             }
 
                             if (/* VALID? */ attrId > 0) {
-                                for (Map.Entry<String, GqlDataTypeShape> entry : datatypes.entrySet()) {
+                                for (Map.Entry<String, GqlDatatypeShape> entry : datatypes.entrySet()) {
                                     if (entry.getValue().id == attrType) {
                                         // --- (c) ---
                                         String attrTypeName = entry.getValue().name;
 
                                         //
-                                        GqlAttributeShape attributeShape = new GqlAttributeShape(nameInSchema, attrId, attrTypeName, isArray);
-                                        attributes.put(nameInSchema, attributeShape);
+                                        GqlAttributeShape attributeShape =
+                                                new GqlAttributeShape(
+                                                    fieldNameInSchema, attrId, attrTypeName, isArray,
+                                                    nameInIpto, qualName, description
+                                                );
+                                        attributes.put(fieldNameInSchema, attributeShape);
                                     }
                                 }
                             }
@@ -138,7 +145,7 @@ public final class Attributes {
         Map<String, CatalogAttribute> attributes = new HashMap<>();
 
         String sql = """
-                SELECT attrid, attrname, qualname, attrtype, scalar
+                SELECT attrid, alias, attrname, qualname, attrtype, scalar
                 FROM repo_attribute
                 """;
 
@@ -150,12 +157,14 @@ public final class Attributes {
                             int attributeId = rs.getInt("attrid");
                             String attributeName = rs.getString("attrname");
                             String qualifiedName = rs.getString("qualname");
+                            String alias = rs.getString("alias");
+                            if (rs.wasNull()) alias = attributeName;
                             int attributeTypeId = rs.getInt("attrtype");
                             boolean isArray = !rs.getBoolean("scalar"); // Note negation
 
-                            attributes.put(attributeName, new CatalogAttribute(
+                            attributes.put(alias, new CatalogAttribute(
                                 attributeId,
-                                null,
+                                alias,
                                 attributeName,
                                 qualifiedName,
                                 AttributeType.of(attributeTypeId),

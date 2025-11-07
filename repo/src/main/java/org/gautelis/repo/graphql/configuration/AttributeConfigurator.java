@@ -1,5 +1,6 @@
 package org.gautelis.repo.graphql.configuration;
 
+import com.fasterxml.uuid.Generators;
 import graphql.language.*;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.repo.db.Database;
@@ -20,12 +21,17 @@ import static org.gautelis.repo.model.AttributeType.RECORD;
 class AttributeConfigurator {
     private static final Logger log = LoggerFactory.getLogger(AttributeConfigurator.class);
 
-    private record ExistingAttributeMeta(int id, int attrType, boolean isArray, String attrName, String qualName) {
+    private record ExistingAttributeMeta(int id, int attrType, boolean isArray, String name, String qualName, String alias) {
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder("Existing attribute metadata for ");
-            sb.append(qualName).append(" {");
-            sb.append("alias=").append(attrName);
+            StringBuilder sb = new StringBuilder("Existing attribute ");
+            if (null != alias) {
+                sb.append("for '").append(alias).append("' ");
+            }
+            sb.append("{");
+            sb.append("id=").append(id);
+            sb.append(", name='").append(name).append('\'');
+            sb.append(", qual-name='").append(qualName).append('\'');
             sb.append(", type=").append(AttributeType.of(attrType));
             sb.append(", is-array=").append(isArray);
             sb.append("}");
@@ -45,7 +51,7 @@ class AttributeConfigurator {
         Map<String, ExistingAttributeMeta> existingAttributes = new HashMap<>();
 
         String sql = """
-                SELECT attrid, attrtype, scalar, attrname, qualname
+                SELECT attrid, attrtype, scalar, attrname, qualname, alias
                 FROM repo_attribute
                 """;
 
@@ -57,11 +63,15 @@ class AttributeConfigurator {
                             int attrId = rs.getInt("attrid");
                             int attrType = rs.getInt("attrtype");
                             boolean isArray = !rs.getBoolean("scalar"); // Note negation
-                            String attrName = rs.getString("attrname");
+                            String name = rs.getString("attrname");
                             String qualName = rs.getString("qualname");
+                            String alias = rs.getString("alias");
+                            if (rs.wasNull()) {
+                                alias = null;
+                            }
 
-                            ExistingAttributeMeta metadata = new ExistingAttributeMeta(attrId, attrType, isArray, attrName, qualName);
-                            existingAttributes.put(qualName, metadata);
+                            ExistingAttributeMeta metadata = new ExistingAttributeMeta(attrId, attrType, isArray, name, qualName, alias);
+                            existingAttributes.put(name, metadata);
                             log.trace(metadata.toString());
                         }
                     }
@@ -86,8 +96,8 @@ class AttributeConfigurator {
         Map<String, ExistingAttributeMeta> existingAttributes = loadExisting();
 
         String sql = """
-                INSERT INTO repo_attribute (attrid, attrtype, scalar, attrname, qualname)
-                VALUES (?,?,?,?,?)
+                INSERT INTO repo_attribute (attrid, attrtype, scalar, attrname, qualname, alias)
+                VALUES (?,?,?,?,?,?)
                 """;
 
         try {
@@ -97,7 +107,7 @@ class AttributeConfigurator {
 
                     Database.usePreparedStatement(conn, sql, pStmt -> {
                         for (EnumValueDefinition enumValueDefinition : enumType.getEnumValueDefinitions()) {
-                            String nameInSchema = enumValueDefinition.getName();
+                            String fieldNameInSchema = enumValueDefinition.getName(); // i.e. attribute alias
 
                             List<Directive> enumValueDirectives = enumValueDefinition.getDirectives();
                             for (Directive enumValueDirective : enumValueDirectives) {
@@ -154,20 +164,20 @@ class AttributeConfigurator {
                                     pStmt.setBoolean(3, !isArray); // Note: negation
                                 }
 
-                                // 4: attribute name in ipto (i.e. an alias) --------------------------
+                                // 4: attribute name in ipto -----------------------------------------
                                 String nameInIpto;
-                                arg = enumValueDirective.getArgument("alias");
+                                arg = enumValueDirective.getArgument("name");
                                 if (null != arg) {
-                                    StringValue alias = (StringValue) arg.getValue();
-                                    nameInIpto = alias.getValue();
+                                    StringValue name = (StringValue) arg.getValue();
+                                    nameInIpto = name.getValue();
 
                                     pStmt.setString(4, nameInIpto);
 
                                     info += ", " + arg.getName();
-                                    info += "=" + nameInIpto;
+                                    info += "='" + nameInIpto + '\'';
                                 } else {
                                     // field name will have to do
-                                    nameInIpto = nameInSchema;
+                                    nameInIpto = fieldNameInSchema;
                                     pStmt.setString(4, nameInIpto);
                                 }
 
@@ -181,54 +191,64 @@ class AttributeConfigurator {
                                     pStmt.setString(5, qualName);
 
                                     info += ", " + arg.getName();
-                                    info += "=" + qualName;
+                                    info += "='" + qualName + '\'';
                                 } else {
-                                    // field name will have to do
-                                    qualName = nameInSchema;
+                                    // attribute name will have to do
+                                    qualName = nameInIpto;
                                     pStmt.setString(5, qualName);
                                 }
 
-                                // 6: description -------------------------------------------------------
+                                // 6: alias -------------------------------------------------------------
+                                {
+                                    pStmt.setString(6, fieldNameInSchema);
+                                }
+
+                                // 7: description -------------------------------------------------------
                                 String description = null;
                                 arg = enumValueDirective.getArgument("description");
                                 if (null != arg) {
                                     StringValue vector = (StringValue) arg.getValue();
                                     description = vector.getValue();
 
-                                    info += ", " + arg.getName();
-                                    info += "=" + description;
+                                    // TODO Handle description (repo_attribute_description)
+                                    info += ", " + arg.getName() + "=<truncated>";
                                 }
 
                                 info += ")";
 
                                 if (/* VALID? */ attrId > 0) {
-
                                     // ----------------------------------------------------------------------
-                                    // First check whether this attribute already exists in local database
+                                    // First check whether this attribute already exists in catalog
                                     // ----------------------------------------------------------------------
                                     boolean identical = false;
 
-                                    ExistingAttributeMeta existingAttribute = existingAttributes.get(qualName);
+                                    log.trace("Checking attribute {} {id={}, name={}, qual-name={}, type={}, vector={}}", attrId, fieldNameInSchema, nameInIpto, qualName, AttributeType.of(attrType), isArray);
+
+                                    ExistingAttributeMeta existingAttribute = existingAttributes.get(nameInIpto);
                                     if (null != existingAttribute) {
-                                        log.trace("Checking attribute {} {alias={}, type={}, vector={}}", qualName, nameInIpto, AttributeType.of(attrType), isArray);
 
                                         // This attribute has already been loaded -- check similarity
-                                        if (existingAttribute.isArray != isArray) {
+                                        if (existingAttribute.isArray() != isArray) {
                                             log.warn("Failed to load attribute {}. New definition differs on existing 'dimensionality' (vector) {} -- skipping", qualName, existingAttribute.isArray);
                                             continue;
                                         }
 
-                                        if (!existingAttribute.attrName.equals(nameInIpto)) {
-                                            log.warn("Failed to load attribute {}. New definition differs on existing 'attribute name' {} -- skipping", qualName, existingAttribute.attrName);
+                                        if (!existingAttribute.name().equals(nameInIpto)) {
+                                            log.warn("Failed to load attribute {}. New definition differs on existing 'attribute name' {} -- skipping", qualName, existingAttribute.name);
                                             continue;
                                         }
 
-                                        if (existingAttribute.attrType != attrType) {
+                                        if (null != existingAttribute.alias() && !fieldNameInSchema.equals(existingAttribute.alias())) {
+                                            log.warn("Failed to load attribute {}. New definition differs on existing 'attribute alias' {} -- skipping", qualName, existingAttribute.alias);
+                                            continue;
+                                        }
+
+                                        if (existingAttribute.attrType() != attrType) {
                                             log.warn("Failed to load attribute {}. New definition differs on existing 'attribute type' {} -- skipping", qualName, AttributeType.of(existingAttribute.attrType));
                                             continue;
                                         }
 
-                                        if (existingAttribute.id != attrId) {
+                                        if (existingAttribute.id() != attrId) {
                                             log.warn("Failed to load attribute {}. New definition differs on existing 'attribute ID' {} -- skipping", qualName, existingAttribute.id);
                                             continue;
                                         }
@@ -237,14 +257,14 @@ class AttributeConfigurator {
                                     }
 
                                     // We have several names for this attribute;
-                                    //  - the name used in the schema,
-                                    //  - the name used in IPTO,
-                                    //  - a qualified name (assumed globally unique).
+                                    //  - the name used in the schema, i.e. an "alias"
+                                    //  - the name used in IPTO, i.e. the attribute name
+                                    //  - a qualified name (assumed globally unique) for the attribute
                                     //
                                     // We need to be able to look up attributes both from a schema viewpoint
                                     // (name in schema) as well as from an IPTO viewpoint (name in IPTO).
-                                    Configurator.ProposedAttributeMeta attributeMeta = new Configurator.ProposedAttributeMeta(attrId, nameInSchema, attrType, isArray, nameInIpto, qualName, description);
-                                    attributesSchemaView.put(nameInSchema, attributeMeta);
+                                    Configurator.ProposedAttributeMeta attributeMeta = new Configurator.ProposedAttributeMeta(attrId, fieldNameInSchema, attrType, isArray, nameInIpto, qualName, description);
+                                    attributesSchemaView.put(fieldNameInSchema, attributeMeta);
                                     attributesIptoView.put(attrId, attributeMeta);
 
                                     //

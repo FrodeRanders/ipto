@@ -87,7 +87,7 @@ public final class Units {
                                 GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
                                 if (null != fieldAttributeDef) {
                                     // --- (e) ---
-                                    String fieldAttributeName = fieldAttributeDef.attributeName;
+                                    String fieldAttributeName = fieldAttributeDef.name;
 
                                     unitFields.add(new GqlFieldShape(unitName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
                                     break; // In the unlikely case there are several @use

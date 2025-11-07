@@ -120,6 +120,7 @@ CREATE TABLE repo_attribute (
 
     qualname    TEXT      NOT NULL,  -- qualified name of attribute
     attrname    TEXT      NOT NULL,  -- name of attribute
+    alias       TEXT      NULL,      -- optional alias of attribute
     attrtype    INT       NOT NULL,  -- defined in org.gautelis.repo.model.attributes.Type
     scalar      BOOLEAN   NOT NULL DEFAULT FALSE,
     created     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

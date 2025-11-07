@@ -38,7 +38,9 @@ public final class KnownAttributes {
 
     public static class AttributeInfo {
         public int id = 0;
+        public String qualName = null;
         public String name = null;
+        public String alias = null;
         public int type = 0; // illegal initial value
         public boolean forcedScalar = false;
         public Timestamp created = null;
@@ -62,7 +64,9 @@ public final class KnownAttributes {
                     while (rs.next()) {
                         AttributeInfo info = new AttributeInfo();
                         info.id = rs.getInt("attrid");
+                        info.qualName = rs.getString("qualname");
                         info.name = rs.getString("attrname");
+                        info.alias = rs.getString("alias");
                         info.type = rs.getInt("attrtype");
                         info.forcedScalar = rs.getBoolean("scalar");
                         info.created = rs.getTimestamp("created");

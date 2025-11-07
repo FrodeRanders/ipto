@@ -221,7 +221,7 @@ class RecordConfigurator {
                                                         }
                                                     };
                                                     builder.dataFetcher(fieldName, fetcher);
-                                                    log.info("Wiring: {} {}", type.getName(), fieldName);
+                                                    log.info("Wiring: {} > {}", type.getName(), fieldName);
 
                                                     //
                                                     if (identical) {

@@ -8,7 +8,7 @@ import java.util.Map;
  * Intermediate representation.
  */
 public class IntRep {
-    public final Map<String, GqlDataTypeShape> datatypes;
+    public final Map<String, GqlDatatypeShape> datatypes;
     public final Map<String, GqlAttributeShape> attributes;
     public final Map<String, GqlRecordShape> records;
     public final Map<String, GqlUnitShape> units;
@@ -23,7 +23,7 @@ public class IntRep {
     }
 
     public static IntRep fromGql(
-        Map<String, GqlDataTypeShape> datatypes,
+        Map<String, GqlDatatypeShape> datatypes,
         Map<String, GqlAttributeShape> attributes,
         Map<String, GqlRecordShape> records,
         Map<String, GqlUnitShape> units,
@@ -61,7 +61,7 @@ public class IntRep {
     public void dumpIr(String source, PrintStream out) {
         out.println("===< " + source + " >===");
         out.println("--- Datatypes ---");
-        for (Map.Entry<String, GqlDataTypeShape> entry : datatypes.entrySet()) {
+        for (Map.Entry<String, GqlDatatypeShape> entry : datatypes.entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();

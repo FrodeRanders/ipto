@@ -9,101 +9,148 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.io.Reader;
-import java.util.HashMap;
 import java.util.Map;
 
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
+    public record GqlViewpoint(
+            Map<String, GqlDatatypeShape> datatypes,
+            Map<String, GqlAttributeShape> attributes,
+            Map<String, GqlRecordShape> records,
+            Map<String, GqlUnitShape> templates,
+            Map<String, GqlOperationShape> operations
+    ) {}
+
+    public record CatalogViewpoint(
+            Map<String, CatalogDatatype> datatypes,
+            Map<String, CatalogAttribute> attributes,
+            Map<String, CatalogRecord> records,
+            Map<String, CatalogTemplate> units
+    ) {}
+
     private Configurator() {
     }
 
-    public static IntRep loadFromFile(Reader reader) {
+    public static GqlViewpoint loadFromFile(Reader reader) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
 
-        Map<String, GqlDataTypeShape> datatypes = Datatypes.derive(registry);
+        Map<String, GqlDatatypeShape> datatypes = Datatypes.derive(registry);
         Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
         Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
-        Map<String, GqlUnitShape> units = Units.derive(registry, attributes);
+        Map<String, GqlUnitShape> templates = Units.derive(registry, attributes);
         Map<String, GqlOperationShape> operations  = Operations.derive(registry);
 
-        // Merge into a single immutable IR
-        return IntRep.fromGql(datatypes, attributes, records, units, operations);
+        return new GqlViewpoint(datatypes, attributes, records, templates, operations);
     }
 
-    public static IntRep loadFromCatalog(Repository repository) {
+    public static CatalogViewpoint loadFromCatalog(Repository repository) {
         Map<String, CatalogDatatype> datatypes = Datatypes.read(repository);
         Map<String, CatalogAttribute> attributes = Attributes.read(repository);
         Map<String, CatalogRecord> records = Records.read(repository);
-        Map<String, CatalogTemplate> units = Units.read(repository);
+        Map<String, CatalogTemplate> templates = Units.read(repository);
 
-        PrintStream out = System.out;
-        out.println("===< Catalog >===");
+        return new CatalogViewpoint(datatypes, attributes, records, templates);
+    }
+
+    public static void dump(GqlViewpoint gql, PrintStream out) {
+        out.println("===< GraphQL >===");
         out.println("--- Datatypes ---");
-        for (Map.Entry<String, CatalogDatatype> entry : datatypes.entrySet()) {
+        for (Map.Entry<String, GqlDatatypeShape> entry : gql.datatypes().entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Attributes ---");
-        for (Map.Entry<String, CatalogAttribute> entry : attributes.entrySet()) {
+        for (Map.Entry<String, GqlAttributeShape> entry : gql.attributes().entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Records ---");
-        for (Map.Entry<String, CatalogRecord> entry : records.entrySet()) {
+        for (Map.Entry<String, GqlRecordShape> entry : gql.records().entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
         out.println("--- Templates ---");
-        for (Map.Entry<String, CatalogTemplate> entry : units.entrySet()) {
+        for (Map.Entry<String, GqlUnitShape> entry : gql.templates().entrySet()) {
             out.println("  " + entry.getValue());
         }
         out.println();
 
-
-
-        return null; // IntRep.fromInternal(/*Datatypes.read(repository),*/ Attributes.read(repository) /* , Records.read(repository), Units.read(repository) */);
+        out.println("--- Operations ---");
+        for (Map.Entry<String, GqlOperationShape> entry : gql.operations().entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
     }
 
-    public static void reconcile(Reader reader, Repository repository) {
-        IntRep external = loadFromFile(reader);
-        external.dumpIr("GraphQL SDL", System.out);
-        IntRep internal = loadFromCatalog(repository);
-        internal.dumpIr("IPTO", System.out);
+    public static void dump(CatalogViewpoint ipto, PrintStream out) {
+        out.println("===< Catalog >===");
+        out.println("--- Datatypes ---");
+        for (Map.Entry<String, CatalogDatatype> entry : ipto.datatypes().entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Attributes ---");
+        for (Map.Entry<String, CatalogAttribute> entry : ipto.attributes().entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Records ---");
+        for (Map.Entry<String, CatalogRecord> entry : ipto.records().entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Templates ---");
+        for (Map.Entry<String, CatalogTemplate> entry : ipto.units().entrySet()) {
+            out.println("  " + entry.getValue());
+        }
+        out.println();
+    }
+
+    public static void reconcile(GqlViewpoint gql, CatalogViewpoint ipto, ResolutionPolicy policy) {
 
         // --- Datatypes ---
-        for (String key : external.datatypes.keySet()) {
-            if (!internal.datatypes.containsKey(key)) {
+        for (String key : gql.datatypes().keySet()) {
+            if (!ipto.datatypes().containsKey(key)) {
                 log.warn("No matching catalog datatype: {}", key);
                 System.out.println("No matching catalog datatype: " + key);
                 continue;
             }
-            GqlDataTypeShape externalDataType = external.datatypes.get(key);
-            GqlDataTypeShape internalDataType = internal.datatypes.get(key);
-            if (!externalDataType.equals(internalDataType)) {
-                log.warn("External and catalog datatype do not match: {} != {}", externalDataType, internalDataType);
-                System.out.println("External and catalog datatype do not match: " + externalDataType +  " != " + internalDataType);
+            GqlDatatypeShape gqlDatatype = gql.datatypes().get(key);
+            CatalogDatatype iptoDatatype = ipto.datatypes().get(key);
+            if (!gqlDatatype.equals(iptoDatatype)) {
+                log.warn("GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
+                System.out.println("GraphQL SDL and catalog datatype do not match: " + gqlDatatype +  " != " + iptoDatatype);
             }
         }
 
         // Attributes
-        for (String key : external.attributes.keySet()) {
-            if (!internal.attributes.containsKey(key)) {
+        for (String key : gql.attributes().keySet()) {
+            if (!ipto.attributes().containsKey(key)) {
                 log.warn("No matching catalog attribute: {}", key);
                 System.out.println("No matching catalog attribute: " + key);
                 continue;
             }
-            GqlAttributeShape externalAttribute = external.attributes.get(key);
-            GqlAttributeShape internalAttribute = internal.attributes.get(key);
-            if (!externalAttribute.equals(internalAttribute)) {
-                log.warn("External and catalog attribute do not match: {} != {}", externalAttribute, internalAttribute);
-                System.out.println("External and catalog attribute do not match: " + externalAttribute +  " != " + internalAttribute);
+            GqlAttributeShape gqlAttribute = gql.attributes().get(key);
+            CatalogAttribute iptoAttribute = ipto.attributes().get(key);
+            if (!gqlAttribute.equals(iptoAttribute)) {
+                log.warn("GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
+                System.out.println("GraphQL SDL and catalog attribute do not match: " + gqlAttribute +  " != " + iptoAttribute);
             }
-        }
 
+            /*
+            GraphQL SDL and catalog attribute do not match:
+            GqlAttributeShape{name='dcLanguage'}
+            !=
+            CatalogAttribute{attribute-name='dc:language'}
+             */
+        }
     }
 
     /*

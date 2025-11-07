@@ -26,7 +26,7 @@ directive @attribute(
     id:       Int!
     datatype: DataTypes!
     array:    Boolean = true # is capable of handling arrays
-    alias:    String = null
+    name:     String = null
     uri:      String = null
     description: String = null
 ) on ENUM_VALUE
@@ -60,85 +60,85 @@ enum DataTypes @datatypeRegistry {
 enum Attributes @attributeRegistry {
     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
     dcTitle @attribute(id: 1, datatype: STRING, array: false,
-        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title",
+        name: "dc:title", uri: "http://purl.org/dc/elements/1.1/title",
         description: "Namnet som ges till resursen. Det är en människoläsbar identifierare som ger en kortfattad representation av resursens innehåll.")
 
     "An entity primarily responsible for making the resource, typically an individual, organization, or service."
     dcCreator @attribute(id: 2, datatype: STRING, array: true,
-        alias: "dc:creator", uri: "http://purl.org/dc/elements/1.1/creator",
+        name: "dc:creator", uri: "http://purl.org/dc/elements/1.1/creator",
         description: "En entitet som primärt är ansvarig för att skapa resursen, vanligtvis en individ, organisation eller tjänst.")
 
     "The topic or the focus of the content within the resource, often represented by keywords, phrases, or classification codes."
     dcSubject @attribute(id: 3, datatype: STRING, array: true,
-        alias: "dc:subject", uri: "http://purl.org/dc/elements/1.1/subject",
+        name: "dc:subject", uri: "http://purl.org/dc/elements/1.1/subject",
         description: "Ämnet eller fokuset för innehållet inom resursen, ofta representerat av nyckelord, fraser eller klassifikationskoder.")
 
     "A summary or abstract detailing the content, purpose, or scope of the resource, providing insight into its primary features."
     dcDescription @attribute(id: 4, datatype: STRING, array: true,
-        alias: "dc:description", uri: "http://purl.org/dc/elements/1.1/description",
+        name: "dc:description", uri: "http://purl.org/dc/elements/1.1/description",
         description: "En sammanfattning eller abstrakt som beskriver innehållet, syftet eller omfånget av resursen och ger insikt i dess huvudsakliga egenskaper.")
 
     "The entity responsible for making the resource available, which could be a person, organization, or service."
     dcPublisher @attribute(id: 5, datatype: STRING, array: true,
-        alias: "dc:publisher", uri: "http://purl.org/dc/elements/1.1/publisher",
+        name: "dc:publisher", uri: "http://purl.org/dc/elements/1.1/publisher",
         description: "Den entitet som ansvarar för att göra resursen tillgänglig, vilket kan vara en person, organisation eller tjänst.")
 
     "Entities that have contributed to the creation or modification of the resource, but are not the primary creators."
     dcContributors @attribute(id: 6, datatype: STRING, array: true,
-        alias: "dc:contributors", uri: "http://purl.org/dc/elements/1.1/contributors",
+        name: "dc:contributors", uri: "http://purl.org/dc/elements/1.1/contributors",
         description: "Entiteter som har bidragit till skapandet eller modifieringen av resursen, men som inte är de primära skaparna.")
 
     "A point or period of time associated with the lifecycle of the resource, such as creation, publication, or modification date, often represented in ISO 8601 format."
     dcDate @attribute(id: 7, datatype: TIME, array: true,
-        alias: "dc:date", uri: "http://purl.org/dc/elements/1.1/date",
+        name: "dc:date", uri: "http://purl.org/dc/elements/1.1/date",
         description: "En tidpunkt eller tidsperiod associerad med resursens livscykel, som skapande-, publicerings- eller ändringsdatum, ofta representerat i ISO 8601-format.")
 
     "The nature or genre of the content within the resource, such as text, image, video, dataset, etc., aiding in understanding its format and use."
     dcType @attribute(id: 8, datatype: STRING, array: true,
-        alias: "dc:type", uri: "http://purl.org/dc/elements/1.1/type",
+        name: "dc:type", uri: "http://purl.org/dc/elements/1.1/type",
         description: "Innehållets natur eller genre inom resursen, såsom text, bild, video, dataset, etc., vilket hjälper till att förstå dess format och användning.")
 
     "The file format, physical medium, or dimensions of the resource, often standardized using MIME types (e.g., text/html, image/jpeg)."
     dcFormat @attribute(id: 9, datatype: STRING, array: true,
-        alias: "dc:format", uri: "http://purl.org/dc/elements/1.1/format",
+        name: "dc:format", uri: "http://purl.org/dc/elements/1.1/format",
         description: "Filformatet, det fysiska mediet eller dimensionerna av resursen, ofta standardiserade med MIME-typer (t.ex. text/html, image/jpeg).")
 
     "A unique reference to the resource within a given context, such as a URL, DOI, ISBN, or URN, enabling unambiguous identification and access."
     dcIdentifier @attribute(id: 10, datatype: STRING, array: false,
-        alias: "dc:identifier", uri: "http://purl.org/dc/elements/1.1/identifier",
+        name: "dc:identifier", uri: "http://purl.org/dc/elements/1.1/identifier",
         description: "En unik referens till resursen inom ett givet sammanhang, såsom en URL, DOI, ISBN eller URN, som möjliggör entydig identifiering och åtkomst.")
 
     "The resource from which the current resource is derived or generated, providing context on its origins or predecessors."
     dcSource @attribute(id: 11, datatype: STRING, array: true,
-        alias: "dc:source", uri: "http://purl.org/dc/elements/1.1/source",
+        name: "dc:source", uri: "http://purl.org/dc/elements/1.1/source",
         description: "Resursen från vilken den aktuella resursen är härledd eller genererad, vilket ger kontext om dess ursprung eller föregångare.")
 
     "The primary language(s) of the content, often denoted using ISO 639 codes (e.g., en for English, fr for French)."
     dcLanguage @attribute(id: 12, datatype: STRING, array: true,
-        alias: "dc:language", uri: "http://purl.org/dc/elements/1.1/language",
+        name: "dc:language", uri: "http://purl.org/dc/elements/1.1/language",
         description: "Huvudspråket (eller språken) för innehållet, ofta angivet med ISO 639-koder (t.ex. en för engelska, fr för franska).")
 
     "A reference to a related resource, indicating a connection or association, such as a parent, child, or sibling relationship."
     dcRelation @attribute(id: 13, datatype: STRING, array: true,
-        alias: "dc:relation", uri: "http://purl.org/dc/elements/1.1/relation",
+        name: "dc:relation", uri: "http://purl.org/dc/elements/1.1/relation",
         description: "En referens till en relaterad resurs, som anger en koppling eller association, såsom en föräldra-, barn- eller syskonrelation.")
 
     "The spatial or temporal extent of the content, indicating geographical locations or time periods relevant to the resource."
     dcCoverage @attribute(id: 14, datatype: STRING, array: true,
-        alias: "dc:coverage", uri: "http://purl.org/dc/elements/1.1/coverage",
+        name: "dc:coverage", uri: "http://purl.org/dc/elements/1.1/coverage",
         description: "Den rumsliga eller tidsmässiga omfattningen av innehållet, som anger geografiska platser eller tidsperioder som är relevanta för resursen.")
 
     "Information about the rights held in and over the resource, such as copyright status, licensing terms, or access restrictions, ensuring proper usage and distribution."
     dcRights @attribute(id: 15, datatype: STRING, array: true,
-        alias: "dc:rights-management", uri: "http://purl.org/dc/elements/1.1/rights-management",
+        name: "dc:rights-management", uri: "http://purl.org/dc/elements/1.1/rights-management",
         description: "Information om rättigheterna som innehas i och över resursen, såsom upphovsrättsstatus, licensvillkor eller åtkomstbegränsningar, vilket säkerställer korrekt användning och distribution.")
 
     # Some domain specific attributes (used in demo)
-    dmoOrderId    @attribute(id: 1001, datatype: STRING, array: false)
-    dmoDeadline   @attribute(id: 1002, datatype: TIME, array: false)
-    dmoReading    @attribute(id: 1003, datatype: DOUBLE, array: true) # i.e. capable of handling multiple values
-    dmoShipment   @attribute(id: 1099, datatype: RECORD, array: false)
-    dmoShipmentId @attribute(id: 2000, datatype: STRING)
+    orderId    @attribute(id: 1001, datatype: STRING, name: "dmo:orderId", array: false)
+    deadline   @attribute(id: 1002, datatype: TIME,   name: "dmo:deadline", array: false)
+    reading    @attribute(id: 1003, datatype: DOUBLE, name: "dmo:reading", array: true) # i.e. capable of handling multiple values
+    shipment   @attribute(id: 1099, datatype: RECORD, name: "dmo:shipment", array: false)
+    shipmentId @attribute(id: 2000, datatype: STRING, name: "dmo:shipmentId")
 }
 
 ##############  object & unit types ##############################
@@ -146,15 +146,15 @@ scalar Long
 scalar DateTime
 scalar Bytes    # Base-64 strings (JSON) on the wire
 
-type Shipment @record(attribute: dmoShipment) {
-    shipmentId  : String  @use(attribute: dmoShipmentId)
-    deadline : DateTime   @use(attribute: dmoDeadline)
-    reading  : [Float]    @use(attribute: dmoReading)
+type Shipment @record(attribute: shipment) {
+    shipmentId  : String  @use(attribute: shipmentId)
+    deadline : DateTime   @use(attribute: deadline)
+    reading  : [Float]    @use(attribute: reading)
 }
 
 type PurchaseOrder @unit(id: 42) {
-    orderId  : String    @use(attribute: dmoOrderId)
-    shipment : Shipment! @use(attribute: dmoShipment)
+    orderId  : String    @use(attribute: orderId)
+    shipment : Shipment! @use(attribute: shipment)
 }
 
 ##############  Query related ####################################

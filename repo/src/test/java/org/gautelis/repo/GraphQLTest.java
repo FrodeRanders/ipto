@@ -23,6 +23,7 @@ import graphql.ExecutionResult;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
 import org.gautelis.repo.graphql2.configuration.Configurator;
+import org.gautelis.repo.graphql2.configuration.ResolutionPolicy;
 import org.gautelis.repo.graphql2.model.IntRep;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
@@ -38,6 +39,8 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
@@ -64,20 +67,20 @@ public class GraphQLTest {
             value.add("abc");
         });
 
-        unit.withAttributeValue("dmoOrderId", String.class, value -> {
+        unit.withAttributeValue("dmo:orderId", String.class, value -> {
             value.add("*some order id*");
         });
 
-        unit.withRecordAttribute("dmoShipment", recrd -> {
-            recrd.withNestedAttributeValue(unit, "dmoShipmentId", String.class, value -> {
+        unit.withRecordAttribute("dmo:shipment", recrd -> {
+            recrd.withNestedAttributeValue(unit, "dmo:shipmentId", String.class, value -> {
                 value.add(aSpecificString);
             });
 
-            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmo:deadline", Instant.class, value -> {
                 value.add(aSpecificInstant);
             });
 
-            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmo:reading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -107,19 +110,14 @@ public class GraphQLTest {
         try (InputStreamReader sdl = new InputStreamReader(
                 Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
-            IntRep graphQLIr = Configurator.loadFromFile(sdl);
-            graphQLIr.dumpIr("GraphQL SDL", System.out);
+            Configurator.GqlViewpoint gql = Configurator.loadFromFile(sdl);
+            Configurator.dump(gql, System.out);
 
             Repository repo = RepositoryFactory.getRepository();
-            Configurator.loadFromCatalog(repo);
+            Configurator.CatalogViewpoint ipto = Configurator.loadFromCatalog(repo);
+            Configurator.dump(ipto, System.out);
 
-            /*
-            IntRep iptoIr = Configurator.loadFromDB(repo);
-            dumpIr("IPTO", iptoIr);
-            */
-
-            //Repository repo = RepositoryFactory.getRepository();
-            //Configurator.reconcile(sdl, repo);
+            Configurator.reconcile(gql, ipto, ResolutionPolicy.PREFER_GQL);
         }
     }
 
@@ -210,16 +208,18 @@ public class GraphQLTest {
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
             String b64 = map.get("orderRaw"); // name same as fieldname in query type
+            if (null != b64) {
+                final Base64.Decoder DEC = Base64.getDecoder();
+                String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 
-            final Base64.Decoder DEC = Base64.getDecoder();
-            String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+                log.info("Result (base64 encoded): {}", b64);
+                log.info("Result (String/JSON): {}", json);
 
-            log.info("Result (base64 encoded): {}", b64);
-            log.info("Result (String/JSON): {}", json);
-
-            System.out.print("--> ");
-            System.out.println(json);
-
+                System.out.print("--> ");
+                System.out.println(json);
+            } else {
+                fail("No search results found (where it is expected)");
+            }
         } else {
             for (GraphQLError error : errors) {
                 log.error("error: {}: {}", error.getMessage(), error);
@@ -256,7 +256,7 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "dmoShipmentId",
+                        "attr", "dmo:shipmentId",
                         "op", "EQ",
                         "value", specificString
                     )
@@ -314,7 +314,7 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "dmoShipmentId",
+                        "attr", "dmo:shipmentId",
                         "op", "EQ",
                         "value", specificString
                 )
@@ -337,16 +337,18 @@ public class GraphQLTest {
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
             String b64 = map.get("ordersRaw"); // name same as fieldname in query type
+            if (null != b64) {
+                final Base64.Decoder DEC = Base64.getDecoder();
+                String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
 
-            final Base64.Decoder DEC = Base64.getDecoder();
-            String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+                log.info("Result (base64 encoded): {}", b64);
+                log.info("Result (String/JSON): {}", json);
 
-            log.info("Result (base64 encoded): {}", b64);
-            log.info("Result (String/JSON): {}", json);
-
-            System.out.print("--> ");
-            System.out.println(json);
-
+                System.out.print("--> ");
+                System.out.println(json);
+            } else {
+                fail("No search results found (where it is expected)");
+            }
         } else {
             for (GraphQLError error : errors) {
                 log.error("error: {}: {}", error.getMessage(), error);

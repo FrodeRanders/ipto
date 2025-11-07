@@ -37,10 +37,13 @@ public class Attribute<T> {
 
     public record Reference(int id, String name) {}
 
-    private int attributeId;
-    private String attributeName;
+    // Attribute related
+    private int id;
+    private String name;
+    private String alias;
+    private AttributeType type;
 
-    private AttributeType attributeType;
+    // Instance (value) related
     private int unitVersionFrom = 1;
     private int unitVersionTo = 1;
     private long valueId = -1L; // initially invalid
@@ -56,11 +59,12 @@ public class Attribute<T> {
      */
     /* Should be package accessible only */
     public Attribute(
-            int id, String name, AttributeType type
+            int id, String name, String alias, AttributeType type
     ) throws AttributeTypeException {
-        this.attributeId = id;
-        this.attributeName = name.trim();
-        this.attributeType = type;
+        this.id = id;
+        this.name = (null != name) ? name.trim() : null;
+        this.alias = (null != alias) ? alias.trim() : null;
+        this.type = type;
 
         value = Value.createValue(type);
     }
@@ -68,7 +72,7 @@ public class Attribute<T> {
     public Attribute(
             KnownAttributes.AttributeInfo attributeInfo
     ) throws AttributeTypeException {
-        this(attributeInfo.id, attributeInfo.name, AttributeType.of(attributeInfo.type));
+        this(attributeInfo.id, attributeInfo.name, attributeInfo.alias, AttributeType.of(attributeInfo.type));
     }
 
     /**
@@ -98,7 +102,7 @@ public class Attribute<T> {
      */
     @SuppressWarnings("CopyConstructorMissesField")
     public Attribute(Attribute<T> other) {
-        this(other.getId(), other.getName(), other.getType());
+        this(other.getId(), other.getName(), other.getAlias(), other.getType());
         value.copy(other.value);
     }
 
@@ -144,7 +148,16 @@ public class Attribute<T> {
      * @return String name of attribute
      */
     public String getName() {
-        return attributeName;
+        return name;
+    }
+
+    /**
+     * Gets attribute alias (if any).
+     *
+     * @return String alias of attribute
+     */
+    public String getAlias() {
+        return alias;
     }
 
     /**
@@ -153,7 +166,7 @@ public class Attribute<T> {
      * @return int id of attribute
      */
     public int getId() {
-        return attributeId;
+        return id;
     }
 
     public long getValueId() {
@@ -162,7 +175,7 @@ public class Attribute<T> {
 
     public void toInternalJson(ArrayNode attributes, ObjectNode attributeNode) {
         if (false) {
-            String _type = attributeType.name().toLowerCase();
+            String _type = type.name().toLowerCase();
             if (value.isScalar()) {
                 _type += "-scalar";
             } else {
@@ -174,9 +187,9 @@ public class Attribute<T> {
         boolean _isModified = isModified();
 
         attributeNode.put("ismodified", _isModified);
-        attributeNode.put("attrname", attributeName);
-        attributeNode.put("attrid", attributeId);
-        attributeNode.put("attrtype", attributeType.getType());
+        attributeNode.put("attrname", name);
+        attributeNode.put("attrid", id);
+        attributeNode.put("attrtype", type.getType());
         attributeNode.put("untverfrom", unitVersionFrom);
         attributeNode.put("untverto", unitVersionTo);
 
@@ -190,7 +203,7 @@ public class Attribute<T> {
     }
 
     public void toExternalJson(ArrayNode attributes, ObjectNode attributeNode) {
-        String _type = attributeType.name().toLowerCase();
+        String _type = type.name().toLowerCase();
         if (value.isScalar()) {
             _type += "-scalar";
         } else {
@@ -198,11 +211,11 @@ public class Attribute<T> {
         }
         attributeNode.put("@type", _type);
 
-        attributeNode.put("attrname", attributeName);
-        attributeNode.put("attrid", attributeId);
-        attributeNode.put("attrtype", attributeType.name());
+        attributeNode.put("attrname", name);
+        attributeNode.put("attrid", id);
+        attributeNode.put("attrtype", type.name());
 
-        if (AttributeType.RECORD == attributeType) {
+        if (AttributeType.RECORD == type) {
             // "hide" unit attributes with local array in record attribute
             attributes = attributeNode.putArray("attributes");
         }
@@ -212,41 +225,27 @@ public class Attribute<T> {
 
     private void readEntry(JsonNode node) throws JsonProcessingException {
         // Get attribute information
-        attributeId = node.path("attrid").asInt();
+        id = node.path("attrid").asInt();
         unitVersionFrom = node.path("unitverfrom").asInt();
         unitVersionTo = node.path("unitverto").asInt();
         valueId = node.path("valueid").asLong();
-        attributeName = node.path("attrname").asText();
-        attributeType = AttributeType.of(node.path("attrtype").asInt());
+        name = node.path("attrname").asText();
+        type = AttributeType.of(node.path("attrtype").asInt());
 
         // Continue with value vector
-        value = Value.inflateValue(attributeType, node);
+        value = Value.inflateValue(type, node);
     }
 
     private void readEntry(ResultSet rs) throws DatabaseReadException, AttributeTypeException {
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * string_idx, string_val,  -- string value at index string_idx
-             * time_idx, time_val,      -- time value at index time_idx
-             * int_idx, int_val,        -- int value at index int_idx
-             * long_idx, long_val,      -- long value at index long_idx
-             * double_idx, double_val,  -- double value at index double_idx
-             * bool_idx, bool_val,      -- boolean value at index bool_idx
-             * data_idx, data_val       -- data value at index data_idx
-             * ----------------------------------------------------------- */
-
             // Get attribute information
-            attributeId = rs.getInt("attrid");
+            id = rs.getInt("attrid");
             valueId = rs.getLong("valueid");
-            attributeName = rs.getString("attrname");
-            attributeType = AttributeType.of(rs.getInt("attrtype"));
+            name = rs.getString("attrname");
+            type = AttributeType.of(rs.getInt("attrtype"));
 
             // Continue with value vector
-            value = Value.inflateValue(attributeType, rs);
+            value = Value.inflateValue(type, rs);
 
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
@@ -275,9 +274,9 @@ public class Attribute<T> {
      */
     @Override
     public String toString() {
-        return "Attribute{" + attributeId + "(" + attributeName + ")[" +
+        return "Attribute{" + id + "(" + name + ")[" +
                 unitVersionFrom + "-" + unitVersionTo + "]:" +
-                attributeType.name() +
+                type.name() +
                 (value.isNew() ? "*" : "") +
                 (value.isModified() ? "~" : "") +
                 "=" + value.toString() + "}";
