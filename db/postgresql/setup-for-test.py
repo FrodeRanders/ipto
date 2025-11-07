@@ -38,7 +38,7 @@ def remove_existing_container(container_name: str):
         print(f"No existing container '{container_name}' to remove (or removal failed). Proceeding.\n")
 
 
-def start_postgres_container(container_name: str, postgres_password: str, host_port: int = 1402):
+def start_postgres_container(container_name: str, postgres_password: str, host_port: int = 5432):
     """
     Start a new postgres container with the specified name, password, and mapped port.
     """
@@ -155,7 +155,7 @@ def main():
     """
     container_name = "repo-postgres"
     postgres_password = "H0nd@666"
-    host_port = 1402
+    host_port = 5432
 
     repo_user = "repo"
     repo_password = "repo"

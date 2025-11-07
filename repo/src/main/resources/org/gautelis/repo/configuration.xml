@@ -34,7 +34,7 @@
         Corresponds to class org.gautelis.vopn.db.Database.Configuration
     -->
     <entry key="port">
-        1402
+        5432
     </entry>
 
     <!--
