@@ -43,7 +43,6 @@ public final class Records {
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             // --- (a) ---
             String typeName = type.getName();
-            log.info("*** type name: {}", typeName);
 
             // Filter operations // TODO hard coded for the time being
             if ("query".equalsIgnoreCase(typeName)
@@ -94,7 +93,6 @@ public final class Records {
                     for (FieldDefinition f : type.getFieldDefinitions()) {
                         // --- (c) ---
                         final String fieldName = f.getName();
-                        log.info("*** field name: {}", fieldName);
 
                         // --- (d) ---
                         final TypeDefinition fieldType = TypeDefinition.of(f.getType());

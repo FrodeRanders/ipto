@@ -86,11 +86,11 @@ public class Configurator {
 
         // Setup GraphQL SDL view of things
         GqlViewpoint gql = loadFromFile(registry, operationTypes);
-        dump(gql, progress);
+        //dump(gql, progress);
 
         // Setup Ipto view of things
         CatalogViewpoint ipto = loadFromCatalog(repo);
-        dump(ipto, progress);
+        //dump(ipto, progress);
 
         // Reconcile differences, i.e. create stuff if needed
         reconcile(repo, gql, ipto, ResolutionPolicy.PREFER_GQL, progress);
@@ -272,7 +272,7 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute {} from record {}: {}.{}", isArray ? fieldName + "[]" : fieldName, typeName, box.getTenantId(), box.getUnitId());
+                        log.trace("Fetching attribute '{}' from record '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, typeName, box.getTenantId(), box.getUnitId());
 
                         // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
                         if (isArray) {
@@ -333,7 +333,7 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute {} ({}) from unit {}: {}.{}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getTenantId(), box.getUnitId());
+                        log.trace("Fetching attribute '{}' ({}) from unit '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getTenantId(), box.getUnitId());
 
                         if (isArray) {
                             return runtimeService.getArray(box, fieldName);
@@ -363,7 +363,6 @@ public class Configurator {
 
         for (String key : gqlOperations.keySet()) {
             GqlOperationShape gqlOperation = gqlOperations.get(key);
-            log.info("*** wireing operation: {}", gqlOperation);
 
             final String type = gqlOperation.typeName();
             final String operationName = gqlOperation.operationName();
@@ -384,7 +383,6 @@ public class Configurator {
                             //***********************************************************
                             if (log.isTraceEnabled()) {
                                 log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                                log.trace("Datafetcher: parameterName='{}', inputType='{}', outputType='{}'", parameterName, inputType, outputType);
                             }
 
                             Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -403,7 +401,6 @@ public class Configurator {
                             //***********************************************************
                             if (log.isTraceEnabled()) {
                                 log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                                log.trace("Datafetcher: parameterName='{}', inputType='{}', outputType='{}'", parameterName, inputType, outputType);
                             }
 
                             Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -428,7 +425,6 @@ public class Configurator {
 
                             if (log.isTraceEnabled()) {
                                 log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                                log.trace("Datafetcher: parameterName='{}', inputType='{}', outputType='{}'", parameterName, inputType, outputType);
                             }
 
                             Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -448,7 +444,6 @@ public class Configurator {
                             //***********************************************************
                             if (log.isTraceEnabled()) {
                                 log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                                log.trace("Datafetcher: parameterName='{}', inputType='{}', outputType='{}'", parameterName, inputType, outputType);
                             }
 
                             Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -528,8 +523,6 @@ public class Configurator {
 
     private static CatalogRecord addRecord(Repository repo, GqlRecordShape gqlRecord, Map<String, GqlAttributeShape> gqlAttributes, PrintStream progress) {
 
-        log.info("Adding record: {}", gqlRecord);
-
         String recordName = gqlRecord.typeName();
         String recordAttributeName = gqlRecord.attributeName();
         List<GqlFieldShape> fields = gqlRecord.fields();
@@ -598,7 +591,6 @@ public class Configurator {
                         for (GqlFieldShape field : fields) {
                             // Determine attrId of field in record
                             GqlAttributeShape fieldAttribute = gqlAttributes.get(field.fieldName());
-                            log.info("Adding record field: {}", fieldAttribute);
 
                             if (null == fieldAttribute) {
                                 log.warn("No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());

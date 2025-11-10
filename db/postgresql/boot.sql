@@ -10,7 +10,7 @@ VALUES (
 
 INSERT INTO repo_namespace (alias, namespace)
 VALUES (
-    'dc', 'http://purl.org/dc/elements/1.1'
+    'dce', 'http://purl.org/dc/elements/1.1'
 )
 ;
 
