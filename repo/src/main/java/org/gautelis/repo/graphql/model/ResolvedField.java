@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.attributes.Attribute;
@@ -12,7 +12,5 @@ public record ResolvedField(
         Attribute.Reference attribute,  // final chosen attribute binding
         AttributeType attrType,
         Cardinality cardinality,
-        boolean isRecord,               // true if it is a record field
-        String recordTypeName,          // when isRecord=true
         EnumSet<Source> provenance      // which sources contributed (for diff/diagnostics)
 ) {}

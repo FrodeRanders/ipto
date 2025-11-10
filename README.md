@@ -35,16 +35,16 @@ enum DataTypes @datatypeRegistry {
 ############## attributes ############################
 enum Attributes @attributeRegistry {
     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-    dcTitle @attribute(id: 1, datatype: STRING, array: false,
-        alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title"   
+    title @attribute(id: 1, datatype: STRING, array: false,
+        alias: "dce:title", uri: "http://purl.org/dc/elements/1.1/title"   
     ...
 
     # Some domain specific attributes (used in demo)
-    dmoOrderId    @attribute(id: 1001, datatype: STRING, array: false)
-    dmoDeadline   @attribute(id: 1002, datatype: TIME, array: false)
-    dmoReading    @attribute(id: 1003, datatype: DOUBLE, array: true) # i.e. capable of handling multiple values
-    dmoShipment   @attribute(id: 1099, datatype: RECORD, array: false)
-    dmoShipmentId @attribute(id: 2000, datatype: STRING)
+    orderId    @attribute(id: 1001, datatype: STRING, name: "dmo:orderId", array: false)
+    deadline   @attribute(id: 1002, datatype: TIME,   name: "dmo:deadline", array: false)
+    reading    @attribute(id: 1003, datatype: DOUBLE, name: "dmo:reading", array: true) # i.e. capable of handling multiple values
+    shipment   @attribute(id: 1099, datatype: RECORD, name: "dmo:shipment", array: false)
+    shipmentId @attribute(id: 2000, datatype: STRING, name: "dmo:shipmentId")
 }
 
 ##############  object & unit types ##############################
@@ -52,15 +52,15 @@ scalar Long
 scalar DateTime
 scalar Bytes    # Base-64 strings (JSON) on the wire
 
-type Shipment @record(attribute: dmoShipment) {
-    shipmentId  : String  @use(attribute: dmoShipmentId)
-    deadline : DateTime   @use(attribute: dmoDeadline)
-    reading  : [Float]    @use(attribute: dmoReading)
+type Shipment @record(attribute: shipment) {
+    shipmentId  : String  @use(attribute: shipmentId)
+    deadline : DateTime   @use(attribute: deadline)
+    reading  : [Float]    @use(attribute: reading)
 }
 
 type PurchaseOrder @unit(id: 42) {
-    orderId  : String    @use(attribute: dmoOrderId)
-    shipment : Shipment! @use(attribute: dmoShipment)
+    orderId  : String    @use(attribute: orderId)
+    shipment : Shipment! @use(attribute: shipment)
 }
 
 ##############  Query related ####################################
@@ -127,9 +127,9 @@ Map<String, Object> filter = Map.of(
                 "tenantId", 1,
                 "where", Map.of(
                         "attrExpr", Map.of(
-                                "attr", "dmoOrderId",
+                                "attr", "orderId", // Uses GraphQL SDL naming
                                 "op", "EQ",
-                                "value", "*order id 2*"
+                                "value", "<order id>"
                         )
                 )
         )
@@ -158,22 +158,26 @@ Result:
         // as they are not used to identify units.
         Unit unit = repo.createUnit(tenantId, "a shipment instance");
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
-            value.add("Shipment information for *order id*");
+        unit.withAttributeValue("dce:title", String.class, value -> {
+            value.add("Shipment information for <order id>");
+        });
+
+        unit.withAttributeValue("dmo:orderId", String.class, value -> {
+            value.add("<order id>");
         });
     
-        unit.withAttribute("dmoShipment", Attribute.class, attr -> {
+        unit.withAttribute("dmo:shipment", Attribute.class, attr -> {
             RecordAttribute recrd = new RecordAttribute(attr);
 
-            recrd.withNestedAttributeValue(unit, "dmoOrderId", String.class, value -> {
-                value.add("*order id*");
+            recrd.withNestedAttributeValue(unit, "dmo:shipmentId", String.class, value -> {
+                value.add("<shipment id>");
             });
 
-            recrd.withNestedAttributeValue(unit, "dmoDeadline", Instant.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmo:deadline", Instant.class, value -> {
                 value.add(Instant.now()); // brutal :)
             });
 
-            recrd.withNestedAttributeValue(unit, "dmoReading", Double.class, value -> {
+            recrd.withNestedAttributeValue(unit, "dmo:reading", Double.class, value -> {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
@@ -192,8 +196,8 @@ Result:
         expr = SearchExpression.assembleAnd(expr, SearchItem.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         // Constrain to specific string attribute, in this case 'order ID'
-        attributeId = getAttributeId("dmoOrderId", repo);
-        SearchItem<String> stringSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, "*order id*");
+        attributeId = getAttributeId("dmo:orderId", repo);
+        SearchItem<String> stringSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, "<order id>");
         expr = SearchExpression.assembleAnd(expr, stringSearchItem);
 
         // 

@@ -3,12 +3,12 @@ package org.gautelis.repo.graphql.runtime;
 import org.gautelis.repo.RepositoryFactory;
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.graphql.configuration.Configurator;
-import org.gautelis.repo.graphql.configuration.OperationsConfigurator;
-import org.gautelis.repo.model.KnownAttributes;
+import org.gautelis.repo.graphql.model.CatalogAttribute;
+import org.gautelis.repo.graphql.model.Query;
+import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.search.UnitSearch;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.*;
@@ -27,18 +27,21 @@ public class RuntimeService {
     private static final Logger log = LoggerFactory.getLogger(RuntimeService.class);
 
     private final Repository repo;
-
-    private final Map<String, Configurator.ExistingDatatypeMeta> datatypes;
-    private final Map<Integer, Configurator.ProposedAttributeMeta> attributesIptoView;
+    private final Map<String, CatalogAttribute> allAttributesByAlias = new HashMap<>();
 
     public RuntimeService(
             Repository repo,
-            Map<String, Configurator.ExistingDatatypeMeta> datatypes,
-            Map<Integer, Configurator.ProposedAttributeMeta> attributesIptoView
+            Configurator.CatalogViewpoint catalogView
     ) {
         this.repo = repo;
-        this.datatypes = datatypes; // empty at the moment
-        this.attributesIptoView = attributesIptoView; // empty at the moment
+
+        // Rearrange
+        for (CatalogAttribute attribute : catalogView.attributes().values()) {
+            String alias = attribute.alias();
+            if (alias != null && !alias.isEmpty()) {
+                allAttributesByAlias.put(alias, attribute);
+            }
+        }
     }
 
     public byte[] storeRawUnit(byte[] bytes) {
@@ -63,14 +66,15 @@ public class RuntimeService {
             return null;
         }
 
-        Map<Integer, Attribute<?>> attributes = new HashMap<>();
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
         unit.get().getAttributes().forEach(attr -> {
-            int attrId = attr.getId();
-            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(attrId);
-
-            //log.trace("Adding attribute {} ({}) of type {}", attributeMeta.nameInSchema(), attr.getName(), attr.getType());
-            attributes.put(attributeMeta.attrId(), attr);
+            attributes.put( attr.getAlias(), attr); // here we assume alias == field name
         });
 
         return new /* outermost */ Box(tenantId, unitId, attributes);
@@ -88,13 +92,13 @@ public class RuntimeService {
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
-    public Object getArray(Box box, int attrId, boolean isMandatory) {
-        log.trace("RuntimeService::getArray({}, {}, {})", box, attrId, isMandatory);
+    public Object getArray(Box box, String fieldName, boolean isMandatory) {
+        log.trace("RuntimeService::getArray({}, {}, {})", box, fieldName, isMandatory);
 
-        Attribute<?> attribute = box.getAttribute(attrId);
+        Attribute<?> attribute = box.getAttribute(fieldName);
         if (null == attribute) {
             if (isMandatory) {
-                log.info("Mandatory attribute {} not present", attrId);
+                log.info("Mandatory field '{}' not present", fieldName);
             }
             return null;
         }
@@ -102,39 +106,43 @@ public class RuntimeService {
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             if (isMandatory) {
-                log.info("Mandatory value(s) for attribute {} not present", attrId);
+                log.info("Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
 
+        // 1) non-record attribute case
         if (!AttributeType.RECORD.equals(attribute.getType())) {
             return values;
         }
 
-        Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
+        // 2) record attribute case
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
-            int childAttrId = attr.getId();
-            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
-
-            attributeMap.put(attributeMeta.attrId(), attr);
+            attributes.put(attr.getAlias(), attr); // here we assume alias == field name
         });
 
-        return new /* inner */ Box(/* outer */ box, attributeMap);
+        return new /* inner */ Box(/* outer */ box, attributes);
     }
 
-    public Object getArray(Box box, int attrId) {
-        return getArray(box, attrId, false);
+    public Object getArray(Box box, String fieldName) {
+        return getArray(box, fieldName, false);
     }
 
-    public Object getScalar(Box box, int attrId, boolean isMandatory) {
-        log.trace("RuntimeService::getScalar({}, {}, {})", box, attrId, isMandatory);
+    public Object getScalar(Box box, String fieldName, boolean isMandatory) {
+        log.trace("RuntimeService::getScalar({}, {}, {})", box, fieldName, isMandatory);
 
-        Attribute<?> attribute = box.getAttribute(attrId);
+        Attribute<?> attribute = box.getAttribute(fieldName);
         if (null == attribute) {
             if (isMandatory) {
-                log.info("Mandatory attribute {} not present", attrId);
+                log.info("Mandatory field '{}' not present", fieldName);
             }
             return null;
         }
@@ -142,32 +150,37 @@ public class RuntimeService {
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
             if (isMandatory) {
-                log.info("Mandatory value(s) for attribute {} not present", attrId);
+                log.info("Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
 
+        // 1) non-record attribute case
         if (!AttributeType.RECORD.equals(attribute.getType())) {
-            return values.getFirst();
+            return values.getFirst(); // since scalar
         }
 
-        Map<Integer, Attribute<?>> attributeMap = new HashMap<>();
+        // 2) record attribute case
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         children.forEach(attr -> {
-            int childAttrId = attr.getId();
-            Configurator.ProposedAttributeMeta attributeMeta = attributesIptoView.get(childAttrId);
-            attributeMap.put(attributeMeta.attrId(), attr);
+            attributes.put(attr.getAlias(), attr);  // here we assume alias == field name
         });
 
-        return new /* inner */ Box(/* outer */ box, attributeMap);
+        return new /* inner */ Box(/* outer */ box, attributes);
     }
 
-    public Object getScalar(Box box, int attrId) {
-        return getScalar(box, attrId,false);
+    public Object getScalar(Box box, String fieldName) {
+        return getScalar(box, fieldName,false);
     }
 
-    private Collection<Unit.Id> search0(OperationsConfigurator.Filter filter) {
+    private Collection<Unit.Id> search0(Query.Filter filter) {
         SearchExpression expr = assembleConstraints(filter);
 
         // Result set constraints (paging)
@@ -200,7 +213,7 @@ public class RuntimeService {
         return ids;
     }
 
-    public List<Box> search(OperationsConfigurator.Filter filter) {
+    public List<Box> search(Query.Filter filter) {
         log.trace("RuntimeService::search");
 
         Collection<Unit.Id> ids = search0(filter);
@@ -214,10 +227,16 @@ public class RuntimeService {
                     Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
                     if (_unit.isPresent()) {
                         Unit unit = _unit.get();
-                        Map<Integer, Attribute<?>> attributes = new HashMap<>(); // because organized by name in Unit (instead of attribute id)
+
+                        //---------------------------------------------------------------------
+                        // OBSERVE
+                        //    We are assuming that the field names used in the SDL equals the
+                        //    attribute aliases used.
+                        //---------------------------------------------------------------------
+                        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
                         for (Attribute<?> attr : unit.getAttributes()) {
-                            attributes.put(attr.getId(), attr);
+                            attributes.put(attr.getAlias(), attr); // here we assume alias == field name
                         }
                         units.add(new /* outermost */ Box(unit, attributes));
 
@@ -232,7 +251,7 @@ public class RuntimeService {
         }
     }
 
-    public byte[] searchRaw(OperationsConfigurator.Filter filter) {
+    public byte[] searchRaw(Query.Filter filter) {
         log.trace("RuntimeService::searchRaw");
 
         Collection<Unit.Id> ids = search0(filter);
@@ -242,9 +261,7 @@ public class RuntimeService {
             try {
                 Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
                 if (_unit.isPresent()) {
-                    Unit unit = _unit.get();
-
-                    units.add(unit);
+                    units.add(_unit.get());
 
                 } else {
                     log.error("Unknown unit: {}", id);
@@ -264,7 +281,7 @@ public class RuntimeService {
 
     /****************** Search related ******************/
 
-    private SearchExpression assembleConstraints(OperationsConfigurator.Filter filter) {
+    private SearchExpression assembleConstraints(Query.Filter filter) {
         // Implicit unit constraints
         int tenantId = filter.tenantId();
         SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
@@ -274,9 +291,9 @@ public class RuntimeService {
         return new AndExpression(expr, assembleConstraints(filter.where()));
     }
 
-    private SearchExpression assembleConstraints(OperationsConfigurator.Node node) {
-        OperationsConfigurator.AttributeExpression attrExpr = node.attrExpr();
-        OperationsConfigurator.TreeExpression treeExpr = node.treeExpr();
+    private SearchExpression assembleConstraints(Query.Node node) {
+        Query.AttributeExpression attrExpr = node.attrExpr();
+        Query.TreeExpression treeExpr = node.treeExpr();
 
         if (null != treeExpr && null == attrExpr) {
             return assembleTreeConstraints(treeExpr);
@@ -289,40 +306,44 @@ public class RuntimeService {
         }
     }
 
-    private SearchExpression assembleTreeConstraints(OperationsConfigurator.TreeExpression treeExpr) {
-        OperationsConfigurator.Logical op = treeExpr.op();
-        OperationsConfigurator.Node left = treeExpr.left();
-        OperationsConfigurator.Node right = treeExpr.right();
+    private SearchExpression assembleTreeConstraints(Query.TreeExpression treeExpr) {
+        Query.Logical op = treeExpr.op();
+        Query.Node left = treeExpr.left();
+        Query.Node right = treeExpr.right();
 
-        if (Objects.requireNonNull(op) == OperationsConfigurator.Logical.AND)
+        if (Objects.requireNonNull(op) == Query.Logical.AND)
             return QueryBuilder.assembleAnd(assembleConstraints(left), assembleConstraints(right));
         else // Logical.OR
             return QueryBuilder.assembleOr(assembleConstraints(left), assembleConstraints(right));
 
     }
 
-    private LeafExpression<?> assembleAttributeConstraints(OperationsConfigurator.AttributeExpression attrExpr) {
+    private LeafExpression<?> assembleAttributeConstraints(Query.AttributeExpression attrExpr) {
         String attrName = attrExpr.attr();
-        OperationsConfigurator.Operator op = attrExpr.op();
+        Query.FilterOperator op = attrExpr.op();
         String value = attrExpr.value();
 
-        Optional<KnownAttributes.AttributeInfo> _info = repo.getAttributeInfo(attrName);
-        if (_info.isEmpty()) {
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        CatalogAttribute catalogAttribute = allAttributesByAlias.get(attrName);
+        if (null == catalogAttribute) {
             throw new InvalidParameterException("Unknown attribute " + attrName);
         }
-        KnownAttributes.AttributeInfo info = _info.get();
 
-        int attrId = info.id;
-        AttributeType attrType = AttributeType.of(info.type);
+        int attrId = catalogAttribute.attrId();
+        AttributeType attrType = catalogAttribute.attrType();
         switch (attrType) {
             case STRING -> {
-                if (Objects.requireNonNull(op) == OperationsConfigurator.Operator.EQ) {
+                if (Objects.requireNonNull(op) == Query.FilterOperator.EQ) {
                     value = value.replace('*', '%');
                     boolean useLIKE = value.indexOf('%') >= 0 || value.indexOf('_') >= 0;  // Uses wildcard
                     if (useLIKE) {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, org.gautelis.repo.search.model.Operator.LIKE, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.LIKE, value));
                     } else {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, org.gautelis.repo.search.model.Operator.EQ, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.EQ, value));
                     }
                 }
                 return new LeafExpression<>(new StringAttributeSearchItem(attrId, op.iptoOp(), value));

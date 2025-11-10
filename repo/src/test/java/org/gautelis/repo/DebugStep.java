@@ -2,8 +2,10 @@ package org.gautelis.repo;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQL;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
+import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.slf4j.Logger;
@@ -17,11 +19,12 @@ public class DebugStep {
     private static final Logger log = LoggerFactory.getLogger(DebugStep.class);
 
     public static void main(String... args) {
-        try (InputStreamReader sdl = new InputStreamReader(
+        try (InputStreamReader reader = new InputStreamReader(
                 Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            Optional<graphql.GraphQL> _graphQL = repo.loadConfiguration(sdl);
+            Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);
+
             if (_graphQL.isEmpty()) {
                 log.error("Could not load configuration");
                 System.exit(1);
@@ -30,10 +33,9 @@ public class DebugStep {
             final int tenantId = 1;
             long unitId;
             {
-
                 Unit unit = repo.createUnit(tenantId, "graphql test");
 
-                unit.withAttribute("dc:title", String.class, attr -> {
+                unit.withAttribute("dce:title", String.class, attr -> {
                     ArrayList<String> value = attr.getValueVector();
                     value.add("abc");
                 });

@@ -18,13 +18,12 @@ package org.gautelis.repo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.uuid.Generators;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
-import org.gautelis.repo.graphql2.configuration.Configurator;
-import org.gautelis.repo.graphql2.configuration.ResolutionPolicy;
-import org.gautelis.repo.graphql2.model.IntRep;
+
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.junit.jupiter.api.*;
@@ -32,13 +31,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -62,13 +59,14 @@ public class GraphQLTest {
     private long createUnit(int tenantId, String aSpecificString, Instant aSpecificInstant) {
         Repository repo = RepositoryFactory.getRepository();
         Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
+        final String orderId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
+        unit.withAttributeValue("dce:title", String.class, value -> {
             value.add("abc");
         });
 
         unit.withAttributeValue("dmo:orderId", String.class, value -> {
-            value.add("*some order id*");
+            value.add(orderId);
         });
 
         unit.withRecordAttribute("dmo:shipment", recrd -> {
@@ -106,26 +104,64 @@ public class GraphQLTest {
 
     @Test
     @Order(1)
-    public void configuration() throws IOException {
-        try (InputStreamReader sdl = new InputStreamReader(
-                Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
-        )) {
-            Configurator.GqlViewpoint gql = Configurator.loadFromFile(sdl);
-            Configurator.dump(gql, System.out);
+    public void retrieveWithInlineLiteral() {
+        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
-            Repository repo = RepositoryFactory.getRepository();
-            Configurator.CatalogViewpoint ipto = Configurator.loadFromCatalog(repo);
-            Configurator.dump(ipto, System.out);
+        final int tenantId = 1;
+        final long unitId = createUnit(tenantId, shipmentId, Instant.now());
 
-            Configurator.reconcile(gql, ipto, ResolutionPolicy.PREFER_GQL);
+        String query = """
+            query Unit {
+              order(id: { tenantId: %d, unitId: %d }) {
+                orderId
+                shipment {
+                  shipmentId
+                  deadline
+                  reading
+                }
+              }
+            }
+            """;
+        query = String.format(query, tenantId, unitId);
+
+        System.out.println("--------------------------------------------------------------");
+        log.info(query);
+        System.out.println(query);
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result: {}", (Object) result.getData());
+
+            System.out.print("--> ");
+            dumpMap(result.getData());
+
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
         }
+        System.out.println("--------------------------------------------------------------");
     }
 
     @Test
     @Order(2)
-    public void retrieve() {
+    public void retrieveUsingVariable() {
+        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, "*shipment id 1*", Instant.now());
+        final long unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -139,7 +175,7 @@ public class GraphQLTest {
               }
             }
             """;
-        System.out.println("--------------------------------------------------------------");
+
         log.info(query);
         System.out.println(query);
 
@@ -180,8 +216,10 @@ public class GraphQLTest {
     @Test
     @Order(3)
     public void retrieveRaw() {
+        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, "*shipment id 2*", Instant.now());
+        final long unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
@@ -238,9 +276,10 @@ public class GraphQLTest {
     @Test
     @Order(4)
     public void search() {
+        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
         final int tenantId = 1;
-        final String specificString = "*shipment id 3*";
-        final long _unitId = createUnit(tenantId, specificString, Instant.now());
+        final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
             query Units($filter: Filter!) {
@@ -256,9 +295,9 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "dmo:shipmentId",
+                        "attr", "shipmentId", // OBS! Expressed using GQL name
                         "op", "EQ",
-                        "value", specificString
+                        "value", shipmentId
                     )
         );
 
@@ -300,9 +339,10 @@ public class GraphQLTest {
     @Test
     @Order(5)
     public void searchRaw() {
+        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
         final int tenantId = 1;
-        final String specificString = "*shipment id 4*";
-        final long _unitId = createUnit(tenantId, specificString, Instant.now());
+        final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
             query Units($filter: Filter!) {
@@ -314,9 +354,9 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "dmo:shipmentId",
+                        "attr", "shipmentId", // OBS! Expressed using GQL name
                         "op", "EQ",
-                        "value", specificString
+                        "value", shipmentId
                 )
         );
 

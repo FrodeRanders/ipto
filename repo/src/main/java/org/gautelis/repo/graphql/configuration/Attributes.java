@@ -1,11 +1,11 @@
-package org.gautelis.repo.graphql2.configuration;
+package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
-import org.gautelis.repo.graphql2.model.CatalogAttribute;
-import org.gautelis.repo.graphql2.model.GqlAttributeShape;
-import org.gautelis.repo.graphql2.model.GqlDatatypeShape;
+import org.gautelis.repo.graphql.model.CatalogAttribute;
+import org.gautelis.repo.graphql.model.GqlAttributeShape;
+import org.gautelis.repo.graphql.model.GqlDatatypeShape;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
@@ -158,17 +158,22 @@ public final class Attributes {
                             String attributeName = rs.getString("attrname");
                             String qualifiedName = rs.getString("qualname");
                             String alias = rs.getString("alias");
-                            if (rs.wasNull()) alias = attributeName;
+                            if (rs.wasNull()) {
+                                log.warn("No alias for attribute '{}'. This may break comparison.",  attributeName);
+                                alias = attributeName;
+                            }
                             int attributeTypeId = rs.getInt("attrtype");
                             boolean isArray = !rs.getBoolean("scalar"); // Note negation
 
-                            attributes.put(alias, new CatalogAttribute(
-                                attributeId,
-                                alias,
-                                attributeName,
-                                qualifiedName,
-                                AttributeType.of(attributeTypeId),
-                                isArray)
+                            attributes.put(alias,
+                                    new CatalogAttribute(
+                                        attributeId,
+                                        alias,
+                                        attributeName,
+                                        qualifiedName,
+                                        AttributeType.of(attributeTypeId),
+                                        isArray
+                                    )
                             );
                         }
                     }

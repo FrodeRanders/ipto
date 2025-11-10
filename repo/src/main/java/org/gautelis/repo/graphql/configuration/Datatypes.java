@@ -1,10 +1,10 @@
-package org.gautelis.repo.graphql2.configuration;
+package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.exceptions.AttributeTypeException;
-import org.gautelis.repo.graphql2.model.CatalogDatatype;
-import org.gautelis.repo.graphql2.model.GqlDatatypeShape;
+import org.gautelis.repo.graphql.model.CatalogDatatype;
+import org.gautelis.repo.graphql.model.GqlDatatypeShape;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;

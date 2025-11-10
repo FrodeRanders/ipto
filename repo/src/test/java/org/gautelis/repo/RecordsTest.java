@@ -47,7 +47,7 @@ public class RecordsTest {
 
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
+        unit.withAttributeValue("dce:title", String.class, value -> {
             value.add("Handling of " + "*some order id*");
         });
 

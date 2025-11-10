@@ -19,15 +19,14 @@ package org.gautelis.repo.model;
 import graphql.GraphQL;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
+import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.listeners.ActionListener;
 import org.gautelis.repo.model.associations.ExternalAssociation;
 import org.gautelis.repo.model.associations.InternalRelation;
 
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
-import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.locks.LockType;
-import org.gautelis.repo.model.utils.RepoRunnable;
 import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.model.utils.TimingData;
 import org.gautelis.repo.search.query.DatabaseAdapter;
@@ -39,6 +38,7 @@ import org.gautelis.repo.search.UnitSearch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.sql.*;
@@ -70,9 +70,8 @@ public class Repository {
     /**
      *
      */
-    public Optional<GraphQL> loadConfiguration(Reader reader) {
-        Configurator loader = new Configurator(this, reader);
-        return loader.load();
+    public Optional<GraphQL> loadConfiguration(Reader reader, PrintStream progress) {
+        return Configurator.load(this, reader, progress);
     }
 
     /**

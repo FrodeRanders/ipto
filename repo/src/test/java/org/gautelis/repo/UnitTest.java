@@ -116,7 +116,7 @@ public class UnitTest {
         //
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
+        unit.withAttributeValue("dce:title", String.class, value -> {
             value.add("First title");
         });
 
@@ -132,7 +132,7 @@ public class UnitTest {
         repo.lockUnit(unit, LockType.WRITE, "unit must not be modified");
         assertTrue(unit.isLocked());
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
+        unit.withAttributeValue("dce:title", String.class, value -> {
             value.add("Second title");
         });
 
@@ -153,7 +153,7 @@ public class UnitTest {
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
-        unit.withAttributeValue("dc:title", String.class, value -> {
+        unit.withAttributeValue("dce:title", String.class, value -> {
             value.add("Third title");
         });
 

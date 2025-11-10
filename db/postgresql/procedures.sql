@@ -441,6 +441,7 @@ WITH unit_hdr AS (
          SELECT av.attrid,
                 a.attrtype,
                 a.attrname,
+                a.alias,
                 av.unitverfrom,
                 av.unitverto,
                 av.valueid,
@@ -509,6 +510,7 @@ SELECT jsonb_build_object(
                                    'attrid',       attrid,
                                    'attrtype',     attrtype,
                                    'attrname',     attrname,
+                                   'alias',        alias,
                                    'unitverfrom',  unitverfrom,
                                    'unitverto',    unitverto,
                                    'valueid',      valueid,
@@ -533,6 +535,7 @@ CREATE OR REPLACE FUNCTION load_unit_vectors (
     attrid         INTEGER,
     attrtype       INTEGER,
     attrname       TEXT,
+    alias          TEXT,
     parent_valueid BIGINT,   -- parent record’s valueid (NULL means top-level)
     record_idx     INTEGER,  -- ordinal inside parent record
     depth          INTEGER,
@@ -551,6 +554,7 @@ WITH RECURSIVE attr_tree AS (
            av.attrid,
            p.attrtype,
            p.attrname,
+           p.alias,
            NULL::bigint AS parent_valueid,   -- top level
            NULL::int    AS record_idx,
            0 AS depth
@@ -565,6 +569,7 @@ WITH RECURSIVE attr_tree AS (
            cv.ref_attrid,
            p.attrtype,
            p.attrname,
+           p.alias,
            cv.valueid AS parent_valueid,
            cv.idx     AS record_idx,
            at.depth + 1
@@ -577,6 +582,7 @@ SELECT
     t.attrid,
     t.attrtype,
     t.attrname,
+    t.alias,
     t.parent_valueid,
     t.record_idx,
     t.depth,

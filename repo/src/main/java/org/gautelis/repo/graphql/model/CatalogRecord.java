@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -9,7 +9,7 @@ public class CatalogRecord {
     public final String recordName;
     private final List<CatalogAttribute> fields = new ArrayList<>();
 
-    public CatalogRecord(String recordName, int recordAttrid) {
+    public CatalogRecord(int recordAttrid, String recordName) {
         this.recordAttrId = recordAttrid;
         this.recordName = recordName;
     }

@@ -51,6 +51,15 @@ public enum AttributeType implements Type {
         throw new AttributeTypeException("Unknown attribute type: " + type);
     }
 
+    public static AttributeType of(String typeName) throws AttributeTypeException {
+        for (AttributeType t : AttributeType.values()) {
+            if (t.name().equals(typeName)) {
+                return t;
+            }
+        }
+        throw new AttributeTypeException("Unknown attribute type: " + typeName);
+    }
+
     public int getType() {
         return type;
     }

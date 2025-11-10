@@ -228,17 +228,17 @@ CONSTRAINT repo_unit_template_name_uq
 )
 ;
 
-CREATE TABLE repo_template_elements (
+CREATE TABLE repo_unit_template_elements (
 templateid INT  NOT NULL,   -- from @unit(id: …)
 attrid     INT  NOT NULL,   -- global attribute id
 
-alias      TEXT NOT NULL,   -- field name inside unit (template)
 idx        INT  NOT NULL,   -- order / display position
+alias      TEXT NOT NULL,   -- field name inside unit (template)
 
-CONSTRAINT repo_template_elements_pk
+CONSTRAINT repo_unit_template_elements_pk
     PRIMARY KEY (templateid, attrid),
-CONSTRAINT repo_template_elements_tmp_ex
-    FOREIGN KEY (templateid) REFERENCES repo_unit_template (templateid)
+CONSTRAINT repo_unit_template_elements_tmp_ex
+    FOREIGN KEY (templateid) REFERENCES repo_unit_template (templateid) ON DELETE CASCADE
 )
 ;
 
@@ -246,18 +246,31 @@ CONSTRAINT repo_template_elements_tmp_ex
 -- Metadata-table: Template for records
 --
 CREATE TABLE repo_record_template (
-record_attrid  INT  NOT NULL,      -- from @record(attribute: …)
-idx            INT  NOT NULL,
-
-field_attrid   INT  NOT NULL,      -- sub-attribute
-alias          TEXT NULL,
-required       BOOLEAN NOT NULL DEFAULT FALSE,
+recordid  INT NOT NULL,  -- from @record(attribute: …)
+name      TEXT NOT NULL, -- type name
 
 CONSTRAINT repo_record_template_pk
-    PRIMARY KEY (record_attrid, idx),
-CONSTRAINT repo_record_template_attr_ex
-    FOREIGN KEY (record_attrid)
-        REFERENCES repo_attribute(attrid)
+    PRIMARY KEY (recordid),
+CONSTRAINT repo_record_template_name_uq
+    UNIQUE (name),
+CONSTRAINT repo_record_template_id_ex
+    FOREIGN KEY (recordid) REFERENCES repo_attribute(attrid)
+)
+;
+
+CREATE TABLE repo_record_template_elements (
+recordid    INT  NOT NULL,      -- attribute id of record attribute
+attrid      INT  NOT NULL,      -- sub-attribute
+
+idx         INT  NOT NULL,      -- order / display position
+alias       TEXT NULL,          -- field name inside record
+
+CONSTRAINT repo_record_template_elements_pk
+    PRIMARY KEY (recordid, attrid),
+CONSTRAINT repo_record_template_elements_id_ex
+    FOREIGN KEY (attrid) REFERENCES repo_attribute(attrid),
+CONSTRAINT repo_record_template_elements_rcrd_ex
+    FOREIGN KEY (recordid) REFERENCES repo_record_template (recordid) ON DELETE CASCADE
 )
 ;
 

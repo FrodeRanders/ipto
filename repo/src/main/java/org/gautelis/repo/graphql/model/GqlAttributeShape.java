@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 /*
  * enum Attributes @attributeRegistry {
@@ -40,6 +40,15 @@ public class GqlAttributeShape {
         this.description = description;
     }
 
+    public boolean equals(CatalogAttribute other) {
+        return attrId == other.attrId()
+                && alias.equals(other.alias())
+                && name.equals(other.attrName())
+                && qualName.equals(other.qualifiedName())
+                && typeName.equals(other.attrType().name())
+                && isArray == other.isArray();
+    }
+
     @Override
     public String toString() {
         String info = "GqlAttributeShape{";
@@ -61,14 +70,5 @@ public class GqlAttributeShape {
         info += ", description=...";
         info += '}';
         return info;
-    }
-
-    public boolean equals(CatalogAttribute other) {
-        return attrId == other.attrId()
-                && alias.equals(other.alias())
-                && name.equals(other.attrName())
-                && qualName.equals(other.qualifiedName())
-                && typeName.equals(other.attrType().name())
-                && isArray == other.isArray();
     }
 }

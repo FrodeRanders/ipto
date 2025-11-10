@@ -212,6 +212,7 @@ public class Attribute<T> {
         attributeNode.put("@type", _type);
 
         attributeNode.put("attrname", name);
+        attributeNode.put("alias", alias);
         attributeNode.put("attrid", id);
         attributeNode.put("attrtype", type.name());
 
@@ -230,6 +231,7 @@ public class Attribute<T> {
         unitVersionTo = node.path("unitverto").asInt();
         valueId = node.path("valueid").asLong();
         name = node.path("attrname").asText();
+        alias = node.path("alias").asText();
         type = AttributeType.of(node.path("attrtype").asInt());
 
         // Continue with value vector
@@ -242,6 +244,7 @@ public class Attribute<T> {
             id = rs.getInt("attrid");
             valueId = rs.getLong("valueid");
             name = rs.getString("attrname");
+            alias = rs.getString("alias");
             type = AttributeType.of(rs.getInt("attrtype"));
 
             // Continue with value vector
@@ -274,7 +277,7 @@ public class Attribute<T> {
      */
     @Override
     public String toString() {
-        return "Attribute{" + id + "(" + name + ")[" +
+        return "Attribute{" + id + "(" + name + (null != alias ? "|" + alias : "") + ")[" +
                 unitVersionFrom + "-" + unitVersionTo + "]:" +
                 type.name() +
                 (value.isNew() ? "*" : "") +

@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.configuration;
+package org.gautelis.repo.graphql.configuration;
 
 public enum ResolutionPolicy {
     PREFER_GQL,

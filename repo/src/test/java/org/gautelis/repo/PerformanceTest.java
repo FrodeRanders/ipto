@@ -89,12 +89,12 @@ public class PerformanceTest {
                 Instant startTime = Instant.now();
 
                 Unit parentUnit = repo.createUnit(tenantId, "parent-" + j);
-                parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                parentUnit.withAttributeValue("dce:title", String.class, value -> {
                     value.add("First value");
                     value.add("Second value");
                     value.add("Third value");
                 });
-                parentUnit.withAttributeValue("dc:description", String.class, value -> {
+                parentUnit.withAttributeValue("dce:description", String.class, value -> {
                     value.add("A test unit");
                 });
                 repo.storeUnit(parentUnit);
@@ -106,7 +106,7 @@ public class PerformanceTest {
                 }
 
                 if (true) {
-                    parentUnit.withAttributeValue("dc:title", String.class, value -> {
+                    parentUnit.withAttributeValue("dce:title", String.class, value -> {
                         value.clear();
                         value.add("Replaced value");
                     });
@@ -136,7 +136,7 @@ public class PerformanceTest {
                     Unit childUnit = repo.createUnit(tenantId, "child-" + j + "-" + i);
 
                     //
-                    parentUnit.withAttribute("dc:title", String.class, attr -> {
+                    parentUnit.withAttribute("dce:title", String.class, attr -> {
                         try {
                             childUnit.addAttribute(attr);
                         } catch (BaseException be) {
@@ -146,17 +146,19 @@ public class PerformanceTest {
 
                     final Instant now = Instant.now();
 
-                    childUnit.withAttributeValue("dc:date", Instant.class, value -> {
+                    childUnit.withAttributeValue("dce:date", Instant.class, value -> {
                         value.add(now);
                     });
 
                     childUnit.withAttributeValue("dmo:orderId", String.class, value -> {
-                        value.add("*some order id*");
+                        String orderId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+                        value.add(orderId);
                     });
 
                     childUnit.withRecordAttribute("dmo:shipment", recrd -> {
                         recrd.withNestedAttributeValue(childUnit, "dmo:shipmentId", String.class, value -> {
-                            value.add("*some shipment id*");
+                            String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+                            value.add(shipmentId);
                         });
 
                         recrd.withNestedAttributeValue(childUnit, "dmo:deadline", Instant.class, value -> {
@@ -173,7 +175,7 @@ public class PerformanceTest {
                     if (/* i within page, that we will search for later down under */
                             i > pageOffset && i == pageOffset + pageSize && numberOfUnitsToHaveSpecificString-- > 0
                     ) {
-                        childUnit.withAttributeValue("dc:title", String.class, value -> {
+                        childUnit.withAttributeValue("dce:title", String.class, value -> {
                             value.add(someSpecificString);
                         });
 
@@ -210,7 +212,7 @@ public class PerformanceTest {
                 expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
 
                 // First attribute constraint
-                Optional<Integer> _timeAttributeId = repo.attributeNameToId("dc:date");
+                Optional<Integer> _timeAttributeId = repo.attributeNameToId("dce:date");
                 int[] timeAttributeId = { 0 };
                 _timeAttributeId.ifPresent(attrId -> timeAttributeId[0] = attrId);
 
@@ -218,7 +220,7 @@ public class PerformanceTest {
                 expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
 
                 // Second attribute constraint
-                Optional<Integer> _stringAttributeId = repo.attributeNameToId("dc:title");
+                Optional<Integer> _stringAttributeId = repo.attributeNameToId("dce:title");
                 int[] stringAttributeId = { 0 };
                 _stringAttributeId.ifPresent(attrId -> stringAttributeId[0] = attrId);
 

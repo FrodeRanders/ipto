@@ -1,11 +1,9 @@
-package org.gautelis.repo.graphql2.configuration;
+package org.gautelis.repo.graphql.configuration;
 
-import org.gautelis.repo.exceptions.ConfigurationException;
-import org.gautelis.repo.graphql.runtime.RuntimeService;
-import org.gautelis.repo.graphql2.model.CatalogAttribute;
-import org.gautelis.repo.graphql2.model.GqlFieldShape;
-import org.gautelis.repo.graphql2.model.ResolvedField;
-import org.gautelis.repo.graphql2.model.Source;
+import org.gautelis.repo.graphql.model.CatalogAttribute;
+import org.gautelis.repo.graphql.model.GqlFieldShape;
+import org.gautelis.repo.graphql.model.ResolvedField;
+import org.gautelis.repo.graphql.model.Source;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.model.attributes.Cardinality;
@@ -66,10 +64,6 @@ public final class FieldResolver {
         }
         */
 
-        // Record semantics
-        boolean isRecord = false; // TODO cat.isRecord();
-        String recordName = null; // TODO isRecord ? cat.recordName() : null;
-
         // Build resolved
         return new ResolvedField(
                 gql.typeName(),
@@ -77,8 +71,6 @@ public final class FieldResolver {
                 new Attribute.Reference(cat.attrId(), cat.attrName()),
                 attrType,
                 cardinality,
-                isRecord,
-                recordName,
                 prov
         );
     }

@@ -1,17 +1,17 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CatalogTemplate {
+public class CatalogUnit {
+    public final int templateId;
     public final String templateName;
-    public final int templateUnitId;
     private final List<CatalogAttribute> fields = new ArrayList<>();
 
-    public CatalogTemplate(String templateName, int templateUnitId) {
+    public CatalogUnit(int templateId, String templateName) {
+        this.templateId = templateId;
         this.templateName = templateName;
-        this.templateUnitId = templateUnitId;
     }
 
     public void addField(CatalogAttribute field) {
@@ -25,7 +25,7 @@ public class CatalogTemplate {
     @Override
     public String toString() {
         String info = "CatalogTemplate{";
-        info += "template-id=" + templateUnitId;
+        info += "template-id=" + templateId;
         info += ", template-name='" + templateName + '\'';
         info += ", fields=[";
         for (CatalogAttribute field : fields) {

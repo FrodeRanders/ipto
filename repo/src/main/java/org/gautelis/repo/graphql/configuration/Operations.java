@@ -1,48 +1,23 @@
-package org.gautelis.repo.graphql2.configuration;
+package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
-import org.gautelis.repo.graphql2.model.GqlOperationShape;
-import org.gautelis.repo.graphql2.model.TypeDef;
+import org.gautelis.repo.graphql.model.GqlOperationShape;
+import org.gautelis.repo.graphql.model.SchemaOperation;
+import org.gautelis.repo.graphql.model.TypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-
-import static org.gautelis.repo.graphql2.configuration.Operations.SchemaOperation.MUTATION;
-import static org.gautelis.repo.graphql2.configuration.Operations.SchemaOperation.QUERY;
-
 
 public final class Operations {
     private static final Logger log = LoggerFactory.getLogger(Operations.class);
 
     private Operations() {}
 
-    enum SchemaOperation {QUERY, MUTATION}
-
-    static Map<String, GqlOperationShape> derive(TypeDefinitionRegistry registry) {
-        Map<String, SchemaOperation> operationTypes = new HashMap<>();
-
-        Optional<SchemaDefinition> _schemaDefinition = registry.schemaDefinition();
-        if (_schemaDefinition.isPresent()) {
-            SchemaDefinition schemaDefinition = _schemaDefinition.get();
-
-            List<OperationTypeDefinition> otds = schemaDefinition.getOperationTypeDefinitions();
-            for (OperationTypeDefinition otd : otds) {
-                switch (otd.getName()) {
-                    case "query" -> {
-                        operationTypes.put(otd.getTypeName().getName(), QUERY);
-                    }
-                    case "mutation" -> {
-                        operationTypes.put(otd.getTypeName().getName(), SchemaOperation.MUTATION);
-                    }
-                }
-            }
-        }
-
+    static Map<String, GqlOperationShape> derive(TypeDefinitionRegistry registry, Map<String, SchemaOperation> operationTypes) {
         Map<String, GqlOperationShape> operations = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
@@ -51,7 +26,7 @@ public final class Operations {
             for (Directive directive : directives) {
                 String name = directive.getName();
 
-                // Kind of negative logic here, treat as operation if not 'unit' nor 'record'
+                // Kind of negative logic here, treat as operation if neither 'unit' nor 'record'
                 isOperation &= !"unit".equals(name);
                 isOperation &= !"record".equals(name);
             }
@@ -72,38 +47,40 @@ public final class Operations {
     }
 
     private static void deriveQueryOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
+        String typeName = type.getName();
+
         for (FieldDefinition f : type.getFieldDefinitions()) {
-            // Operation name
-            final String fieldName = f.getName();
-            final TypeDef resultType = TypeDef.of(f.getType());
+            final String operationName = f.getName(); // field name
+            final TypeDefinition resultType = TypeDefinition.of(f.getType());
 
             List<InputValueDefinition> inputs = f.getInputValueDefinitions();
 
             if (!inputs.isEmpty()) {
                 InputValueDefinition input = inputs.getFirst();
                 String inputName = input.getName();
-                TypeDef typeDef = TypeDef.of(input.getType());
-            }
+                TypeDefinition inputType = TypeDefinition.of(input.getType());
 
-            operations.put(/* operation name */ fieldName, new GqlOperationShape(fieldName, QUERY.name(), resultType.typeName()));
+                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY.name(), inputName, inputType.typeName(), resultType.typeName()));
+            }
         }
     }
 
     private static void deriveMutationOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
+        String typeName = type.getName();
+
         for (FieldDefinition f : type.getFieldDefinitions()) {
-            // Operation name
-            final String fieldName = f.getName();
-            final TypeDef resultType = TypeDef.of(f.getType());
+            final String operationName = f.getName(); // field name
+            final TypeDefinition resultType = TypeDefinition.of(f.getType());
 
             List<InputValueDefinition> inputs = f.getInputValueDefinitions();
 
             if (!inputs.isEmpty()) {
                 InputValueDefinition input = inputs.getFirst();
                 String inputName = input.getName();
-                TypeDef typeDef = TypeDef.of(input.getType());
-            }
+                TypeDefinition inputType = TypeDefinition.of(input.getType());
 
-            operations.put(/* operation name */ fieldName, new GqlOperationShape(fieldName, MUTATION.name(), resultType.typeName()));
+                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION.name(), inputName, inputType.typeName(), resultType.typeName()));
+            }
         }
     }
 }

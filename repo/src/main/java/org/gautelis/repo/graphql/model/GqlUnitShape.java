@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 import java.util.List;
 
@@ -21,11 +21,16 @@ import java.util.List;
  * Details about individual fields are found in GqlFieldShape
  */
 public record GqlUnitShape(
-        String typeName,     // (a)
-        int templateId,      // (b)
-        String templateName, // (c)
+        String typeName,           // (a)
+        int templateId,            // (b)
+        String templateName,       // (c)
         List<GqlFieldShape> fields
 ) {
+    public boolean equals(CatalogUnit other) {
+        return typeName.equals(other.templateName)
+            && templateId == other.templateId;
+    }
+
     @Override
     public String toString() {
         String info = "GqlUnitShape{";

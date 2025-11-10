@@ -16,7 +16,7 @@ public final class LongScalar {
     public static final GraphQLScalarType INSTANCE =
             GraphQLScalarType.newScalar()
                     .name("Long")
-                    .description("Java Long ↔ PostgreSQL BIGINT")
+                    .description("Integer value mapped to Java Long")
                     .coercing(new Coercing<Long, String>() {
 
                         @Override
@@ -25,6 +25,7 @@ public final class LongScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingSerializeException {
+                            log.trace("Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
                             if (dataFetcherResult instanceof Number n)
                                 return n.toString();
                             throw new CoercingSerializeException("Expected Long but was " + dataFetcherResult);

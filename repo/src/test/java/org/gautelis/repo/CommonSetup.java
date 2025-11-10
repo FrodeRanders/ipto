@@ -17,6 +17,7 @@
 package org.gautelis.repo;
 
 import graphql.GraphQL;
+import org.gautelis.repo.graphql.configuration.Configurator;
 import org.gautelis.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,11 +41,13 @@ public class CommonSetup {
         }
 
         Optional<GraphQL> _graphQL;
-        try (InputStreamReader sdl = new InputStreamReader(
-                Objects.requireNonNull(CommonSetup.class.getResourceAsStream("unit-schema.graphqls"))
+
+        try (InputStreamReader reader = new InputStreamReader(
+                Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            _graphQL = repo.loadConfiguration(sdl);
+            _graphQL = Configurator.load(repo, reader, System.out);
+
             if (_graphQL.isEmpty()) {
                 throw new RuntimeException("Failed to load configuration");
             }

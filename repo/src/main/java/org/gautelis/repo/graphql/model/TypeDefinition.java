@@ -1,4 +1,4 @@
-package org.gautelis.repo.graphql2.model;
+package org.gautelis.repo.graphql.model;
 
 import graphql.language.ListType;
 import graphql.language.NonNullType;
@@ -7,24 +7,24 @@ import graphql.language.TypeName;
 
 /*
  * type PurchaseOrder {
- *    orderId  : String    @use(attribute: ORDER_ID)
- *    shipment : Shipment! @use(attribute: SHIPMENT)
+ *    orderId  : String    @use(attribute: orderId)
+ *    shipment : Shipment! @use(attribute: shipment)
  * }
  *
  * Variations in field type definitions:
  *
- *    shipment : Shipment     @use(attribute: SHIPMENT)
- *    shipment : Shipment!    @use(attribute: SHIPMENT)
- *    shipment : [Shipment]!  @use(attribute: SHIPMENT)
+ *    shipment : Shipment     @use(attribute: shipment)
+ *    shipment : Shipment!    @use(attribute: shipment)
+ *    shipment : [Shipment]!  @use(attribute: shipment)
  *                   ^
  *                   | (a)
  */
-public record TypeDef(
+public record TypeDefinition(
         String typeName,
         boolean isArray,
         boolean isMandatory
 ) {
-    public static TypeDef of(Type t) {
+    public static TypeDefinition of(Type t) {
         boolean isArray = false;
         boolean isMandatory = false;
         String name = null;
@@ -50,7 +50,7 @@ public record TypeDef(
             name = typeName.getName();
         }
 
-        return new TypeDef(name, isArray, isMandatory);
+        return new TypeDefinition(name, isArray, isMandatory);
     }
 
     @Override

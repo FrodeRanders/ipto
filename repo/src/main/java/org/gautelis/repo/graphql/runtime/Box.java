@@ -5,7 +5,10 @@ import org.gautelis.repo.model.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class Box {
     private static final Logger log = LoggerFactory.getLogger(Box.class);
@@ -13,23 +16,30 @@ public class Box {
     private final int tenantId;
     private final long unitId;
 
-    // attrId in IPTO -> attribute
-    private final Map<Integer, Attribute<?>> attributes;
+    //---------------------------------------------------------------------
+    // OBSERVE
+    //    We are assuming that the field names used in the SDL equals the
+    //    attribute aliases used.
+    //    GraphQL operates on the information in the SDL, so when assembling
+    //    results (of queries and so on), it maps Box' contents for units
+    //    and records to fields as described in the SDL.
+    //---------------------------------------------------------------------
+    private final Map</* field name */ String, Attribute<?>> attributesByFieldName;
 
     /* package accessible only */
-    Box(int tenantId, long unitId, Map<Integer, Attribute<?>> attributes) {
+    Box(int tenantId, long unitId, Map</* field name */ String, Attribute<?>> attributes) {
         this.tenantId = tenantId;
         this.unitId = unitId;
-        this.attributes = attributes;
+        this.attributesByFieldName = attributes;
     }
 
     /* package accessible only */
-    Box(Unit unit, Map<Integer, Attribute<?>> attributes) {
+    Box(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
         this(Objects.requireNonNull(unit).getTenantId(), unit.getUnitId(), attributes);
     }
 
     /* package accessible only */
-    Box(Box parent, Map<Integer, Attribute<?>> attributes) {
+    Box(Box parent, Map</* field name */ String, Attribute<?>> attributes) {
         this(Objects.requireNonNull(parent).tenantId, parent.unitId, attributes);
     }
 
@@ -42,14 +52,14 @@ public class Box {
     }
 
     /* package accessible only */
-    Attribute<?> getAttribute(int attrId) {
-        return attributes.get(attrId);
+    Attribute<?> getAttribute(String fieldName) {
+        return attributesByFieldName.get(fieldName);
     }
 
-    public <A> A scalar(int attrId, Class<A> expectedClass) {
-        log.trace("Box::scalar({}, {})", attrId, expectedClass.getName());
+    public <A> A scalar(String alias, Class<A> expectedClass) {
+        log.trace("Box::scalar({}, {})", alias, expectedClass.getName());
 
-        Attribute<?> attribute = attributes.get(attrId);
+        Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
             return null;
         }
@@ -62,10 +72,10 @@ public class Box {
         return expectedClass.cast(values.getFirst());
     }
 
-    public <A> List<A> array(int attrId, Class<A> expectedClass) {
-        log.trace("Box::array({}, {})", attrId, expectedClass.getName());
+    public <A> List<A> array(String alias, Class<A> expectedClass) {
+        log.trace("Box::array({}, {})", alias, expectedClass.getName());
 
-        Attribute<?> attribute = attributes.get(attrId);
+        Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
             return List.of();
         }
@@ -84,8 +94,12 @@ public class Box {
         sb.append("Box{");
         sb.append("tenantId=").append(tenantId);
         sb.append(", unitId=").append(unitId);
-        sb.append(", attributes=").append(attributes);
-        sb.append("}");
+        sb.append(", attributes=[");
+        for (Map.Entry<String, Attribute<?>> entry : attributesByFieldName.entrySet()) {
+            Attribute<?> attribute = entry.getValue();
+            sb.append(attribute).append(" ");
+        }
+        sb.append("]}");
         return sb.toString();
     }
 }

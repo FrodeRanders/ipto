@@ -40,7 +40,7 @@
         <logger name="org.gautelis.repo.model.cache.UnitFactory" level="TRACE" />
         <logger name="org.gautelis.repo.graphql" level="TRACE" />
         <logger name="org.apache" level="WARN" />
-        <logger name="graphql" level="TRACE" />
+        <logger name="org.gautelis.repo.graphql" level="TRACE" />
 
         <logger name="STATISTICS" level="INFO">
             <appender-ref ref="STATISTICS"/>
