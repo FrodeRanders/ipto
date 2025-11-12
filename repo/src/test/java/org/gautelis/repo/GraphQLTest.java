@@ -105,14 +105,24 @@ public class GraphQLTest {
     @Test
     @Order(1)
     public void retrieveWithInlineLiteral() {
-        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+        final String shipmentId1 = Generators.timeBasedEpochGenerator().generate().toString();
+        final String shipmentId2 = Generators.timeBasedEpochGenerator().generate().toString();
 
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, shipmentId, Instant.now());
+        final long unitId1 = createUnit(tenantId, shipmentId1, Instant.now());
+        final long unitId2 = createUnit(tenantId, shipmentId2, Instant.now());
 
         String query = """
             query Unit {
-              order(id: { tenantId: %d, unitId: %d }) {
+              order1: order(id: { tenantId: %d, unitId: %d }) {
+                orderId
+                shipment {
+                  shipmentId
+                  deadline
+                  reading
+                }
+              }
+              order2: order(id: { tenantId: %d, unitId: %d }) {
                 orderId
                 shipment {
                   shipmentId
@@ -122,7 +132,7 @@ public class GraphQLTest {
               }
             }
             """;
-        query = String.format(query, tenantId, unitId);
+        query = String.format(query, tenantId, unitId1, tenantId, unitId2);
 
         System.out.println("--------------------------------------------------------------");
         log.info(query);
@@ -282,7 +292,7 @@ public class GraphQLTest {
         final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
-            query Units($filter: Filter!) {
+            query Orders($filter: Filter!) {
               orders(filter: $filter) {
                 shipment {
                     deadline
@@ -338,6 +348,63 @@ public class GraphQLTest {
 
     @Test
     @Order(5)
+    public void searchWithInlineLiteral() {
+        final String shipmentId1 = Generators.timeBasedEpochGenerator().generate().toString();
+        final String shipmentId2 = Generators.timeBasedEpochGenerator().generate().toString();
+
+        final int tenantId = 1;
+        final long _unitId1 = createUnit(tenantId, shipmentId1, Instant.now());
+        final long _unitId2 = createUnit(tenantId, shipmentId1, Instant.now());
+
+        String query = """
+            query Shipments {
+              shipment1: orders(filter: {tenantId: %d, where: {attrExpr: {attr: shipmentId, op: EQ, value: "%s"}}}) {
+                shipment {
+                    deadline
+                }
+              }
+              shipment2: orders(filter: {tenantId: %d, where: {attrExpr: {attr: shipmentId, op: EQ, value: "%s"}}}) {
+                shipment {
+                    deadline
+                }
+              }
+            }
+            """;
+
+        query = String.format(query, tenantId, shipmentId1, tenantId, shipmentId2);
+
+        log.info(query);
+        System.out.println(query);
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result: {}", (Object) result.getData());
+
+            System.out.print("--> ");
+            dumpMap(result.getData());
+
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
+        }
+        System.out.println("--------------------------------------------------------------");
+    }
+
+    @Test
+    @Order(6)
     public void searchRaw() {
         final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
@@ -345,7 +412,7 @@ public class GraphQLTest {
         final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
 
         String query = """
-            query Units($filter: Filter!) {
+            query Orders($filter: Filter!) {
               ordersRaw(filter: $filter)
             }
             """;
