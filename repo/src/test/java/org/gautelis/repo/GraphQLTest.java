@@ -354,7 +354,7 @@ public class GraphQLTest {
 
         final int tenantId = 1;
         final long _unitId1 = createUnit(tenantId, shipmentId1, Instant.now());
-        final long _unitId2 = createUnit(tenantId, shipmentId1, Instant.now());
+        final long _unitId2 = createUnit(tenantId, shipmentId2, Instant.now());
 
         String query = """
             query Shipments {
