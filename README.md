@@ -270,23 +270,39 @@ automated in ```db/postgresql/setup-for-test.py```, but you can do this manually
 Pulling the latest 'postgres' image from Docker Hub...
 Using default tag: latest
 latest: Pulling from library/postgres
-254e724d7786: Pull complete
-...
+51365f04b688: Already exists 
+0c62f2c77679: Pull complete 
+c023bf617631: Pull complete 
+0e87e20f185f: Pull complete 
+b83bbd32af80: Pull complete 
+a07fc0ed999b: Pull complete 
+bbde65ac7d82: Pull complete 
+78a6f7f512d5: Pull complete 
+ca2cdb9a2003: Pull complete 
+77b822173e77: Pull complete 
+ffc2fd6399f0: Pull complete 
+1b20b7b2f09a: Pull complete 
+7f9e156818dc: Pull complete 
+Digest: sha256:1a7c9115671c686384cf4cd9fb50b682f8d5df9bb1d26070001741a064dd04b4
+Status: Downloaded newer image for postgres:latest
+docker.io/library/postgres:latest
 
+What's next:
+    View a summary of image vulnerabilities and recommendations → docker scout quickview postgres
 Image pulled successfully.
 
 Removing existing container named 'repo-postgres' (if any)...
 Removed old container 'repo-postgres'.
 
-Starting new container 'repo-postgres' on port 1402 ...
-2e8b41855a8976901ed256cba75c6541c3dda188a4cb617f911688c26057212b
-Container started.
+Starting new container 'repo-postgres' on port 5432 ...
+5ceba8bf0ad24dea8d4d35e1a8275ab16ee231e19a54fd7947cf9b8a73e56843
+Container started: 5ceba8bf0ad2
 
-Waiting 10 seconds for the database to initialize...
-Proceeding...
+Awaiting startup...
+Running psql commands in container...
+Commands executed. Exiting psql.
 
-Entering container to run psql commands...
-...
+All SQL files have been executed.
 
-Setup completed.  
+Setup completed.
 ```
