@@ -296,7 +296,7 @@ public class PerformanceTest {
 
         Runtime runtime = Runtime.getRuntime();
         int numProcessors = runtime.availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(2); // Math.max(numProcessors/2, 1)
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1)); 
 
         try {
             Repository repo = RepositoryFactory.getRepository();
