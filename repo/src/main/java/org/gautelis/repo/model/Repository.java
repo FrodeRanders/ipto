@@ -745,7 +745,9 @@ public class Repository {
     }
 
     public void withConnection(InternalConnectionRunnable runnable) throws java.sql.SQLException {
-        runnable.run(context.getDataSource().getConnection());
+        try (Connection conn = context.getDataSource().getConnection()) {
+            runnable.run(conn);
+        }
     }
 }
 
