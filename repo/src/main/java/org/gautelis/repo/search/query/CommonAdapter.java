@@ -391,7 +391,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
         GeneratedStatement generatedStatement = generateStatement(sd);
         String statement = generatedStatement.statement();
-        log.debug("Search statement: {}", statement);
+        log.trace("Search statement: {}", statement);
 
         Collection<SearchItem<?>> preparedItems = generatedStatement.preparedItems();
         Map<String, SearchItem<?>> ccv = generatedStatement.commonConstraintValues();
