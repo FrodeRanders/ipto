@@ -80,7 +80,7 @@ public class Unit implements Cloneable {
         }
     }
 
-    ObjectMapper MAPPER = new ObjectMapper();   // thread-safe, reuse one instance
+    private static final ObjectMapper MAPPER = new ObjectMapper();   // thread-safe, reuse one instance
 
     private final Context ctx;
 

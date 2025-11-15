@@ -33,6 +33,7 @@ import java.util.Optional;
 public class CommonSetup {
     private static final Logger log = LoggerFactory.getLogger(CommonSetup.class);
 
+    @SuppressWarnings("CanBeFinal")
     private static GraphQL graphQL = null;
 
     public static GraphQL setUp() throws IOException {
@@ -40,20 +41,17 @@ public class CommonSetup {
             return graphQL;
         }
 
-        Optional<GraphQL> _graphQL;
-
         try (InputStreamReader reader = new InputStreamReader(
                 Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            _graphQL = Configurator.load(repo, reader, System.out);
+            Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);
 
             if (_graphQL.isEmpty()) {
                 throw new RuntimeException("Failed to load configuration");
             }
-        }
 
-        graphQL = _graphQL.get();
-        return graphQL;
+            return _graphQL.get();
+        }
     }
 }

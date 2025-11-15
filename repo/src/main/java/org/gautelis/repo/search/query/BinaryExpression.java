@@ -26,7 +26,7 @@ public sealed abstract class BinaryExpression implements SearchExpression
         permits AndExpression, OrExpression {
 
     protected final SearchExpression left, right;
-    protected Operator operator;
+    protected final Operator operator;
 
     protected BinaryExpression(Operator operator, SearchExpression left, SearchExpression right) {
         Objects.requireNonNull(operator, "operator");

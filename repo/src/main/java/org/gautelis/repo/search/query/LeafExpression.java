@@ -33,7 +33,7 @@ import static org.gautelis.repo.model.AttributeType.*;
 import static org.gautelis.repo.search.model.Operator.EQ;
 
 public final class LeafExpression<T extends SearchItem<?>> implements SearchExpression {
-    protected static final Logger log = LoggerFactory.getLogger(LeafExpression.class);
+    private static final Logger log = LoggerFactory.getLogger(LeafExpression.class);
 
     final T item;
     private String label = null;

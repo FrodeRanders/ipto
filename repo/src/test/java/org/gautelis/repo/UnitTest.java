@@ -56,7 +56,7 @@ public class UnitTest {
         }
     }
 
-    private Stack<Counters> counters = new Stack<>();
+    private final Stack<Counters> counters = new Stack<>();
 
 
     @BeforeAll

@@ -18,7 +18,7 @@ import java.util.Locale;
 public class TimeHelper {
     private static final Logger log = LoggerFactory.getLogger(TimeHelper.class);
 
-    private static DateTimeFormatter FMT = new DateTimeFormatterBuilder()
+    private static final DateTimeFormatter FMT = new DateTimeFormatterBuilder()
             .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
             .appendFraction(ChronoField.MICRO_OF_SECOND, 3, 6, true) // 000—999999
             .toFormatter();

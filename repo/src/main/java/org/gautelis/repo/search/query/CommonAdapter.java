@@ -47,7 +47,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
     //          used to format an Instance, so it is suitable as a
     //          <string> in a TO_TIMESTAMP construct.
     //------------------------------------------------------------------
-    public static String INSTANT_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
+    public static final String INSTANT_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
 
     /**
      * Unload issues for this database adapter.

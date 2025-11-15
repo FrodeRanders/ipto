@@ -496,7 +496,7 @@ public class Repository {
         // Delete unit (all versions) if not locked.
         boolean isUndisposable = false;
         {
-            for (Lock lock : unit.getLocks()) {
+            for (Lock _lock : unit.getLocks()) {
                 isUndisposable = true;
                 break;
             }

@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class GraphQLTest {
     private static final Logger log = LoggerFactory.getLogger(GraphQLTest.class);
 
-    ObjectMapper MAPPER = new ObjectMapper();
+    private final ObjectMapper MAPPER = new ObjectMapper();
 
     private static graphql.GraphQL graphQL = null;
 

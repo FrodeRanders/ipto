@@ -56,7 +56,7 @@ public abstract class Value<T> {
      * <p>
      * Called from derived objects.
      */
-    protected Value(ArrayNode node) throws JsonProcessingException {
+    protected Value(ArrayNode node) {
         isNew = false;
 
         // Mark current status, so we can detect changes later...

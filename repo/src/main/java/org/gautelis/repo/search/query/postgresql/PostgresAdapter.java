@@ -35,7 +35,7 @@ import java.util.Locale;
 public class PostgresAdapter extends CommonAdapter {
     protected static final Logger log = LoggerFactory.getLogger(PostgresAdapter.class);
 
-    public static String POSTGRES_TIME_PATTERN = "YYYY-MM-DD HH24:MI:SS.MS";
+    public static final String POSTGRES_TIME_PATTERN = "YYYY-MM-DD HH24:MI:SS.MS";
 
     public PostgresAdapter() {
     }

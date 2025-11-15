@@ -30,7 +30,7 @@ import java.util.*;
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
 
-    private static ObjectMapper objectMapper = new ObjectMapper();
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
 
     public record GqlViewpoint(
