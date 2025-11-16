@@ -69,8 +69,8 @@ public class PerformanceTest {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 50; //
-        final int numberOfChildren = 10; //
+        final int numberOfParents = 5000; //
+        final int numberOfChildren = 100; //
 
         try {
             Instant firstParentCreated = null;
@@ -294,22 +294,23 @@ public class PerformanceTest {
     @Order(2)
     public void concurrent() {
 
+        final int numberOfUnits = 1000;
+
         final int tenantId = 1; // SCRATCH
-        final int numberOfUnits = 500;
         final String someKnownAttribute = "dce:description";
 
-        System.out.println("Running concurrent test, creating " + numberOfUnits + " units (fast) with subsequent searches (slower)");
+        Runtime runtime = Runtime.getRuntime();
+        int numProcessors = runtime.availableProcessors();
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1));
+
+        System.out.println("Running concurrent test with " + numProcessors + " threads, creating " + numberOfUnits + " units with subsequent searches");
         System.out.flush();
 
         RunningStatistics storeStats = new RunningStatistics();
         RunningStatistics searchOnNameStats = new RunningStatistics();
         RunningStatistics searchOnAttribStats = new RunningStatistics();
 
-        Runtime runtime = Runtime.getRuntime();
-        int numProcessors = runtime.availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1));
-
-        try {
+        try /* NO! try with resource ('executor') */ {
             Repository repo = RepositoryFactory.getRepository();
 
             Vector<String> unitNames = new Vector<>(numberOfUnits);

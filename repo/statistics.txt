@@ -1052,3 +1052,60 @@ repo_record_template_elements |              12 |                66 |           
             repo_unit_version |           9,814 |        70,335,735 |      5,039,687 |         368 MB
 
 
+2025-11-16 15:06:09.451: Run of 500.000 units, after adjusting indexes.
+===================================================================================================
+OS: Mac OS X 15.7.2 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=14 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=60 MiB
+DB: PostgreSQL 18.1 (Debian 18.1-1.pgdg13+2) on x86_64-pc-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+
+Units: total=512355 locks=0 vectors=3545230
+Values: string=1551672 time=1006055 integer=0 long=0 double=1006110 boolean=0 data=0 record=1509165
+Assocs: internal=0 external=0
+
+2025-11-16 15:06:09.458: 
+-----------------------+--------+-------+---------+--------+----------+-------------+------------------
+           Measurement |  Count |   Min |     Max |   Mean |    CV(%) |  Total time            i.e.
+-----------------------+--------+-------+---------+--------+----------+-------------+------------------
+         custom search |   1988 |  0,42 |  905,12 |   1,42 |  1426,21 |        3181 |         3s 181ms
+           delete unit |      1 |  6,09 |    6,09 |   6,09 |      NaN |           6 |              6ms
+          event action | 511001 |  0,00 |    0,05 |   0,00 |   438,67 |           0 |                 
+fetch known attributes |      1 |  3,51 |    3,51 |   3,51 |      NaN |           4 |              4ms
+            get status |      1 |  1,12 |    1,12 |   1,12 |      NaN |           1 |              1ms
+             lock unit |      1 |  5,71 |    5,71 |   5,71 |      NaN |           6 |              6ms
+        resurrect unit |      1 |  7,28 |    7,28 |   7,28 |      NaN |           7 |              7ms
+                search |      2 |  1,22 |   40,80 |  21,01 |   133,21 |          42 |             42ms
+            set status |      1 |  1,79 |    1,79 |   1,79 |      NaN |           2 |              2ms
+            store unit | 510996 |  1,07 |   57,54 |   1,90 |    44,00 |     1059587 | 17mins 39s 587ms
+           unlock unit |      1 |  3,44 |    3,44 |   3,44 |      NaN |           3 |              3ms
+
+
+2025-11-16 15:06:09.465: Index behaviour: 
+------------------------------+-----------------+-------------------+----------------+----------------
+                    Tablename |  Total seq scan |  Total index scan |  Rows in table |  Size of table
+------------------------------+-----------------+-------------------+----------------+----------------
+               repo_attribute |       3,521,893 |            23,821 |             20 |     8192 bytes
+   repo_attribute_description |               3 |                 0 |              0 |        0 bytes
+         repo_attribute_value |              17 |        11,383,724 |      3,542,536 |         231 MB
+          repo_boolean_vector |              15 |                15 |              0 |        0 bytes
+             repo_data_vector |              15 |                15 |              0 |        0 bytes
+           repo_double_vector |              11 |                75 |      1,006,915 |          50 MB
+          repo_external_assoc |              15 |                 5 |              0 |        0 bytes
+          repo_integer_vector |              15 |                15 |              0 |        0 bytes
+          repo_internal_assoc |              17 |                10 |              0 |        0 bytes
+                    repo_lock |           5,083 |               310 |              0 |     8192 bytes
+                     repo_log |               3 |                 0 |              0 |        0 bytes
+             repo_long_vector |              15 |                15 |              0 |        0 bytes
+               repo_namespace |               3 |                 0 |              1 |     8192 bytes
+         repo_record_template |              31 |                 3 |              1 |     8192 bytes
+repo_record_template_elements |              22 |                 7 |              3 |     8192 bytes
+           repo_record_vector |              15 |           527,644 |      1,509,519 |          82 MB
+           repo_string_vector |              15 |           259,702 |      1,551,578 |         112 MB
+                  repo_tenant |         507,067 |             5,300 |              2 |     8192 bytes
+             repo_time_vector |              17 |               600 |      1,006,772 |          50 MB
+             repo_unit_kernel |              31 |           535,660 |        512,357 |          37 MB
+           repo_unit_template |              32 |                 2 |              1 |     8192 bytes
+  repo_unit_template_elements |              29 |                 0 |              2 |     8192 bytes
+            repo_unit_version |              22 |         7,594,985 |        517,574 |          38 MB
+
+
