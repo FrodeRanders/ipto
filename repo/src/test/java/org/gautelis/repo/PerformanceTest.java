@@ -296,6 +296,8 @@ public class PerformanceTest {
 
         final int tenantId = 1; // SCRATCH
         final int numberOfUnits = 500;
+        final String someKnownAttribute = "dce:description";
+
         System.out.println("Running concurrent test, creating " + numberOfUnits + " units (fast) with subsequent searches (slower)");
         System.out.flush();
 
@@ -327,7 +329,7 @@ public class PerformanceTest {
                             value.add("Second value");
                             value.add("Third value");
                         });
-                        parentUnit.withAttributeValue("dce:description", String.class, value -> {
+                        parentUnit.withAttributeValue(someKnownAttribute, String.class, value -> {
                             String uniqueDescription = Generators.timeBasedEpochGenerator().generate().toString();
                             value.add(uniqueDescription);
                             attribValues.add(uniqueDescription);
@@ -388,7 +390,7 @@ public class PerformanceTest {
                 });
             }
 
-            int attributeId = getAttributeId("dce:description", repo);
+            int attributeId = getAttributeId(someKnownAttribute, repo);
 
             for (int i=0; i<numberOfUnits; i++) {
                 final int j = i;
@@ -429,7 +431,7 @@ public class PerformanceTest {
                             }));
 
                             if (unitId.isEmpty()) {
-                                fail("Failed to find known unit corresponding to search");
+                                fail("Failed to find known unit corresponding to search for \"" + someKnownAttribute + " = '" + attribValue + "'\"");
                             }
                         } catch (SQLException sqle) {
                             fail(sqle.getMessage());
