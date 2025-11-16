@@ -88,11 +88,12 @@ CREATE INDEX repo_uv_ind1
     INCLUDE (unitname);
 
 CREATE INDEX repo_uv_ind2
-    ON repo_unit_version (tenantid, lower(unitname), unitid, unitver);
+    ON repo_unit_version (tenantid, LOWER(unitname), unitid, unitver);
 
-CREATE INDEX repo_uv_tenant_unitname_idx
-    ON repo_unit_version (tenantid, unitname, unitid, unitver);
 
+/*
+ * Could be of interest
+ *
 CREATE VIEW repo_unit_last_version AS
 SELECT uk.tenantid, uk.unitid, uv.unitver, uk.corrid, uk.status, uv.unitname, uk.lastver, uk.created, uv.modified
 FROM repo_unit_kernel uk
@@ -100,6 +101,7 @@ FROM repo_unit_kernel uk
          uk.tenantid = uv.tenantid
      AND uk.unitid = uv.unitid
      AND uk.lastver = uv.unitver;
+*/
 
 ---------------------------------------------------------------
 -- Collection of known attributes
