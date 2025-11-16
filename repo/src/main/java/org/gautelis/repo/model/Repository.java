@@ -16,6 +16,7 @@
  */
 package org.gautelis.repo.model;
 
+import com.fasterxml.uuid.Generators;
 import graphql.GraphQL;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
@@ -77,7 +78,29 @@ public class Repository {
     /**
      * Creates a unit for specified tenant with the specified name.
      * @param tenantId id of tenant
-     * @param name name of unit
+     * @param name name of unit (may be null)
+     * @param correlationId a correlation id specific for this unit
+     * @return a new unit, not yet persisted
+     * @throws DatabaseConnectionException
+     * @throws DatabaseReadException
+     * @throws DatabaseWriteException
+     * @throws ConfigurationException
+     */
+    public Unit createUnit(
+            int tenantId,
+            String name,
+            UUID correlationId
+    ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
+        return new Unit(context, tenantId, name, correlationId);
+    }
+
+    /**
+     * Creates a unit for specified tenant with the specified name.
+     * @param tenantId id of tenant
+     * @param name name of unit (may be null)
+     * <p>
+     * A correlation id specific for this unit is automatically created (UUID v7)
+     * <p>
      * @return a new unit, not yet persisted
      * @throws DatabaseConnectionException
      * @throws DatabaseReadException
@@ -88,7 +111,8 @@ public class Repository {
             int tenantId,
             String name
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
-        return new Unit(context, tenantId, name);
+        UUID correlationId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
+        return new Unit(context, tenantId, name, correlationId);
     }
 
     /**

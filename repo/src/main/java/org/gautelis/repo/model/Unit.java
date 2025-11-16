@@ -113,7 +113,8 @@ public class Unit implements Cloneable {
     Unit(
             final Context ctx,
             final int tenantId,
-            final String name
+            final String name,
+            final UUID correlationId
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
         this(ctx);
 
@@ -126,7 +127,7 @@ public class Unit implements Cloneable {
         this.tenantId = tenantId;
         this.unitId = -1L; // assigned first when stored
         this.unitVersion = 1;
-        this.corrId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
+        this.corrId = correlationId;
         this.unitName = null != name ? name.trim() : null;
         this.unitStatus = Status.EFFECTIVE;
 
