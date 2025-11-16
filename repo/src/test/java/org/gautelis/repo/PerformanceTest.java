@@ -282,44 +282,60 @@ public class PerformanceTest {
         }
     }
 
+    private int getAttributeId(String attributeName, Repository repo) {
+        Optional<Integer> attributeId = repo.attributeNameToId(attributeName);
+        if (attributeId.isEmpty()) {
+            throw new RuntimeException("Unknown attribute: " + attributeName);
+        }
+        return attributeId.get();
+    }
+
     @Test
     @Order(2)
     public void concurrent() {
 
         final int tenantId = 1; // SCRATCH
         final int numberOfUnits = 500;
-        System.out.println("Running concurrent test, creating " + numberOfUnits + " units with subsequent searches");
+        System.out.println("Running concurrent test, creating " + numberOfUnits + " units (fast) with subsequent searches (slower)");
         System.out.flush();
 
-        RunningStatistics averageStoreTPI = new RunningStatistics(); // Average time per iteration
-        RunningStatistics averageSearchTPI = new RunningStatistics(); // Average time per iteration
+        RunningStatistics storeStats = new RunningStatistics();
+        RunningStatistics searchOnNameStats = new RunningStatistics();
+        RunningStatistics searchOnAttribStats = new RunningStatistics();
 
         Runtime runtime = Runtime.getRuntime();
         int numProcessors = runtime.availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1)); 
+        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1));
 
         try {
             Repository repo = RepositoryFactory.getRepository();
 
+            Vector<String> unitNames = new Vector<>(numberOfUnits);
+            Vector<String> attribValues = new Vector<>(numberOfUnits);
+
             for (int i=0; i<numberOfUnits; i++) {
-                final int j = i;
 
                 executor.submit(() -> {
                     Instant startTime = Instant.now();
                     {
-                        Unit parentUnit = repo.createUnit(tenantId, "concurrent-unit-" + j);
+                        String uniqueName = Generators.timeBasedEpochGenerator().generate().toString();
+                        Unit parentUnit = repo.createUnit(tenantId, uniqueName);
+                        unitNames.add(uniqueName);
+
                         parentUnit.withAttributeValue("dce:title", String.class, value -> {
                             value.add("First value");
                             value.add("Second value");
                             value.add("Third value");
                         });
                         parentUnit.withAttributeValue("dce:description", String.class, value -> {
-                            value.add("A concurrent test unit");
+                            String uniqueDescription = Generators.timeBasedEpochGenerator().generate().toString();
+                            value.add(uniqueDescription);
+                            attribValues.add(uniqueDescription);
                         });
 
                         repo.storeUnit(parentUnit);
                     }
-                    averageStoreTPI.addSample(startTime, /* endTime */ Instant.now());
+                    storeStats.addSample(startTime, /* endTime */ Instant.now());
                 });
             }
 
@@ -334,12 +350,13 @@ public class PerformanceTest {
                         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
                         // Unit version constraint
-                        SearchItem<String> nameSearchItem = new StringUnitSearchItem(Column.UNIT_VERSION_UNITNAME, Operator.EQ, "concurrent-unit-" + j);
+                        String unitName = unitNames.get(j);
+                        SearchItem<String> nameSearchItem = new StringUnitSearchItem(Column.UNIT_VERSION_UNITNAME, Operator.EQ, unitName);
                         expr = QueryBuilder.assembleAnd(expr, nameSearchItem);
 
                         // Result set constraints (paging)
                         SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
-                        UnitSearch usd = new UnitSearch(expr, order, /* selectionSize */ 5);
+                        UnitSearch usd = new UnitSearch(expr, order, /* no selection limit */ 0);
 
                         // Build SQL statement for search
                         DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
@@ -355,7 +372,7 @@ public class PerformanceTest {
                                     Timestamp _created = rs.getTimestamp(++k);
                                     Timestamp _modified = rs.getTimestamp(++k);
 
-                                    log.info("Concurrent search: Found: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
+                                    //log.trace("Concurrent search: Found: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
                                     unitId.add(new Unit.Id(_tenantId, _unitId));
                                 }
                             }));
@@ -367,7 +384,58 @@ public class PerformanceTest {
                             fail(sqle.getMessage());
                         }
                     }
-                    averageSearchTPI.addSample(startTime, /* endTime */ Instant.now());
+                    searchOnNameStats.addSample(startTime, /* endTime */ Instant.now());
+                });
+            }
+
+            int attributeId = getAttributeId("dce:description", repo);
+
+            for (int i=0; i<numberOfUnits; i++) {
+                final int j = i;
+
+                executor.submit(() -> {
+                    Instant startTime = Instant.now();
+                    {
+                        // Unit constraints
+                        SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
+                        expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
+
+                        // Attribute constraint
+                        String attribValue = attribValues.get(j);
+                        SearchItem<String> nameSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, attribValue);
+                        expr = QueryBuilder.assembleAnd(expr, nameSearchItem);
+
+                        // Result set constraints (paging)
+                        SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
+                        UnitSearch usd = new UnitSearch(expr, order, /* no selection limit */ 0);
+
+                        // Build SQL statement for search
+                        DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
+
+                        try {
+                            Collection<Unit.Id> unitId = new ArrayList<>();
+                            repo.withConnection(conn -> searchAdapter.search(conn, usd, repo.getTimingData(), rs -> {
+                                while (rs.next()) {
+                                    int k = 0;
+                                    int _tenantId = rs.getInt(++k);
+                                    long _unitId = rs.getLong(++k);
+                                    int _unitVer = rs.getInt(++k);
+                                    Timestamp _created = rs.getTimestamp(++k);
+                                    Timestamp _modified = rs.getTimestamp(++k);
+
+                                    //log.trace("Concurrent search: Found: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
+                                    unitId.add(new Unit.Id(_tenantId, _unitId));
+                                }
+                            }));
+
+                            if (unitId.isEmpty()) {
+                                fail("Failed to find known unit corresponding to search");
+                            }
+                        } catch (SQLException sqle) {
+                            fail(sqle.getMessage());
+                        }
+                    }
+                    searchOnAttribStats.addSample(startTime, /* endTime */ Instant.now());
                 });
             }
 
@@ -390,8 +458,8 @@ public class PerformanceTest {
         }
 
         String info = String.format(
-                "Concurrent count=%d, store-time=%fms search-time=%fms",
-                numberOfUnits, averageStoreTPI.getMean(), averageSearchTPI.getMean()
+                "Concurrent count=%d, store-time=%.2fms unit-search-time=%.2fms attrib-search-time=%.2fms",
+                numberOfUnits, storeStats.getMean(), searchOnNameStats.getMean(), searchOnAttribStats.getMean()
         );
         log.info(info);
         System.out.println(info);
