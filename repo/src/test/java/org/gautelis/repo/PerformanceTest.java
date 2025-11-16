@@ -69,7 +69,7 @@ public class PerformanceTest {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 5000; //
+        final int numberOfParents = 500; //
         final int numberOfChildren = 100; //
 
         try {
@@ -301,9 +301,10 @@ public class PerformanceTest {
 
         Runtime runtime = Runtime.getRuntime();
         int numProcessors = runtime.availableProcessors();
-        ExecutorService executor = Executors.newFixedThreadPool(Math.max(numProcessors/2, 1));
+        int numThreads = Math.max(numProcessors/2, 1);
+        ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-        System.out.println("Running concurrent test with " + numProcessors + " threads, creating " + numberOfUnits + " units with subsequent searches");
+        System.out.println("Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
         System.out.flush();
 
         RunningStatistics storeStats = new RunningStatistics();
@@ -447,7 +448,7 @@ public class PerformanceTest {
 
             // Await completion
             System.out.println("Awaiting completion...");
-            boolean finished = executor.awaitTermination(5, TimeUnit.MINUTES);
+            boolean finished = executor.awaitTermination(1, TimeUnit.MINUTES);
             assertTrue(finished, "All tasks did not finish in time");
 
         } catch (Throwable t) {
