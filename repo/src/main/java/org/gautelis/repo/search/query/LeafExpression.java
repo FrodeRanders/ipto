@@ -77,7 +77,10 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
             UnitSearchItem<?> item,
             boolean usePrepare
     ) {
-        sb.append(item.getColumn()).append(" ");
+        switch (item.getType()) {
+            case STRING -> sb.append("lower(").append(item.getColumn()).append(") ");
+            default -> sb.append(item.getColumn()).append(" ");
+        }
         sb.append(item.getOperator());
         sb.append(" ");
         if (usePrepare) {
@@ -85,6 +88,7 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
         } else {
             switch (item.getType()) {
                 case TIME -> sb.append("TIMESTAMP '").append(item.getValue()).append("'");
+                case STRING -> sb.append("lower('").append(item.getValue()).append("')");
                 default -> sb.append(item.getValue());
             }
         }
