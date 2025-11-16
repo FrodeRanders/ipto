@@ -21,11 +21,9 @@
 -- Remember to grant privileges to the specific database user
 ---------------------------------------------------------------
 
-CREATE SCHEMA IF NOT EXISTS repo AUTHORIZATION repo
-;
+CREATE SCHEMA IF NOT EXISTS repo AUTHORIZATION repo;
 
-ALTER ROLE repo SET search_path = repo, public
-;
+ALTER ROLE repo SET search_path = repo, public;
 
 ---------------------------------------------------------------
 -- Identifies tenants for information units
@@ -41,8 +39,7 @@ CREATE TABLE repo_tenant (
         PRIMARY KEY (tenantid),
     CONSTRAINT repo_tenant_name_unique
         UNIQUE (name)
-)
-;
+);
 
 
 ---------------------------------------------------------------
@@ -63,17 +60,14 @@ CREATE TABLE repo_unit_kernel (
         UNIQUE (corrid),
     CONSTRAINT repo_unit_kernel_tenant_exists
         FOREIGN KEY (tenantid) REFERENCES repo_tenant (tenantid)
-)
-;
+);
 
 CREATE INDEX repo_uk_ind1
     ON repo_unit_kernel (tenantid, status, created DESC)
-    INCLUDE (unitid)
-;
+    INCLUDE (unitid);
 
 CREATE INDEX repo_uk_ind2
-    ON repo_unit_kernel (tenantid, unitid, lastver)
-;
+    ON repo_unit_kernel (tenantid, unitid, lastver);
 
 CREATE TABLE repo_unit_version (
     tenantid     INT        NOT NULL,  -- id of tenant
@@ -87,13 +81,17 @@ CREATE TABLE repo_unit_version (
         PRIMARY KEY (tenantid, unitid, unitver),
     CONSTRAINT repo_unit_version_krnl_exists
         FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
-)
-;
+);
 
 CREATE INDEX repo_uv_ind1
     ON repo_unit_version (tenantid, unitid, unitver, modified)
     INCLUDE (unitname);
-;
+
+CREATE INDEX repo_uv_ind2
+    ON repo_unit_version (tenantid, lower(unitname), unitid, unitver);
+
+CREATE INDEX repo_uv_tenant_unitname_idx
+    ON repo_unit_version (tenantid, unitname, unitid, unitver);
 
 CREATE VIEW repo_unit_last_version AS
 SELECT uk.tenantid, uk.unitid, uv.unitver, uk.corrid, uk.status, uv.unitname, uk.lastver, uk.created, uv.modified
@@ -112,8 +110,7 @@ CREATE TABLE repo_namespace (
 
     CONSTRAINT repo_namespace_pk
         PRIMARY KEY (alias, namespace)
-)
-;
+);
 
 CREATE TABLE repo_attribute (
     attrid      INT       NOT NULL,  -- id of attribute (serial)
@@ -131,8 +128,7 @@ CREATE TABLE repo_attribute (
         UNIQUE (qualname),
     CONSTRAINT repo_attr_name_unique
         UNIQUE (attrname)
-)
-;
+);
 
 CREATE TABLE repo_attribute_description (
     attrid      INT     NOT NULL,  -- id of attribute (serial)
@@ -145,8 +141,7 @@ CREATE TABLE repo_attribute_description (
         PRIMARY KEY (attrid, lang),
     CONSTRAINT repo_attr_desc_attr_ex
         FOREIGN KEY (attrid) REFERENCES repo_attribute (attrid)
-)
-;
+);
 
 ---------------------------------------------------------------------------
 -- Values of attributes
@@ -182,18 +177,15 @@ CREATE TABLE repo_attribute_value (
         FOREIGN KEY (tenantid, unitid, unitverfrom) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE,
     CONSTRAINT repo_attribute_value_unit_ex2
         FOREIGN KEY (tenantid, unitid, unitverto) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE
-)
-;
+);
 
 -- covers attribute search, like "find all units where x = ... or y = ...
 CREATE INDEX repo_av_ind1
-    ON repo_attribute_value (attrid ASC)
-;
+    ON repo_attribute_value (attrid ASC);
 
 CREATE INDEX repo_av_ind2
     ON repo_attribute_value (tenantid, unitid, attrid, unitverfrom, unitverto)
-    INCLUDE (valueid)
-;
+    INCLUDE (valueid);
 
 /*
  * If we anticipate a lot of versions of units with multiple
@@ -225,8 +217,7 @@ CONSTRAINT repo_unit_template_pk
     PRIMARY KEY (templateid),
 CONSTRAINT repo_unit_template_name_uq
     UNIQUE (name)
-)
-;
+);
 
 CREATE TABLE repo_unit_template_elements (
 templateid INT  NOT NULL,   -- from @unit(id: …)
@@ -239,8 +230,7 @@ CONSTRAINT repo_unit_template_elements_pk
     PRIMARY KEY (templateid, attrid),
 CONSTRAINT repo_unit_template_elements_tmp_ex
     FOREIGN KEY (templateid) REFERENCES repo_unit_template (templateid) ON DELETE CASCADE
-)
-;
+);
 
 ---------------------------------------------------------------
 -- Metadata-table: Template for records
@@ -255,8 +245,7 @@ CONSTRAINT repo_record_template_name_uq
     UNIQUE (name),
 CONSTRAINT repo_record_template_id_ex
     FOREIGN KEY (recordid) REFERENCES repo_attribute(attrid)
-)
-;
+);
 
 CREATE TABLE repo_record_template_elements (
 recordid    INT  NOT NULL,      -- attribute id of record attribute
@@ -271,8 +260,7 @@ CONSTRAINT repo_record_template_elements_id_ex
     FOREIGN KEY (attrid) REFERENCES repo_attribute(attrid),
 CONSTRAINT repo_record_template_elements_rcrd_ex
     FOREIGN KEY (recordid) REFERENCES repo_record_template (recordid) ON DELETE CASCADE
-)
-;
+);
 
 
 ---------------------------------------------------------------
@@ -290,17 +278,14 @@ CONSTRAINT repo_string_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_string_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 -- Considering removing
 CREATE INDEX repo_sv_ind1
-ON repo_string_vector (LOWER(value) ASC)
-;
+ON repo_string_vector (LOWER(value) ASC);
 
 CREATE INDEX repo_sv_ind2
-ON repo_string_vector (valueid ASC, LOWER(value) ASC)
-;
+ON repo_string_vector (valueid ASC, LOWER(value) ASC);
 
 
 -- Considering... for ILIKE '%foo%' searches
@@ -327,13 +312,11 @@ CONSTRAINT repo_time_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_time_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 -- Relevant for range scans (x <= ?)
 CREATE INDEX repo_tiv_ind1
-ON repo_time_vector (value ASC)
-;
+    ON repo_time_vector (value ASC);
 
 --
 -- Integer values
@@ -348,8 +331,7 @@ CONSTRAINT repo_integer_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_integer_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 --
 -- Long values
@@ -364,8 +346,7 @@ CONSTRAINT repo_long_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_long_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 --
 -- Double values
@@ -380,8 +361,7 @@ CONSTRAINT repo_double_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_double_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 --
 -- Boolean values
@@ -396,8 +376,7 @@ CONSTRAINT repo_boolean_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_boolean_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 --
 -- Binary values
@@ -412,8 +391,7 @@ CONSTRAINT repo_data_vector_pk
     PRIMARY KEY (valueid, idx),
 CONSTRAINT repo_data_v_value_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 --
 -- Records
@@ -431,21 +409,18 @@ CONSTRAINT repo_record_vec_parent_ex
     FOREIGN KEY (valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE,
 CONSTRAINT repo_record_vec_child_ex
     FOREIGN KEY (ref_valueid) REFERENCES repo_attribute_value(valueid) ON DELETE CASCADE
-)
-;
+);
 
 -- Relevant when resolving placeholders (child -> parent),
 -- i.e. when querying "WHERE ref_valueid = ?child?"
 CREATE INDEX repo_rv_ind1
 ON repo_record_vector (ref_valueid)
-WITH (fillfactor = 80) -- 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
-;
+WITH (fillfactor = 80); -- 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
 
 
 -- Relevant when deleting a child, validating schema, adding a composite
 CREATE INDEX repo_rv_ind2
-ON repo_record_vector (valueid, ref_attrid)
-;
+ON repo_record_vector (valueid, ref_attrid);
 
 
 ---------------------------------------------------------------
@@ -458,13 +433,11 @@ unitver   INTEGER   NOT NULL,
 event     INT       NOT NULL, -- defined in org.gautelis.repo.model.ActionEvent
 logentry  TEXT      NOT NULL,
 logtime   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-)
-;
+);
 
 -- When searching for all events for a certain unit
 CREATE INDEX repo_log_ind1
-ON repo_log (tenantid, unitid)
-;
+ON repo_log (tenantid, unitid);
 
 
 
@@ -492,8 +465,7 @@ CONSTRAINT repo_lock_pk
     PRIMARY KEY (tenantid, unitid, lockid),
 CONSTRAINT repo_lock_unit_exists
     FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
-)
-;
+);
 
 
 ----------------------------------------------------------------
@@ -520,16 +492,13 @@ CONSTRAINT repo_ia_left_unit_exists
     FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE,
 CONSTRAINT repo_ia_right_unit_exists
     FOREIGN KEY (assoctenantid, assocunitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
-)
-;
+);
 
 CREATE INDEX repo_iassoc_idx1
-ON repo_internal_assoc (assoctype, assoctenantid, assocunitid)
-;
+ON repo_internal_assoc (assoctype, assoctenantid, assocunitid);
 
 CREATE INDEX repo_iassoc_idx2
-ON repo_internal_assoc (tenantid, unitid, assoctype)
-;
+ON repo_internal_assoc (tenantid, unitid, assoctype);
 
 CREATE TABLE repo_external_assoc (
 tenantid    INT       NOT NULL,
@@ -542,13 +511,10 @@ CONSTRAINT repo_external_assoc_pk
     PRIMARY KEY (tenantid, unitid, assoctype, assocstring),
 CONSTRAINT repo_ea_left_unit_exists
     FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
-)
-;
+);
 
 CREATE INDEX repo_eassoc_idx1
-ON repo_external_assoc (assoctype, assocstring)
-;
+ON repo_external_assoc (assoctype, assocstring);
 
 CREATE INDEX repo_eassoc_idx2
-ON repo_external_assoc (tenantid, unitid, assoctype)
-;
+ON repo_external_assoc (tenantid, unitid, assoctype);
