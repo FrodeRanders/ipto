@@ -148,8 +148,8 @@ public class AssociationManager {
             Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         String statement;
@@ -195,8 +195,8 @@ public class AssociationManager {
             Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         String statement;
@@ -236,8 +236,8 @@ public class AssociationManager {
             Context ctx, int tenantId, long unitId, AssociationType assocType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         String statement;
@@ -276,8 +276,8 @@ public class AssociationManager {
             Context ctx, AssociationType assocType, int assocTenantId, long assocUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         if (!assocType.isRelational()) {
@@ -313,8 +313,8 @@ public class AssociationManager {
             Context ctx, AssociationType assocType, String assocString
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         if (assocType.isRelational()) {
@@ -351,8 +351,8 @@ public class AssociationManager {
             Context ctx, AssociationType assocType, int assocTenantId, long assocUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         if (!assocType.isRelational()) {
@@ -391,8 +391,8 @@ public class AssociationManager {
             Context ctx, AssociationType assocType, String assocString
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         if (assocType.isRelational()) {

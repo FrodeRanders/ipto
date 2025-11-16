@@ -3,7 +3,7 @@ package org.gautelis.repo.model;
 import org.gautelis.repo.exceptions.AssociationTypeException;
 
 public enum AssociationType implements Type {
-    INVALID(0, /* is relational? */ false, /* allows multiples? */ false),
+    UNKNOWN(0, /* is relational? */ false, /* allows multiples? */ false),
     PARENT_CHILD_RELATION(1, /* is relational? */ true, /* allows multiples? */ true),
     CASE_ASSOCIATION(2, /* is relational? */ false, /* allows multiples? */ false),
     REPLACEMENT_RELATION(3, /* is relational? */ true, /* allows multiples? */ false);

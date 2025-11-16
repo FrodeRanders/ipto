@@ -38,7 +38,7 @@ public abstract class Association {
 
     private int tenantId = -1; // invalid
     private long unitId = -1L; // invalid
-    private AssociationType type = AssociationType.INVALID;
+    private AssociationType type = AssociationType.UNKNOWN;
 
     // Used when resurrecting association
     protected Association() {

@@ -30,7 +30,15 @@ import java.sql.SQLException;
 import java.util.Objects;
 
 /**
- *
+ * This is any kind of association between a unit and some external entity.
+ * <p>
+ * The single/multiple association integrity is maintained
+ * internally in AssociationManager.
+ * <p>
+ * It is always safe to create an association of a specific
+ * type for a unit since existing associations are removed
+ * if the specified association type does not support
+ * multiple associations.
  */
 public class ExternalAssociation extends Association {
 
@@ -70,7 +78,7 @@ public class ExternalAssociation extends Association {
         // Checking bounds against internalMap implicitly checks bounds
         // against multipleMap since they are equilength (or definitely
         // should be)
-        if (assocType == AssociationType.INVALID) {
+        if (assocType == AssociationType.UNKNOWN) {
             throw new InvalidParameterException("Unknown association type: " + assocType);
         }
 
@@ -154,8 +162,8 @@ public class ExternalAssociation extends Association {
             throw new InvalidParameterException("Invalid empty association string");
         }
 
-        if (assocType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid association type");
+        if (assocType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown association type");
         }
 
         if (assocType.isRelational()) {

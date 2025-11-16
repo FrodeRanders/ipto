@@ -28,7 +28,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 /**
- *
+ * This is any kind of relation between a unit and another unit.
+ * <p>
+ * The single/multiple relation integrity is maintained
+ * internally in AssociationManager.
  */
 public class InternalRelation extends Association {
 
@@ -70,8 +73,8 @@ public class InternalRelation extends Association {
         // Checking bounds against isRelationMap implicitly checks bounds
         // against allowMultipleMap since they are equilength (or definitely
         // should be)
-        if (AssociationType.INVALID == relationType) {
-            throw new InvalidParameterException("Invalid relation type");
+        if (AssociationType.UNKNOWN == relationType) {
+            throw new InvalidParameterException("Unknown relation type");
         }
 
         if (!relationType.isRelational()) {
@@ -150,8 +153,8 @@ public class InternalRelation extends Association {
             long relationUnitId
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
 
-        if (relationType == AssociationType.INVALID) {
-            throw new InvalidParameterException("Invalid relation type");
+        if (relationType == AssociationType.UNKNOWN) {
+            throw new InvalidParameterException("Unknown relation type");
         }
 
         if (!relationType.isRelational()) {
