@@ -340,7 +340,7 @@ BEGIN
 
     -- Ensure that no unresolved children remain
     IF EXISTS (SELECT 1 FROM in_record_elems WHERE ref_valueid IS NULL) THEN
-        RAISE EXCEPTION 'Record references attribute(s) without an effective value at %.%v%', v_tenantid, v_unitid, p_unitver
+        RAISE EXCEPTION 'Record references attribute(s) without an effective value at %.%:%', v_tenantid, v_unitid, p_unitver
             USING ERRCODE = '22023';
     END IF;
 
