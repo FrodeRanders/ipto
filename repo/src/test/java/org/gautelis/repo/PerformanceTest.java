@@ -448,7 +448,7 @@ public class PerformanceTest {
 
             // Await completion
             System.out.println("Awaiting completion...");
-            boolean finished = executor.awaitTermination(5, TimeUnit.MINUTES);
+            boolean finished = executor.awaitTermination(1, TimeUnit.MINUTES);
             assertTrue(finished, "All tasks did not finish in time");
 
         } catch (Throwable t) {
