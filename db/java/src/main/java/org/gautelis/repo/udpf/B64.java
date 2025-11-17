@@ -1,4 +1,4 @@
-package org.gautelis.repo.udf;
+package org.gautelis.repo.udpf;
 
 import javax.sql.rowset.serial.SerialBlob;
 import java.sql.Blob;
@@ -6,6 +6,9 @@ import java.sql.Clob;
 import java.sql.SQLException;
 import java.util.Base64;
 
+/**
+ * User defined function (UDF)
+ */
 public class B64 {
     private static final Base64.Encoder ENC = Base64.getEncoder();
     private static final Base64.Decoder DEC = Base64.getDecoder();
