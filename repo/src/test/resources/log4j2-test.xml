@@ -41,6 +41,7 @@
         <logger name="org.gautelis.repo.graphql" level="TRACE" />
         <logger name="org.apache" level="WARN" />
         <logger name="org.gautelis.repo.graphql" level="TRACE" />
+        <logger name="com.zaxxer.hikari" level="INFO" />
 
         <logger name="STATISTICS" level="INFO">
             <appender-ref ref="STATISTICS"/>
