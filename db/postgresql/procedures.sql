@@ -113,13 +113,16 @@ END $$;
 -- Store a new unit, with attributes, with value vectors, from JSON
 --
 CREATE OR REPLACE PROCEDURE ingest_new_unit_json (
-    IN  p_unit     jsonb,
-    OUT p_unitid   bigint,
-    OUT p_unitver  int,
-    OUT p_created  timestamp,
-    OUT p_modified timestamp
+    IN  p_unit_text text,
+    OUT p_unitid    bigint,
+    OUT p_unitver   int,
+    OUT p_created   timestamp,
+    OUT p_modified  timestamp
 ) LANGUAGE plpgsql AS $$
 DECLARE
+    -- local jsonb variable, parsed from text
+    p_unit jsonb := p_unit_text::jsonb;
+
     v_tenantid   int         := (p_unit ->> 'tenantid')::int;
     v_corrid     uuid        := (p_unit ->> 'corrid')::uuid;
     v_status     int         := (p_unit ->> 'status')::int;
@@ -235,11 +238,14 @@ END $$;
 -- Store a new version of an existing unit, with attributes, with value vectors, from JSON
 --
 CREATE OR REPLACE PROCEDURE ingest_new_version_json (
-    IN  p_unit     jsonb,
-    OUT p_unitver  int,
-    OUT p_modified timestamp
+    IN  p_unit_text text,
+    OUT p_unitver   int,
+    OUT p_modified  timestamp
 ) LANGUAGE plpgsql AS $$
 DECLARE
+    -- local jsonb variable, parsed from text
+    p_unit jsonb := p_unit_text::jsonb;
+
     v_tenantid int    := (p_unit ->> 'tenantid')::int;
     v_unitid   bigint := (p_unit ->> 'unitid')::bigint;
     v_status   int    := (p_unit ->> 'status')::int;

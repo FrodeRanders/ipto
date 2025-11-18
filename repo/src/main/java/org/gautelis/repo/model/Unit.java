@@ -454,12 +454,9 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_unit_json(?, ?, ?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            var pgJson = new org.postgresql.util.PGobject();
-            pgJson.setType("jsonb");
             ObjectNode json = asInternalJson();
-            pgJson.setValue(json.toString());
 
-            cs.setObject(1, pgJson);
+            cs.setString(1, json.toString());
             cs.registerOutParameter(2, Types.BIGINT);
             cs.registerOutParameter(3, Types.INTEGER);
             cs.registerOutParameter(4, Types.TIMESTAMP);
@@ -485,13 +482,9 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_version_json(?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            var pgJson = new org.postgresql.util.PGobject();
-            pgJson.setType("jsonb");
             ObjectNode json = asInternalJson();
-            //log.trace("JSON: {}", json); // TODO REMOVE
-            pgJson.setValue(json.toString());
 
-            cs.setObject(1, pgJson);
+            cs.setString(1, json.toString());
             cs.registerOutParameter(2, Types.INTEGER);
             cs.registerOutParameter(3, Types.TIMESTAMP);
             cs.execute();
