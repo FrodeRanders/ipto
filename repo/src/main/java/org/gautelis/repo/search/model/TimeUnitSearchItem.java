@@ -29,6 +29,8 @@ public class TimeUnitSearchItem extends UnitSearchItem<Instant> {
     private final Instant instant;
 
     public TimeUnitSearchItem(Column column, Operator operator, Instant instant) {
+        // This isn't an attribute, but we currently use AttributeType.STRING
+        // to tell how we want to treat the value when searching.
         super(AttributeType.TIME, column, operator);
         this.instant = instant;
     }

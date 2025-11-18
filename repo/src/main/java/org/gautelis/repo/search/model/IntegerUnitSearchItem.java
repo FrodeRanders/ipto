@@ -28,6 +28,8 @@ public class IntegerUnitSearchItem extends UnitSearchItem<Integer> {
     private final int value;
 
     public IntegerUnitSearchItem(Column column, Operator operator, int value) {
+        // This isn't an attribute, but we currently use AttributeType.STRING
+        // to tell how we want to treat the value when searching.
         super(AttributeType.INTEGER, column, operator);
         this.value = value;
     }

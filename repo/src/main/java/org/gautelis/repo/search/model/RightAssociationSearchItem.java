@@ -20,8 +20,28 @@ import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.search.query.LeafExpression;
 
-public abstract class AssociationSearchItem<T> extends SearchItem<T> {
-    protected AssociationSearchItem(AssociationType type, Operator operator) {
+public class RightAssociationSearchItem extends AssociationSearchItem<String> {
+
+    private final String assocString;
+
+    protected RightAssociationSearchItem(AssociationType type, Operator operator, String assocString) {
         super(type, operator);
+        this.assocString = assocString;
+    }
+
+    /**
+     * Generates constraint "Unit --association--> {assocString}".
+     * <p>
+     */
+    public static LeafExpression<RightAssociationSearchItem> constrainOnRightAssociationEQ(
+            AssociationType type,
+            String assocString
+    ) throws NumberFormatException, InvalidParameterException {
+        return new LeafExpression<>(new RightAssociationSearchItem(type, Operator.EQ, assocString));
+    }
+
+    @Override
+    public String getValue() {
+        return assocString;
     }
 }

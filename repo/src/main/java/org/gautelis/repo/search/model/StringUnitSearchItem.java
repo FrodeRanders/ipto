@@ -34,6 +34,8 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
     public StringUnitSearchItem(
             Column column, Operator operator, String value
     ) {
+        // This isn't an attribute, but we currently use AttributeType.STRING
+        // to tell how we want to treat the value when searching.
         super(AttributeType.STRING, column, operator);
         this.value = value;
     }

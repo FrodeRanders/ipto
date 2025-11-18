@@ -18,10 +18,30 @@ package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.AssociationType;
+import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.search.query.LeafExpression;
 
-public abstract class AssociationSearchItem<T> extends SearchItem<T> {
-    protected AssociationSearchItem(AssociationType type, Operator operator) {
+public class LeftAssociationSearchItem extends AssociationSearchItem<Unit.Id> {
+    private final Unit.Id id;
+
+    protected LeftAssociationSearchItem(AssociationType type, Operator operator, Unit.Id id) {
         super(type, operator);
+        this.id = id;
+    }
+
+    /**
+     * Generates constraint "Unit <--association-- {assocString}".
+     * <p>
+     */
+    public static LeafExpression<LeftAssociationSearchItem> constrainOnLeftAssociation(
+            AssociationType type,
+            Unit.Id id
+    ) throws NumberFormatException, InvalidParameterException {
+        return new LeafExpression<>(new LeftAssociationSearchItem(type, Operator.EQ, id));
+    }
+
+    @Override
+    public Unit.Id getValue() {
+        return id;
     }
 }

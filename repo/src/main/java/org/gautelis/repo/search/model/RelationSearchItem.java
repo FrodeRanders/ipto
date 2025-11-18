@@ -18,10 +18,11 @@ package org.gautelis.repo.search.model;
 
 import org.gautelis.repo.exceptions.InvalidParameterException;
 import org.gautelis.repo.model.AssociationType;
+import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.search.query.LeafExpression;
 
-public abstract class AssociationSearchItem<T> extends SearchItem<T> {
-    protected AssociationSearchItem(AssociationType type, Operator operator) {
+public abstract class RelationSearchItem<T> extends SearchItem<T> {
+    protected RelationSearchItem(AssociationType type, Operator operator) {
         super(type, operator);
     }
 }

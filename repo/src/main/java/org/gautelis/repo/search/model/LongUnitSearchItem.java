@@ -27,6 +27,8 @@ public class LongUnitSearchItem extends UnitSearchItem<Long> {
     private final long value;
 
     public LongUnitSearchItem(Column column, Operator operator, long value) {
+        // This isn't an attribute, but we currently use AttributeType.STRING
+        // to tell how we want to treat the value when searching.
         super(AttributeType.LONG, column, operator);
         this.value = value;
     }

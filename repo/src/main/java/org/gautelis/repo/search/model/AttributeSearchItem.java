@@ -24,7 +24,7 @@ public abstract class AttributeSearchItem<T> extends SearchItem<T> {
     private final int attrId;
 
     protected AttributeSearchItem(AttributeType type, Operator operator, int attrId) {
-        super(Variant.ATTRIBUTE, type, operator);
+        super(type, operator);
         this.attrId = attrId;
     }
 

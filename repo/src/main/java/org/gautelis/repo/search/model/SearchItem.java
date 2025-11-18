@@ -30,29 +30,15 @@ import java.util.Objects;
  */
 public abstract class SearchItem<T> {
     //
-    public enum Variant {
-        UNIT,
-        ATTRIBUTE,
-        ASSOCIATION
-    }
-
-    //
-    protected final Variant variant;
     protected final Type type;
     protected final Operator operator;
 
-    protected SearchItem(Variant variant, Type type, Operator operator) {
-        Objects.requireNonNull(variant, "variant");
+    protected SearchItem(Type type, Operator operator) {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(operator, "operator");
 
-        this.variant = variant;
         this.type = type;
         this.operator = operator;
-    }
-
-    public Variant getVariant() {
-        return variant;
     }
 
     public Type getType() {
