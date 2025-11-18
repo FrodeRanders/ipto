@@ -67,7 +67,7 @@ public class RepositoryFactory {
         return getConfiguration(ConfigurationTool.loadFromResource(RepositoryFactory.class, "configuration.xml"));
     }
 
-    public static <T extends DataSource> Repository getRepository(Database.DataSourcePreparation<T> dataSourcePreparer) {
+    public static Repository getRepository() {
         if (null != repo) {
             return repo;
         }
@@ -157,13 +157,6 @@ public class RepositoryFactory {
         Context context = new Context(dataSource, config, statements, searchAdapter);
         repo = new Repository(context, eventThreshold, actionListeners);
         return repo;
-    }
-
-    public static Repository getRepository() {
-        if (null != repo) {
-            return repo;
-        }
-        return getRepository(new PostgresDataSourcePreparer());
     }
 
     /*
