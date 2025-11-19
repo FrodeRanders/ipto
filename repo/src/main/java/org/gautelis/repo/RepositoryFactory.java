@@ -101,6 +101,7 @@ public class RepositoryFactory {
         String url = config.url();
         if (null == url || url.isEmpty()) {
             url = "jdbc:" + config.manager() + "://" + config.server() + ":" + config.port() +"/" + config.database();
+            log.info("Synthesizing a JDBC URL: " + url);
         }
         hConfig.setJdbcUrl(url);
         String user = config.user();
