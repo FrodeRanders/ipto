@@ -1,11 +1,17 @@
 package org.gautelis.repo.udpf;
 
-import java.sql.*;
-import java.util.*;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.io.IOException;
+import java.sql.*;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.logging.*;
 
 /**
  * Java implementations of repo_* routines for DB2 LUW.
@@ -22,6 +28,20 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
  * --------------------------------------------------------------
  */
 public class Routines {
+    private static final Logger LOG = Logger.getLogger("repo.procs");
+    static {
+        try {
+            // Path must exist and be writable by db2inst1
+            // /database/config/db2inst1/sqllib/db2dump/DIAG0000/
+            Handler fileHandler = new FileHandler("/database/config/db2inst1/sqllib/db2dump/DIAG0000/repo-proc.log", true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            LOG.addHandler(fileHandler);
+            LOG.setUseParentHandlers(false);
+            LOG.setLevel(Level.INFO);
+        } catch (IOException ioe) {
+            System.err.println("Warning: could not set up file handler: " + ioe.getMessage());
+        }
+    }
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -49,11 +69,12 @@ public class Routines {
             int fromVer,
             int toVer
     ) throws SQLException {
-
         String sql =
-                "INSERT INTO repo_attribute_value " +
-                        "(tenantid, unitid, attrid, unitverfrom, unitverto) " +
-                        "VALUES (?, ?, ?, ?, ?)";
+                "SELECT valueid FROM FINAL TABLE ( " +
+                "  INSERT INTO repo_attribute_value " +
+                "    (tenantid, unitid, attrid, unitverfrom, unitverto) " +
+                "  VALUES (?, ?, ?, ?, ?) " +
+                ")";
 
         try (PreparedStatement pStmt = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             pStmt.setInt(1, tenantId);
@@ -61,14 +82,13 @@ public class Routines {
             pStmt.setInt(3, attrId);
             pStmt.setInt(4, fromVer);
             pStmt.setInt(5, toVer);
-            pStmt.executeUpdate();
 
-            try (ResultSet rs = pStmt.getGeneratedKeys()) {
+            try (ResultSet rs = pStmt.executeQuery()) {
                 if (rs.next()) {
-                    return rs.getLong(1);
+                    return rs.getLong(1);  // valueid
                 } else {
-                    // This is nothing we can recover from
-                    String info = "Failed to determine auto-generated value ID";
+                    String info = "Insert into repo_attribute_value succeeded but no valueid returned";
+                    LOG.warning(info);
                     throw new SQLException(info);
                 }
             }
@@ -108,8 +128,8 @@ public class Routines {
                         pStmt.setLong(1, valueId);
                         pStmt.setInt(2, i);
                         String tsStr = values.get(i).asText();
-                        // adapt to your actual timestamp format as needed:
-                        Timestamp ts = Timestamp.valueOf(tsStr);
+                        Instant instant = Instant.parse(tsStr); // Parse ISO-8601 instant
+                        Timestamp ts = Timestamp.from(instant);
                         pStmt.setTimestamp(3, ts);
                         pStmt.addBatch();
                     }
@@ -184,9 +204,11 @@ public class Routines {
                 }
                 break;
             }
-            default:
-                throw new SQLException("Unsupported attrtype " + attrType +
-                        " for primitive attribute; valueid=" + valueId);
+            default: {
+                String info = "Unsupported attrtype " + attrType + " for primitive attribute; valueid=" + valueId;
+                LOG.warning(info);
+                throw new SQLException(info);
+            }
         }
     }
 
@@ -246,7 +268,7 @@ public class Routines {
      * OUT p_unitver  INTEGER,
      * OUT p_created  TIMESTAMP,
      * OUT p_modified TIMESTAMP
-     * ) LANGUAGE JAVA PARAMETER STYLE JAVA ...
+     * ) ...
      * <p>
      * Parameter-style JAVA: OUT params are single-element arrays.
      */
@@ -257,6 +279,7 @@ public class Routines {
             Timestamp[] p_created,
             Timestamp[] p_modified
     ) throws SQLException {
+        LOG.info("Starting INGEST_NEW_UNIT_JSON");
 
         Connection con = getConnection();
 
@@ -269,9 +292,13 @@ public class Routines {
             int status = root.path("status").asInt();
             String unitName = root.path("unitname").asText();
 
+            LOG.fine("Storing new unit: tenantId=" + tenantId + ", corrid=" + corridStr + ", status=" + status);
+
             // Insert unit header row (repo_unit_kernel)
             String sqlKernel =
-                    "INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (?, ?, ?)";
+                    "SELECT unitid FROM FINAL TABLE ( " +
+                    "  INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (?, ?, ?) " +
+                    ")";
 
             long unitId;
             try (PreparedStatement pStmt = con.prepareStatement(sqlKernel)) {
@@ -282,18 +309,18 @@ public class Routines {
                     pStmt.setString(2, corridStr); // store UUID as string
                 }
                 pStmt.setInt(3, status);
-                pStmt.executeUpdate();
 
-                try (ResultSet rs = pStmt.getGeneratedKeys()) {
+                try (ResultSet rs = pStmt.executeQuery()) {
                     if (rs.next()) {
                         unitId = rs.getLong(1);
                     } else {
-                        // This is nothing we can recover from
-                        String info = "Failed to determine auto-generated unit ID";
+                        String info = "Insert into repo_unit_kernel succeeded but no unitid returned";
+                        LOG.warning(info);
                         throw new SQLException(info);
                     }
                 }
             }
+            LOG.fine("Inserted into repo_unit_kernel");
 
             // Determine unit version (from lastver), and get created
             int unitVer;
@@ -310,7 +337,9 @@ public class Routines {
 
                 try (ResultSet rs = pStmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new SQLException("Inserted repo_unit_kernel not found for unit=" + tenantId + "." + unitId);
+                        String info = "Inserted repo_unit_kernel not found for unit=" + tenantId + "." + unitId;
+                        LOG.warning(info);
+                        throw new SQLException(info);
                     }
                     unitVer = rs.getInt(1);
                     created = rs.getTimestamp(2);
@@ -347,10 +376,9 @@ public class Routines {
 
                 try (ResultSet rs = pStmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new SQLException(
-                                "Inserted repo_unit_version not found for unit=" +
-                                        tenantId + "." + unitId + ":" + unitVer
-                        );
+                        String info = "Inserted repo_unit_version not found for unit=" + tenantId + "." + unitId + ":" + unitVer;
+                        LOG.warning(info);
+                        throw new SQLException(info);
                     }
                     modified = rs.getTimestamp(1);
                 }
@@ -473,11 +501,9 @@ public class Routines {
 
                                 Long childValId = currentValueIds.get(refAttrId);
                                 if (childValId == null) {
-                                    throw new SQLException(
-                                            "Record references attribute " + refAttrId +
-                                            " without effective value at " +
-                                            tenantId + "." + unitId + ":" + unitVer
-                                    );
+                                    String info = "Record references attribute " + refAttrId + " without effective value at " + tenantId + "." + unitId + ":" + unitVer;
+                                    LOG.warning(info);
+                                    throw new SQLException(info);
                                 }
 
                                 pStmtUpd.setLong(1, childValId);
@@ -573,6 +599,7 @@ public class Routines {
             int[] p_unitver,
             Timestamp[] p_modified
     ) throws SQLException {
+        LOG.info("Starting INGEST_NEW_VERSION_JSON");
 
         Connection con = getConnection();
 
@@ -601,7 +628,9 @@ public class Routines {
 
                 try (ResultSet rs = pStmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new SQLException("No matching repo_unit_kernel for unit=" + tenantId + "." + unitId);
+                        String info = "No matching repo_unit_kernel for unit=" + tenantId + "." + unitId;
+                        LOG.warning(info);
+                        throw new SQLException(info);
                     }
                     prevVer = rs.getInt(1);
                 }
@@ -650,10 +679,9 @@ public class Routines {
 
                 try (ResultSet rs = pStmt.executeQuery()) {
                     if (!rs.next()) {
-                        throw new SQLException(
-                                "New repo_unit_version not found for unit="
-                                + tenantId + "." + unitId + ":" + newVer
-                        );
+                        String info = "New repo_unit_version not found for unit=" + tenantId + "." + unitId + ":" + newVer;
+                        LOG.warning(info);
+                        throw new SQLException(info);
                     }
                     modified = rs.getTimestamp(1);
                 }
@@ -826,10 +854,9 @@ public class Routines {
                 // Ensure no unresolved children remain
                 for (RecordElement re : recordElems) {
                     if (re.refValueId == null) {
-                        throw new SQLException("Record references attribute " + re.refAttrId
-                                + " without an effective value at "
-                                + tenantId + "." + unitId + ":" + newVer
-                        );
+                        String info = "Record references attribute " + re.refAttrId + " without an effective value at " + tenantId + "." + unitId + ":" + newVer;
+                        LOG.warning(info);
+                        throw new SQLException(info);
                     }
                 }
 
@@ -953,8 +980,339 @@ public class Routines {
                 }
             }
         } catch (Exception e) {
+            LOG.warning(e.getMessage());
             if (e instanceof SQLException) throw (SQLException) e;
             throw new SQLException("Error in ingest_new_version_json", e);
         }
+    }
+
+    // DB2 Java routines: OUT parameters are 1-element arrays.
+    public static void extractUnit(
+            int    pTenantId,
+            long   pUnitId,
+            int    pUnitVer,   // -1 means “latest”
+            Clob[] pJsonOut
+    ) throws SQLException {
+
+        Connection conn = DriverManager.getConnection("jdbc:default:connection");
+
+        ObjectNode root = MAPPER.createObjectNode();
+
+        //
+        int lastVer;
+        int unitVer;
+        String corrid;
+        int status;
+        Instant created;
+        Instant modified;
+        String unitName;
+
+        // Get unit kernel (for lastver)
+        try (PreparedStatement pStmt = conn.prepareStatement(
+                "SELECT tenantid, unitid, corrid, status, lastver, created " +
+                    "FROM repo_unit_kernel " +
+                    "WHERE tenantid = ? AND unitid = ?")
+        ) {
+            pStmt.setInt(1, pTenantId);
+            pStmt.setLong(2, pUnitId);
+
+            try (ResultSet rs = pStmt.executeQuery()) {
+                if (!rs.next()) {
+                    // No such unit
+                    pJsonOut[0] = null;
+                    return;
+                }
+                corrid = rs.getString("corrid");
+                status = rs.getInt("status");
+                lastVer = rs.getInt("lastver");
+                Timestamp tsCreated = rs.getTimestamp("created");
+                created = tsCreated != null ? tsCreated.toInstant() : null;
+            }
+        }
+
+        unitVer = (pUnitVer > 0 ? pUnitVer : lastVer);
+
+        // Get specific unit version
+        try (PreparedStatement pStmt = conn.prepareStatement(
+                "SELECT unitver, unitname, modified " +
+                    "FROM repo_unit_version " +
+                    "WHERE tenantid = ? AND unitid = ? AND unitver = ?")
+        ) {
+            pStmt.setInt(1, pTenantId);
+            pStmt.setLong(2, pUnitId);
+            pStmt.setInt(3, unitVer);
+
+            try (ResultSet rs = pStmt.executeQuery()) {
+                if (!rs.next()) {
+                    // No such version
+                    pJsonOut[0] = null;
+                    return;
+                }
+                unitName = rs.getString("unitname");
+                Timestamp tsModified = rs.getTimestamp("modified");
+                modified = tsModified != null ? tsModified.toInstant() : null;
+            }
+        }
+
+        // Build header JSON
+        root.put("@type", "unit");
+        root.put("@version", 2);
+        root.put("tenantid", pTenantId);
+        root.put("unitid", pUnitId);
+        root.put("unitver", unitVer);
+        root.put("corrid", corrid);
+        root.put("status", status);
+        root.put("unitname", unitName);
+        if (created != null) {
+            root.put("created", DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(created));
+        }
+        if (modified != null) {
+            root.put("modified", DateTimeFormatter.ISO_INSTANT.withZone(ZoneOffset.UTC).format(modified));
+        }
+
+        root.put("isreadonly", lastVer > unitVer);
+
+        // Load attributes effective at unitVer
+        ArrayNode attrsArray = MAPPER.createArrayNode();
+
+        String attrSql =
+                "SELECT av.attrid, a.attrtype, a.attrname, a.alias, " +
+                "       av.unitverfrom, av.unitverto, av.valueid " +
+                "FROM   repo_attribute_value av " +
+                "JOIN   repo_attribute a " +
+                "  ON   a.attrid = av.attrid " +
+                "WHERE  av.tenantid = ? " +
+                "  AND  av.unitid = ? " +
+                "  AND  ? BETWEEN av.unitverfrom AND av.unitverto";
+
+        try (PreparedStatement pStmt = conn.prepareStatement(attrSql)) {
+            pStmt.setInt(1, pTenantId);
+            pStmt.setLong(2, pUnitId);
+            pStmt.setInt(3, unitVer);
+
+            try (ResultSet rs = pStmt.executeQuery()) {
+                while (rs.next()) {
+                    int attrId = rs.getInt("attrid");
+                    int attrType = rs.getInt("attrtype");
+                    String attrName = rs.getString("attrname");
+                    String alias = rs.getString("alias");
+                    int unitVerFrom = rs.getInt("unitverfrom");
+                    int unitVerTo = rs.getInt("unitverto");
+                    long valueId = rs.getLong("valueid");
+
+                    ObjectNode attrNode = MAPPER.createObjectNode();
+                    attrNode.put("attrid", attrId);
+                    attrNode.put("attrtype", attrType);
+                    attrNode.put("attrname", attrName);
+                    if (alias != null) {
+                        attrNode.put("alias", alias);
+                    }
+                    attrNode.put("unitverfrom", unitVerFrom);
+                    attrNode.put("unitverto", unitVerTo);
+                    attrNode.put("valueid", valueId);
+
+                    // value: depends on attrtype
+                    JsonNode valueNode = loadAttributeValue(
+                            conn, attrType, valueId
+                    );
+                    if (valueNode != null) {
+                        attrNode.set("value", valueNode);
+                    }
+
+                    attrsArray.add(attrNode);
+                }
+            }
+        }
+
+        root.set("attributes", attrsArray);
+
+        // Serialize JSON into OUT parameter
+        try {
+            Clob clob = conn.createClob();
+            clob.setString(1, MAPPER.writeValueAsString(root));
+            pJsonOut[0] = clob;
+
+        } catch (Exception e) {
+            // Turn into SQL exception so DB2 reports it
+            throw new SQLException("Failed to serialize JSON", e);
+        }
+    }
+
+    /**
+     * Load the value vector for a given (attrtype, valueid) and return it as a JSON array
+     * or array-of-objects (in case of RECORD).
+     */
+    private static JsonNode loadAttributeValue(
+            Connection conn,
+            int attrType,
+            long valueId
+    ) throws SQLException {
+
+        ArrayNode arr = MAPPER.createArrayNode();
+
+        switch (attrType) {
+            case 1: { // STRING
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_string_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            String v = rs.getString("value");
+                            if (v == null) arr.addNull();
+                            else arr.add(v);
+                        }
+                    }
+                }
+                break;
+            }
+            case 2: { // TIME (timestamp)
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_time_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            Timestamp ts = rs.getTimestamp("value");
+                            if (ts == null) {
+                                arr.addNull();
+                            } else {
+                                Instant instant = ts.toInstant();
+                                String iso = DateTimeFormatter.ISO_INSTANT
+                                        .withZone(ZoneOffset.UTC)
+                                        .format(instant);
+                                arr.add(iso);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case 3: { // INTEGER
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_integer_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            int v = rs.getInt("value");
+                            if (rs.wasNull()) arr.addNull();
+                            else arr.add(v);
+                        }
+                    }
+                }
+                break;
+            }
+            case 4: { // LONG
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_long_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            long v = rs.getLong("value");
+                            if (rs.wasNull()) arr.addNull();
+                            else arr.add(v);
+                        }
+                    }
+                }
+                break;
+            }
+            case 5: { // DOUBLE
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_double_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            double v = rs.getDouble("value");
+                            if (rs.wasNull()) arr.addNull();
+                            else arr.add(v);
+                        }
+                    }
+                }
+                break;
+            }
+            case 6: { // BOOLEAN
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_boolean_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            boolean v = rs.getBoolean("value");
+                            if (rs.wasNull()) arr.addNull();
+                            else arr.add(v);
+                        }
+                    }
+                }
+                break;
+            }
+            case 7: { // DATA / BLOB → base64
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, value FROM repo_data_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            byte[] bytes = rs.getBytes("value");
+                            if (bytes == null) {
+                                arr.addNull();
+                            } else {
+                                String b64 = Base64.getEncoder().encodeToString(bytes);
+                                arr.add(b64);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case 99: { // RECORD: array of {ref_attrid, ref_valueid}
+                try (PreparedStatement pStmt = conn.prepareStatement(
+                        "SELECT idx, ref_attrid, ref_valueid " +
+                            "FROM repo_record_vector " +
+                            "WHERE valueid = ? ORDER BY idx")
+                ) {
+                    pStmt.setLong(1, valueId);
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        while (rs.next()) {
+                            ObjectNode elem = MAPPER.createObjectNode();
+                            int refAttr = rs.getInt("ref_attrid");
+                            long refVal = rs.getLong("ref_valueid");
+                            elem.put("ref_attrid", refAttr);
+                            if (rs.wasNull()) {
+                                elem.putNull("ref_valueid");
+                            } else {
+                                elem.put("ref_valueid", refVal);
+                            }
+                            arr.add(elem);
+                        }
+                    }
+                }
+                break;
+            }
+            default: {
+                String info = "Unsupported attrtype " + attrType + " for attribute; valueid=" + valueId;
+                LOG.warning(info);
+                throw new SQLException(info);
+            }
+        }
+
+        return arr;
     }
 }

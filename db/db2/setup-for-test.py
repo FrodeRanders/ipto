@@ -199,10 +199,9 @@ def main() -> None:
     host_port = 50000
     db2_password = "H0nd@666"       # Please replace...
     database_name = "REPO"
-    # sql_files = ["schema.sql", "load-udf.sql", "procedures.sql", "boot.sql"]
     sql_files = ["schema.sql", "load-udf.sql", "procedures.sql", "boot.sql"]
 
-    #
+    # Maven coordinate must match artefact referred to in load-udf.sql
     extract_mvn_artifact("org.gautelis:repo-udpf:1.0-SNAPSHOT:jar")
 
     #
