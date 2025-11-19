@@ -26,6 +26,7 @@ import org.gautelis.repo.utils.CheckedConsumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.time.Instant;
@@ -47,6 +48,10 @@ public abstract class DatabaseAdapter implements Adapter {
     public abstract String asTimeLiteral(String timeStr);
 
     public abstract String asTimeLiteral(Instant instant);
+
+    public abstract boolean useClob();
+
+    public abstract String getDbVersion(DataSource dataSource);
 
     //---------------------------------------------------------------
     // GENERIC STRUCTURAL

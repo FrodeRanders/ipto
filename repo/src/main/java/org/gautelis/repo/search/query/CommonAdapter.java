@@ -413,13 +413,44 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                                     pStmt.setInt(++i, tenantId);
                                 }
                             }
+                            Object value = item.getValue();
                             switch (item.getType()) {
-                                case STRING -> pStmt.setString(++i, (String) item.getValue());
-                                case TIME -> pStmt.setTimestamp(++i, instant2Timestamp((Instant) item.getValue()));
-                                case INTEGER -> pStmt.setInt(++i, (Integer) item.getValue());
-                                case LONG -> pStmt.setLong(++i, (Long) item.getValue());
-                                case DOUBLE -> pStmt.setDouble(++i, (Double) item.getValue());
-                                case BOOLEAN -> pStmt.setBoolean(++i, (Boolean) item.getValue());
+                                case STRING -> {
+                                    if (null != value)
+                                        pStmt.setString(++i, (String) value);
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.VARCHAR);
+                                }
+                                case TIME -> {
+                                    if (null != value)
+                                        pStmt.setTimestamp(++i, instant2Timestamp((Instant) value));
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.TIMESTAMP);
+                                }
+                                case INTEGER -> {
+                                    if (null != value)
+                                        pStmt.setInt(++i, (Integer) value);
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.INTEGER);
+                                }
+                                case LONG -> {
+                                    if (null != value)
+                                        pStmt.setLong(++i, (Long) value);
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.BIGINT);
+                                }
+                                case DOUBLE -> {
+                                    if (null != value)
+                                        pStmt.setDouble(++i, (Double) value);
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.DOUBLE);
+                                }
+                                case BOOLEAN -> {
+                                    if (null != value)
+                                        pStmt.setBoolean(++i, (Boolean) value);
+                                    else
+                                        pStmt.setNull(++i, java.sql.Types.BOOLEAN);
+                                }
                                 default -> {
                                     // DATA and RECORD are not searchable
                                     throw new InvalidParameterException("Attribute type not searchable: " + item.getType());

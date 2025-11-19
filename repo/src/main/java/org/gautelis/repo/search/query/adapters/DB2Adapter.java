@@ -14,33 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.repo.search.query.postgresql;
+package org.gautelis.repo.search.query.adapters;
 
-import org.gautelis.repo.search.model.SearchItem;
-import org.gautelis.repo.search.query.CommonAdapter;
+import org.gautelis.repo.db.Database;
 import org.gautelis.repo.search.UnitSearch;
+import org.gautelis.repo.search.query.CommonAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.Collection;
-import java.util.LinkedList;
 import java.util.Locale;
 
 /**
  *
  */
-public class PostgresAdapter extends CommonAdapter {
-    protected static final Logger log = LoggerFactory.getLogger(PostgresAdapter.class);
+public class DB2Adapter extends CommonAdapter {
+    protected static final Logger log = LoggerFactory.getLogger(DB2Adapter.class);
 
-    public static final String POSTGRES_TIME_PATTERN = "YYYY-MM-DD HH24:MI:SS.MS";
+    //
+    public static final String DB2_TIME_PATTERN = "YYYY-MM-DD HH24:MI:SS.FF3";
 
-    public PostgresAdapter() {
+    public DB2Adapter() {
     }
 
-    private static final DateTimeFormatter PG_FMT =
+    public boolean useClob() {
+        return true;
+    }
+
+    private static final DateTimeFormatter DB2_FMT =
             DateTimeFormatter.ofPattern(INSTANT_TIME_PATTERN)
                     .withLocale(Locale.ENGLISH)
                     .withZone(ZoneOffset.UTC);   // or your zone
@@ -53,13 +58,13 @@ public class PostgresAdapter extends CommonAdapter {
         //--------------------------------------------------
         return "TO_TIMESTAMP('" +
                 timeStr.replace('\'', ' ') +
-                "', '" + POSTGRES_TIME_PATTERN + "')";
+                "', '" + DB2_TIME_PATTERN + "')";
     }
 
     public String asTimeLiteral(Instant instant) {
         return "TO_TIMESTAMP('" +
-                PG_FMT.format(instant) +
-                "', '" + POSTGRES_TIME_PATTERN + "')";
+                DB2_FMT.format(instant) +
+                "', '" + DB2_TIME_PATTERN + "')";
     }
 
     protected GeneratedStatement generateStatement(
@@ -85,5 +90,19 @@ public class PostgresAdapter extends CommonAdapter {
         }
 
         return new GeneratedStatement(buf.toString(), generatedStatement.preparedItems(), generatedStatement.commonConstraintValues());
+    }
+
+    public String getDbVersion(DataSource dataSource) {
+        String sql = """
+                SELECT service_level || ' FP' || fixpack_num AS db2_version
+                FROM SYSIBMADM.ENV_INST_INFO;
+                """;
+        String[] version = {"unknown"};
+        Database.useReadonlyStatement(dataSource, sql, rs -> {
+            if (rs.next()) {
+                version[0] = rs.getString("db2_version");
+            }
+        });
+        return version[0];
     }
 }
