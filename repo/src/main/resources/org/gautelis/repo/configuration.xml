@@ -5,62 +5,60 @@
     <!--
         Corresponds to class org.gautelis.vopn.db.Database.Configuration
     -->
+
+    <!--
     <entry key="url">
         jdbc:postgresql://localhost:5432/repo
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
     <entry key="user">
         repo
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
     <entry key="password">
         repo
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
-    -->
     <entry key="repository.database.adapter">
-        org.gautelis.repo.search.query.postgresql.PostgresAdapter
+        org.gautelis.repo.search.query.adapters.PostgresAdapter
+    </entry>
+    -->
+
+    <entry key="url">
+        jdbc:db2://localhost:50000/REPO:currentSchema=REPO;currentFunctionPath=REPO,SYSIBM,SYSFUN,SYSPROC,SYSIBMADM;
+    </entry>
+
+    <entry key="user">
+        DB2INST1
+    </entry>
+
+    <entry key="password">
+        H0nd@666
+    </entry>
+
+    <entry key="repository.database.adapter">
+        org.gautelis.repo.search.query.adapters.DB2Adapter
     </entry>
 
     <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
+        Non-db related configuration
     -->
     <entry key="repository.events.threshold">
         60
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
-    -->
     <entry key="repository.events.listeners">
         org.gautelis.repo.listeners.NopActionListener
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
-    -->
     <entry key="repository.cache.look_behind">
         true
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
-    -->
     <entry key="repository.cache.max_size">
         1000
     </entry>
 
-    <!--
-        Corresponds to class org.gautelis.repo.model.Configuration
-    -->
     <entry key="repository.cache.idle_check_interval">
         60
     </entry>

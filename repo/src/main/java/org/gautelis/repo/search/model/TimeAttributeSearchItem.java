@@ -48,6 +48,6 @@ public class TimeAttributeSearchItem extends AttributeSearchItem<Instant> {
      * specified attribute id.
      */
     public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new TimeAttributeSearchItem(attrId, Operator.EQ, TimeHelper.parseInstant(value)));
+        return new LeafExpression<>(new TimeAttributeSearchItem(attrId, Operator.EQ, Instant.parse(value)));
     }
 }

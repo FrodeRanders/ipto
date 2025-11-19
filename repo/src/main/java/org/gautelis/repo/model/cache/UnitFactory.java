@@ -26,9 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.ref.SoftReference;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.SQLType;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -123,27 +121,26 @@ public final class UnitFactory {
         } else {
             // This pulls attributes as well as unit, as opposed to classic load, but saves
             // the extra step of later having to pull attributes.
-            String sql = "SELECT extract_unit_json(?, ?, ?) AS unit_json";
+            String sql = "{ CALL extract_unit_json(?, ?, ?, ?) }";
 
             Unit[] unit = { null };
-            Database.useReadonlyPreparedStatement(ctx.getDataSource(), sql, pStmt -> {
-                int i = 0;
-                pStmt.setInt(++i, tenantId);
-                pStmt.setLong(++i, unitId);
-                if (unitVersion > 0) {
-                    pStmt.setInt(++i, unitVersion);
-                } else {
-                    pStmt.setNull(++i, java.sql.Types.INTEGER);
-                }
-
-                try (ResultSet rs = Database.executeQuery(pStmt)) {
-                    if (rs.next()) {
-                        String json = rs.getString("unit_json");
-                        log.trace("Resurrecting unit {}.{}: {}} ", tenantId, unitId, json);
-
-                        unit[0] = resurrect(ctx, json);
-                        cacheStore(ctx, unit[0]);
+            Database.useConnection(ctx.getDataSource(), conn -> {
+                try (CallableStatement cStmt = conn.prepareCall(sql)) {
+                    cStmt.setInt(1, tenantId);
+                    cStmt.setLong(2, unitId);
+                    if (unitVersion > 0) {
+                        cStmt.setInt(3, unitVersion);
+                    } else {
+                        cStmt.setInt(3, -1);
                     }
+                    cStmt.registerOutParameter(4, ctx.useClob() ? java.sql.Types.CLOB : Types.VARCHAR);
+                    cStmt.execute();
+
+                    String json = cStmt.getString(4);
+                    log.trace("Resurrecting unit {}.{}: {}} ", tenantId, unitId, json);
+
+                    unit[0] = resurrect(ctx, json);
+                    cacheStore(ctx, unit[0]);
                 }
             });
 

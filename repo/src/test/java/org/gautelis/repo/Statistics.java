@@ -4,6 +4,7 @@ import com.sun.management.OperatingSystemMXBean;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.db.Table;
 import org.gautelis.repo.model.Repository;
+import org.gautelis.repo.search.query.adapters.PostgresAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,20 +46,14 @@ public class Statistics {
             /*
              * DB server version
              */
-            String sql = "SELECT version()"; // PostgreSQL specific, certainly.
-
-            Database.useReadonlyStatement(dataSource, sql, rs -> {
-                if (rs.next()) {
-                    buf.append("DB: ")
-                            .append(rs.getString("version")).append("\n");
-                }
-            });
+            buf.append("DB: ")
+                    .append(repo.getDatabaseAdapter().getDbVersion(dataSource)).append("\n");
             buf.append("\n");
 
             /*
              * Count all units
              */
-            sql = "SELECT COUNT(*) FROM " + Table.UNIT_KERNEL.getTableName();
+            String sql = "SELECT COUNT(*) FROM " + Table.UNIT_KERNEL.getTableName();
 
             Database.useReadonlyStatement(dataSource, sql, rs -> {
                 if (rs.next()) {
@@ -178,7 +173,11 @@ public class Statistics {
 
             statistics.info(buf.toString());
             statistics.info("\n{}", repo.getTimingData().report());
-            statistics.info("Index behaviour: \n{}", dumpIndexUse(dataSource));
+
+            // We currently only do this on PostgreSQL (and not DB2)
+            if (repo.getDatabaseAdapter() instanceof PostgresAdapter) {
+                statistics.info("Index behaviour: \n{}", dumpIndexUse(dataSource));
+            }
         });
     }
 

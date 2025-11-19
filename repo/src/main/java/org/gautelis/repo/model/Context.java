@@ -59,4 +59,8 @@ public final class Context {
     public TimingData getTimingData() {
         return timingData;
     }
+
+    public boolean useClob() {
+        return adapter.useClob();
+    }
 }

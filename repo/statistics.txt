@@ -1109,3 +1109,31 @@ repo_record_template_elements |              22 |                 7 |           
             repo_unit_version |              22 |         7,594,985 |        517,574 |          38 MB
 
 
+2025-11-19 22:13:09.995: Running on DB2 -- performance is not stellar, but no tuning done so far
+===================================================================================================
+OS: Mac OS X 15.7.2 (x86_64) with 20 cores (physical and/or hyperthreaded)
+Phys memory: total=64 GiB free=20 GiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.1+12-LTS) mem-total=112 MiB mem-free=88 MiB
+DB: DB2 v11.5.8.0 FP0
+
+Units: total=6252 locks=0 vectors=22900
+Values: string=23166 time=4050 integer=0 long=0 double=4096 boolean=0 data=0 record=6144
+Assocs: internal=0 external=0
+
+2025-11-19 22:13:10.001: 
+-----------------------+--------+--------+---------+--------+---------+-------------+----------------
+           Measurement |  Count |    Min |     Max |   Mean |   CV(%) |  Total time          i.e.
+-----------------------+--------+--------+---------+--------+---------+-------------+----------------
+         custom search |   2001 |   2,47 |  214,80 |  36,32 |   99,28 |       72703 | 1min 12s 703ms
+           delete unit |      1 |  14,60 |   14,60 |  14,60 |     NaN |          15 |           15ms
+          event action |   1605 |   0,00 |    0,07 |   0,00 |  355,18 |           0 |               
+fetch known attributes |      1 |  16,57 |   16,57 |  16,57 |     NaN |          17 |           17ms
+            get status |      1 |   4,98 |    4,98 |   4,98 |     NaN |           5 |            5ms
+             lock unit |      1 |  16,31 |   16,31 |  16,31 |     NaN |          16 |           16ms
+        resurrect unit |      1 |  15,04 |   15,04 |  15,04 |     NaN |          15 |           15ms
+                search |      2 |   2,97 |   85,44 |  44,21 |  131,92 |          88 |           88ms
+            set status |      1 |   5,01 |    5,01 |   5,01 |     NaN |           5 |            5ms
+            store unit |   1604 |   3,83 |   93,40 |  10,99 |   36,23 |       17622 |      17s 622ms
+           unlock unit |      1 |   7,43 |    7,43 |   7,43 |     NaN |           7 |            7ms
+
+

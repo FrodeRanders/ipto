@@ -69,7 +69,7 @@ public class PerformanceTest {
 
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 500; //
+        final int numberOfParents = 50; //
         final int numberOfChildren = 10; //
 
         try {

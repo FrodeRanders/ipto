@@ -84,7 +84,7 @@ final class TimeValue extends Value<Instant> {
     /* package accessible only */
     void inflate(ArrayNode node) {
         try {
-            node.forEach(value -> values.add(TimeHelper.parseInstant(value.asText())));
+            node.forEach(value -> values.add(Instant.parse(value.asText())));
         } catch (Throwable t) {
             log.info("Failed to parse value as timestamp: {}", node, t);
         }

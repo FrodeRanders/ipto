@@ -100,11 +100,7 @@ public class TimeHelper {
     }
 
     public static Instant parseInstant(String s) {
-        // Local time
-        LocalDateTime ldt = LocalDateTime.parse(s, FMT);
-
-        // local time to UTC
-        return ldt.toInstant(ZoneOffset.UTC);
+        return Instant.parse(s);
     }
 
     public static Instant timestamp2Instant(Timestamp timestamp) {

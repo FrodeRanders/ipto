@@ -456,7 +456,7 @@ public class Unit implements Cloneable {
         try (CallableStatement cs = conn.prepareCall(sql)) {
             ObjectNode json = asInternalJson();
 
-            cs.setString(1, json.toString());
+            cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
             cs.registerOutParameter(2, Types.BIGINT);
             cs.registerOutParameter(3, Types.INTEGER);
             cs.registerOutParameter(4, Types.TIMESTAMP);
@@ -484,7 +484,7 @@ public class Unit implements Cloneable {
         try (CallableStatement cs = conn.prepareCall(sql)) {
             ObjectNode json = asInternalJson();
 
-            cs.setString(1, json.toString());
+            cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
             cs.registerOutParameter(2, Types.INTEGER);
             cs.registerOutParameter(3, Types.TIMESTAMP);
             cs.execute();
@@ -575,7 +575,7 @@ public class Unit implements Cloneable {
             unitId = root.path("unitid").asLong();
             corrId = UUID.fromString(root.path("corrid").asText());
             unitStatus = Status.of(root.path("status").asInt());
-            createdTime = TimeHelper.parseInstant(root.get("created").asText());
+            createdTime = Instant.parse(root.get("created").asText());
 
             // Version information
             unitVersion = root.path("unitver").asInt();
@@ -584,7 +584,7 @@ public class Unit implements Cloneable {
             } else {
                 unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            modifiedTime = TimeHelper.parseInstant(root.get("modified").asText());
+            modifiedTime = Instant.parse(root.get("modified").asText());
 
             // Predicates
             isReadOnly = root.path("isreadonly").asBoolean();

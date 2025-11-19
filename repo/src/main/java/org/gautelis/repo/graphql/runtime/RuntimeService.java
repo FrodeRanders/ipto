@@ -19,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -349,7 +350,7 @@ public class RuntimeService {
                 return new LeafExpression<>(new StringAttributeSearchItem(attrId, op.iptoOp(), value));
             }
             case TIME -> {
-                return new LeafExpression<>(new TimeAttributeSearchItem(attrId, op.iptoOp(), TimeHelper.parseInstant(value)));
+                return new LeafExpression<>(new TimeAttributeSearchItem(attrId, op.iptoOp(), Instant.parse(value)));
             }
             case INTEGER -> {
                 return new LeafExpression<>(new IntegerAttributeSearchItem(attrId, op.iptoOp(), Integer.parseInt(value)));
