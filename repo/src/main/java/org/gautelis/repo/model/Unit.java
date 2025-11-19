@@ -575,7 +575,13 @@ public class Unit implements Cloneable {
             unitId = root.path("unitid").asLong();
             corrId = UUID.fromString(root.path("corrid").asText());
             unitStatus = Status.of(root.path("status").asInt());
-            createdTime = Instant.parse(root.get("created").asText());
+            String _created = root.path("created").asText();
+            if (_created.toLowerCase().endsWith("z")) {
+                createdTime = Instant.parse(_created);
+            } else {
+                // Kludge!!!
+                createdTime = Instant.parse(_created + "Z");
+            }
 
             // Version information
             unitVersion = root.path("unitver").asInt();
@@ -584,7 +590,13 @@ public class Unit implements Cloneable {
             } else {
                 unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            modifiedTime = Instant.parse(root.get("modified").asText());
+            String _modified = root.path("modified").asText();
+            if (_modified.toLowerCase().endsWith("z")) {
+                modifiedTime = Instant.parse(_modified);
+            } else {
+                // Kludge!!!
+                modifiedTime = Instant.parse(_modified + "Z");
+            }
 
             // Predicates
             isReadOnly = root.path("isreadonly").asBoolean();

@@ -121,7 +121,7 @@ public final class UnitFactory {
         } else {
             // This pulls attributes as well as unit, as opposed to classic load, but saves
             // the extra step of later having to pull attributes.
-            String sql = "{ CALL extract_unit_json(?, ?, ?, ?) }";
+            String sql = "CALL extract_unit_json(?, ?, ?, ?)";
 
             Unit[] unit = { null };
             Database.useConnection(ctx.getDataSource(), conn -> {
@@ -133,10 +133,27 @@ public final class UnitFactory {
                     } else {
                         cStmt.setInt(3, -1);
                     }
-                    cStmt.registerOutParameter(4, ctx.useClob() ? java.sql.Types.CLOB : Types.VARCHAR);
+                    if (ctx.useClob()) {
+                        // DB2, ...
+                        cStmt.registerOutParameter(4, java.sql.Types.CLOB);
+                    } else {
+                        // PostgreSQL, ...
+                        cStmt.registerOutParameter(4, java.sql.Types.OTHER);
+                    }
                     cStmt.execute();
 
-                    String json = cStmt.getString(4);
+                    Object out = cStmt.getObject(4);
+                    String json = null;
+
+                    if (out != null) {
+                        json = switch (out) {
+                            case String s -> s; /* If we are lucky */
+                            case Clob clob -> clob.getSubString(1L, (int) clob.length()); /* DB2 */
+                            case org.postgresql.util.PGobject pg -> pg.getValue(); /* PostgreSQL */
+                            default -> out.toString(); // Fall back on driver behaviour
+                        };
+                    }
+
                     log.trace("Resurrecting unit {}.{}: {}} ", tenantId, unitId, json);
 
                     unit[0] = resurrect(ctx, json);
