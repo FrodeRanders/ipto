@@ -27,7 +27,7 @@ public interface Configuration extends Database.Configuration {
     int eventsThreshold();
 
     @Configurable(property = "repository.events.listeners", value = "org.gautelis.repo.listeners.LoggingActionListener")
-    String eventsListeners();
+    String[] eventsListeners();
 
     @Configurable(property = "repository.cache.look_behind", value = "true")
     boolean cacheLookBehind();

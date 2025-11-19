@@ -5,8 +5,8 @@
     <!--
         Corresponds to class org.gautelis.vopn.db.Database.Configuration
     -->
-    <entry key="database">
-        repo
+    <entry key="url">
+        jdbc:postgresql://localhost:5432/repo
     </entry>
 
     <!--
@@ -21,34 +21,6 @@
     -->
     <entry key="password">
         repo
-    </entry>
-
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
-    <entry key="server">
-        localhost
-    </entry>
-
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
-    <entry key="port">
-        5432
-    </entry>
-
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
-    <entry key="manager">
-        postgresql
-    </entry>
-
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
-    <entry key="driver">
-        org.postgresql.ds.PGSimpleDataSource
     </entry>
 
     <!--
@@ -92,6 +64,15 @@
     <entry key="repository.cache.idle_check_interval">
         60
     </entry>
+
+    <!--
+        Unused, since we have a 'url'.
+    -->
+    <entry key="driver" />
+    <entry key="manager" />
+    <entry key="server" />
+    <entry key="port" />
+    <entry key="database" />
 </properties>
 
 

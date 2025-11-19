@@ -84,7 +84,6 @@ public class RepositoryFactory {
             throw new ConfigurationException(info, ioe);
         }
 
-
         //
         Configuration config;
         try {
@@ -97,39 +96,34 @@ public class RepositoryFactory {
         }
         int eventThreshold = config.eventsThreshold();
 
-        /*
-        DataSource dataSource;
-        try {
-            dataSource = Database.getDataSource(config, dataSourcePreparer);
-            prepareDatabase(config.manager(), dataSource);
-        }
-        catch (DatabaseException dbe) {
-            String info = "Failed to load data source according to configuration: " + dbe.getMessage();
-            log.error(info, dbe);
-            throw new ConfigurationException(info, dbe);
-        }
-        */
-
-        // TODO -- go through this
+        // Database
         HikariConfig hConfig = new HikariConfig();
-        String url = "jdbc:" + config.manager() + "://" + config.server() + ":" + config.port() +"/" + config.database();
+        String url = config.url();
+        if (null == url || url.isEmpty()) {
+            url = "jdbc:" + config.manager() + "://" + config.server() + ":" + config.port() +"/" + config.database();
+        }
         hConfig.setJdbcUrl(url);
-        hConfig.setUsername(config.user());
-        hConfig.setPassword(config.password());
-        hConfig.setMaximumPoolSize(50);
+        String user = config.user();
+        if (null != user && !user.isEmpty()) {
+            hConfig.setUsername(user);
+        }
+        String password = config.password();
+        if (null != password && !password.isEmpty()) {
+            hConfig.setPassword(password);
+        }
+        hConfig.setMaximumPoolSize(config.maxActive());
         HikariDataSource dataSource = new HikariDataSource(hConfig);
 
-        // For now -- TODO Fix Configurable to allow collection return values
+        //
         Collection<String> eventListeners = new ArrayList<>();
-        String _eventListener = config.eventsListeners(); // for now
-        eventListeners.add(_eventListener);
+        Collections.addAll(eventListeners, config.eventsListeners());
 
         // Setup event listeners
         Map<String, ActionListener> actionListeners = new HashMap<>();
-        for (String eventListener : eventListeners) {
+        eventListeners.forEach(eventListener -> {
             if (actionListeners.containsKey(eventListener)) {
                 log.warn("Event listener {} already registered, skipping", eventListener);
-                continue;
+                return;
             }
             Optional<ActionListener> listener = PluginsHelper.getPlugin(eventListener, ActionListener.class);
             if (listener.isPresent()) {
@@ -140,7 +134,7 @@ public class RepositoryFactory {
             } else {
                 log.error("Failed to instantiate event listener {}", eventListener);
             }
-        }
+        });
 
         // Setup database adapter
         DatabaseAdapter searchAdapter;
@@ -157,59 +151,5 @@ public class RepositoryFactory {
         Context context = new Context(dataSource, config, statements, searchAdapter);
         repo = new Repository(context, eventThreshold, actionListeners);
         return repo;
-    }
-
-    /*
-     * Helper functionality
-     */
-    public static void prepareDatabase(String dbm, DataSource dataSource) throws ConfigurationException {
-        Objects.requireNonNull(dbm, "dbm");
-        Objects.requireNonNull(dataSource, "dataSource");
-
-        try {
-            Options options = Options.getDefault();
-            options.debug = DEBUG_DATABASE_SETUP;
-            Manager mngr = new PostgreSQL(dataSource, options);
-
-            prepare("schema.sql", dbm, mngr, new PrintWriter(System.out));
-            prepare("boot.sql", dbm, mngr, new PrintWriter(System.out));
-
-        } catch (Throwable t) {
-            String info = "Failed to prepare internal database: ";
-            info += t.getMessage();
-            log.error(info, t);
-            throw new ConfigurationException(info, t);
-        }
-    }
-
-    /**
-     * Prepare the database by running script.
-     * <p>
-     *
-     * @throws Exception if fails to load configuration or fails to create database objects
-     */
-    private static void prepare(String filename, String dbm, Manager manager, PrintWriter out) throws Exception {
-        Objects.requireNonNull(filename, "fileName");
-        Objects.requireNonNull(dbm, "dbm");
-        Objects.requireNonNull(manager, "manager");
-        Objects.requireNonNull(out, "out");
-
-        String workingDirectory = System.getProperty("user.dir");
-        File file = Path.of(workingDirectory, "db", dbm, filename).toFile();
-        if (file.exists()) {
-            log.info("Sourcing {}", file.getAbsolutePath());
-            try (InputStreamReader reader = new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8)) {
-                manager.execute(filename, reader, out);
-            }
-        } else {
-            try (InputStream is = RepositoryFactory.class.getResourceAsStream(filename)) {
-                log.info("Sourcing bundled {}", filename);
-
-                if (null == is) {
-                    throw new ConfigurationException("No bundled file " + filename + " found");
-                }
-                manager.execute(filename, new InputStreamReader(is), out);
-            }
-        }
     }
 }
