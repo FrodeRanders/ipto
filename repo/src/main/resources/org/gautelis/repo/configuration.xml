@@ -2,10 +2,6 @@
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
 
-    <!--
-        Corresponds to class org.gautelis.vopn.db.Database.Configuration
-    -->
-
     <entry key="url">
         jdbc:postgresql://localhost:5432/repo
     </entry>
