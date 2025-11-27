@@ -18,12 +18,16 @@ package org.gautelis.repo;
 
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.attributes.Attribute;
+import org.gautelis.repo.model.attributes.Value;
 import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -40,15 +44,15 @@ public class RecordsTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void test() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
+        final String unitTitle = "Handling of *some order id*";
 
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
         unit.withAttributeValue("dce:title", String.class, value -> {
-            value.add("Handling of " + "*some order id*");
+            value.add(unitTitle);
         });
 
         unit.withAttributeValue("dmo:orderId", String.class, value -> {
@@ -68,8 +72,34 @@ public class RecordsTest {
                 value.add(Math.PI);
                 value.add(Math.E);
             });
+
+            // Test where we add an attribute that also exists at unit level.
+            recrd.withNestedAttributeValue(unit, "dce:title", String.class, value -> {
+                value.add("Handling of " + "*some shipment id*");
+            });
         });
 
         repo.storeUnit(unit);
+
+        Optional<Unit> _sameUnit = repo.getUnit(unit.getTenantId(), unit.getUnitId());
+        if (_sameUnit.isEmpty()) {
+            fail("Unit " + unit.getReference() + " exists, but is not retrievable");
+        }
+
+        Unit sameUnit = _sameUnit.get();
+        Optional<Attribute<String>> _title = sameUnit.getStringAttribute("dce:title");
+        if (_title.isEmpty()) {
+            fail("Attribute 'dce:title' not found in unit " + unit.getReference() + " but is known to exist");
+        }
+        Attribute<String> title = _title.get();
+        ArrayList<String> valueVector = title.getValueVector();
+
+        if (valueVector.size() != 1) {
+            fail("Attribute 'dce:title' must have exactly one value");
+        }
+
+        if (!valueVector.get(0).equals(unitTitle)) {
+            fail("Attribute 'dce:title' does not have expected value: \"" + unitTitle + "\" != \"" + valueVector.get(0) + "\"");
+        }
     }
 }

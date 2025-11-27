@@ -160,8 +160,9 @@ public class PerformanceTest {
                     });
 
                     childUnit.withRecordAttribute("dmo:shipment", recrd -> {
+                        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
                         recrd.withNestedAttributeValue(childUnit, "dmo:shipmentId", String.class, value -> {
-                            String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
                             value.add(shipmentId);
                         });
 
@@ -172,6 +173,10 @@ public class PerformanceTest {
                         recrd.withNestedAttributeValue(childUnit, "dmo:reading", Double.class, value -> {
                             value.add(Math.PI);
                             value.add(Math.E);
+                        });
+
+                        recrd.withNestedAttributeValue(childUnit, "dce:title", String.class, value -> {
+                            value.add("Handling of shipment " + shipmentId);
                         });
                     });
 

@@ -108,7 +108,6 @@ public class UnitTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
     public void test() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
