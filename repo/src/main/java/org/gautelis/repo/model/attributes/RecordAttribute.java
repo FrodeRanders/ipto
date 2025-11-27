@@ -20,6 +20,8 @@ import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.Unit;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class RecordAttribute {

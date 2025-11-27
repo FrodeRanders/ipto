@@ -114,20 +114,10 @@ final class StringValue extends Value<String> {
     }
 
     /* package accessible only */
-    void toInternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
-    ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
-        for (String value : values) {
-            array.add(value);
-        }
-    }
-
-    /* package accessible only */
-    void toExternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
+    void toJson(
+            ArrayNode _ignored,
+            ObjectNode attributeNode,
+            boolean _isChatty
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (String value : values) {

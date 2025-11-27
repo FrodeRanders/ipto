@@ -91,6 +91,11 @@ public final class RecordValue extends Value<Attribute<?>> {
 
     /* package accessible only */
     void inflate(ArrayNode node) {
+        if (null == node) {
+            log.debug("No record contents");
+            return;
+        }
+
         /*
          * 'node' structure:
          * [
@@ -148,47 +153,15 @@ public final class RecordValue extends Value<Attribute<?>> {
         return values.getFirst();
     }
 
-    /* package accessible only */
-    void toInternalJson(
+    void toJson(
             ArrayNode attributes,
-            ObjectNode attributeNode
-    ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode valueNode = null;
-        valueNode = attributeNode.putArray(VALUE_PROPERTY_NAME);
-
-        for (Attribute<?> nestedAttribute : values) {
-            // 'attributes' either in 'unit' (if flat) or in
-            // record parent attribute if not.
-            ObjectNode nestedAttributeNode = attributes.addObject();
-            nestedAttribute.toInternalJson(attributes, nestedAttributeNode);
-
-            // Attributes are nested at unit level, so
-            // we need to describe additional relations.
-            if (null != valueNode) {
-                // Add reference to that attribute within this record attribute
-                ObjectNode nestedAttributeRefNode = valueNode.addObject();
-
-                int attrId = nestedAttribute.getId();
-                nestedAttributeRefNode.put("ref_attrid", attrId);
-
-                long valueId = nestedAttribute.getValueId();
-                if (valueId > 0) {
-                    nestedAttributeRefNode.put("ref_valueid", valueId);
-                } else {
-                    nestedAttributeRefNode.putNull("ref_valueid");
-                }
-            }
-        }
-    }
-
-    void toExternalJson(
-            ArrayNode attributes,
-            ObjectNode attributeNode
+            ObjectNode attributeNode,
+            boolean isChatty
     ) throws AttributeTypeException, AttributeValueException {
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' are represented in record parent attribute.
             ObjectNode nestedAttributeNode = attributes.addObject();
-            nestedAttribute.toExternalJson(attributes, nestedAttributeNode);
+            nestedAttribute.toJson(attributes, nestedAttributeNode, isChatty);
         }
     }
 

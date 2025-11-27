@@ -149,22 +149,10 @@ final class DataValue extends Value<Object> {
     }
 
     /* package accessible only */
-    void toInternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
-    ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
-        for (Object _value : values) {
-            byte[] value = (byte[]) _value; // Assumption
-            String b64 = Base64.getEncoder().encodeToString(value);
-            array.add(b64);
-        }
-    }
-
-    /* package accessible only */
-    void toExternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
+    void toJson(
+            ArrayNode _ignored,
+            ObjectNode attributeNode,
+            boolean _isChatty
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Object _value : values) {

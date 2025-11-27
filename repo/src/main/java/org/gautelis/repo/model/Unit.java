@@ -228,12 +228,12 @@ public class Unit implements Cloneable {
         return "#NOID#";
     }
 
-    private ObjectNode asInternalJson() {
+    private ObjectNode getJson(boolean isChatty) {
         ObjectNode unitNode = MAPPER.createObjectNode();
 
-        if (false) {
-            unitNode.put("@type", "internal:unit");
-            unitNode.put("@version", 1);
+        if (isChatty) {
+            unitNode.put("@type", "ipto:unit");
+            unitNode.put("@version", 2);
         }
 
         // unit itself
@@ -259,43 +259,7 @@ public class Unit implements Cloneable {
 
         for (Attribute<?> attribute : attributes.values()) {
             ObjectNode attributeNode = attrs.addObject();
-            attribute.toInternalJson(attrs, attributeNode);
-        }
-
-        return unitNode;
-    }
-
-
-    private ObjectNode asExternalJson() {
-        ObjectNode unitNode = MAPPER.createObjectNode();
-
-        unitNode.put("@type", "ipto:unit");
-        unitNode.put("@version", 2);
-
-        // unit itself
-        unitNode.put("tenantid", tenantId);
-        if (/* has been saved and thus is valid? */ unitId > 0) {
-            unitNode.put("unitid", unitId);
-        } else {
-            unitNode.putNull("unitid");
-        }
-        unitNode.put("unitver", unitVersion);
-        unitNode.put("corrid", corrId.toString());
-        unitNode.put("status", unitStatus.getStatus());
-        unitNode.put("unitname", unitName);
-        unitNode.put("created", createdTime != null ? createdTime.toString() : null);
-        unitNode.put("modified", modifiedTime != null ? modifiedTime.toString() : null);
-
-        // attributes array
-        ArrayNode attrs = MAPPER.createArrayNode();
-        unitNode.set("attributes", attrs);
-
-        // attributes of unit
-        fetchAttributes();
-
-        for (Attribute<?> attribute : attributes.values()) {
-            ObjectNode attributeNode = attrs.addObject();
-            attribute.toExternalJson(attrs, attributeNode);
+            attribute.toJson(attrs, attributeNode, isChatty);
         }
 
         return unitNode;
@@ -303,7 +267,7 @@ public class Unit implements Cloneable {
 
     public String asJson(boolean pretty) {
         try {
-            ObjectNode unitNode = asExternalJson();
+            ObjectNode unitNode = getJson(/* be chatty and use type names */ true);
             if (pretty) {
                 return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
             } else {
@@ -376,6 +340,7 @@ public class Unit implements Cloneable {
     void store() throws DatabaseConnectionException, AttributeTypeException, AttributeValueException, DatabaseReadException, DatabaseWriteException, ConfigurationException, SystemInconsistencyException {
         if (attributes == null) {
             if (!isModified) {
+                log.trace("Ignored store request, since unit {} is not modified", getReference());
                 return;
 
             } else if (!isNew) {
@@ -396,6 +361,7 @@ public class Unit implements Cloneable {
 
         // Do not perform store if no modifications in unit
         if (!isModified) {
+            log.trace("Ignored store request, since unit {} is not modified", getReference());
             return;
         }
 
@@ -454,7 +420,8 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_unit_json(?, ?, ?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            ObjectNode json = asInternalJson();
+            ObjectNode json = getJson(/* don't be chatty */ false);
+            log.trace("Storing new unit {}", json);
 
             cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
             cs.registerOutParameter(2, Types.BIGINT);
@@ -482,7 +449,8 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_version_json(?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            ObjectNode json = asInternalJson();
+            ObjectNode json = getJson(/* don't be chatty */ false);
+            log.trace("Storing unit version {}", json);
 
             cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
             cs.registerOutParameter(2, Types.INTEGER);
@@ -601,10 +569,15 @@ public class Unit implements Cloneable {
             // Predicates
             isReadOnly = root.path("isreadonly").asBoolean();
 
-            // In this context (i.e. with CLASSIC_LOAD == false in
+            // In this context (i.e. with a JSON_BASED load strategy in
             // org.gautelis.repo.model.cache.UnitFactory), when inflating
-            // units from JSON, attributes are already read and returned
-            // in the JSON, so we continue with preparing them now
+            // units (from JSON), attributes are already read and returned
+            // in the JSON, so we continue with preparing them now.
+            //
+            // All attributes are returned in a flat structure, so we
+            // create any possibly record structure by processing
+            // record attributes and removing nested attributes from the
+            // global and flat structure.
             if (attributes == null) {
                 // Attributes that need some extra care in a subsequent step
                 Collection<Attribute<?>> recordAttributes = new ArrayList<>();
@@ -632,6 +605,7 @@ public class Unit implements Cloneable {
                     if (recordAttribute.getValue() instanceof RecordValue recValue) {
                         Collection<RecordValue.AttributeReference> refs = recValue.getClaimedReferences();
                         Iterator<RecordValue.AttributeReference> rit = refs.iterator();
+
                         while (rit.hasNext()) {
                             RecordValue.AttributeReference ref = rit.next();
                             Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
@@ -639,7 +613,7 @@ public class Unit implements Cloneable {
                                 recValue.set(referredAttribute);
                                 rit.remove(); // Reference is now resolved
 
-                                // remove attribute from unit-level, since it belongs at record-level
+                                // Remove attribute from unit-level, since it is owned by a nested record
                                 valueIdToAttribute.remove(ref.refValueId());
                             }
                         }
@@ -991,7 +965,7 @@ public class Unit implements Cloneable {
         ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
         for (Attribute<?> attribute : values) {
             // This scales reasonably well with a 'reasonable' number of nested attributes :)
-            if (attribute.getName().equals(name)) {
+            if (attribute.getName().equalsIgnoreCase(name)) {
                 Class<?> actual = attribute.getConcreteType();
                 if (expectedClass.equals(actual)) {
                     // Located attribute by name and Java type
@@ -1008,7 +982,7 @@ public class Unit implements Cloneable {
             // ...and that's an error
             throw new IllegalArgumentException("Attribute " + name + " not nested in attribute " + recordAttribute);
         } else {
-            // ...and therefore we add it from pool of globally known attributes
+            // ...and therefore we add it from globally known attributes
             Optional<KnownAttributes.AttributeInfo> attributeInfo = KnownAttributes.getAttribute(ctx, name);
             if (attributeInfo.isEmpty()) {
                 throw new IllegalArgumentException("Attribute '" + name + "' is not defined in system");
@@ -1017,9 +991,10 @@ public class Unit implements Cloneable {
             Attribute<?> attribute = new Attribute<>(attributeInfo.get());
             values.add(attribute); // added to attribute's values
 
+            // TODO -- Should we instantiate nested attributes as well?
             if (AttributeType.RECORD == attribute.getType()) {
-                // TODO -- instantiate nested attributes if not instantiated already?
             }
+
             runnable.run((Attribute<A>) attribute);
         }
     }

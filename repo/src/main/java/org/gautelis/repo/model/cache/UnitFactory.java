@@ -42,7 +42,12 @@ public final class UnitFactory {
     private final static Object mgrLock = new Object();
     private static UnitCacheManager cacheMgr = null;
 
-    private static final boolean CLASSIC_LOAD = false; // JSON load instead of classic
+    public enum LoadStrategy {
+        RESULTSET_BASED,
+        JSON_BASED
+    }
+
+    public static final LoadStrategy loadStrategy = LoadStrategy.JSON_BASED;
 
     /**
      * Checks existence of unit
@@ -84,84 +89,89 @@ public final class UnitFactory {
             }
         }
 
-        if (CLASSIC_LOAD) {
-            // Not in cache, continue reading from database
-            Unit[] unit = { null };
-            if (unitVersion > 0) {
-                Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
-                    int i = 0;
-                    pStmt.setInt(++i, tenantId);
-                    pStmt.setLong(++i, unitId);
-                    pStmt.setInt(++i, unitVersion);
+        switch (loadStrategy) {
+            case RESULTSET_BASED: {
+                // Not in cache, continue reading from database
+                Unit[] unit = { null };
+                if (unitVersion > 0) {
+                    Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGet(), pStmt -> {
+                        int i = 0;
+                        pStmt.setInt(++i, tenantId);
+                        pStmt.setLong(++i, unitId);
+                        pStmt.setInt(++i, unitVersion);
 
-                    try (ResultSet rs = Database.executeQuery(pStmt)) {
-                        if (rs.next()) {
-                            unit[0] = resurrect(ctx, rs);
-                            cacheStore(ctx, unit[0]);
+                        try (ResultSet rs = Database.executeQuery(pStmt)) {
+                            if (rs.next()) {
+                                unit[0] = resurrect(ctx, rs);
+                                cacheStore(ctx, unit[0]);
+                            }
                         }
-                    }
-                });
-            } else {
-                Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGetLatest(), pStmt -> {
-                    int i = 0;
-                    pStmt.setInt(++i, tenantId);
-                    pStmt.setLong(++i, unitId);
+                    });
+                } else {
+                    Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().unitGetLatest(), pStmt -> {
+                        int i = 0;
+                        pStmt.setInt(++i, tenantId);
+                        pStmt.setLong(++i, unitId);
 
-                    try (ResultSet rs = Database.executeQuery(pStmt)) {
-                        if (rs.next()) {
-                            unit[0] = resurrect(ctx, rs);
-                            cacheStore(ctx, unit[0]);
+                        try (ResultSet rs = Database.executeQuery(pStmt)) {
+                            if (rs.next()) {
+                                unit[0] = resurrect(ctx, rs);
+                                cacheStore(ctx, unit[0]);
+                            }
                         }
-                    }
-                });
+                    });
+                }
+
+                return Optional.ofNullable(unit[0]);
             }
 
-            return Optional.ofNullable(unit[0]);
+            case JSON_BASED: {
+                // This pulls attributes as well as unit, as opposed to classic load, but saves
+                // the extra step of later having to pull attributes.
+                String sql = "CALL extract_unit_json(?, ?, ?, ?)";
 
-        } else {
-            // This pulls attributes as well as unit, as opposed to classic load, but saves
-            // the extra step of later having to pull attributes.
-            String sql = "CALL extract_unit_json(?, ?, ?, ?)";
+                Unit[] unit = { null };
+                Database.useConnection(ctx.getDataSource(), conn -> {
+                    try (CallableStatement cStmt = conn.prepareCall(sql)) {
+                        cStmt.setInt(1, tenantId);
+                        cStmt.setLong(2, unitId);
+                        if (unitVersion > 0) {
+                            cStmt.setInt(3, unitVersion);
+                        } else {
+                            cStmt.setInt(3, -1);
+                        }
+                        if (ctx.useClob()) {
+                            // DB2, ...
+                            cStmt.registerOutParameter(4, java.sql.Types.CLOB);
+                        } else {
+                            // PostgreSQL, ...
+                            cStmt.registerOutParameter(4, java.sql.Types.OTHER);
+                        }
+                        cStmt.execute();
 
-            Unit[] unit = { null };
-            Database.useConnection(ctx.getDataSource(), conn -> {
-                try (CallableStatement cStmt = conn.prepareCall(sql)) {
-                    cStmt.setInt(1, tenantId);
-                    cStmt.setLong(2, unitId);
-                    if (unitVersion > 0) {
-                        cStmt.setInt(3, unitVersion);
-                    } else {
-                        cStmt.setInt(3, -1);
+                        Object out = cStmt.getObject(4);
+                        String json = null;
+
+                        if (out != null) {
+                            json = switch (out) {
+                                case String s -> s; /* If we are lucky */
+                                case Clob clob -> clob.getSubString(1L, (int) clob.length()); /* DB2 */
+                                case org.postgresql.util.PGobject pg -> pg.getValue(); /* PostgreSQL */
+                                default -> out.toString(); // Fall back on driver behaviour
+                            };
+                        }
+
+                        log.trace("Resurrecting unit {}.{}: {}", tenantId, unitId, json);
+
+                        unit[0] = resurrect(ctx, json);
+                        cacheStore(ctx, unit[0]);
                     }
-                    if (ctx.useClob()) {
-                        // DB2, ...
-                        cStmt.registerOutParameter(4, java.sql.Types.CLOB);
-                    } else {
-                        // PostgreSQL, ...
-                        cStmt.registerOutParameter(4, java.sql.Types.OTHER);
-                    }
-                    cStmt.execute();
+                });
 
-                    Object out = cStmt.getObject(4);
-                    String json = null;
-
-                    if (out != null) {
-                        json = switch (out) {
-                            case String s -> s; /* If we are lucky */
-                            case Clob clob -> clob.getSubString(1L, (int) clob.length()); /* DB2 */
-                            case org.postgresql.util.PGobject pg -> pg.getValue(); /* PostgreSQL */
-                            default -> out.toString(); // Fall back on driver behaviour
-                        };
-                    }
-
-                    log.trace("Resurrecting unit {}.{}: {}} ", tenantId, unitId, json);
-
-                    unit[0] = resurrect(ctx, json);
-                    cacheStore(ctx, unit[0]);
-                }
-            });
-
-            return Optional.ofNullable(unit[0]);
+                return Optional.ofNullable(unit[0]);
+            }
+            default:
+                return  Optional.empty();
         }
     }
 

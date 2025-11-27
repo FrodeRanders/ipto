@@ -173,8 +173,8 @@ public class Attribute<T> {
         return valueId;
     }
 
-    public void toInternalJson(ArrayNode attributes, ObjectNode attributeNode) {
-        if (false) {
+    public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty) {
+        if (isChatty) {
             String _type = type.name().toLowerCase();
             if (value.isScalar()) {
                 _type += "-scalar";
@@ -182,46 +182,21 @@ public class Attribute<T> {
                 _type += "-vector";
             }
             attributeNode.put("@type", _type);
-        }
-
-        boolean _isModified = isModified();
-
-        attributeNode.put("ismodified", _isModified);
-        attributeNode.put("attrname", name);
-        attributeNode.put("attrid", id);
-        attributeNode.put("attrtype", type.getType());
-        attributeNode.put("untverfrom", unitVersionFrom);
-        attributeNode.put("untverto", unitVersionTo);
-
-        // if (/* has been saved and thus is valid? */ valueId > 0) {
-        //     attributeNode.put("valueid", valueId);
-        // } else {
-        //     attributeNode.putNull("valueid");
-        // }
-
-        value.toInternalJson(attributes, attributeNode);
-    }
-
-    public void toExternalJson(ArrayNode attributes, ObjectNode attributeNode) {
-        String _type = type.name().toLowerCase();
-        if (value.isScalar()) {
-            _type += "-scalar";
+            attributeNode.put("attrname", name);
+            attributeNode.put("alias", alias);
+            attributeNode.put("attrtype", type.name());
         } else {
-            _type += "-vector";
+            attributeNode.put("attrtype", type.getType());
         }
-        attributeNode.put("@type", _type);
 
-        attributeNode.put("attrname", name);
-        attributeNode.put("alias", alias);
         attributeNode.put("attrid", id);
-        attributeNode.put("attrtype", type.name());
 
         if (AttributeType.RECORD == type) {
             // "hide" unit attributes with local array in record attribute
             attributes = attributeNode.putArray("attributes");
         }
 
-        value.toExternalJson(attributes, attributeNode);
+        value.toJson(attributes, attributeNode, isChatty);
     }
 
     private void readEntry(JsonNode node) throws JsonProcessingException {

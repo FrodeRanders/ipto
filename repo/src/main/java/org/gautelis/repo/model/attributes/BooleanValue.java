@@ -115,20 +115,10 @@ final class BooleanValue extends Value<Boolean> {
     }
 
     /* package accessible only */
-    void toInternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
-    ) throws AttributeTypeException, AttributeValueException {
-        ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
-        for (Boolean value : values) {
-            array.add(value);
-        }
-    }
-
-    /* package accessible only */
-    void toExternalJson(
-            ArrayNode ignored,
-            ObjectNode attributeNode
+    void toJson(
+            ArrayNode _ignored,
+            ObjectNode attributeNode,
+            boolean _isChatty
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Boolean value : values) {
