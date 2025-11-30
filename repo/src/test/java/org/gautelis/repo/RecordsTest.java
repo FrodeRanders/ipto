@@ -16,18 +16,20 @@
  */
 package org.gautelis.repo;
 
+import com.fasterxml.uuid.Generators;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.attributes.Attribute;
-import org.gautelis.repo.model.attributes.Value;
+import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -35,71 +37,270 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 @Tag("records")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(GlobalSetupExtension.class)
 public class RecordsTest {
     private static final Logger log = LoggerFactory.getLogger(RecordsTest.class);
-
-    @BeforeAll
-    public static void setUp() throws IOException {
-        CommonSetup.setUp();
-    }
 
     @Test
     public void test() {
         Repository repo = RepositoryFactory.getRepository();
         final int tenantId = 1;
-        final String unitTitle = "Handling of *some order id*";
+        UUID processId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
+        final String processDescription = "Yrkan om vård av husdjur";
 
-        Unit unit = repo.createUnit(tenantId, "a record instance");
+        // ------------------ Steg 1 i process, etablera Yrkan -------------------
+        Unit yrkan = repo.createUnit(tenantId, processId);
 
-        unit.withAttributeValue("dce:title", String.class, value -> {
-            value.add(unitTitle);
-        });
-
-        unit.withAttributeValue("dmo:orderId", String.class, value -> {
-            value.add("*some order id*");
-        });
-
-        unit.withRecordAttribute("dmo:shipment", recrd -> {
-            recrd.withNestedAttributeValue(unit, "dmo:shipmentId", String.class, value -> {
-                value.add("*some shipment id*");
-            });
-
-            recrd.withNestedAttributeValue(unit, "dmo:deadline", Instant.class, value -> {
-                value.add(Instant.now());
-            });
-
-            recrd.withNestedAttributeValue(unit, "dmo:reading", Double.class, value -> {
-                value.add(Math.PI);
-                value.add(Math.E);
-            });
-
-            // Test where we add an attribute that also exists at unit level.
-            recrd.withNestedAttributeValue(unit, "dce:title", String.class, value -> {
-                value.add("Handling of " + "*some shipment id*");
+        /*
+         * type Yrkan @record(attribute: yrkan) {
+         *     person : Person
+         *     beskrivning : String @use(attribute: description)
+         *     beslut : Beslut
+         *     producerade_resultat : [ProduceratResultat]
+         * }
+         *
+         * type FysiskPerson @record(attribute: fysisk_person) {
+         *     personnummer : String
+         * }
+         */
+        yrkan.withRecordAttribute("ffa:fysisk_person", person -> {
+            person.withNestedAttributeValue("ffa:personnummer", String.class, value -> {
+                value.add("19121212-1212");
             });
         });
 
-        repo.storeUnit(unit);
+        yrkan.withAttributeValue("dce:description", String.class, value -> {
+            value.add(processDescription);
+        });
 
-        Optional<Unit> _sameUnit = repo.getUnit(unit.getTenantId(), unit.getUnitId());
+        repo.storeUnit(yrkan);
+
+        // ------------------ Steg 2 i process, pröva rätten till -------------------
+        yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+            /*
+             * enum RattenTillPeriodOmfattning {
+             *     HEL
+             *     EN_ATTONDEL
+             *     OCHSAAVIDARE
+             * }
+             *
+             * enum ErsattningsTyp {
+             *     SJUKPENNING # ersattningstyp:SJUKPENNING
+             *     FORALDRAPENNING # ersattningstyp:FORALDRAPENNING
+             *     HUNDBIDRAG # ersattningstyp:HUNDBIDRAG
+             * }
+             *
+             * type RattenTillPeriod @record(attribute: ratten_till_period) {
+             *     ersattningstyp : ErsattningsTyp
+             *     omfattning : RattenTillPeriodOmfattning
+             * }
+             */
+            Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
+            if (rattenTill.isPresent()) {
+                RecordAttribute rattenTillRecord = RecordAttribute.from(yrkan, rattenTill.get());
+
+                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
+                    ersattningstyp.add("HUNDBIDRAG");
+                });
+
+                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
+                    omfattning.add("HEL");
+                });
+
+                Attribute<?> attribute = rattenTill.get();
+                resultat.add(attribute);
+            }
+        });
+
+        repo.storeUnit(yrkan);
+
+        // ------------------ Steg 3 i process, beräkna -------------------
+        yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+            /*
+             * enum BeloppsPeriod {
+             *     PER_TIMME
+             *     PER_DAG
+             *     PER_MAANAD
+             *     PER_AAR
+             * }
+             *
+             * enum Valuta {
+             *     SEK
+             *     EUR
+             * }
+             *
+             * enum Skattestatus {
+             *     SKATTEFRI
+             *     SKATTEPLIKTIG
+             * }
+             *
+             * type Belopp @record(attribute: belopp) {
+             *     varde : Float
+             *     beloppsperiod : BeloppsPeriod
+             *     skattestatus : Skattestatus
+             *     valuta : Valuta
+             * }
+             *
+             * type Period @record(attribute: period){
+             *     from : DateTime
+             *     tom : DateTime
+             * }
+             *
+             * enum ErsattningsTyp {
+             *     SJUKPENNING # ersattningstyp:SJUKPENNING
+             *     FORALDRAPENNING # ersattningstyp:FORALDRAPENNING
+             *     HUNDBIDRAG # ersattningstyp:HUNDBIDRAG
+             * }
+             *
+             * type Ersattning @record(attribute: ersattning) {
+             *     typ : ErsattningsTyp
+             *     belopp : Belopp
+             *     period : Period
+             * }
+             */
+            Optional<Attribute<?>> ersattning = repo.instantiateAttribute("ffa:ersattning");
+            if (ersattning.isPresent()) {
+                RecordAttribute ersattningRecord = RecordAttribute.from(yrkan, ersattning.get());
+
+                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> {
+                    value.add("HUNDBIDRAG");
+                });
+
+                ersattningRecord.withNestedAttribute("ffa:belopp", Attribute.class, belopp -> {
+                    RecordAttribute beloppRecord = RecordAttribute.wrap(yrkan, belopp);
+
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> {
+                        beloppsvarde.add(1000.0);
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> {
+                        beloppsperiodisering.add("PER_DAG");
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> {
+                        valuta.add("SEK");
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> {
+                        skattestatus.add("SKATTEPLIKTIG");
+                    });
+                });
+
+                ersattningRecord.withNestedAttribute("ffa:period", Attribute.class, period -> {
+                    RecordAttribute periodRecord = RecordAttribute.wrap(yrkan, period);
+
+                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> {
+                        value.add(Instant.now());
+                    });
+                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> {
+                        value.add(Instant.now());
+                    });
+                });
+
+                resultat.add(ersattningRecord.getDelegate());
+            }
+        });
+
+        repo.storeUnit(yrkan);
+
+        // ------------------ Steg 4 i process, besluta -------------------
+        yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+            /*
+             * enum BeslutsTyp {
+             *     INTERRIMISTISK
+             *     STALLNINGSTAGANDE
+             *     SLUTLIGT
+             * }
+             *
+             * enum BeslutsUtfall {
+             *     BEVILJAT
+             *     AVSLAG
+             *     DELVIS_BEVILJANDE
+             *     AVVISNING
+             *     AVSKRIVNING
+             * }
+             *
+             * enum BeslutsLagrum {
+             *     SFB_K112_P2a # SFB Kap. 112 § 2a
+             *     SFB_K112_P3  # SFB Kap. 112 § 3
+             *     SFB_K112_P4  # SFB Kap. 112 § 4
+             *     SFB_K113_P3_S1 # SFB Kap. 113 § 3 p. 1
+             *     SFB_K113_P3_S2 # SFB Kap. 113 § 3 p. 2
+             *     SFB_K113_P3_S3 # SFB Kap. 113 § 3 p. 3
+             *     FL_P36 # FL § 36
+             *     FL_P37 # FL § 37
+             *     FL_P38 # FL § 38
+             * }
+             *
+             * type Beslut @record(attribute: beslut) {
+             *     datum : DateTime @use(attribute: date)
+             *     beslutsfattare : String
+             *     typ : BeslutsTyp
+             *     utfall : BeslutsUtfall
+             *     organisation : String
+             *     lagrum : BeslutsLagrum
+             *     avslagsanledning : String
+             * }
+             */
+            Optional<Attribute<?>> beslut = repo.instantiateAttribute("ffa:beslut");
+            if (beslut.isPresent()) {
+                RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
+
+                beslutsRecord.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+                    datum.add(Instant.now());
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
+                    beslutsfattare.add("Beslut Person");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
+                    beslutstyp.add("SLUTLIGT");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
+                    beslutsutfall.add("BEVILJAT");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
+                    organisation.add("Myndigheten");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
+                    lagrum.add("FL_P38");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
+                    // Ingen
+                });
+
+                resultat.add(beslutsRecord.getDelegate());
+            }
+        });
+
+        repo.storeUnit(yrkan);
+
+        // ------------------ Process avslutad -------------------
+
+        // Test
+        Optional<Unit> _sameUnit = repo.getUnit(yrkan.getTenantId(), yrkan.getUnitId());
         if (_sameUnit.isEmpty()) {
-            fail("Unit " + unit.getReference() + " exists, but is not retrievable");
+            fail("Unit " + yrkan.getReference() + " exists, but is not retrievable");
         }
 
         Unit sameUnit = _sameUnit.get();
-        Optional<Attribute<String>> _title = sameUnit.getStringAttribute("dce:title");
-        if (_title.isEmpty()) {
-            fail("Attribute 'dce:title' not found in unit " + unit.getReference() + " but is known to exist");
+        Optional<Attribute<String>> _description = sameUnit.getStringAttribute("dce:description");
+        if (_description.isEmpty()) {
+            fail("Attribute 'dce:description' not found in unit " + yrkan.getReference() + " but is known to exist");
         }
-        Attribute<String> title = _title.get();
-        ArrayList<String> valueVector = title.getValueVector();
+        Attribute<String> description = _description.get();
+        ArrayList<String> valueVector = description.getValueVector();
 
         if (valueVector.size() != 1) {
-            fail("Attribute 'dce:title' must have exactly one value");
+            fail("Attribute 'dce:description' must have exactly one value");
         }
 
-        if (!valueVector.get(0).equals(unitTitle)) {
-            fail("Attribute 'dce:title' does not have expected value: \"" + unitTitle + "\" != \"" + valueVector.get(0) + "\"");
+        if (!processDescription.equals(valueVector.get(0))) {
+            fail("Attribute 'dce:description' does not have expected value: \"" + processDescription + "\" != \"" + valueVector.get(0) + "\"");
         }
     }
 }

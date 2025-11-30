@@ -3,6 +3,7 @@ package org.gautelis.repo.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
+import org.gautelis.repo.exceptions.Stacktrace;
 import org.gautelis.repo.graphql.model.*;
 import org.gautelis.repo.graphql.model.TypeDefinition;
 import org.gautelis.repo.model.AttributeType;
@@ -48,12 +49,14 @@ public final class Templates {
             if ("query".equalsIgnoreCase(typeName)
                     || "mutation".equalsIgnoreCase(typeName)
                     || "subscription".equalsIgnoreCase(typeName)) {
+                log.debug("Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (unitDirectivesOnType.isEmpty()) {
+                log.debug("Ignoring type: {}", typeName);
                 continue;
             }
 
@@ -113,6 +116,7 @@ public final class Templates {
                     }
                 }
                 units.put(typeName, new GqlUnitShape(typeName, templateId, templateName, unitFields));
+                log.trace("Defining shape for {}: {}", typeName, units.get(typeName));
             }
         }
 

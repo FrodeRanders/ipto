@@ -16,8 +16,10 @@
  */
 package org.gautelis.repo;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.gautelis.repo.model.attributes.Attribute;
+import org.gautelis.repo.model.attributes.RecordAttribute;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.fasterxml.uuid.Generators;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
@@ -30,62 +32,138 @@ import org.junit.jupiter.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  *
  */
+import graphql.GraphQL;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+
 @Tag("GraphQL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(GlobalSetupExtension.class)
 public class GraphQLTest {
     private static final Logger log = LoggerFactory.getLogger(GraphQLTest.class);
 
     private final ObjectMapper MAPPER = new ObjectMapper();
 
-    private static graphql.GraphQL graphQL = null;
-
-    @BeforeAll
-    public static void setUp() throws IOException {
-        graphQL = CommonSetup.setUp();
-    }
-
     private long createUnit(int tenantId, String aSpecificString, Instant aSpecificInstant) {
         Repository repo = RepositoryFactory.getRepository();
-        Unit unit = repo.createUnit(tenantId, "graphql 'unit' test");
-        final String orderId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+        final UUID processId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
 
-        unit.withAttributeValue("dce:title", String.class, value -> {
-            value.add("abc");
-        });
+        Unit yrkan = repo.createUnit(tenantId, processId);
 
-        unit.withAttributeValue("dmo:orderId", String.class, value -> {
-            value.add(orderId);
-        });
-
-        unit.withRecordAttribute("dmo:shipment", recrd -> {
-            recrd.withNestedAttributeValue(unit, "dmo:shipmentId", String.class, value -> {
-                value.add(aSpecificString);
-            });
-
-            recrd.withNestedAttributeValue(unit, "dmo:deadline", Instant.class, value -> {
-                value.add(aSpecificInstant);
-            });
-
-            recrd.withNestedAttributeValue(unit, "dmo:reading", Double.class, value -> {
-                value.add(Math.PI);
-                value.add(Math.E);
+        yrkan.withRecordAttribute("ffa:fysisk_person", person -> {
+            person.withNestedAttributeValue("ffa:personnummer", String.class, value -> {
+                value.add("19121212-1212");
             });
         });
 
-        repo.storeUnit(unit);
-        return unit.getUnitId();
+        yrkan.withAttributeValue("dce:description", String.class, value -> {
+            value.add("Yrkan om vård av husdjur");
+        });
+
+        yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+            Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
+            if (rattenTill.isPresent()) {
+                RecordAttribute rattenTillRecord = RecordAttribute.from(yrkan, rattenTill.get());
+
+                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
+                    ersattningstyp.add("HUNDBIDRAG");
+                });
+
+                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
+                    omfattning.add("HEL");
+                });
+
+                Attribute<?> attribute = rattenTill.get();
+                resultat.add(attribute);
+            }
+
+            Optional<Attribute<?>> ersattning = repo.instantiateAttribute("ffa:ersattning");
+            if (ersattning.isPresent()) {
+                RecordAttribute ersattningRecord = RecordAttribute.from(yrkan, ersattning.get());
+
+                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> {
+                    value.add("HUNDBIDRAG");
+                });
+
+                ersattningRecord.withNestedAttribute("ffa:belopp", Attribute.class, belopp -> {
+                    RecordAttribute beloppRecord = RecordAttribute.wrap(yrkan, belopp);
+
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> {
+                        beloppsvarde.add(1000.0);
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> {
+                        beloppsperiodisering.add("PER_DAG");
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> {
+                        valuta.add("SEK");
+                    });
+                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> {
+                        skattestatus.add("SKATTEPLIKTIG");
+                    });
+                });
+
+                ersattningRecord.withNestedAttribute("ffa:period", Attribute.class, period -> {
+                    RecordAttribute periodRecord = RecordAttribute.wrap(yrkan, period);
+
+                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> {
+                        value.add(Instant.now());
+                    });
+                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> {
+                        value.add(Instant.now());
+                    });
+                });
+
+                resultat.add(ersattningRecord.getDelegate());
+            }
+
+            Optional<Attribute<?>> beslut = repo.instantiateAttribute("ffa:beslut");
+            if (beslut.isPresent()) {
+                RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
+
+                beslutsRecord.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+                    datum.add(aSpecificInstant);
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
+                    beslutsfattare.add(aSpecificString);
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
+                    beslutstyp.add("SLUTLIGT");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
+                    beslutsutfall.add("BEVILJAT");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
+                    organisation.add("Myndigheten");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
+                    lagrum.add("FL_P38");
+                });
+
+                beslutsRecord.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
+                    // Ingen
+                });
+
+                resultat.add(beslutsRecord.getDelegate());
+            }
+        });
+
+        repo.storeUnit(yrkan);
+        return yrkan.getUnitId();
     }
 
     private void dumpMap(Map<String, ?> root) {
@@ -104,30 +182,47 @@ public class GraphQLTest {
 
     @Test
     @Order(1)
-    public void retrieveWithInlineLiteral() {
-        final String shipmentId1 = Generators.timeBasedEpochGenerator().generate().toString();
-        final String shipmentId2 = Generators.timeBasedEpochGenerator().generate().toString();
+    public void retrieveWithInlineLiteral(GraphQL graphQL) {
+        final String beslutsfattare1 = Generators.timeBasedEpochGenerator().generate().toString();
+        final String beslutsfattare2 = Generators.timeBasedEpochGenerator().generate().toString();
 
         final int tenantId = 1;
-        final long unitId1 = createUnit(tenantId, shipmentId1, Instant.now());
-        final long unitId2 = createUnit(tenantId, shipmentId2, Instant.now());
+        final long unitId1 = createUnit(tenantId, beslutsfattare1, Instant.now());
+        final long unitId2 = createUnit(tenantId, beslutsfattare2, Instant.now());
 
         String query = """
             query Unit {
-              order1: order(id: { tenantId: %d, unitId: %d }) {
-                orderId
-                shipment {
-                  shipmentId
-                  deadline
-                  reading
+              yrkan1: yrkan(id: { tenantId: 1, unitId: 14033 }) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
+                }
+                producerade_resultat {
+                  ... on Ersattning {
+                    ersattningstyp
+                    belopp {
+                      beloppsvarde
+                    }
+                  }
                 }
               }
-              order2: order(id: { tenantId: %d, unitId: %d }) {
-                orderId
-                shipment {
-                  shipmentId
-                  deadline
-                  reading
+            
+              yrkan2: yrkan(id: { tenantId: 1, unitId: 14034 }) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
+                }
+                beslut {
+                  datum
+                  beslutsfattare
                 }
               }
             }
@@ -167,7 +262,7 @@ public class GraphQLTest {
 
     @Test
     @Order(2)
-    public void retrieveUsingVariable() {
+    public void retrieveUsingVariable(GraphQL graphQL) {
         final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
         final int tenantId = 1;
@@ -175,12 +270,22 @@ public class GraphQLTest {
 
         String query = """
             query Unit($id: UnitIdentification!) {
-              order(id: $id) {
-                orderId
-                shipment {
-                    shipmentId
-                    deadline
-                    reading
+              yrkan(id: $id) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
+                }
+                producerade_resultat {
+                  ... on Ersattning {
+                     ersattningstyp
+                     belopp {
+                       beloppsvarde
+                     }
+                  }
                 }
               }
             }
@@ -225,15 +330,15 @@ public class GraphQLTest {
 
     @Test
     @Order(3)
-    public void retrieveRaw() {
-        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+    public void retrieveRaw(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
         final int tenantId = 1;
-        final long unitId = createUnit(tenantId, shipmentId, Instant.now());
+        final long unitId = createUnit(tenantId, beslutsfattare, Instant.now());
 
         String query = """
             query Unit($id: UnitIdentification!) {
-              orderRaw(id: $id)
+              yrkanRaw(id: $id)
             }
             """;
         log.info(query);
@@ -255,7 +360,7 @@ public class GraphQLTest {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
-            String b64 = map.get("orderRaw"); // name same as fieldname in query type
+            String b64 = map.get("yrkanRaw"); // OBS! name same as fieldname in query type
             if (null != b64) {
                 final Base64.Decoder DEC = Base64.getDecoder();
                 String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
@@ -285,17 +390,34 @@ public class GraphQLTest {
 
     @Test
     @Order(4)
-    public void search() {
-        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+    public void search(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
         final int tenantId = 1;
-        final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
+        final long _unitId = createUnit(tenantId, beslutsfattare, Instant.now());
 
         String query = """
-            query Orders($filter: Filter!) {
-              orders(filter: $filter) {
-                shipment {
-                    deadline
+            query Unit($filter: Filter!) {
+              yrkanden(filter: $filter) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
+                }
+                producerade_resultat {
+                  ... on Ersattning {
+                     ersattningstyp
+                     belopp {
+                       beloppsvarde
+                     }
+                  }
+                }
+                beslut {
+                  datum
+                  beslutsfattare
                 }
               }
             }
@@ -305,9 +427,9 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
             "attrExpr", Map.of(
-                        "attr", "shipmentId", // OBS! Expressed using GQL name
+                        "attr", "beslutsfattare", // OBS! Expressed using GQL name
                         "op", "EQ",
-                        "value", shipmentId
+                        "value", beslutsfattare
                     )
         );
 
@@ -348,30 +470,40 @@ public class GraphQLTest {
 
     @Test
     @Order(5)
-    public void searchWithInlineLiteral() {
-        final String shipmentId1 = Generators.timeBasedEpochGenerator().generate().toString();
-        final String shipmentId2 = Generators.timeBasedEpochGenerator().generate().toString();
+    public void searchWithInlineLiteral(GraphQL graphQL) {
+        final String beslutsfattare1 = Generators.timeBasedEpochGenerator().generate().toString();
+        final String beslutsfattare2 = Generators.timeBasedEpochGenerator().generate().toString();
 
         final int tenantId = 1;
-        final long _unitId1 = createUnit(tenantId, shipmentId1, Instant.now());
-        final long _unitId2 = createUnit(tenantId, shipmentId2, Instant.now());
+        final long _unitId1 = createUnit(tenantId, beslutsfattare1, Instant.now());
+        final long _unitId2 = createUnit(tenantId, beslutsfattare2, Instant.now());
 
         String query = """
-            query Shipments {
-              shipment1: orders(filter: {tenantId: %d, where: {attrExpr: {attr: shipmentId, op: EQ, value: "%s"}}}) {
-                shipment {
-                    deadline
+            query Unit {
+              yrkanden1: yrkanden(filter: {tenantId: %d, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "%s"}}}) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
                 }
               }
-              shipment2: orders(filter: {tenantId: %d, where: {attrExpr: {attr: shipmentId, op: EQ, value: "%s"}}}) {
-                shipment {
-                    deadline
+              yrkanden2: yrkanden(filter: {tenantId: %d, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "%s"}}}) {
+                person {
+                  ... on FysiskPerson {
+                    personnummer
+                  }
+                  ... on JuridiskPerson {
+                    orgnummer
+                  }
                 }
               }
             }
             """;
 
-        query = String.format(query, tenantId, shipmentId1, tenantId, shipmentId2);
+        query = String.format(query, tenantId, beslutsfattare1, tenantId, beslutsfattare2);
 
         log.info(query);
         System.out.println(query);
@@ -405,15 +537,15 @@ public class GraphQLTest {
 
     @Test
     @Order(6)
-    public void searchRaw() {
-        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+    public void searchRaw(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
         final int tenantId = 1;
-        final long _unitId = createUnit(tenantId, shipmentId, Instant.now());
+        final long _unitId = createUnit(tenantId, beslutsfattare, Instant.now());
 
         String query = """
-            query Orders($filter: Filter!) {
-              ordersRaw(filter: $filter)
+            query Unit($filter: Filter!) {
+              yrkandenRaw(filter: $filter)
             }
             """;
         log.info(query);
@@ -421,9 +553,9 @@ public class GraphQLTest {
 
         Map<String, Object> where = Map.of(
                 "attrExpr", Map.of(
-                        "attr", "shipmentId", // OBS! Expressed using GQL name
+                        "attr", "beslutsfattare", // OBS! Expressed using GQL name
                         "op", "EQ",
-                        "value", shipmentId
+                        "value", beslutsfattare
                 )
         );
 
@@ -443,7 +575,7 @@ public class GraphQLTest {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
-            String b64 = map.get("ordersRaw"); // name same as fieldname in query type
+            String b64 = map.get("yrkandenRaw"); // OBS! name same as fieldname in query type
             if (null != b64) {
                 final Base64.Decoder DEC = Base64.getDecoder();
                 String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);

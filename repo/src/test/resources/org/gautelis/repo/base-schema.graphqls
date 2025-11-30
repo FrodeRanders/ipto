@@ -1,0 +1,53 @@
+
+##############  directive definitions ############################
+"""
+@datatypeRegistry annotates an enum, marking it as being definitions
+of basic data types (using the @datatype directive). These basic data
+types are not configurable as such -- they are inherent and known to
+the system -- but they need to be referable in the schema.
+
+All of the following attributes are defined using these basic data types.
+"""
+directive @datatypeRegistry on ENUM
+directive @datatype(id: Int) on ENUM_VALUE
+
+"""
+@attributeRegistry annotates an enum, marking it as being definitions
+of attributes (using the @attribute directive).
+
+All of the following types are defined using these attributes.
+"""
+directive @attributeRegistry on ENUM
+directive @attribute(
+    id:       Int!
+    datatype: DataTypes!
+    array:    Boolean = true # is capable of handling arrays
+    name:     String = null
+    uri:      String = null
+    description: String = null
+) on ENUM_VALUE
+
+"""
+@unit annotates identifiable units that consists of attributes
+(i.e. fields defined using the @use directive) that are defined
+in the @attributeRegistry.
+
+@record annotates bundles of attributes that can be combined in
+various ways to represent compounds, such as an address. Records
+are used to define units.
+"""
+directive @use(attribute: Attributes!) on FIELD_DEFINITION
+directive @unit(id: Int, name: String) on OBJECT # either id or name
+directive @record(attribute: Attributes!) on OBJECT
+
+##############  basic data types ############################
+enum DataTypes @datatypeRegistry {
+    STRING    @datatype(id: 1)
+    TIME      @datatype(id: 2)
+    INTEGER   @datatype(id: 3)
+    LONG      @datatype(id: 4)
+    DOUBLE    @datatype(id: 5)
+    BOOLEAN   @datatype(id: 6)
+    DATA      @datatype(id: 7)
+    RECORD    @datatype(id: 99)
+}

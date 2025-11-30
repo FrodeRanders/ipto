@@ -16,9 +16,9 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.exceptions.AttributeValueException;
 import org.gautelis.repo.exceptions.DatabaseReadException;
@@ -37,7 +37,7 @@ final class BooleanValue extends Value<Boolean> {
     /**
      * Creates an <I>existing</I> boolean value
      */
-    BooleanValue(ArrayNode node) throws JsonProcessingException {
+    BooleanValue(ArrayNode node) throws JacksonException {
         super(node);
         inflate(node);
     }
@@ -79,8 +79,7 @@ final class BooleanValue extends Value<Boolean> {
         }
     }
 
-    /* package accessible only */
-    void inflate(ArrayNode node)  {
+    private void inflate(ArrayNode node)  {
         node.forEach(value -> values.add(value.asBoolean()));
     }
 

@@ -16,9 +16,9 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
 import org.gautelis.repo.model.AttributeType;
 
@@ -35,7 +35,7 @@ final class StringValue extends Value<String> {
     /**
      * Creates an <I>existing</I> string value
      */
-    StringValue(ArrayNode node) throws JsonProcessingException {
+    StringValue(ArrayNode node) throws JacksonException {
         super(node);
         inflate(node);
     }
@@ -77,8 +77,7 @@ final class StringValue extends Value<String> {
         }
     }
 
-    /* package accessible only */
-    void inflate(ArrayNode node) {
+    private void inflate(ArrayNode node) {
         node.forEach(value -> values.add(value.asText()));
     }
 

@@ -74,7 +74,7 @@ CREATE TABLE repo_unit_version (
     unitid       BIGINT     NOT NULL,  -- id of unit
     unitver      INTEGER    NOT NULL,  -- version of unit
 
-    unitname     VARCHAR(255) NOT NULL,  -- name of unit
+    unitname     VARCHAR(255),         -- name of unit
     modified     TIMESTAMP  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT repo_unit_version_pk

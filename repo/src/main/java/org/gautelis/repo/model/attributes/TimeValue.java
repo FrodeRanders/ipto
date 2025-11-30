@@ -16,9 +16,9 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.exceptions.AttributeValueException;
 import org.gautelis.repo.exceptions.DatabaseReadException;
@@ -39,7 +39,7 @@ final class TimeValue extends Value<Instant> {
     /**
      * Creates an <I>existing</I> time value
      */
-    TimeValue(ArrayNode node) throws JsonProcessingException {
+    TimeValue(ArrayNode node) throws JacksonException {
         super(node);
         inflate(node);
     }
@@ -81,8 +81,7 @@ final class TimeValue extends Value<Instant> {
         }
     }
 
-    /* package accessible only */
-    void inflate(ArrayNode node) {
+    private void inflate(ArrayNode node) {
         try {
             node.forEach(value -> {
                 String _time = value.asText();

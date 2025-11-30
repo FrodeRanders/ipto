@@ -61,11 +61,13 @@ public class Box {
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
+            log.debug("No attribute found for alias '{}'", alias);
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
+            log.debug("No values found for attribute with alias '{}'", alias);
             return null;
         }
 
@@ -77,11 +79,13 @@ public class Box {
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
+            log.debug("No attribute found for alias '{}'", alias);
             return List.of();
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
+            log.debug("No values found for attribute with alias '{}'", alias);
             return List.of();
         }
 

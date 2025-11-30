@@ -17,11 +17,14 @@
 package org.gautelis.repo;
 
 import com.fasterxml.uuid.Generators;
+import graphql.GraphQL;
 import org.gautelis.repo.db.Column;
 import org.gautelis.repo.exceptions.BaseException;
 import org.gautelis.repo.model.AssociationType;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.attributes.Attribute;
+import org.gautelis.repo.model.attributes.RecordAttribute;
 import org.gautelis.repo.model.locks.LockType;
 import org.gautelis.repo.model.utils.RunningStatistics;
 import org.gautelis.repo.search.UnitSearch;
@@ -32,10 +35,10 @@ import org.gautelis.repo.search.query.SearchExpression;
 import org.gautelis.repo.search.query.SearchOrder;
 import org.gautelis.vopn.lang.TimeDelta;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.math.BigInteger;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -54,13 +57,11 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 @Tag("performance")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(GlobalSetupExtension.class)
 public class PerformanceTest {
     private static final Logger log = LoggerFactory.getLogger(PerformanceTest.class);
-
-    @BeforeAll
-    public static void setUp() throws IOException {
-        CommonSetup.setUp();
-    }
 
     @Test
     @Order(1)
@@ -154,30 +155,22 @@ public class PerformanceTest {
                         value.add(now);
                     });
 
-                    childUnit.withAttributeValue("dmo:orderId", String.class, value -> {
-                        String orderId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
-                        value.add(orderId);
-                    });
+                    childUnit.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+                        Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
+                        if (rattenTill.isPresent()) {
+                            RecordAttribute rattenTillRecord = RecordAttribute.from(childUnit, rattenTill.get());
 
-                    childUnit.withRecordAttribute("dmo:shipment", recrd -> {
-                        final String shipmentId = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+                            rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
+                                ersattningstyp.add("HUNDBIDRAG");
+                            });
 
-                        recrd.withNestedAttributeValue(childUnit, "dmo:shipmentId", String.class, value -> {
-                            value.add(shipmentId);
-                        });
+                            rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
+                                omfattning.add("HEL");
+                            });
 
-                        recrd.withNestedAttributeValue(childUnit, "dmo:deadline", Instant.class, value -> {
-                            value.add(now);
-                        });
-
-                        recrd.withNestedAttributeValue(childUnit, "dmo:reading", Double.class, value -> {
-                            value.add(Math.PI);
-                            value.add(Math.E);
-                        });
-
-                        recrd.withNestedAttributeValue(childUnit, "dce:title", String.class, value -> {
-                            value.add("Handling of shipment " + shipmentId);
-                        });
+                            Attribute<?> attribute = rattenTill.get();
+                            resultat.add(attribute);
+                        }
                     });
 
                     // Some unique unit will get unique attribute

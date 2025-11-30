@@ -16,10 +16,10 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
 import org.gautelis.repo.model.AttributeType;
 import org.slf4j.Logger;
@@ -52,7 +52,7 @@ public abstract class Value<T> {
     }
 
     /**
-     * Creates an <I>existing</I> attribute value from a resultset.
+     * Creates an <I>existing</I> attribute value from somewhere.
      * <p>
      * Called from derived objects.
      */
@@ -140,17 +140,75 @@ public abstract class Value<T> {
     protected static <T> Value<T> inflateValue(
             AttributeType type,
             JsonNode node
-    ) throws AttributeTypeException, JsonProcessingException {
+    ) throws AttributeTypeException, JacksonException {
         Value<?> value = switch (type) {
-            case STRING -> new StringValue((ArrayNode) node.get(StringValue.VALUE_PROPERTY_NAME));
-            case TIME -> new TimeValue((ArrayNode) node.get(TimeValue.VALUE_PROPERTY_NAME));
-            case INTEGER -> new IntegerValue((ArrayNode) node.get(IntegerValue.VALUE_PROPERTY_NAME));
-            case LONG -> new LongValue((ArrayNode) node.get(LongValue.VALUE_PROPERTY_NAME));
-            case DOUBLE -> new DoubleValue((ArrayNode) node.get(DoubleValue.VALUE_PROPERTY_NAME));
-            case BOOLEAN -> new BooleanValue((ArrayNode) node.get(BooleanValue.VALUE_PROPERTY_NAME));
-            case DATA -> new DataValue((ArrayNode) node.get(DataValue.VALUE_PROPERTY_NAME));
-            case RECORD -> new RecordValue((ArrayNode) node.get(RecordValue.VALUE_PROPERTY_NAME));
+            case STRING -> {
+                if (null == node || !node.has(StringValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", StringValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new StringValue((ArrayNode) node.get(StringValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case TIME -> {
+                if (null == node || !node.has(TimeValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", TimeValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new TimeValue((ArrayNode) node.get(TimeValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case INTEGER -> {
+                if (null == node || !node.has(IntegerValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", IntegerValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new IntegerValue((ArrayNode) node.get(IntegerValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case LONG -> {
+                if (null == node || !node.has(LongValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", LongValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new LongValue((ArrayNode) node.get(LongValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case DOUBLE -> {
+                if (null == node || !node.has(DoubleValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", DoubleValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new DoubleValue((ArrayNode) node.get(DoubleValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case BOOLEAN -> {
+                if (null == node || !node.has(BooleanValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", BooleanValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new BooleanValue((ArrayNode) node.get(BooleanValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case DATA -> {
+                if (null == node || !node.has(DataValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", DataValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new DataValue((ArrayNode) node.get(DataValue.VALUE_PROPERTY_NAME));
+                }
+            }
+            case RECORD -> {
+                if (null == node || !node.has(RecordValue.VALUE_PROPERTY_NAME)) {
+                    log.trace("No json node '{}' for type {}: {}", RecordValue.VALUE_PROPERTY_NAME, type.name(), node);
+                    yield new StringValue();
+                } else {
+                    yield new RecordValue((ArrayNode) node.get(RecordValue.VALUE_PROPERTY_NAME));
+                }
+            }
         };
+
+        value.resetModificationFlag(); // Since just _inflated_ from somewhere
 
         //noinspection unchecked
         return (Value<T>) value;
@@ -181,14 +239,6 @@ public abstract class Value<T> {
         //noinspection unchecked
         return (Value<T>) value;
     }
-
-    /**
-     * Actually inflate values from the resultset.
-     * <p>
-     * This method must be overridden by each value type (StringValue, ...)
-     */
-    /* package accessible only */
-    abstract void inflate(ArrayNode node);
 
     /**
      * Actually inflate values from the resultset.
@@ -237,6 +287,14 @@ public abstract class Value<T> {
      * Mark attribute value as stored (to database)
      */
     protected void setStored() {
+        initialHashCode = values.hashCode();
+        isNew = false;
+    }
+
+    /**
+     * Mark attribute value as stored (to database)
+     */
+    private void resetModificationFlag() {
         initialHashCode = values.hashCode();
         isNew = false;
     }

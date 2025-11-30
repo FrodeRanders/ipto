@@ -1,0 +1,111 @@
+scalar DateTime
+
+type Period {
+    from : DateTime
+    tom : DateTime
+}
+
+enum ArbetsformagaOmfattning {
+    HEL
+    EN_ATTONDEL
+    OCHSAAVIDARE
+}
+
+type BedomdArbetsformaga {
+    omfattning : ArbetsformagaOmfattning
+}
+
+enum BeslutsTyp {
+    INTERRIMISTISK
+    STALLNINGSTAGANDE
+    SLUTLIGT
+}
+
+enum BeslutsUtfall {
+    BEVILJAT
+    AVSLAG
+    DELVIS_BEVILJANDE
+    AVVISNING
+    AVSKRIVNING
+}
+
+enum BeslutsLagrum {
+    SFB_K112_P2a # SFB Kap. 112 § 2a
+    SFB_K112_P3  # SFB Kap. 112 § 3
+    SFB_K112_P4  # SFB Kap. 112 § 4
+    SFB_K113_P3_S1 # SFB Kap. 113 § 3 p. 1
+    SFB_K113_P3_S2 # SFB Kap. 113 § 3 p. 2
+    SFB_K113_P3_S3 # SFB Kap. 113 § 3 p. 3
+    FL_P36 # FL § 36
+    FL_P37 # FL § 37
+    FL_P38 # FL § 38
+}
+
+type Beslut {
+    datum : DateTime
+    beslutsfattare : String
+    typ : BeslutsTyp
+    utfall : BeslutsUtfall
+    organisation : String
+    lagrum : BeslutsLagrum
+    avslagsanledning : String
+}
+
+enum ErsattningsTyp {
+    SJUKPENNING # ersattningstyp:SJUKPENNING
+    FORALDRAPENNING # ersattningstyp:FORALDRAPENNING
+    HUNDBIDRAG # ersattningstyp:HUNDBIDRAG
+}
+
+type Ersattning {
+    typ : ErsattningsTyp
+    belopp : Float
+    period : Period
+}
+
+enum KravTyp {
+    NAGON
+}
+
+type Krav {
+    typ : KravTyp
+    belopp : Float
+    period : Period
+}
+
+type FysiskPerson {
+    personnummer : String
+}
+
+type JuridiskPerson {
+    orgnummer : String
+}
+
+union Person = FysiskPerson | JuridiskPerson
+
+type Intyg {
+    giltighetsperiod : String
+    institution : String
+    beskrivning : String
+    utfardat_datum : DateTime
+}
+
+enum RattenTillPeriodOmfattning {
+    HEL
+    EN_ATTONDEL
+    OCHSAAVIDARE
+}
+
+type RattenTillPeriod {
+    ersattningstyp : ErsattningsTyp
+    omfattning : RattenTillPeriodOmfattning
+}
+
+union ProduceratResultat = Ersattning | Krav | Intyg | BedomdArbetsformaga | RattenTillPeriod
+type Yrkan {
+    person : Person
+    beskrivning : String
+    beslut : Beslut
+    producerade_resultat : [ProduceratResultat]
+}
+

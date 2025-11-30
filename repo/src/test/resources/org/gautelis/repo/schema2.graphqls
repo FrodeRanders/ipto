@@ -1,0 +1,367 @@
+schema {
+    query: Query
+    #mutation: Mutation
+}
+
+##############  directive definitions ############################
+"""
+@datatypeRegistry annotates an enum, marking it as being definitions
+of basic data types (using the @datatype directive). These basic data
+types are not configurable as such -- they are inherent and known to
+the system -- but they need to be referable in the schema.
+
+All of the following attributes are defined using these basic data types.
+"""
+directive @datatypeRegistry on ENUM
+directive @datatype(id: Int) on ENUM_VALUE
+
+"""
+@attributeRegistry annotates an enum, marking it as being definitions
+of attributes (using the @attribute directive).
+
+All of the following types are defined using these attributes.
+"""
+directive @attributeRegistry on ENUM
+directive @attribute(
+    id:       Int!
+    datatype: DataTypes!
+    array:    Boolean = true # is capable of handling arrays
+    name:     String = null
+    uri:      String = null
+    description: String = null
+) on ENUM_VALUE
+
+"""
+@unit annotates identifiable units that consists of attributes
+(i.e. fields defined using the @use directive) that are defined
+in the @attributeRegistry.
+
+@record annotates bundles of attributes that can be combined in
+various ways to represent compounds, such as an address. Records
+are used to define units.
+"""
+directive @use(attribute: Attributes!) on FIELD_DEFINITION
+directive @unit(id: Int, name: String) on OBJECT # either id or name
+directive @record(attribute: Attributes!) on OBJECT
+
+##############  basic data types ############################
+enum DataTypes @datatypeRegistry {
+    STRING    @datatype(id: 1)
+    TIME      @datatype(id: 2)
+    INTEGER   @datatype(id: 3)
+    LONG      @datatype(id: 4)
+    DOUBLE    @datatype(id: 5)
+    BOOLEAN   @datatype(id: 6)
+    DATA      @datatype(id: 7)
+    RECORD    @datatype(id: 99)
+}
+
+############## attributes ############################
+enum Attributes @attributeRegistry {
+    "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
+    title @attribute(id: 1, datatype: STRING, array: false,
+        name: "dce:title", uri: "http://purl.org/dc/elements/1.1/title",
+        description: "Namnet som ges till resursen. Det är en människoläsbar identifierare som ger en kortfattad representation av resursens innehåll.")
+
+    "An entity primarily responsible for making the resource, typically an individual, organization, or service."
+    creator @attribute(id: 2, datatype: STRING, array: true,
+        name: "dce:creator", uri: "http://purl.org/dc/elements/1.1/creator",
+        description: "En entitet som primärt är ansvarig för att skapa resursen, vanligtvis en individ, organisation eller tjänst.")
+
+    "The topic or the focus of the content within the resource, often represented by keywords, phrases, or classification codes."
+    subject @attribute(id: 3, datatype: STRING, array: true,
+        name: "dce:subject", uri: "http://purl.org/dc/elements/1.1/subject",
+        description: "Ämnet eller fokuset för innehållet inom resursen, ofta representerat av nyckelord, fraser eller klassifikationskoder.")
+
+    "A summary or abstract detailing the content, purpose, or scope of the resource, providing insight into its primary features."
+    description @attribute(id: 4, datatype: STRING, array: true,
+        name: "dce:description", uri: "http://purl.org/dc/elements/1.1/description",
+        description: "En sammanfattning eller abstrakt som beskriver innehållet, syftet eller omfånget av resursen och ger insikt i dess huvudsakliga egenskaper.")
+
+    "The entity responsible for making the resource available, which could be a person, organization, or service."
+    publisher @attribute(id: 5, datatype: STRING, array: true,
+        name: "dce:publisher", uri: "http://purl.org/dc/elements/1.1/publisher",
+        description: "Den entitet som ansvarar för att göra resursen tillgänglig, vilket kan vara en person, organisation eller tjänst.")
+
+    "Entities that have contributed to the creation or modification of the resource, but are not the primary creators."
+    contributors @attribute(id: 6, datatype: STRING, array: true,
+        name: "dce:contributors", uri: "http://purl.org/dc/elements/1.1/contributors",
+        description: "Entiteter som har bidragit till skapandet eller modifieringen av resursen, men som inte är de primära skaparna.")
+
+    "A point or period of time associated with the lifecycle of the resource, such as creation, publication, or modification date, often represented in ISO 8601 format."
+    date @attribute(id: 7, datatype: TIME, array: true,
+        name: "dce:date", uri: "http://purl.org/dc/elements/1.1/date",
+        description: "En tidpunkt eller tidsperiod associerad med resursens livscykel, som skapande-, publicerings- eller ändringsdatum, ofta representerat i ISO 8601-format.")
+
+    "The nature or genre of the content within the resource, such as text, image, video, dataset, etc., aiding in understanding its format and use."
+    type @attribute(id: 8, datatype: STRING, array: true,
+        name: "dce:type", uri: "http://purl.org/dc/elements/1.1/type",
+        description: "Innehållets natur eller genre inom resursen, såsom text, bild, video, dataset, etc., vilket hjälper till att förstå dess format och användning.")
+
+    "The file format, physical medium, or dimensions of the resource, often standardized using MIME types (e.g., text/html, image/jpeg)."
+    format @attribute(id: 9, datatype: STRING, array: true,
+        name: "dce:format", uri: "http://purl.org/dc/elements/1.1/format",
+        description: "Filformatet, det fysiska mediet eller dimensionerna av resursen, ofta standardiserade med MIME-typer (t.ex. text/html, image/jpeg).")
+
+    "A unique reference to the resource within a given context, such as a URL, DOI, ISBN, or URN, enabling unambiguous identification and access."
+    identifier @attribute(id: 10, datatype: STRING, array: false,
+        name: "dce:identifier", uri: "http://purl.org/dc/elements/1.1/identifier",
+        description: "En unik referens till resursen inom ett givet sammanhang, såsom en URL, DOI, ISBN eller URN, som möjliggör entydig identifiering och åtkomst.")
+
+    "The resource from which the current resource is derived or generated, providing context on its origins or predecessors."
+    source @attribute(id: 11, datatype: STRING, array: true,
+        name: "dce:source", uri: "http://purl.org/dc/elements/1.1/source",
+        description: "Resursen från vilken den aktuella resursen är härledd eller genererad, vilket ger kontext om dess ursprung eller föregångare.")
+
+    "The primary language(s) of the content, often denoted using ISO 639 codes (e.g., en for English, fr for French)."
+    language @attribute(id: 12, datatype: STRING, array: true,
+        name: "dce:language", uri: "http://purl.org/dc/elements/1.1/language",
+        description: "Huvudspråket (eller språken) för innehållet, ofta angivet med ISO 639-koder (t.ex. en för engelska, fr för franska).")
+
+    "A reference to a related resource, indicating a connection or association, such as a parent, child, or sibling relationship."
+    relation @attribute(id: 13, datatype: STRING, array: true,
+        name: "dce:relation", uri: "http://purl.org/dc/elements/1.1/relation",
+        description: "En referens till en relaterad resurs, som anger en koppling eller association, såsom en föräldra-, barn- eller syskonrelation.")
+
+    "The spatial or temporal extent of the content, indicating geographical locations or time periods relevant to the resource."
+    coverage @attribute(id: 14, datatype: STRING, array: true,
+        name: "dce:coverage", uri: "http://purl.org/dc/elements/1.1/coverage",
+        description: "Den rumsliga eller tidsmässiga omfattningen av innehållet, som anger geografiska platser eller tidsperioder som är relevanta för resursen.")
+
+    "Information about the rights held in and over the resource, such as copyright status, licensing terms, or access restrictions, ensuring proper usage and distribution."
+    rights @attribute(id: 15, datatype: STRING, array: true,
+        name: "dce:rights-management", uri: "http://purl.org/dc/elements/1.1/rights-management",
+        description: "Information om rättigheterna som innehas i och över resursen, såsom upphovsrättsstatus, licensvillkor eller åtkomstbegränsningar, vilket säkerställer korrekt användning och distribution.")
+
+    # Some domain specific attributes
+    avslagsanledning     @attribute(id: 1001, datatype: STRING, name: "ffa:avslagsanledning")
+    beloppsvarde         @attribute(id: 1002, datatype: DOUBLE, name: "ffa:beloppsvarde")
+    beloppsperiodisering @attribute(id: 1003, datatype: STRING, name: "ffa:beloppsperiodisering")
+    valuta               @attribute(id: 1004, datatype: STRING, name: "ffa:valuta")
+    skattestatus         @attribute(id: 1005, datatype: STRING, name: "ffa:skattestatus")
+    beslutsfattare       @attribute(id: 1006, datatype: STRING, name: "ffa:beslutsfattare")
+    beslutstyp           @attribute(id: 1007, datatype: STRING, name: "ffa:beslutstyp")
+    beslutsutfall        @attribute(id: 1008, datatype: STRING, name: "ffa:beslutsutfall")
+    giltighetsperiod     @attribute(id: 1009, datatype: STRING, name: "ffa:giltighetsperiod")
+    institution          @attribute(id: 1010, datatype: STRING, name: "ffa:institution")
+    organisation         @attribute(id: 1011, datatype: STRING, name: "ffa:organisation")
+    orgnummer            @attribute(id: 1012, datatype: STRING, name: "ffa:organisationsnummer")
+    personnummer         @attribute(id: 1013, datatype: STRING, name: "ffa:personnummer")
+    from                 @attribute(id: 1014, datatype: TIME,   name: "ffa:from")
+    tom                  @attribute(id: 1015, datatype: TIME,   name: "ffa:tom")
+    ersattningstyp       @attribute(id: 1016, datatype: STRING, name: "ffa:ersattningstyp")
+    omfattning           @attribute(id: 1017, datatype: STRING, name: "ffa:omfattning")
+    lagrum               @attribute(id: 1018, datatype: STRING, name: "ffa:lagrum")
+    kravstyp             @attribute(id: 1019, datatype: STRING, name: "ffa:kravstyp")
+    beloppsperiod        @attribute(id: 1020, datatype: STRING, name: "ffa:beloppsperiod")
+
+    producerade_resultat @attribute(id: 2001, datatype: RECORD, name: "ffa:producerade_resultat")
+    belopp               @attribute(id: 2002, datatype: RECORD, name: "ffa:belopp")
+    beslut               @attribute(id: 2003, datatype: RECORD, name: "ffa:beslut")
+    ersattning           @attribute(id: 2004, datatype: RECORD, name: "ffa:ersattning")
+    fysisk_person        @attribute(id: 2005, datatype: RECORD, name: "ffa:fysisk_person")
+    intyg                @attribute(id: 2006, datatype: RECORD, name: "ffa:intyg")
+    juridisk_person      @attribute(id: 2007, datatype: RECORD, name: "ffa:juridisk_person")
+    krav                 @attribute(id: 2008, datatype: RECORD, name: "ffa:krav")
+    period               @attribute(id: 2009, datatype: RECORD, name: "ffa:period")
+    ratten_till_period   @attribute(id: 2010, datatype: RECORD, name: "ffa:ratten_till_period")
+    bedomd_arbetsformaga @attribute(id: 2011, datatype: RECORD, name: "ffa:bedomd_arbetsformaga")
+    yrkan                @attribute(id: 2012, datatype: RECORD, name: "ffa:yrkan")
+    person               @attribute(id: 2013, datatype: RECORD, name: "ffa:person")
+
+    dataleverans_id      @attribute(id: 9001, datatype: STRING, name: "mimer:dataleveransid")
+}
+
+##############  object & unit types ##############################
+scalar Long
+scalar DateTime
+scalar Bytes    # Base-64 strings (JSON) on the wire
+
+enum BeloppsPeriod {
+    PER_TIMME
+    PER_DAG
+    PER_MAANAD
+    PER_AAR
+}
+
+enum Valuta {
+    SEK
+    EUR
+}
+
+enum Skattestatus {
+    SKATTEFRI
+    SKATTEPLIKTIG
+}
+
+type Belopp @record(attribute: belopp) {
+    beloppsvarde : Float
+    beloppsperiod : BeloppsPeriod
+    skattestatus : Skattestatus
+    valuta : Valuta
+}
+
+type Period @record(attribute: period){
+    from : DateTime
+    tom : DateTime
+}
+
+enum ArbetsformagaOmfattning {
+    HEL
+    EN_ATTONDEL
+    OCHSAAVIDARE
+}
+
+type BedomdArbetsformaga @record(attribute: bedomd_arbetsformaga) {
+    omfattning : ArbetsformagaOmfattning
+}
+
+enum BeslutsTyp {
+    INTERRIMISTISK
+    STALLNINGSTAGANDE
+    SLUTLIGT
+}
+
+enum BeslutsUtfall {
+    BEVILJAT
+    AVSLAG
+    DELVIS_BEVILJANDE
+    AVVISNING
+    AVSKRIVNING
+}
+
+enum BeslutsLagrum {
+    SFB_K112_P2a # SFB Kap. 112 § 2a
+    SFB_K112_P3  # SFB Kap. 112 § 3
+    SFB_K112_P4  # SFB Kap. 112 § 4
+    SFB_K113_P3_S1 # SFB Kap. 113 § 3 p. 1
+    SFB_K113_P3_S2 # SFB Kap. 113 § 3 p. 2
+    SFB_K113_P3_S3 # SFB Kap. 113 § 3 p. 3
+    FL_P36 # FL § 36
+    FL_P37 # FL § 37
+    FL_P38 # FL § 38
+}
+
+type Beslut @record(attribute: beslut) {
+    datum : DateTime @use(attribute: date)
+    beslutsfattare : String
+    beslutstyp : BeslutsTyp
+    beslutsutfall : BeslutsUtfall
+    organisation : String
+    lagrum : BeslutsLagrum
+    avslagsanledning : String
+}
+
+enum ErsattningsTyp {
+    SJUKPENNING # ersattningstyp:SJUKPENNING
+    FORALDRAPENNING # ersattningstyp:FORALDRAPENNING
+    HUNDBIDRAG # ersattningstyp:HUNDBIDRAG
+}
+
+type Ersattning @record(attribute: ersattning) {
+    ersattningstyp : ErsattningsTyp
+    belopp : Belopp
+    period : Period
+}
+
+enum KravTyp {
+    NAGON
+}
+
+type Krav @record(attribute: krav) {
+    kravstyp : KravTyp
+    belopp : Belopp
+    period : Period
+}
+
+type FysiskPerson @record(attribute: fysisk_person) {
+    personnummer : String
+}
+
+type JuridiskPerson @record(attribute: juridisk_person) {
+    orgnummer : String
+}
+
+union Person = FysiskPerson | JuridiskPerson
+
+type Intyg @record(attribute: intyg) {
+    giltighetsperiod : Period  @use(attribute: period)
+    institution : String
+    beskrivning : String @use(attribute: description)
+    utfardat_datum : DateTime  @use(attribute: date)
+}
+
+enum RattenTillPeriodOmfattning {
+    HEL
+    EN_ATTONDEL
+    OCHSAAVIDARE
+}
+
+type RattenTillPeriod @record(attribute: ratten_till_period) {
+    ersattningstyp : ErsattningsTyp
+    omfattning : RattenTillPeriodOmfattning
+}
+
+union ProduceratResultat = Ersattning | Krav | Intyg | BedomdArbetsformaga | RattenTillPeriod
+
+type Yrkan @record(attribute: yrkan) {
+    person : Person
+    beskrivning : String @use(attribute: description)
+    beslut : Beslut
+    producerade_resultat : [ProduceratResultat]
+}
+
+type Dataleverans @unit(id: 1001) {
+    dataleveransid : String  @use(attribute: dataleverans_id)
+    data : Bytes
+}
+
+##############  Query related ####################################
+
+input UnitIdentification {
+    tenantId : Int!
+    unitId : Long!
+}
+
+#
+enum Operator { GT, GEQ, EQ, LEQ, LT, LIKE, NEQ }
+
+input AttributeExpression {
+    attr  : Attributes!
+    op : Operator!
+    value : String!
+}
+
+enum Logical { AND, OR }
+
+input TreeExpression {
+    op : Logical!
+    left : Node!
+    right : Node!
+}
+
+input Node {
+    attrExpr : AttributeExpression,
+    treeExpr : TreeExpression
+}
+
+input Filter {
+    tenantId: Int!
+    where: Node!
+    offset: Int = 0
+    size: Int = 20
+}
+
+
+##############  Queries ###########################################
+type Query {
+    yrkan(id : UnitIdentification!) : Yrkan
+    yrkanRaw(id : UnitIdentification!) : Bytes
+    yrkanden(filter: Filter!) : [Yrkan]
+    yrkandenRaw(filter: Filter!) : Bytes
+}
+
+##############  Mutations ###########################################
+type Mutation {
+    lagraDataleveransRaw(data : Bytes!) : Dataleverans
+}

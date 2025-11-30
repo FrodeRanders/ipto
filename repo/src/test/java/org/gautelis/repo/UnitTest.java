@@ -16,12 +16,15 @@
  */
 package org.gautelis.repo;
 
+import graphql.GraphQL;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.UnitLockedException;
 import org.gautelis.repo.model.Repository;
 import org.gautelis.repo.model.Unit;
 import org.gautelis.repo.model.locks.LockType;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,6 +40,9 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  */
 @Tag("units")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+@ExtendWith(GlobalSetupExtension.class)
 public class UnitTest {
     private static final Logger log = LoggerFactory.getLogger(UnitTest.class);
 
@@ -57,12 +63,6 @@ public class UnitTest {
     }
 
     private final Stack<Counters> counters = new Stack<>();
-
-
-    @BeforeAll
-    public static void setUp() throws IOException {
-        CommonSetup.setUp();
-    }
 
     private Counters getCounters() {
         Repository repo = RepositoryFactory.getRepository();

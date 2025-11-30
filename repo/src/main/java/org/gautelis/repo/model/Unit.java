@@ -16,12 +16,12 @@
  */
 package org.gautelis.repo.model;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.uuid.Generators;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.*;
-import org.gautelis.repo.model.associations.*;
+import org.gautelis.repo.model.associations.Association;
+import org.gautelis.repo.model.associations.AssociationManager;
+import org.gautelis.repo.model.associations.ExternalAssociation;
+import org.gautelis.repo.model.associations.InternalRelation;
 import org.gautelis.repo.model.attributes.*;
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
@@ -30,15 +30,17 @@ import org.gautelis.repo.model.utils.TimedExecution;
 import org.gautelis.repo.utils.TimeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.sql.*;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 
 
 /**
@@ -257,11 +259,15 @@ public class Unit implements Cloneable {
         // attributes of unit
         fetchAttributes();
 
-        for (Attribute<?> attribute : attributes.values()) {
-            ObjectNode attributeNode = attrs.addObject();
-            attribute.toJson(attrs, attributeNode, isChatty);
+        try {
+            for (Attribute<?> attribute : attributes.values()) {
+                ObjectNode attributeNode = attrs.addObject();
+                attribute.toJson(attrs, attributeNode, isChatty);
+            }
+        } catch (java.lang.StackOverflowError soe) {
+            log.error("Cannot unwrap attributes of {}: {}", getReference(), soe.getMessage(), soe);
+            log.error("Unit in question: {}", this);
         }
-
         return unitNode;
     }
 
@@ -273,7 +279,7 @@ public class Unit implements Cloneable {
             } else {
                 return unitNode.toString();
             }
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException(e);
         }
     }
@@ -633,7 +639,7 @@ public class Unit implements Cloneable {
                     attributes.put(attribute.getName(), attribute);
                 }
             }
-        } catch (JsonProcessingException jpe) {
+        } catch (JacksonException jpe) {
             throw new SystemInconsistencyException("Cannot resurrect from JSON", jpe);
         } catch (DateTimeParseException dtpe) {
             throw new SystemInconsistencyException("Unknown time format: " + dtpe.getMessage(), dtpe);
@@ -925,9 +931,11 @@ public class Unit implements Cloneable {
         } else {
             Attribute<?> attribute = _attribute.get();
 
+            /*
             if (AttributeType.RECORD == attribute.getType()) {
-                // TODO -- instantiate nested attributes?
+                // TODO -- instantiate nested attributes now?
             }
+            */
 
             Class<?> actual = attribute.getConcreteType();
             if (expectedClass.equals(actual)) {
@@ -962,6 +970,9 @@ public class Unit implements Cloneable {
     public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Objects.requireNonNull(recordAttribute, "recordAttribute");
 
+        /*
+         * Look among attributes in the record and not at the unit level
+         */
         ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
         for (Attribute<?> attribute : values) {
             // This scales reasonably well with a 'reasonable' number of nested attributes :)
@@ -1028,7 +1039,7 @@ public class Unit implements Cloneable {
                 throw new IllegalArgumentException("Not a record attribute: " + name);
             }
 
-            runnable.run(new RecordAttribute(attribute));
+            runnable.run(new RecordAttribute(this, attribute));
         }
     }
 
@@ -1049,7 +1060,7 @@ public class Unit implements Cloneable {
             Optional<KnownAttributes.AttributeInfo> attributeInfo = KnownAttributes.getAttribute(ctx, attrName);
             if (attributeInfo.isEmpty()) {
                 // Attribute does not exist among know attributes!
-                String info = String.format("Failed to automatically add attribute %s to unit %s: This attribute does not exist among known attributes and is unknown to the system", attrName, getReference());
+                String info = String.format("Failed to automatically add attribute %s to unit %s: This attribute is unknown to the system", attrName, getReference());
                 log.error(info);
                 throw new SystemInconsistencyException(info);
             }
@@ -1076,8 +1087,8 @@ public class Unit implements Cloneable {
             //
             Optional<KnownAttributes.AttributeInfo> attributeInfo = KnownAttributes.getAttribute(ctx, attributeId);
             if (attributeInfo.isEmpty()) {
-                // Attribute does not exist among know attributes!
-                String info = String.format("Failed to automatically add attribute with id %d to unit %s: This attribute does not exist among known attributes and is unknown to the system", attributeId, getReference());
+                // Attribute does not exist among known attributes!
+                String info = String.format("Failed to automatically add attribute with id %d to unit %s: This attribute is unknown to the system", attributeId, getReference());
                 log.error(info);
                 throw new SystemInconsistencyException(info);
             }

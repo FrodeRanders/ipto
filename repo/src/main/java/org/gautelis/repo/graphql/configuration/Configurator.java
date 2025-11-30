@@ -1,9 +1,9 @@
 package org.gautelis.repo.graphql.configuration;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import graphql.language.*;
+import graphql.schema.idl.errors.StrictModeWiringException;
+import tools.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
-import graphql.language.OperationTypeDefinition;
-import graphql.language.SchemaDefinition;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.SchemaGenerator;
@@ -38,6 +38,7 @@ public class Configurator {
             Map<String, GqlAttributeShape> attributes,
             Map<String, GqlRecordShape> records,
             Map<String, GqlUnitShape> units,
+            Map<String, GqlUnionShape> unions,
             Map<String, GqlOperationShape> operations
     ) {}
 
@@ -86,17 +87,17 @@ public class Configurator {
 
         // Setup GraphQL SDL view of things
         GqlViewpoint gql = loadFromFile(registry, operationTypes);
-        //dump(gql, progress);
+        dump(gql, progress);
 
         // Setup Ipto view of things
         CatalogViewpoint ipto = loadFromCatalog(repo);
-        //dump(ipto, progress);
+        dump(ipto, progress);
 
         // Reconcile differences, i.e. create stuff if needed
         reconcile(repo, gql, ipto, ResolutionPolicy.PREFER_GQL, progress);
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
-        wire(runtimeWiring, repo, runtimeService, operationTypes, gql, ipto);
+        wire(registry, runtimeWiring, repo, runtimeService, operationTypes, gql, ipto);
 
         return Optional.of(
                 GraphQL.newGraphQL(
@@ -110,9 +111,10 @@ public class Configurator {
         Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
         Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
         Map<String, GqlUnitShape> templates = Templates.derive(registry, attributes);
+        Map<String, GqlUnionShape> unions = Unions.derive(registry, attributes, records);
         Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
 
-        return new GqlViewpoint(datatypes, attributes, records, templates, operations);
+        return new GqlViewpoint(datatypes, attributes, records, templates, unions, operations);
     }
 
     private static CatalogViewpoint loadFromCatalog(Repository repo) {
@@ -198,6 +200,7 @@ public class Configurator {
     }
 
     private static void wire(
+            TypeDefinitionRegistry registry,
             RuntimeWiring.Builder runtimeWiring,
             Repository repository,
             RuntimeService runtimeService,
@@ -209,6 +212,7 @@ public class Configurator {
         wireRecords(runtimeWiring, repository, runtimeService, gqlViewpoint, catalogViewpoint);
         wireUnits(runtimeWiring, repository, runtimeService, gqlViewpoint, catalogViewpoint);
         wireOperations(runtimeWiring, repository, runtimeService, operationTypes, gqlViewpoint, catalogViewpoint);
+        wireUnions(registry, runtimeWiring, runtimeService, gqlViewpoint, catalogViewpoint);
     }
 
     private static void wireAttributes(
@@ -224,8 +228,6 @@ public class Configurator {
         for (String key : gqlAttributes.keySet()) {
             GqlAttributeShape gqlAttribute = gqlAttributes.get(key);
             CatalogAttribute iptoAttribute = iptoAttributes.get(key);
-
-
         }
     }
 
@@ -236,6 +238,7 @@ public class Configurator {
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint
     ) {
+        Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
         Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
 
@@ -255,8 +258,32 @@ public class Configurator {
                     CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
+                    final String fieldType = field.gqlTypeRef();
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
+
+                    final List<String> alternativeFieldNames = new ArrayList<>();
+
+                    GqlUnionShape union = gqlUnions.get(fieldType);
+                    if (null != union) {
+                        // This field refers to a union type, so the
+                        // actual instances will be of a union member type.
+                        List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
+                        log.debug("Record '{}' contains a union field '{} : {}' with members {}",
+                                typeName, fieldName, union.unionName(), unionMemberTypes
+                        );
+
+                        for (String memberType : unionMemberTypes) {
+                            for (GqlRecordShape recrd : gqlRecords.values()) {
+                                String unionMember = recrd.typeName();
+                                if (unionMember.equals(memberType)) {
+                                    String attributeEnumName = recrd.attributeEnumName();
+                                    log.debug("### Identified possible match {} for type {}", attributeEnumName, memberType);
+                                    alternativeFieldNames.add(attributeEnumName);
+                                }
+                            }
+                        }
+                    }
 
                     // Tell GraphQL how to fetch this specific (record) type
                     DataFetcher<?> fetcher = env -> {
@@ -276,9 +303,9 @@ public class Configurator {
 
                         // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
                         if (isArray) {
-                            return runtimeService.getArray(box, fieldName);
+                            return runtimeService.getArray(fieldName, alternativeFieldNames, box);
                         } else {
-                            return runtimeService.getScalar(box, fieldName);
+                            return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -297,6 +324,9 @@ public class Configurator {
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint
     ) {
+        Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
+        Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
+
         Map<String, GqlUnitShape> gqlTemplates = gqlViewpoint.units();
         Map<String, CatalogUnit> iptoTemplates = catalogViewpoint.units();
 
@@ -306,6 +336,7 @@ public class Configurator {
 
             final String typeName = gqlTemplate.typeName();
 
+            // Assuming these are "synchronized" on ordinal/index
             Iterator<GqlFieldShape> fit = gqlTemplate.fields().iterator();
             Iterator<CatalogAttribute> ait = iptoTemplate.fields().iterator();
 
@@ -316,8 +347,32 @@ public class Configurator {
                     CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
+                    final String fieldType = field.gqlTypeRef();
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
+
+                    final List<String> alternativeFieldNames = new ArrayList<>();
+
+                    GqlUnionShape union = gqlUnions.get(fieldType);
+                    if (null != union) {
+                        // This field refers to a union type, so the
+                        // actual instances will be of a union member type.
+                        List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
+                        log.debug("Record '{}' contains a union field '{} : {}' with members {}",
+                                typeName, fieldName, union.unionName(), unionMemberTypes
+                        );
+
+                        for (String memberType : unionMemberTypes) {
+                            for (GqlRecordShape recrd : gqlRecords.values()) {
+                                String unionMember = recrd.typeName();
+                                if (unionMember.equals(memberType)) {
+                                    String attributeEnumName = recrd.attributeEnumName();
+                                    log.debug("### Identified possible match {} for type {}", attributeEnumName, memberType);
+                                    alternativeFieldNames.add(attributeEnumName);
+                                }
+                            }
+                        }
+                    }
 
                     // Tell GraphQL how to fetch this specific (template) type
                     DataFetcher<?> fetcher = env -> {
@@ -336,9 +391,9 @@ public class Configurator {
                         log.trace("Fetching attribute '{}' ({}) from unit '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getTenantId(), box.getUnitId());
 
                         if (isArray) {
-                            return runtimeService.getArray(box, fieldName);
+                            return runtimeService.getArray(fieldName, alternativeFieldNames, box);
                         } else {
-                            return runtimeService.getScalar(box, fieldName);
+                            return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -459,6 +514,93 @@ public class Configurator {
         }
     }
 
+    private static void wireUnions(
+            TypeDefinitionRegistry registry,
+            RuntimeWiring.Builder  runtimeWiring,
+            RuntimeService runtimeService,
+            GqlViewpoint gqlViewpoint,
+            CatalogViewpoint catalogViewpoint
+    ) {
+        Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
+        Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
+        Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
+
+        for (String key : gqlUnions.keySet()) {
+            GqlUnionShape  gqlUnion = gqlUnions.get(key);
+
+            String unionName = gqlUnion.unionName();
+
+            Map</* record attribute id */ Integer, /* record name */ String> idToName = new HashMap<>();
+
+            List<UnionMember> members = gqlUnion.members();
+            for (UnionMember member : members) {
+                String memberName = member.memberType();
+                log.info("Wiring union: {} > {}", unionName, memberName);
+
+                GqlRecordShape gqlRecord = gqlRecords.get(memberName);
+                CatalogRecord iptoRecord = iptoRecords.get(memberName);
+
+                String attributeAlias = gqlRecord.attributeEnumName();
+                //log.trace("    attribute-alias: {}", attributeAlias);
+                //log.trace("    attribute-name: {} ({})", iptoRecord.recordName, iptoRecord.recordAttrId);
+
+                idToName.put(iptoRecord.recordAttrId, memberName);
+            }
+
+            try {
+                runtimeWiring.type(unionName, typeWiring -> typeWiring
+                        .typeResolver(env -> {
+                            Object value = env.getObject(); // box
+                            if (value instanceof Box box) {
+                                log.info("union wire: box: {} for union '{}'", box, unionName);
+
+                                // Plan ahead (as soon as I get my match together :)
+                                //   - Derive recordAttributeId from "value"
+                                //   - Look up GraphQL type name from idToName
+                                //   - Return that object type
+
+                                /*
+                                Integer recordAttributeId = extractRecordAttributeId(value);
+                                String recordName = idToName.get(recordAttributeId);
+                                if (recordName != null) {
+                                    return env.getSchema().getObjectType(recordName);
+                                }
+                                return null;
+                                */
+
+                                /*
+                                String recordName = idToName.get(recordAttributeId);
+                                return env.getSchema().getObjectType(recordName);
+
+                                // No match – could log or throw
+                                return null;
+                                */
+
+                                /*
+                                log.trace("Fetching attribute '{}' from record '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, typeName, box.getTenantId(), box.getUnitId());
+
+                                // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
+                                if (isArray) {
+                                    return runtimeService.getArray(fieldName, alternativeFieldNames, box);
+                                } else {
+                                    return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
+                                }
+                                */
+
+                                return null;
+
+                            } else {
+                                log.warn("No box");
+                                return null;
+                            }
+                        })
+                );
+            } catch (StrictModeWiringException smwe) {
+                log.warn("Could not wire unions for type {}", unionName, smwe);
+            }
+        }
+    }
+
     private static CatalogAttribute addAttribute(Repository repo, GqlAttributeShape gqlAttribute, PrintStream progress) {
 
         CatalogAttribute attribute = new CatalogAttribute(
@@ -524,7 +666,7 @@ public class Configurator {
     private static CatalogRecord addRecord(Repository repo, GqlRecordShape gqlRecord, Map<String, GqlAttributeShape> gqlAttributes, PrintStream progress) {
 
         String recordName = gqlRecord.typeName();
-        String recordAttributeName = gqlRecord.attributeName();
+        String recordAttributeName = gqlRecord.attributeEnumName();
         List<GqlFieldShape> fields = gqlRecord.fields();
 
         // Determine attrId of record attribute
@@ -778,6 +920,12 @@ public class Configurator {
 
         out.println("--- Units ---");
         for (Map.Entry<String, GqlUnitShape> entry : gql.units().entrySet()) {
+            out.println("  " + entry.getKey() + " -> " + entry.getValue());
+        }
+        out.println();
+
+        out.println("--- Unions ---");
+        for (Map.Entry<String, GqlUnionShape> entry : gql.unions().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();

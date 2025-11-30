@@ -16,9 +16,9 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.AttributeTypeException;
 import org.gautelis.repo.exceptions.AttributeValueException;
 import org.gautelis.repo.exceptions.DatabaseReadException;
@@ -38,7 +38,7 @@ final class DoubleValue extends Value<Double> {
     /**
      * Creates an <I>existing</I> double value
      */
-    DoubleValue(ArrayNode node) throws JsonProcessingException {
+    DoubleValue(ArrayNode node) throws JacksonException {
         super(node);
         inflate(node);
     }
@@ -81,8 +81,7 @@ final class DoubleValue extends Value<Double> {
         }
     }
 
-    /* package accessible only */
-    void inflate(ArrayNode node) {
+    private void inflate(ArrayNode node) {
         node.forEach(value -> values.add(value.asDouble()));
     }
 

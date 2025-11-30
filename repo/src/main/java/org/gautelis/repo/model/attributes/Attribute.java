@@ -16,10 +16,10 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
 import org.gautelis.repo.model.AttributeType;
 import org.gautelis.repo.model.KnownAttributes;
@@ -91,7 +91,7 @@ public class Attribute<T> {
     /* Should be package accessible only */
     public Attribute(
             JsonNode node
-    ) throws JsonProcessingException {
+    ) throws JacksonException {
         readEntry(node);
     }
 
@@ -192,14 +192,14 @@ public class Attribute<T> {
         attributeNode.put("attrid", id);
 
         if (AttributeType.RECORD == type) {
-            // "hide" unit attributes with local array in record attribute
+            // push local record 'attributes', effectively hiding unit attributes
             attributes = attributeNode.putArray("attributes");
         }
 
         value.toJson(attributes, attributeNode, isChatty);
     }
 
-    private void readEntry(JsonNode node) throws JsonProcessingException {
+    private void readEntry(JsonNode node) throws JacksonException {
         // Get attribute information
         id = node.path("attrid").asInt();
         unitVersionFrom = node.path("unitverfrom").asInt();

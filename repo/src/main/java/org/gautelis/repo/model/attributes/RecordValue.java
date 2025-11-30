@@ -16,10 +16,10 @@
  */
 package org.gautelis.repo.model.attributes;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import org.gautelis.repo.exceptions.*;
 import org.gautelis.repo.model.AttributeType;
 
@@ -41,7 +41,7 @@ public final class RecordValue extends Value<Attribute<?>> {
     /**
      * Creates an <I>existing</I> record value
      */
-    RecordValue(ArrayNode node) throws JsonProcessingException {
+    RecordValue(ArrayNode node) throws JacksonException {
         super(node);
         inflate(node);
     }
@@ -89,8 +89,7 @@ public final class RecordValue extends Value<Attribute<?>> {
         /* Do nothing! Nested attributes are injected in Unit */
     }
 
-    /* package accessible only */
-    void inflate(ArrayNode node) {
+    private void inflate(ArrayNode node) {
         if (null == node) {
             log.debug("No record contents");
             return;

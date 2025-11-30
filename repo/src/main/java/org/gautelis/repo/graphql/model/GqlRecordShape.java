@@ -13,9 +13,10 @@ import java.util.List;
  * Details about individual fields are found in GqlFieldShape
  */
 public record GqlRecordShape(
-    String typeName,           // (a)
-    String attributeName,      // (b)
-    List<GqlFieldShape>fields
+        String typeName,           // (a)
+        String attributeEnumName,  // (b)
+        String attributeName,
+        List<GqlFieldShape> fields
 ) {
     public boolean equals(CatalogRecord other) {
         return typeName.equals(other.recordName);
@@ -25,6 +26,7 @@ public record GqlRecordShape(
     public String toString() {
         String info = "GqlRecordShape{";
         info += "record-name='" + typeName + '\'';
+        info += ", attribute-enum-name='" + attributeEnumName + '\'';
         info += ", attribute-name='" + attributeName + '\'';
         info += ", fields=[";
         for (GqlFieldShape field : fields) {

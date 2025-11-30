@@ -4,6 +4,7 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
 import org.gautelis.repo.exceptions.ConfigurationException;
+import org.gautelis.repo.exceptions.Stacktrace;
 import org.gautelis.repo.graphql.model.*;
 import org.gautelis.repo.graphql.model.TypeDefinition;
 import org.gautelis.repo.model.AttributeType;
@@ -48,12 +49,14 @@ public final class Records {
             if ("query".equalsIgnoreCase(typeName)
              || "mutation".equalsIgnoreCase(typeName)
              || "subscription".equalsIgnoreCase(typeName)) {
+                log.debug("Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (!unitDirectivesOnType.isEmpty()) {
+                log.debug("Ignoring type: {}", typeName);
                 continue;
             }
 
@@ -88,6 +91,7 @@ public final class Records {
                 GqlAttributeShape recordAttributeDef = attributes.get(recordAttributeName);
                 if (null != recordAttributeDef) {
                     final int recordAttributeId = recordAttributeDef.attrId;
+                    final String catalogAttributeName = recordAttributeDef.name;
 
                     List<GqlFieldShape> recordFields = new ArrayList<>();
                     for (FieldDefinition f : type.getFieldDefinitions()) {
@@ -112,18 +116,22 @@ public final class Records {
 
                                     recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
                                     break; // In the unlikely case there are several @use
+                                } else {
+                                    log.debug("Not a valid record field definition (with @use): " + fieldName);
                                 }
                             }
                         } else {
                             // No @use, but we will fall back on aliases
                             GqlAttributeShape attributeShape = attributes.get(fieldName);
                             if (null != attributeShape) {
-
                                 recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
+                            } else {
+                                log.debug("Not a valid record field definition: " + fieldName);
                             }
                         }
                     }
-                    records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, recordFields));
+                    records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, catalogAttributeName, recordFields));
+                    log.trace("Defining shape for {}: {}", typeName, records.get(typeName));
                 }
             } else {
                 String info = "Not a valid record definition: " + typeName;

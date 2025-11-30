@@ -25,6 +25,7 @@ import org.gautelis.repo.listeners.ActionListener;
 import org.gautelis.repo.model.associations.ExternalAssociation;
 import org.gautelis.repo.model.associations.InternalRelation;
 
+import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.model.cache.UnitFactory;
 import org.gautelis.repo.model.locks.Lock;
 import org.gautelis.repo.model.locks.LockType;
@@ -113,6 +114,43 @@ public class Repository {
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
         UUID correlationId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
         return new Unit(context, tenantId, name, correlationId);
+    }
+
+    /**
+     * Creates a unit for specified tenant. The unit is not given a
+     * name -- which is quite OK.
+     * @param tenantId id of tenant
+     * <p>
+     * A correlation id specific for this unit is automatically created (UUID v7)
+     * <p>
+     * @return a new unit, not yet persisted
+     * @throws DatabaseConnectionException
+     * @throws DatabaseReadException
+     * @throws DatabaseWriteException
+     * @throws ConfigurationException
+     */
+    public Unit createUnit(
+            int tenantId
+    ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
+        UUID correlationId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
+        return new Unit(context, tenantId, /* no name */ null, correlationId);
+    }
+
+    /**
+     * Creates a unit for specified tenant with the specified correlation ID.
+     * @param tenantId id of tenant
+     * @param correlationId a correlation id specific for this unit
+     * @return a new unit, not yet persisted
+     * @throws DatabaseConnectionException
+     * @throws DatabaseReadException
+     * @throws DatabaseWriteException
+     * @throws ConfigurationException
+     */
+    public Unit createUnit(
+            int tenantId,
+            UUID correlationId
+    ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
+        return new Unit(context, tenantId, /* no name */ null, correlationId);
     }
 
     /**
@@ -667,6 +705,29 @@ public class Repository {
             log.error("Failure in search", e);
         }
         return new SearchResult(result, totalNumberOfHits[0]);
+    }
+
+    /**
+     * Instantiates an attribute
+     */
+    public Optional<Attribute<?>> instantiateAttribute(String attributeName) throws DatabaseConnectionException, DatabaseReadException {
+        Optional<KnownAttributes.AttributeInfo> attributeInfo = getAttributeInfo(attributeName);
+        if (attributeInfo.isPresent()) {
+            Attribute<?> attribute = new Attribute<>(attributeInfo.get());
+            return Optional.of(attribute);
+        }
+
+        return Optional.empty();
+    }
+
+    public Optional<Attribute<?>> instantiateAttribute(int attributeId) throws DatabaseConnectionException, DatabaseReadException {
+        Optional<KnownAttributes.AttributeInfo> attributeInfo = getAttributeInfo(attributeId);
+        if (attributeInfo.isPresent()) {
+            Attribute<?> attribute = new Attribute<>(attributeInfo.get());
+            return Optional.of(attribute);
+        }
+
+        return Optional.empty();
     }
 
     /**

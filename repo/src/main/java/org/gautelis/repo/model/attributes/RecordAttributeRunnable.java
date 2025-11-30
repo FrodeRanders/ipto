@@ -16,6 +16,9 @@
  */
 package org.gautelis.repo.model.attributes;
 
+import org.gautelis.repo.model.Context;
+
+@FunctionalInterface
 public interface RecordAttributeRunnable {
-    void run(RecordAttribute attribute);
+    void run(RecordAttribute record);
 }
