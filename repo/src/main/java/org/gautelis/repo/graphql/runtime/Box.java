@@ -5,16 +5,12 @@ import org.gautelis.repo.model.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class Box {
     private static final Logger log = LoggerFactory.getLogger(Box.class);
 
-    private final int tenantId;
-    private final long unitId;
+    protected final Unit unit;
 
     //---------------------------------------------------------------------
     // OBSERVE
@@ -26,30 +22,18 @@ public class Box {
     //---------------------------------------------------------------------
     private final Map</* field name */ String, Attribute<?>> attributesByFieldName;
 
-    /* package accessible only */
-    Box(int tenantId, long unitId, Map</* field name */ String, Attribute<?>> attributes) {
-        this.tenantId = tenantId;
-        this.unitId = unitId;
+    protected Box(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
+        Objects.requireNonNull(unit, "unit");
+        this.unit = unit;
         this.attributesByFieldName = attributes;
     }
 
     /* package accessible only */
-    Box(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
-        this(Objects.requireNonNull(unit).getTenantId(), unit.getUnitId(), attributes);
-    }
-
-    /* package accessible only */
     Box(Box parent, Map</* field name */ String, Attribute<?>> attributes) {
-        this(Objects.requireNonNull(parent).tenantId, parent.unitId, attributes);
+        this(Objects.requireNonNull(parent).getUnit(), attributes);
     }
 
-    public int getTenantId() {
-        return tenantId;
-    }
-
-    public long getUnitId() {
-        return unitId;
-    }
+    public Unit getUnit() { return unit; }
 
     /* package accessible only */
     Attribute<?> getAttribute(String fieldName) {
@@ -95,9 +79,7 @@ public class Box {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        sb.append("Box{");
-        sb.append("tenantId=").append(tenantId);
-        sb.append(", unitId=").append(unitId);
+        sb.append("unit=").append(unit.getReference());
         sb.append(", attributes=[");
         for (Map.Entry<String, Attribute<?>> entry : attributesByFieldName.entrySet()) {
             Attribute<?> attribute = entry.getValue();

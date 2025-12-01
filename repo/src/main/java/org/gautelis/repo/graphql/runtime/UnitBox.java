@@ -1,0 +1,32 @@
+package org.gautelis.repo.graphql.runtime;
+
+import org.gautelis.repo.model.Unit;
+import org.gautelis.repo.model.attributes.Attribute;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.*;
+
+public class UnitBox extends Box {
+    private static final Logger log = LoggerFactory.getLogger(UnitBox.class);
+
+    /* package accessible only */
+    UnitBox(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
+        super(unit, attributes);
+
+        log.trace("Created {}", this);
+    }
+
+    /* package accessible only */
+    UnitBox(Box parent, Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
+        this(Objects.requireNonNull(parent).getUnit(), attributes);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UnitBox{");
+        sb.append(super.toString());
+        return sb.toString();
+    }
+}

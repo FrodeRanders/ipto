@@ -125,41 +125,36 @@ public class GraphQLTest {
 
                 resultat.add(ersattningRecord.getDelegate());
             }
+        });
 
-            Optional<Attribute<?>> beslut = repo.instantiateAttribute("ffa:beslut");
-            if (beslut.isPresent()) {
-                RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
+        yrkan.withRecordAttribute("ffa:beslut", beslut -> {
+            beslut.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+                datum.add(aSpecificInstant);
+            });
 
-                beslutsRecord.withNestedAttributeValue("dce:date", Instant.class, datum -> {
-                    datum.add(aSpecificInstant);
-                });
+            beslut.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
+                beslutsfattare.add(aSpecificString);
+            });
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
-                    beslutsfattare.add(aSpecificString);
-                });
+            beslut.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
+                beslutstyp.add("SLUTLIGT");
+            });
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
-                    beslutstyp.add("SLUTLIGT");
-                });
+            beslut.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
+                beslutsutfall.add("BEVILJAT");
+            });
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
-                    beslutsutfall.add("BEVILJAT");
-                });
+            beslut.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
+                organisation.add("Myndigheten");
+            });
 
-                beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
-                    organisation.add("Myndigheten");
-                });
+            beslut.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
+                lagrum.add("FL_P38");
+            });
 
-                beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
-                    lagrum.add("FL_P38");
-                });
-
-                beslutsRecord.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
-                    // Ingen
-                });
-
-                resultat.add(beslutsRecord.getDelegate());
-            }
+            beslut.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
+                // Ingen
+            });
         });
 
         repo.storeUnit(yrkan);
@@ -192,7 +187,7 @@ public class GraphQLTest {
 
         String query = """
             query Unit {
-              yrkan1: yrkan(id: { tenantId: 1, unitId: 14033 }) {
+              yrkan1: yrkan(id: { tenantId: %d, unitId: %d }) {
                 person {
                   ... on FysiskPerson {
                     personnummer
@@ -211,7 +206,7 @@ public class GraphQLTest {
                 }
               }
             
-              yrkan2: yrkan(id: { tenantId: 1, unitId: 14034 }) {
+              yrkan2: yrkan(id: { tenantId: %d, unitId: %d }) {
                 person {
                   ... on FysiskPerson {
                     personnummer

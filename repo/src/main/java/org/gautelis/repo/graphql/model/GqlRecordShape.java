@@ -1,5 +1,8 @@
 package org.gautelis.repo.graphql.model;
 
+import graphql.language.ObjectTypeDefinition;
+import graphql.language.Type;
+
 import java.util.List;
 
 /*
@@ -14,6 +17,7 @@ import java.util.List;
  */
 public record GqlRecordShape(
         String typeName,           // (a)
+        List<Type> objectTypes,
         String attributeEnumName,  // (b)
         String attributeName,
         List<GqlFieldShape> fields

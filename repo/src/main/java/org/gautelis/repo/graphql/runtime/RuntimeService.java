@@ -63,11 +63,12 @@ public class RuntimeService {
     public Box loadUnit(int tenantId, long unitId) {
         log.trace("RuntimeService::loadUnit({}, {})", tenantId, unitId);
 
-        Optional<Unit> unit = repo.getUnit(tenantId, unitId);
-        if (unit.isEmpty()) {
+        Optional<Unit> _unit = repo.getUnit(tenantId, unitId);
+        if (_unit.isEmpty()) {
             log.trace("No unit with id {}.{}", tenantId, unitId);
             return null;
         }
+        Unit unit = _unit.get();
 
         //---------------------------------------------------------------------
         // OBSERVE
@@ -76,11 +77,15 @@ public class RuntimeService {
         //---------------------------------------------------------------------
         Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
-        unit.get().getAttributes().forEach(attr -> {
+        unit.getAttributes().forEach(attr -> {
             attributes.put(attr.getAlias(), attr); // here we assume alias == field name
         });
 
-        return new /* outermost */ Box(tenantId, unitId, attributes);
+        if (attributes.isEmpty()) {
+            log.debug("No attributes for unit with id {}.{}", tenantId, unitId);
+        }
+
+        return new /* outermost */ UnitBox(unit, attributes);
     }
 
     public byte[] loadRawUnit(int tenantId, long unitId) {
@@ -96,28 +101,38 @@ public class RuntimeService {
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
-    public Object getArray(String fieldName, List<String> alternativeFieldNames, Box box, boolean isMandatory) {
-        log.trace("RuntimeService::getArray('{}', {}, {})", fieldName, box, isMandatory);
+    public Object getArray(List<String> fieldNames,  Box box, boolean isMandatory) {
+        log.trace("RuntimeService::getArray({}, {}, {})", fieldNames, box, isMandatory);
 
-        Attribute<?> attribute = box.getAttribute(fieldName);
-        if (null == attribute) {
-            log.trace("No attribute '{}'.", fieldName);
+        String fieldName = null;
+        Attribute<?> attribute = null;
 
-            for (String alternativeFieldName : alternativeFieldNames) {
-                log.debug(" ... trying '{}'.", alternativeFieldName);
-                fieldName += "|" + alternativeFieldName;
-                attribute = box.getAttribute(alternativeFieldName);
-                if (attribute != null) {
-                    break;
-                }
-                log.trace("No attribute '{}'.", fieldName);
-            }
+        Iterator<String> fnit = fieldNames.iterator();
+        if (fnit.hasNext()) {
+            fieldName = fnit.next();
+
+            attribute = box.getAttribute(fieldName);
             if (null == attribute) {
-                if (isMandatory) {
-                    log.info("Mandatory field '{}' not present", fieldName);
+                log.trace("No attribute '{}'.", fieldName);
+
+                while (fnit.hasNext()) {
+                    fieldName = fnit.next();
+                    log.debug(" ... trying '{}'.", fieldName);
+
+                    attribute = box.getAttribute(fieldName);
+                    if (attribute != null) {
+                        break;
+                    }
+                    log.trace("No attribute '{}'.", fieldName);
                 }
-                return null;
             }
+        }
+
+        if (null == attribute) {
+            if (isMandatory) {
+                log.info("Mandatory field(s) not present: {}", fieldNames);
+            }
+            return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
@@ -150,32 +165,42 @@ public class RuntimeService {
         return new /* inner */ Box(/* outer */ box, attributes);
     }
 
-    public Object getArray(String fieldName, List<String> alternativeFieldNames, Box box) {
-        return getArray(fieldName, alternativeFieldNames, box, false);
+    public Object getArray(List<String> fieldNames, Box box) {
+        return getArray(fieldNames, box, false);
     }
 
-    public Object getScalar(String fieldName, List<String> alternativeFieldNames, Box box, boolean isMandatory) {
-        log.trace("RuntimeService::getScalar('{}', {}, {})", fieldName, box, isMandatory);
+    public Object getScalar(List<String> fieldNames, Box box, boolean isMandatory) {
+        log.trace("RuntimeService::getScalar({}, {}, {})", fieldNames, box, isMandatory);
 
-        Attribute<?> attribute = box.getAttribute(fieldName);
-        if (null == attribute) {
-            log.trace("No attribute '{}'.", fieldName);
+        String fieldName = null;
+        Attribute<?> attribute = null;
 
-            for (String alternativeFieldName : alternativeFieldNames) {
-                log.debug(" ... trying '{}'.", alternativeFieldName);
-                fieldName += "|" + alternativeFieldName;
-                attribute = box.getAttribute(alternativeFieldName);
-                if (attribute != null) {
-                    break;
-                }
-                log.trace("No attribute '{}'.", fieldName);
-            }
+        Iterator<String> fnit = fieldNames.iterator();
+        if (fnit.hasNext()) {
+            fieldName = fnit.next();
+
+            attribute = box.getAttribute(fieldName);
             if (null == attribute) {
-                if (isMandatory) {
-                    log.info("Mandatory field '{}' not present", fieldName);
+                log.trace("No attribute '{}'.", fieldName);
+
+                while (fnit.hasNext()) {
+                    fieldName = fnit.next();
+                    log.debug(" ... trying '{}'.", fieldName);
+
+                    attribute = box.getAttribute(fieldName);
+                    if (attribute != null) {
+                        break;
+                    }
+                    log.trace("No attribute '{}'.", fieldName);
                 }
-                return null;
             }
+        }
+
+        if (null == attribute) {
+            if (isMandatory) {
+                log.info("Mandatory field(s) not present: {}", fieldNames);
+            }
+            return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
@@ -205,11 +230,11 @@ public class RuntimeService {
             attributes.put(attr.getAlias(), attr);  // here we assume alias == field name
         });
 
-        return new /* inner */ Box(/* outer */ box, attributes);
+        return new /* inner */ RecordBox(/* outer */ box, attribute, attributes);
     }
 
-    public Object getScalar(String fieldName, List<String> alternativeFieldNames, Box box) {
-        return getScalar(fieldName, alternativeFieldNames, box,false);
+    public Object getScalar(List<String> fieldNames, Box box) {
+        return getScalar(fieldNames, box,false);
     }
 
     private Collection<Unit.Id> search0(Query.Filter filter) {

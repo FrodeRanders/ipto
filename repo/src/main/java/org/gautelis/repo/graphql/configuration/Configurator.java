@@ -1,7 +1,11 @@
 package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
+import graphql.schema.GraphQLObjectType;
+import graphql.schema.TypeResolver;
 import graphql.schema.idl.errors.StrictModeWiringException;
+import org.gautelis.repo.graphql.runtime.RecordBox;
+import org.gautelis.repo.model.attributes.Attribute;
 import tools.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
 import graphql.schema.DataFetcher;
@@ -262,7 +266,8 @@ public class Configurator {
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
 
-                    final List<String> alternativeFieldNames = new ArrayList<>();
+                    final List<String> fieldNames = new ArrayList<>();
+                    fieldNames.add(fieldName);
 
                     GqlUnionShape union = gqlUnions.get(fieldType);
                     if (null != union) {
@@ -278,8 +283,8 @@ public class Configurator {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("### Identified possible match {} for type {}", attributeEnumName, memberType);
-                                    alternativeFieldNames.add(attributeEnumName);
+                                    log.debug("Adding alternative {} for union {}", memberType, union.unionName());
+                                    fieldNames.add(attributeEnumName);
                                 }
                             }
                         }
@@ -299,13 +304,13 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute '{}' from record '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, typeName, box.getTenantId(), box.getUnitId());
+                        log.trace("Fetching attribute '{}' from record '{}': {}", isArray ? fieldName + "[]" : fieldName, typeName, box.getUnit().getReference());
 
                         // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
                         if (isArray) {
-                            return runtimeService.getArray(fieldName, alternativeFieldNames, box);
+                            return runtimeService.getArray(fieldNames, box);
                         } else {
-                            return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
+                            return runtimeService.getScalar(fieldNames, box);
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -351,7 +356,8 @@ public class Configurator {
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
 
-                    final List<String> alternativeFieldNames = new ArrayList<>();
+                    final List<String> fieldNames = new ArrayList<>();
+                    fieldNames.add(fieldName);
 
                     GqlUnionShape union = gqlUnions.get(fieldType);
                     if (null != union) {
@@ -367,8 +373,8 @@ public class Configurator {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("### Identified possible match {} for type {}", attributeEnumName, memberType);
-                                    alternativeFieldNames.add(attributeEnumName);
+                                    log.debug("Adding alternative {} for union {}", memberType, union.unionName());
+                                    fieldNames.add(attributeEnumName);
                                 }
                             }
                         }
@@ -388,12 +394,12 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute '{}' ({}) from unit '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getTenantId(), box.getUnitId());
+                        log.trace("Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
 
                         if (isArray) {
-                            return runtimeService.getArray(fieldName, alternativeFieldNames, box);
+                            return runtimeService.getArray(fieldNames, box);
                         } else {
-                            return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
+                            return runtimeService.getScalar(fieldNames, box);
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -530,7 +536,7 @@ public class Configurator {
 
             String unionName = gqlUnion.unionName();
 
-            Map</* record attribute id */ Integer, /* record name */ String> idToName = new HashMap<>();
+            Map</* record attribute alias */ String, /* record type */ String> aliasToTypeName = new HashMap<>();
 
             List<UnionMember> members = gqlUnion.members();
             for (UnionMember member : members) {
@@ -538,63 +544,38 @@ public class Configurator {
                 log.info("Wiring union: {} > {}", unionName, memberName);
 
                 GqlRecordShape gqlRecord = gqlRecords.get(memberName);
-                CatalogRecord iptoRecord = iptoRecords.get(memberName);
-
                 String attributeAlias = gqlRecord.attributeEnumName();
-                //log.trace("    attribute-alias: {}", attributeAlias);
-                //log.trace("    attribute-name: {} ({})", iptoRecord.recordName, iptoRecord.recordAttrId);
 
-                idToName.put(iptoRecord.recordAttrId, memberName);
+                log.trace("Union '{}': attribute alias '{}' => type '{}'", unionName, attributeAlias, gqlRecord.typeName());
+                aliasToTypeName.put(attributeAlias, gqlRecord.typeName());
             }
 
             try {
-                runtimeWiring.type(unionName, typeWiring -> typeWiring
-                        .typeResolver(env -> {
-                            Object value = env.getObject(); // box
-                            if (value instanceof Box box) {
-                                log.info("union wire: box: {} for union '{}'", box, unionName);
+                // Plan ahead (as soon as I get my match together :)
+                //   - Derive recordAttributeId from "value"
+                //   - Look up GraphQL type name from idToName
+                //   - Return that object type
 
-                                // Plan ahead (as soon as I get my match together :)
-                                //   - Derive recordAttributeId from "value"
-                                //   - Look up GraphQL type name from idToName
-                                //   - Return that object type
+                TypeResolver unionResolver = env -> {
+                    //**** Executed at runtime **********************************
+                    // My mission in life is to resolve a specific union
+                    // (the current 'unionName').
+                    // Everything needed at runtime is accessible right
+                    // now so it is captured for later.
+                    //***********************************************************
+                    Object value = env.getObject(); // box
+                    log.info("union wire: {} for union '{}'", value, unionName);
 
-                                /*
-                                Integer recordAttributeId = extractRecordAttributeId(value);
-                                String recordName = idToName.get(recordAttributeId);
-                                if (recordName != null) {
-                                    return env.getSchema().getObjectType(recordName);
-                                }
-                                return null;
-                                */
+                    if (value instanceof RecordBox recordBox) {
+                        String typeName = aliasToTypeName.get(recordBox.getRecordAttribute().getAlias());
+                        return env.getSchema().getObjectType(typeName);
+                    }
+                    log.warn("No resolver for union '{}': No (record) box: {}", unionName, value);
+                    return null;
+                };
 
-                                /*
-                                String recordName = idToName.get(recordAttributeId);
-                                return env.getSchema().getObjectType(recordName);
+                runtimeWiring.type(unionName,t -> t.typeResolver(unionResolver));
 
-                                // No match – could log or throw
-                                return null;
-                                */
-
-                                /*
-                                log.trace("Fetching attribute '{}' from record '{}': {}.{}", isArray ? fieldName + "[]" : fieldName, typeName, box.getTenantId(), box.getUnitId());
-
-                                // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
-                                if (isArray) {
-                                    return runtimeService.getArray(fieldName, alternativeFieldNames, box);
-                                } else {
-                                    return runtimeService.getScalar(fieldName, alternativeFieldNames, box);
-                                }
-                                */
-
-                                return null;
-
-                            } else {
-                                log.warn("No box");
-                                return null;
-                            }
-                        })
-                );
             } catch (StrictModeWiringException smwe) {
                 log.warn("Could not wire unions for type {}", unionName, smwe);
             }

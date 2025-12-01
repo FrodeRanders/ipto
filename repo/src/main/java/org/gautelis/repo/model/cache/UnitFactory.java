@@ -150,21 +150,24 @@ public final class UnitFactory {
                         cStmt.execute();
 
                         Object out = cStmt.getObject(4);
-                        String json = null;
 
-                        if (out != null) {
-                            json = switch (out) {
+                        if (out == null) {
+                            log.debug("Null result in 'extract_unit_json'");
+
+                        } else {
+                            String json = switch (out) {
                                 case String s -> s; /* If we are lucky */
                                 case Clob clob -> clob.getSubString(1L, (int) clob.length()); /* DB2 */
                                 case org.postgresql.util.PGobject pg -> pg.getValue(); /* PostgreSQL */
                                 default -> out.toString(); // Fall back on driver behaviour
                             };
+
+                            //log.trace("Resurrecting unit {}.{}: {}", tenantId, unitId, json);
+                            log.trace("Resurrecting unit {}.{}", tenantId, unitId);
+
+                            unit[0] = resurrect(ctx, json);
+                            cacheStore(ctx, unit[0]);
                         }
-
-                        log.trace("Resurrecting unit {}.{}: {}", tenantId, unitId, json);
-
-                        unit[0] = resurrect(ctx, json);
-                        cacheStore(ctx, unit[0]);
                     }
                 });
 

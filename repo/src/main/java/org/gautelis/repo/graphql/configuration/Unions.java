@@ -6,10 +6,7 @@ import org.gautelis.repo.graphql.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public final class Unions {
@@ -34,8 +31,12 @@ public final class Unions {
     static Map<String, GqlUnionShape> derive(
             TypeDefinitionRegistry registry,
             Map<String, GqlAttributeShape> attributes,
-            Map<String, GqlRecordShape> gqlRecords
+            Map<String, GqlRecordShape> records
     ) {
+        Objects.requireNonNull(registry, "registry");
+        Objects.requireNonNull(attributes, "attributes");
+        Objects.requireNonNull(records, "records");
+
         Map<String, GqlUnionShape> unions = new HashMap<>();
 
 
@@ -58,12 +59,10 @@ public final class Unions {
                 if (memberType instanceof TypeName unionTypeName) {
                     String memberName = unionTypeName.getName();
 
-                    GqlRecordShape gqlRecord = gqlRecords.get(memberName);
-                    //CatalogRecord iptoRecord = iptoRecords.get(memberName);
-
-                    String attributeAlias = gqlRecord.attributeEnumName();
-                    //log.trace("    attribute-alias: {}", attributeAlias);
-                    //log.trace("    attribute-name: {} ({})", iptoRecord.recordName, iptoRecord.recordAttrId);
+                    // TODO??
+                    //log.trace("Looking up '{}' among records {}",  memberName, records.keySet());
+                    //GqlRecordShape gqlRecord = records.get(memberName);
+                    //String attributeAlias = gqlRecord.attributeEnumName();
 
                     members.add(new UnionMember(unionName, memberName));
                 } else {

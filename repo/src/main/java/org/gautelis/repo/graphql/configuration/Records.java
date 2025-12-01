@@ -130,7 +130,9 @@ public final class Records {
                             }
                         }
                     }
-                    records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, catalogAttributeName, recordFields));
+                    List<Type> objectTypes = List.of();
+
+                    records.put(typeName, new GqlRecordShape(typeName, objectTypes, recordAttributeName, catalogAttributeName, recordFields));
                     log.trace("Defining shape for {}: {}", typeName, records.get(typeName));
                 }
             } else {
