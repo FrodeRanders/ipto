@@ -253,18 +253,20 @@ public class Configurator {
             final String typeName = gqlRecord.typeName();
 
             Iterator<GqlFieldShape> fit = gqlRecord.fields().iterator();
-            Iterator<CatalogAttribute> ait = iptoRecord.fields().iterator();
+            //Iterator<CatalogAttribute> ait = iptoRecord.fields().iterator();
 
             runtimeWiring.type(typeName, builder -> {
 
-                while (fit.hasNext() && ait.hasNext()) {
+                while (fit.hasNext() /* && ait.hasNext() */) {
                     GqlFieldShape field = fit.next();
-                    CatalogAttribute attribute = ait.next();
+                    //CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
                     final String fieldType = field.gqlTypeRef();
-                    final int fieldAttrId = attribute.attrId();
+                    //final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
+
+                    //log.debug("Wiring field '{}' for record '{}'", fieldName, typeName);
 
                     final List<String> fieldNames = new ArrayList<>();
                     fieldNames.add(fieldName);
@@ -529,7 +531,7 @@ public class Configurator {
     ) {
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
-        Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
+        //Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
 
         for (String key : gqlUnions.keySet()) {
             GqlUnionShape  gqlUnion = gqlUnions.get(key);
@@ -564,7 +566,7 @@ public class Configurator {
                     // now so it is captured for later.
                     //***********************************************************
                     Object value = env.getObject(); // box
-                    log.info("union wire: {} for union '{}'", value, unionName);
+                    log.info("union wire: '{}' <- {}", unionName, value);
 
                     if (value instanceof RecordBox recordBox) {
                         String typeName = aliasToTypeName.get(recordBox.getRecordAttribute().getAlias());

@@ -17,7 +17,6 @@ import java.util.List;
  */
 public record GqlRecordShape(
         String typeName,           // (a)
-        List<Type> objectTypes,
         String attributeEnumName,  // (b)
         String attributeName,
         List<GqlFieldShape> fields

@@ -121,6 +121,8 @@ public class RuntimeService {
 
                     attribute = box.getAttribute(fieldName);
                     if (attribute != null) {
+                        // TODO I think we should assemble attributes for all field names
+                        //      and not break after first, since we are operating on an array
                         break;
                     }
                     log.trace("No attribute '{}'.", fieldName);
@@ -155,14 +157,14 @@ public class RuntimeService {
         //    We are assuming that the field names used in the SDL equals the
         //    attribute aliases used.
         //---------------------------------------------------------------------
-        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
-
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
+        ArrayList<Box> boxes = new ArrayList<>();
+
         children.forEach(attr -> {
-            attributes.put(attr.getAlias(), attr); // here we assume alias == field name
+            boxes.add(new /* inner */ RecordBox(/* outer */ box, attr, Map.of(attr.getAlias(), attr)));
         });
 
-        return new /* inner */ Box(/* outer */ box, attributes);
+        return boxes;
     }
 
     public Object getArray(List<String> fieldNames, Box box) {
