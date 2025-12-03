@@ -1,11 +1,10 @@
 package org.gautelis.repo.graphql.configuration;
 
 import graphql.language.*;
-import graphql.schema.GraphQLObjectType;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.errors.StrictModeWiringException;
+import org.gautelis.repo.graphql.runtime.AttributeBox;
 import org.gautelis.repo.graphql.runtime.RecordBox;
-import org.gautelis.repo.model.attributes.Attribute;
 import tools.jackson.databind.ObjectMapper;
 import graphql.GraphQL;
 import graphql.schema.DataFetcher;
@@ -91,11 +90,11 @@ public class Configurator {
 
         // Setup GraphQL SDL view of things
         GqlViewpoint gql = loadFromFile(registry, operationTypes);
-        dump(gql, progress);
+        //dump(gql, progress);
 
         // Setup Ipto view of things
         CatalogViewpoint ipto = loadFromCatalog(repo);
-        dump(ipto, progress);
+        //dump(ipto, progress);
 
         // Reconcile differences, i.e. create stuff if needed
         reconcile(repo, gql, ipto, ResolutionPolicy.PREFER_GQL, progress);
@@ -265,6 +264,7 @@ public class Configurator {
                     final String fieldType = field.gqlTypeRef();
                     //final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
+                    final boolean isMandatory = field.isMandatory();
 
                     //log.debug("Wiring field '{}' for record '{}'", fieldName, typeName);
 
@@ -308,11 +308,22 @@ public class Configurator {
 
                         log.trace("Fetching attribute '{}' from record '{}': {}", isArray ? fieldName + "[]" : fieldName, typeName, box.getUnit().getReference());
 
-                        // REPLACE return runtimeService.getRecord(box, childAttrid, _idx);
-                        if (isArray) {
-                            return runtimeService.getArray(fieldNames, box);
+                        if (box instanceof RecordBox recordBox) {
+                            if (isArray) {
+                                return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
+                            } else {
+                                return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
+                            }
+                        }
+                        else if (box instanceof AttributeBox attributeBox) {
+                            if (isArray) {
+                                return runtimeService.getAttributeArray(fieldNames, attributeBox);
+                            } else {
+                                return runtimeService.getAttributeScalar(fieldNames, attributeBox);
+                            }
                         } else {
-                            return runtimeService.getScalar(fieldNames, box);
+                            log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                            return null;
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -357,6 +368,7 @@ public class Configurator {
                     final String fieldType = field.gqlTypeRef();
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
+                    final boolean isMandatory = field.isMandatory();
 
                     final List<String> fieldNames = new ArrayList<>();
                     fieldNames.add(fieldName);
@@ -398,10 +410,23 @@ public class Configurator {
 
                         log.trace("Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
 
-                        if (isArray) {
-                            return runtimeService.getArray(fieldNames, box);
+                        if (box instanceof RecordBox recordBox) {
+                            log.debug("DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
+                            if (isArray) {
+                                return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
+                            } else {
+                                return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
+                            }
+                        }
+                        else if (box instanceof AttributeBox attributeBox) { // UnitBox is an AttributeBox
+                            if (isArray) {
+                                return runtimeService.getAttributeArray(fieldNames, attributeBox);
+                            } else {
+                                return runtimeService.getAttributeScalar(fieldNames, attributeBox);
+                            }
                         } else {
-                            return runtimeService.getScalar(fieldNames, box);
+                            log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                            return null;
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);

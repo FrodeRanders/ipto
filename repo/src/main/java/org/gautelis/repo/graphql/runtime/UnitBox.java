@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class UnitBox extends Box {
+public class UnitBox extends AttributeBox {
     private static final Logger log = LoggerFactory.getLogger(UnitBox.class);
 
     /* package accessible only */
@@ -27,6 +27,7 @@ public class UnitBox extends Box {
         StringBuilder sb = new StringBuilder();
         sb.append("UnitBox{");
         sb.append(super.toString());
+        sb.append("}");
         return sb.toString();
     }
 }

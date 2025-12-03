@@ -12,7 +12,6 @@ import org.gautelis.repo.model.attributes.Attribute;
 import org.gautelis.repo.search.UnitSearch;
 import org.gautelis.repo.search.model.*;
 import org.gautelis.repo.search.query.*;
-import org.gautelis.repo.utils.TimeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,8 +100,79 @@ public class RuntimeService {
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
-    public Object getArray(List<String> fieldNames,  Box box, boolean isMandatory) {
-        log.trace("RuntimeService::getArray({}, {}, {})", fieldNames, box, isMandatory);
+    public Object getValueArray(List<String> fieldNames, RecordBox box, boolean isMandatory) {
+        log.trace("RuntimeService::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
+
+        Attribute<?> attribute = null;
+        String fieldName = null;
+
+        for (String name : fieldNames) {
+            fieldName = name;
+
+            Attribute<Attribute<?>> recordAttribute = box.getRecordAttribute();
+            ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
+
+            for (Attribute<?> attr : values) {
+                if (attr.getAlias().equals(fieldName)) {
+                    attribute = attr;
+                    break;
+                }
+            }
+        }
+
+        if (null == attribute) {
+            log.trace("Attribute(s) not present: {}", fieldNames);
+            if (isMandatory) {
+                log.info("Mandatory field(s) not present: {}", fieldNames);
+            }
+            return null;
+        }
+
+        ArrayList<?> values = attribute.getValueVector();
+        if (values.isEmpty()) {
+            log.trace("No values for attribute '{}'.", fieldName);
+            if (isMandatory) {
+                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+            }
+            return null;
+        }
+
+        // 1) non-record attribute case
+        if (!AttributeType.RECORD.equals(attribute.getType())) {
+            return values;
+        }
+
+        // 2) record attribute case
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
+        ArrayList<Box> boxes = new ArrayList<>();
+
+        children.forEach(child -> {
+            if (!AttributeType.RECORD.equals(child.getType())) {
+                // Primitive attribute
+                boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
+            } else {
+                Map</* field name */ String, Attribute<?>> childAttributes = new HashMap<>();
+                child.getValueVector().forEach(val -> {
+                    // TODO
+                });
+
+                @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
+                Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;
+                boxes.add(new /* inner */ RecordBox(/* outer */ box,  childAsRecord, Map.of(child.getAlias(), child)));
+            }
+        });
+
+        return boxes;
+    }
+
+    public Object getAttributeArray(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
+        log.trace("RuntimeService::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
         Attribute<?> attribute = null;
@@ -157,22 +227,96 @@ public class RuntimeService {
         //    We are assuming that the field names used in the SDL equals the
         //    attribute aliases used.
         //---------------------------------------------------------------------
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
         ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
         ArrayList<Box> boxes = new ArrayList<>();
 
-        children.forEach(attr -> {
-            boxes.add(new /* inner */ RecordBox(/* outer */ box, attr, Map.of(attr.getAlias(), attr)));
+        children.forEach(child -> {
+            if (!AttributeType.RECORD.equals(child.getType())) {
+                // Primitive attribute
+                boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
+            } else {
+                Map</* field name */ String, Attribute<?>> childAttributes = new HashMap<>();
+                child.getValueVector().forEach(val -> {
+                    // TODO
+                });
+
+                @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
+                Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;
+                boxes.add(new /* inner */ RecordBox(/* outer */ box,  childAsRecord, Map.of(child.getAlias(), child)));
+            }
         });
 
         return boxes;
     }
 
-    public Object getArray(List<String> fieldNames, Box box) {
-        return getArray(fieldNames, box, false);
+    public Object getAttributeArray(List<String> fieldNames, AttributeBox box) {
+        return getAttributeArray(fieldNames, box, false);
     }
 
-    public Object getScalar(List<String> fieldNames, Box box, boolean isMandatory) {
-        log.trace("RuntimeService::getScalar({}, {}, {})", fieldNames, box, isMandatory);
+    public Object getValueScalar(List<String> fieldNames, RecordBox box, boolean isMandatory) {
+        log.trace("RuntimeService::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
+
+        Attribute<?> attribute = null;
+        String fieldName = null;
+
+        for (String name : fieldNames) {
+            fieldName = name;
+
+            Attribute<Attribute<?>> recordAttribute = box.getRecordAttribute();
+            ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
+
+            for (Attribute<?> attr : values) {
+                if (attr.getAlias().equals(fieldName)) {
+                    attribute = attr;
+                    break;
+                }
+            }
+        }
+
+        if (null == attribute) {
+            log.trace("Attribute(s) not present: {}", fieldNames);
+            if (isMandatory) {
+                log.info("Mandatory field(s) not present: {}", fieldNames);
+            }
+            return null;
+        }
+
+        ArrayList<?> values = attribute.getValueVector();
+        if (values.isEmpty()) {
+            log.trace("No values for attribute '{}'.", fieldName);
+            if (isMandatory) {
+                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+            }
+            return null;
+        }
+
+        // 1) non-record attribute case
+        if (!AttributeType.RECORD.equals(attribute.getType())) {
+            return values.getFirst(); // since scalar
+        }
+
+        // 2) record attribute case
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
+
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) values;
+        children.forEach(attr -> {
+            attributes.put(attr.getAlias(), attr);  // here we assume alias == field name
+        });
+
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
+        Attribute<Attribute<?>> attributeAsRecord = (Attribute<Attribute<?>>) attribute;
+        return new /* inner */ RecordBox(/* outer */ box, attributeAsRecord, attributes);
+    }
+
+    public Object getAttributeScalar(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
+        log.trace("RuntimeService::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
         Attribute<?> attribute = null;
@@ -227,16 +371,19 @@ public class RuntimeService {
         //---------------------------------------------------------------------
         Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
 
-        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) attribute.getValueVector();
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
+        ArrayList<Attribute<?>> children = (ArrayList<Attribute<?>>) values;
         children.forEach(attr -> {
             attributes.put(attr.getAlias(), attr);  // here we assume alias == field name
         });
 
-        return new /* inner */ RecordBox(/* outer */ box, attribute, attributes);
+        @SuppressWarnings("unchecked") // since attribute _is_ RECORD, i.e. Attribute<Attribute<?>>
+        Attribute<Attribute<?>> attributeAsRecord = (Attribute<Attribute<?>>) attribute;
+        return new /* inner */ RecordBox(/* outer */ box, attributeAsRecord, attributes);
     }
 
-    public Object getScalar(List<String> fieldNames, Box box) {
-        return getScalar(fieldNames, box,false);
+    public Object getAttributeScalar(List<String> fieldNames, AttributeBox box) {
+        return getAttributeScalar(fieldNames, box,false);
     }
 
     private Collection<Unit.Id> search0(Query.Filter filter) {
@@ -297,7 +444,7 @@ public class RuntimeService {
                         for (Attribute<?> attr : unit.getAttributes()) {
                             attributes.put(attr.getAlias(), attr); // here we assume alias == field name
                         }
-                        units.add(new /* outermost */ Box(unit, attributes));
+                        units.add(new /* outermost */ AttributeBox(unit, attributes));
 
                     } else {
                         log.error("Unknown unit: {}", id);

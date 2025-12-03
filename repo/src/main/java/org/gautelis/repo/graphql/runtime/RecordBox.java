@@ -7,13 +7,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class RecordBox extends Box {
+public class RecordBox extends AttributeBox {
     private static final Logger log = LoggerFactory.getLogger(RecordBox.class);
 
-    private final Attribute<?> recordAttribute;
+    private final Attribute<Attribute<?>> recordAttribute;
 
     /* package accessible only */
-    RecordBox(Unit unit, Attribute<?> recordAttribute, Map</* field name */ String, Attribute<?>> attributes) {
+    RecordBox(Unit unit, Attribute<Attribute<?>> recordAttribute, Map</* field name */ String, Attribute<?>> attributes) {
         super(unit, attributes);
 
         Objects.requireNonNull(recordAttribute, "recordAttribute");
@@ -23,13 +23,14 @@ public class RecordBox extends Box {
     }
 
     /* package accessible only */
-    RecordBox(Box parent, Attribute<?> recordAttribute, Map</* field name */ String, Attribute<?>> attributes) {
+    RecordBox(Box parent, Attribute<Attribute<?>> recordAttribute, Map</* field name */ String, Attribute<?>> attributes) {
         this(Objects.requireNonNull(parent).getUnit(), recordAttribute, attributes);
     }
 
-    public Attribute<?> getRecordAttribute() {
+    public Attribute<Attribute<?>> getRecordAttribute() {
         return recordAttribute;
     }
+
 
     @Override
     public String toString() {
@@ -38,6 +39,7 @@ public class RecordBox extends Box {
         sb.append("record-attribute='").append(recordAttribute.getName()).append('\'');
         sb.append(", attribute-alias='").append(recordAttribute.getAlias()).append('\'');
         sb.append(", ").append(super.toString());
+        sb.append("}");
         return sb.toString();
     }
 }
