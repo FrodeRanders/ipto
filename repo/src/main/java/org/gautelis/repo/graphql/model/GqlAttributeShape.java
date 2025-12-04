@@ -3,13 +3,13 @@ package org.gautelis.repo.graphql.model;
 /*
  * enum Attributes @attributeRegistry {
  *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
- *     dcTitle @attribute(id: 1, datatype: STRING, array: false, name: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
+ *     title @attribute(id: 1, datatype: STRING, array: false, name: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
  *     ...
  *     shipmentId  @attribute(id: 1004, datatype: STRING)
  *     shipment    @attribute(id: 1099, datatype: RECORD, array: false)
  * }
  *
- * dcTitle @attribute(id: 1, datatype: STRING, array: false, name: "dc:title", qualname: "http:...", description: "...")
+ * title @attribute(id: 1, datatype: STRING, array: false, name: "dc:title", qualname: "http:...", description: "...")
  *     ^                  ^              ^              ^               ^                    ^                       ^
  *     | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
  */

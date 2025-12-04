@@ -241,6 +241,7 @@ public class Configurator {
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint
     ) {
+        Map<String, GqlAttributeShape> attributes = gqlViewpoint.attributes();
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
         Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
@@ -261,15 +262,31 @@ public class Configurator {
                     //CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
+                    final String backingAttributeName = field.usedAttributeName();
                     final String fieldType = field.gqlTypeRef();
                     //final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
                     final boolean isMandatory = field.isMandatory();
 
+                    String attributeNameForField = null;
+                    for (GqlAttributeShape shape : attributes.values()) {
+                        if (shape.name.equals(backingAttributeName)) {
+                            attributeNameForField = shape.alias; // may be same as fieldName
+                        }
+                    }
+
+                    GqlAttributeShape attributeShape = attributes.get(attributeNameForField);
+                    boolean isRecord = AttributeType.RECORD.name().equalsIgnoreCase(attributeShape.typeName);
+
                     //log.debug("Wiring field '{}' for record '{}'", fieldName, typeName);
 
                     final List<String> fieldNames = new ArrayList<>();
-                    fieldNames.add(fieldName);
+
+                    if (null != attributeNameForField && !attributeNameForField.isEmpty()) {
+                        fieldNames.add(attributeNameForField);
+                    } else {
+                        fieldNames.add(fieldName);
+                    }
 
                     GqlUnionShape union = gqlUnions.get(fieldType);
                     if (null != union) {
@@ -306,24 +323,46 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute '{}' from record '{}': {}", isArray ? fieldName + "[]" : fieldName, typeName, box.getUnit().getReference());
+                        log.trace("Fetching {}attribute '{}' from record '{}': {}",
+                                isRecord ? "record " : "",
+                                isArray ? fieldName + "[]" : fieldName,
+                                typeName, box.getUnit().getReference());
 
-                        if (box instanceof RecordBox recordBox) {
-                            if (isArray) {
-                                return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
+                        if (isRecord) {
+                            if (box instanceof RecordBox recordBox) {
+                                if (isArray) {
+                                    return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
+                                } else {
+                                    return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
+                                }
+                            } else if (box instanceof AttributeBox attributeBox) { // as is UnitBox
+                                if (isArray) {
+                                    return runtimeService.getAttributeArray(fieldNames, attributeBox);
+                                } else {
+                                    return runtimeService.getAttributeScalar(fieldNames, attributeBox);
+                                }
                             } else {
-                                return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
+                                log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                                return null;
                             }
                         }
-                        else if (box instanceof AttributeBox attributeBox) {
-                            if (isArray) {
-                                return runtimeService.getAttributeArray(fieldNames, attributeBox);
+                        else {
+                            if (box instanceof RecordBox recordBox) {
+                                if (isArray) {
+                                    return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
+                                } else {
+                                    return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
+                                }
+                            } else if (box instanceof AttributeBox attributeBox) { // as is UnitBox
+                                if (isArray) {
+                                    return runtimeService.getAttributeArray(fieldNames, attributeBox);
+                                } else {
+                                    return runtimeService.getAttributeScalar(fieldNames, attributeBox);
+                                }
                             } else {
-                                return runtimeService.getAttributeScalar(fieldNames, attributeBox);
+                                log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                                return null;
                             }
-                        } else {
-                            log.warn("Unknown box: {}", box.getClass().getCanonicalName());
-                            return null;
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
@@ -365,6 +404,7 @@ public class Configurator {
                     CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
+                    final String backingAttributeName = field.usedAttributeName();
                     final String fieldType = field.gqlTypeRef();
                     final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
@@ -372,6 +412,9 @@ public class Configurator {
 
                     final List<String> fieldNames = new ArrayList<>();
                     fieldNames.add(fieldName);
+                    if (!fieldName.equals(backingAttributeName)) {
+                        fieldNames.add(backingAttributeName);
+                    }
 
                     GqlUnionShape union = gqlUnions.get(fieldType);
                     if (null != union) {

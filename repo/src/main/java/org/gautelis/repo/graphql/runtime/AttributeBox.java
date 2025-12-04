@@ -84,7 +84,7 @@ public class AttributeBox extends Box {
         sb.append(", attributes=[");
         for (Map.Entry<String, Attribute<?>> entry : attributesByFieldName.entrySet()) {
             Attribute<?> attribute = entry.getValue();
-            sb.append(attribute).append(" ");
+            sb.append(attribute).append(", ");
         }
         sb.append("]");
         return sb.toString();

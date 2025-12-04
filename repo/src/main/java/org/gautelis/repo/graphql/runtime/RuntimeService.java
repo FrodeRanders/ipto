@@ -157,11 +157,6 @@ public class RuntimeService {
                 // Primitive attribute
                 boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
             } else {
-                Map</* field name */ String, Attribute<?>> childAttributes = new HashMap<>();
-                child.getValueVector().forEach(val -> {
-                    // TODO
-                });
-
                 @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
                 Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;
                 boxes.add(new /* inner */ RecordBox(/* outer */ box,  childAsRecord, Map.of(child.getAlias(), child)));
@@ -236,11 +231,6 @@ public class RuntimeService {
                 // Primitive attribute
                 boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
             } else {
-                Map</* field name */ String, Attribute<?>> childAttributes = new HashMap<>();
-                child.getValueVector().forEach(val -> {
-                    // TODO
-                });
-
                 @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
                 Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;
                 boxes.add(new /* inner */ RecordBox(/* outer */ box,  childAsRecord, Map.of(child.getAlias(), child)));
