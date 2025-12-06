@@ -303,6 +303,7 @@ public class PerformanceTest {
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
         System.out.println("Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
+        System.out.println("*** If this is run immediately after PostgreSQL startup and without warm-up, the statistics will not be accurate!");
         System.out.flush();
 
         RunningStatistics storeStats = new RunningStatistics();

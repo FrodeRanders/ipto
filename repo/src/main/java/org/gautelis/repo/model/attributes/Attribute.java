@@ -35,6 +35,9 @@ import java.util.ArrayList;
 public class Attribute<T> {
     private static final Logger log = LoggerFactory.getLogger(Attribute.class);
 
+    public static final int INVALID_ATTRID = -1;
+    private static final long INVALID_VALUEID = -1L;
+
     public record Reference(int id, String name) {}
 
     // Attribute related
@@ -46,7 +49,7 @@ public class Attribute<T> {
     // Instance (value) related
     private int unitVersionFrom = 1;
     private int unitVersionTo = 1;
-    private long valueId = -1L; // initially invalid
+    private long valueId = INVALID_VALUEID; // initially invalid
     private Value<T> value = null;
 
     /**

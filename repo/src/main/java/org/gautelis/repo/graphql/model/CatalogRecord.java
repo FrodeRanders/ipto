@@ -5,13 +5,21 @@ import java.util.Collections;
 import java.util.List;
 
 public class CatalogRecord {
-    public final int recordAttrId;
+    public int recordAttrId;
     public final String recordName;
     private final List<CatalogAttribute> fields = new ArrayList<>();
 
     public CatalogRecord(int recordAttrid, String recordName) {
         this.recordAttrId = recordAttrid;
         this.recordName = recordName;
+    }
+
+    public CatalogRecord(String recordName) {
+        this(-1, recordName);
+    }
+
+    public void setRecordId(int recordId) {
+        this.recordAttrId = recordId;
     }
 
     public void addField(CatalogAttribute field) {

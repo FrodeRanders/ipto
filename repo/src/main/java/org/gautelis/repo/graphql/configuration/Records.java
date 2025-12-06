@@ -90,7 +90,6 @@ public final class Records {
             if (null != recordAttributeName && !recordAttributeName.isEmpty()) {
                 GqlAttributeShape recordAttributeDef = attributes.get(recordAttributeName);
                 if (null != recordAttributeDef) {
-                    final int recordAttributeId = recordAttributeDef.attrId;
                     final String catalogAttributeName = recordAttributeDef.name;
 
                     List<GqlFieldShape> recordFields = new ArrayList<>();
@@ -158,7 +157,7 @@ public final class Records {
         // )
         //
         // repo_record_template (
-        //    recordid  INT NOT NULL,  -- from @record(attribute: …)
+        //    recordid  INT NOT NULL,
         //    name      TEXT NOT NULL, -- type name
         // )
         //
@@ -212,9 +211,13 @@ public final class Records {
                                 currentRecord = new CatalogRecord(recordId, recordName);
                             }
 
-                            currentRecord.addField(
-                                    new CatalogAttribute(recordFieldAttrId, alias, recordFieldAttrName, recordFieldQualname, AttributeType.of(recordFieldAttrType), isArray)
+                            CatalogAttribute attribute = new CatalogAttribute(
+                                    alias, recordFieldAttrName,
+                                    recordFieldQualname, AttributeType.of(recordFieldAttrType),
+                                    isArray
                             );
+                            attribute.setAttrId(recordFieldAttrId);
+                            currentRecord.addField(attribute);
                         }
                         if (currentRecord != null) catalogRecords.add(currentRecord); // flush last one
 

@@ -3,6 +3,7 @@ package org.gautelis.repo.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.TypeResolver;
 import graphql.schema.idl.errors.StrictModeWiringException;
+import org.gautelis.repo.exceptions.ConfigurationException;
 import org.gautelis.repo.graphql.runtime.AttributeBox;
 import org.gautelis.repo.graphql.runtime.RecordBox;
 import tools.jackson.databind.ObjectMapper;
@@ -27,6 +28,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.io.Reader;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -40,7 +43,7 @@ public class Configurator {
             Map<String, GqlDatatypeShape> datatypes,
             Map<String, GqlAttributeShape> attributes,
             Map<String, GqlRecordShape> records,
-            Map<String, GqlUnitShape> units,
+            Map<String, GqlUnitTemplateShape> units,
             Map<String, GqlUnionShape> unions,
             Map<String, GqlOperationShape> operations
     ) {}
@@ -49,7 +52,7 @@ public class Configurator {
             Map<String, CatalogDatatype> datatypes,
             Map<String, CatalogAttribute> attributes,
             Map<String, CatalogRecord> records,
-            Map<String, CatalogUnit> units
+            Map<String, CatalogUnitTemplate> units
     ) {}
 
     private Configurator() {
@@ -113,7 +116,7 @@ public class Configurator {
         Map<String, GqlDatatypeShape> datatypes = Datatypes.derive(registry);
         Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
         Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
-        Map<String, GqlUnitShape> templates = Templates.derive(registry, attributes);
+        Map<String, GqlUnitTemplateShape> templates = UnitTemplates.derive(registry, attributes);
         Map<String, GqlUnionShape> unions = Unions.derive(registry, attributes, records);
         Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
 
@@ -124,7 +127,7 @@ public class Configurator {
         Map<String, CatalogDatatype> datatypes = Datatypes.read(repo);
         Map<String, CatalogAttribute> attributes = Attributes.read(repo);
         Map<String, CatalogRecord> records = Records.read(repo);
-        Map<String, CatalogUnit> templates = Templates.read(repo);
+        Map<String, CatalogUnitTemplate> templates = UnitTemplates.read(repo);
 
         return new CatalogViewpoint(datatypes, attributes, records, templates);
     }
@@ -170,7 +173,13 @@ public class Configurator {
                 log.warn("Record '{}' not found in catalog", key);
                 progress.println("Record '" + key + "' not found in catalog");
 
-                CatalogRecord record = addRecord(repo, gqlViewpoint.records().get(key), gqlViewpoint.attributes(), progress);
+                CatalogRecord record = addRecord(
+                        repo,
+                        gqlViewpoint.records().get(key),
+                        gqlViewpoint.attributes(),
+                        catalogViewpoint.attributes(),
+                        progress
+                );
                 catalogViewpoint.records().put(key, record); // replace
                 continue;
             }
@@ -188,17 +197,28 @@ public class Configurator {
                 log.warn("Unit template '{}' not found in catalog", key);
                 progress.println("Unit template '" + key + "' not found in catalog");
 
-                CatalogUnit template = addTemplate(repo, gqlViewpoint.units.get(key), gqlViewpoint.attributes(), progress);
+                CatalogUnitTemplate template = addUnitTemplate(
+                        repo,
+                        gqlViewpoint.units.get(key),
+                        gqlViewpoint.attributes(),
+                        catalogViewpoint.attributes(),
+                        progress
+                );
                 catalogViewpoint.units().put(key, template); // replace
                 continue;
             }
-            GqlUnitShape gqlTemplate = gqlViewpoint.units.get(key);
-            CatalogUnit iptoTemplate = catalogViewpoint.units().get(key);
+            GqlUnitTemplateShape gqlTemplate = gqlViewpoint.units.get(key);
+            CatalogUnitTemplate iptoTemplate = catalogViewpoint.units().get(key);
 
             if (!gqlTemplate.equals(iptoTemplate)) {
                 log.error("GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
                 progress.println("GraphQL SDL and catalog template do not match: " + gqlTemplate +  " != " + iptoTemplate);
             }
+        }
+
+        if (log.isTraceEnabled()) {
+            dump(gqlViewpoint, progress);
+            dump(catalogViewpoint, progress);
         }
     }
 
@@ -244,11 +264,11 @@ public class Configurator {
         Map<String, GqlAttributeShape> attributes = gqlViewpoint.attributes();
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
-        Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
+        //Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
 
         for (String key : gqlRecords.keySet()) {
             GqlRecordShape gqlRecord = gqlRecords.get(key);
-            CatalogRecord iptoRecord = iptoRecords.get(key);
+            //CatalogRecord iptoRecord = iptoRecords.get(key);
 
             final String typeName = gqlRecord.typeName();
 
@@ -384,12 +404,12 @@ public class Configurator {
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
 
-        Map<String, GqlUnitShape> gqlTemplates = gqlViewpoint.units();
-        Map<String, CatalogUnit> iptoTemplates = catalogViewpoint.units();
+        Map<String, GqlUnitTemplateShape> gqlTemplates = gqlViewpoint.units();
+        Map<String, CatalogUnitTemplate> iptoTemplates = catalogViewpoint.units();
 
         for (String key : gqlTemplates.keySet()) {
-            GqlUnitShape gqlTemplate = gqlTemplates.get(key);
-            CatalogUnit iptoTemplate = iptoTemplates.get(key);
+            GqlUnitTemplateShape gqlTemplate = gqlTemplates.get(key);
+            CatalogUnitTemplate iptoTemplate = iptoTemplates.get(key);
 
             final String typeName = gqlTemplate.typeName();
 
@@ -654,8 +674,8 @@ public class Configurator {
 
     private static CatalogAttribute addAttribute(Repository repo, GqlAttributeShape gqlAttribute, PrintStream progress) {
 
+        // NOTE: attribute.attrId is adjusted later, after writing to repo_attribute
         CatalogAttribute attribute = new CatalogAttribute(
-                gqlAttribute.attrId,
                 gqlAttribute.alias,
                 gqlAttribute.name,
                 gqlAttribute.qualName,
@@ -664,8 +684,8 @@ public class Configurator {
         );
 
         String sql = """
-            INSERT INTO repo_attribute (attrid, attrtype, scalar, attrname, qualname, alias)
-            VALUES (?,?,?,?,?,?)
+            INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias)
+            VALUES (?,?,?,?,?)
             """;
 
         try {
@@ -673,17 +693,28 @@ public class Configurator {
                 try {
                     conn.setAutoCommit(false);
 
-                    Database.usePreparedStatement(conn, sql, pStmt -> {
+                    String[] generatedColumns = { "attrid" };
+                    try (PreparedStatement pStmt = conn.prepareStatement(sql, generatedColumns)) {
                         int i = 0;
-                        pStmt.setInt(++i, attribute.attrId());
                         pStmt.setInt(++i, attribute.attrType().getType());
                         pStmt.setBoolean(++i, !attribute.isArray()); // Note negation
                         pStmt.setString(++i, attribute.attrName());
                         pStmt.setString(++i, attribute.qualifiedName());
                         pStmt.setString(++i, attribute.alias());
 
-                        Database.execute(pStmt);
-                    });
+                        Database.executeUpdate(pStmt);
+
+                        try (ResultSet rs = pStmt.getGeneratedKeys()) {
+                            if (rs.next()) {
+                                int attriId = rs.getInt(1);
+                                attribute.setAttrId(attriId);
+                            } else {
+                                String info = "Failed to determine auto-generated attribute ID";
+                                log.error(info); // This is nothing we can recover from
+                                throw new ConfigurationException(info);
+                            }
+                        }
+                    }
 
                     conn.commit();
                     log.info("Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
@@ -714,25 +745,27 @@ public class Configurator {
         return attribute;
     }
 
-    private static CatalogRecord addRecord(Repository repo, GqlRecordShape gqlRecord, Map<String, GqlAttributeShape> gqlAttributes, PrintStream progress) {
+    private static CatalogRecord addRecord(Repository repo, GqlRecordShape gqlRecord, Map<String, GqlAttributeShape> gqlAttributes, Map<String, CatalogAttribute> catalogAttributes, PrintStream progress) {
 
         String recordName = gqlRecord.typeName();
         String recordAttributeName = gqlRecord.attributeEnumName();
         List<GqlFieldShape> fields = gqlRecord.fields();
 
         // Determine attrId of record attribute
-        GqlAttributeShape recordAttribute = gqlAttributes.get(recordAttributeName);
+        CatalogAttribute recordAttribute = catalogAttributes.get(recordAttributeName);
         if (null == recordAttribute) {
-            log.warn("No matching record attribute: {}", recordAttributeName);
+            log.warn("No matching record attribute in catalog: {}", recordAttributeName);
             throw new RuntimeException("No matching record attribute: " + recordAttributeName);
         }
 
-        int recordId = recordAttribute.attrId;
-        CatalogRecord catalogRecord = new CatalogRecord(recordId, recordName);
+        final int recordAttributeId = recordAttribute.attrId();
+
+        CatalogRecord catalogRecord = new CatalogRecord(recordName);
+        catalogRecord.setRecordId(recordAttributeId);
 
         // repo_record_template (
-        //    recordid  INT,  -- from @record(attribute: …)
-        //    name      TEXT, -- type name
+        //    recordid  INT,
+        //    name      TEXT,
         // )
         //
         // repo_record_template_elements (
@@ -744,7 +777,7 @@ public class Configurator {
         // )
         String recordSql = """
                         INSERT INTO repo_record_template (recordid, name)
-                        VALUES (?, ?)
+                        VALUES (?,?)
                         """;
 
         String elementsSql = """
@@ -759,10 +792,12 @@ public class Configurator {
                 try {
                     conn.setAutoCommit(false);
 
+                    // Table: repo_record_template
                     Database.usePreparedStatement(conn, recordSql, pStmt -> {
                         try {
-                            pStmt.setInt(1, catalogRecord.recordAttrId);
-                            pStmt.setString(2, catalogRecord.recordName);
+                            int i = 0;
+                            pStmt.setInt(++i, recordAttributeId);
+                            pStmt.setString(++i, catalogRecord.recordName);
 
                             Database.execute(pStmt);
 
@@ -779,6 +814,7 @@ public class Configurator {
                         }
                     });
 
+                    // Table: repo_record_template_elements
                     Database.usePreparedStatement(conn, elementsSql, pStmt -> {
                         int idx = 0; // index into record
                         for (GqlFieldShape field : fields) {
@@ -790,14 +826,11 @@ public class Configurator {
                                 continue;
                             }
 
-                            CatalogAttribute attribute = new CatalogAttribute(
-                                    fieldAttribute.attrId,
-                                    field.fieldName(),
-                                    fieldAttribute.name,
-                                    fieldAttribute.qualName,
-                                    AttributeType.of(fieldAttribute.typeName),
-                                    field.isArray()
-                            );
+                            CatalogAttribute attribute = catalogAttributes.get(field.fieldName());
+                            if (null == attribute) {
+                                log.warn("No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
+                                continue;
+                            }
 
                             //
                             pStmt.clearParameters();
@@ -843,13 +876,14 @@ public class Configurator {
         return catalogRecord;
     }
 
-    private static CatalogUnit addTemplate(Repository repo, GqlUnitShape gqlTemplate, Map<String, GqlAttributeShape> gqlAttributes, PrintStream progress) {
+    private static CatalogUnitTemplate addUnitTemplate(Repository repo, GqlUnitTemplateShape gqlUnitTemplate, Map<String, GqlAttributeShape> _gqlAttributes, Map<String, CatalogAttribute> catalogAttributes, PrintStream progress) {
 
-        CatalogUnit template = new CatalogUnit(gqlTemplate.templateId(), gqlTemplate.typeName());
+        // NOTE: template.templateId is adjusted later, after writing to repo_unit_template
+        CatalogUnitTemplate template = new CatalogUnitTemplate(gqlUnitTemplate.typeName());
 
         String templateSql = """
-                        INSERT INTO repo_unit_template (templateid, name)
-                        VALUES (?, ?)
+                        INSERT INTO repo_unit_template (name)
+                        VALUES (?)
                         """;
 
         String elementsSql = """
@@ -862,45 +896,36 @@ public class Configurator {
                 try {
                     conn.setAutoCommit(false);
 
-                    Database.usePreparedStatement(conn, templateSql, pStmt -> {
-                        try {
-                            pStmt.setInt(1, template.templateId);
-                            pStmt.setString(2, template.templateName);
+                    // Table: repo_unit_template
+                    String[] generatedColumns = { "templateid" };
+                    try (PreparedStatement pStmt = conn.prepareStatement(templateSql, generatedColumns)) {
+                        int i = 0;
+                        pStmt.setString(++i, template.templateName);
 
-                            Database.execute(pStmt);
+                        Database.executeUpdate(pStmt);
 
-                        } catch (SQLException sqle) {
-                            String sqlState = sqle.getSQLState();
-                            conn.rollback();
-
-                            if (sqlState.startsWith("23")) {
-                                // 23505 : duplicate key value violates unique constraint "repo_unit_template_pk"
-                                log.info("Unit template '{}' seems to already have been loaded", template.templateName);
+                        try (ResultSet rs = pStmt.getGeneratedKeys()) {
+                            if (rs.next()) {
+                                int templateId = rs.getInt(1);
+                                template.setTemplateId(templateId);
                             } else {
-                                throw sqle;
+                                String info = "Failed to determine auto-generated unit template ID";
+                                log.error(info); // This is nothing we can recover from
+                                throw new ConfigurationException(info);
                             }
                         }
-                    });
+                    }
 
+                    // Table: repo_unit_template_elements
                     Database.usePreparedStatement(conn, elementsSql, pStmt -> {
                         int idx = 0; // index into record
-                        for (GqlFieldShape field : gqlTemplate.fields()) {
+                        for (GqlFieldShape field : gqlUnitTemplate.fields()) {
                             // Determine attrId of field in record
-                            GqlAttributeShape fieldAttribute = gqlAttributes.get(field.fieldName());
-                            if (null == fieldAttribute) {
-                                log.warn("No matching field attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
+                            CatalogAttribute attribute  = catalogAttributes.get(field.fieldName());
+                            if (null == attribute) {
+                                log.warn("No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
-                            //int fieldAttrId = fieldAttribute.attrId;
-
-                            CatalogAttribute attribute = new CatalogAttribute(
-                                fieldAttribute.attrId,
-                                field.fieldName(),
-                                fieldAttribute.name,
-                                fieldAttribute.qualName,
-                                AttributeType.of(fieldAttribute.typeName),
-                                fieldAttribute.isArray
-                            );
 
                             //
                             pStmt.clearParameters();
@@ -969,8 +994,8 @@ public class Configurator {
         }
         out.println();
 
-        out.println("--- Units ---");
-        for (Map.Entry<String, GqlUnitShape> entry : gql.units().entrySet()) {
+        out.println("--- Unit templates ---");
+        for (Map.Entry<String, GqlUnitTemplateShape> entry : gql.units().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
@@ -1011,8 +1036,8 @@ public class Configurator {
         }
         out.println();
 
-        out.println("--- Units ---");
-        for (Map.Entry<String, CatalogUnit> entry : ipto.units().entrySet()) {
+        out.println("--- Unit templates ---");
+        for (Map.Entry<String, CatalogUnitTemplate> entry : ipto.units().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();

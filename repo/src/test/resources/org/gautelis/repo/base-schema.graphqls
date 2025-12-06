@@ -19,7 +19,6 @@ All of the following types are defined using these attributes.
 """
 directive @attributeRegistry on ENUM
 directive @attribute(
-    id:       Int!
     datatype: DataTypes!
     array:    Boolean = true # is capable of handling arrays
     name:     String = null
@@ -37,7 +36,7 @@ various ways to represent compounds, such as an address. Records
 are used to define units.
 """
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @unit(id: Int, name: String) on OBJECT # either id or name
+directive @unit(name: String) on OBJECT
 directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################

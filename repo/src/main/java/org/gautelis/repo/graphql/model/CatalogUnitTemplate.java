@@ -4,14 +4,22 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CatalogUnit {
-    public final int templateId;
+public class CatalogUnitTemplate {
+    public int templateId;
     public final String templateName;
     private final List<CatalogAttribute> fields = new ArrayList<>();
 
-    public CatalogUnit(int templateId, String templateName) {
+    public CatalogUnitTemplate(int templateId, String templateName) {
         this.templateId = templateId;
         this.templateName = templateName;
+    }
+
+    public CatalogUnitTemplate(String templateName) {
+        this(-1, templateName);
+    }
+
+    public void setTemplateId(int templateId) {
+        this.templateId = templateId;
     }
 
     public void addField(CatalogAttribute field) {
@@ -24,7 +32,7 @@ public class CatalogUnit {
 
     @Override
     public String toString() {
-        String info = "CatalogTemplate{";
+        String info = "CatalogUnitTemplate{";
         info += "template-id=" + templateId;
         info += ", template-name='" + templateName + '\'';
         info += ", fields=[";

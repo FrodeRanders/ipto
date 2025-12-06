@@ -3,16 +3,10 @@ package org.gautelis.repo.graphql.model;
 import java.util.List;
 
 /*
- * type PurchaseOrder @unit(id: 42) {
+ * type PurchaseOrder @unit {
  *    orderId  : String    @use(attribute: ORDER_ID)  <-- a FIELD in this unit
  *    ...
  * }
- *
- * type PurchaseOrder @unit(id: 42) {
- *             ^                 ^
- *             | (a)             | (b)
- *
- * -or-
  *
  * type PurchaseOrder @unit(name: Order) {
  *             ^                   ^
@@ -20,25 +14,21 @@ import java.util.List;
  *
  * Details about individual fields are found in GqlFieldShape
  */
-public record GqlUnitShape(
+public record GqlUnitTemplateShape(
         String typeName,           // (a)
-        int templateId,            // (b)
         String templateName,       // (c)
         List<GqlFieldShape> fields
 ) {
-    public boolean equals(CatalogUnit other) {
-        return typeName.equals(other.templateName)
-            && templateId == other.templateId;
+    public boolean equals(CatalogUnitTemplate other) {
+        return typeName.equals(other.templateName);
     }
 
     @Override
     public String toString() {
-        String info = "GqlUnitShape{";
+        String info = "GqlUnitTemplateShape{";
         info += "type-name='" + typeName + '\'';
         if (null != templateName) {
             info += ", template-name=" + templateName;
-        } else {
-            info += ", template-id=" + templateId;
         }
         info += ", fields=[";
         for (GqlFieldShape field : fields) {

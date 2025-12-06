@@ -29,15 +29,15 @@ public final class Attributes {
     /*
      * enum Attributes @attributeRegistry {
      *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-     *     dcTitle @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
+     *     title @attribute(datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
      *     ...
-     *     shipmentId  @attribute(id: 1004, datatype: STRING)
-     *     shipment    @attribute(id: 1099, datatype: RECORD, array: false)
+     *     shipmentId  @attribute(datatype: STRING)
+     *     shipment    @attribute(datatype: RECORD, array: false)
      * }
      *
-     * dcTitle @attribute(id: 1, datatype: STRING, array: false, alias: "dc:title", qualname: "http:...", description: "...")
-     *     ^                  ^              ^              ^               ^                    ^                       ^
-     *     | (a)              | (b)          | (c)          | (d)           | (e)                | (f)                   | (g)
+     * title @attribute(datatype: STRING, array: false, alias: "dc:title", qualname: "http:...", description: "...")
+     *   ^                          ^              ^               ^                    ^                       ^
+     *   | (a)                      | (c)          | (d)           | (e)                | (f)                   | (g)
      */
     static Map<String, GqlAttributeShape> derive(TypeDefinitionRegistry registry, Map<String, GqlDatatypeShape> datatypes) {
         Map<String, GqlAttributeShape> attributes = new HashMap<>();
@@ -53,17 +53,9 @@ public final class Attributes {
 
                         List<Directive> enumValueDirectives = enumValueDefinition.getDirectives();
                         for (Directive enumValueDirective : enumValueDirectives) {
-                            // --- (b) ---
-                            int attrId = -1; // INVALID
-                            Argument arg = enumValueDirective.getArgument("id");
-                            if (null != arg) {
-                                IntValue _id = (IntValue) arg.getValue();
-                                attrId = _id.getValue().intValue();
-                            }
-
                             // --- (c*) type, converted to name later ---
                             int attrType = -1; // INVALID
-                            arg = enumValueDirective.getArgument("datatype");
+                            Argument arg = enumValueDirective.getArgument("datatype");
                             if (null != arg) {
                                 EnumValue datatype = (EnumValue) arg.getValue();
                                 GqlDatatypeShape dataTypeDef = datatypes.get(datatype.getName());
@@ -116,20 +108,18 @@ public final class Attributes {
                                 description = vector.getValue();
                             }
 
-                            if (/* VALID? */ attrId > 0) {
-                                for (Map.Entry<String, GqlDatatypeShape> entry : datatypes.entrySet()) {
-                                    if (entry.getValue().id == attrType) {
-                                        // --- (c) ---
-                                        String attrTypeName = entry.getValue().name;
+                            for (Map.Entry<String, GqlDatatypeShape> entry : datatypes.entrySet()) {
+                                if (entry.getValue().id == attrType) {
+                                    // --- (c) ---
+                                    String attrTypeName = entry.getValue().name;
 
-                                        //
-                                        GqlAttributeShape attributeShape =
-                                                new GqlAttributeShape(
-                                                    fieldNameInSchema, attrId, attrTypeName, isArray,
-                                                    nameInIpto, qualName, description
-                                                );
-                                        attributes.put(fieldNameInSchema, attributeShape);
-                                    }
+                                    //
+                                    GqlAttributeShape attributeShape =
+                                            new GqlAttributeShape(
+                                                fieldNameInSchema, attrTypeName, isArray,
+                                                nameInIpto, qualName, description
+                                            );
+                                    attributes.put(fieldNameInSchema, attributeShape);
                                 }
                             }
                         }
@@ -165,16 +155,15 @@ public final class Attributes {
                             int attributeTypeId = rs.getInt("attrtype");
                             boolean isArray = !rs.getBoolean("scalar"); // Note negation
 
-                            attributes.put(alias,
-                                    new CatalogAttribute(
-                                        attributeId,
-                                        alias,
-                                        attributeName,
-                                        qualifiedName,
-                                        AttributeType.of(attributeTypeId),
-                                        isArray
-                                    )
+                            CatalogAttribute attribute = new CatalogAttribute(
+                                    alias,
+                                    attributeName,
+                                    qualifiedName,
+                                    AttributeType.of(attributeTypeId),
+                                    isArray
                             );
+                            attribute.setAttrId(attributeId);
+                            attributes.put(alias, attribute);
                         }
                     }
                 });

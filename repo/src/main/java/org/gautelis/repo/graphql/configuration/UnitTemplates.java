@@ -3,7 +3,6 @@ package org.gautelis.repo.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.repo.db.Database;
-import org.gautelis.repo.exceptions.Stacktrace;
 import org.gautelis.repo.graphql.model.*;
 import org.gautelis.repo.graphql.model.TypeDefinition;
 import org.gautelis.repo.model.AttributeType;
@@ -19,27 +18,27 @@ import java.util.List;
 import java.util.Map;
 
 
-public final class Templates {
-    private static final Logger log = LoggerFactory.getLogger(Templates.class);
+public final class UnitTemplates {
+    private static final Logger log = LoggerFactory.getLogger(UnitTemplates.class);
 
-    private Templates() {}
+    private UnitTemplates() {}
 
     /*
-     * type PurchaseOrder @unit(id: 42) {
+     * type PurchaseOrder @unit {
      *    orderId  : String    @use(attribute: ORDER_ID)
      *    shipment : Shipment! @use(attribute: SHIPMENT)
      * }
      *
-     * type PurchaseOrder @unit(id: 42) {
-     *             ^                 ^
-     *             | (a)             | (b)
+     * type PurchaseOrder @unit(name: purchase_order) {
+     *             ^                    ^
+     *             | (a)                | (b)
      *
      *    orderId  : String    @use(attribute: ORDER_ID)
      *     ^           ^                         ^
      *     | (c)       | (d)                     | (e)
      */
-    static Map<String, GqlUnitShape> derive(TypeDefinitionRegistry registry, Map<String, GqlAttributeShape> attributes) {
-        Map<String, GqlUnitShape> units = new HashMap<>();
+    static Map<String, GqlUnitTemplateShape> derive(TypeDefinitionRegistry registry, Map<String, GqlAttributeShape> attributes) {
+        Map<String, GqlUnitTemplateShape> units = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             // --- (a) ---
@@ -61,24 +60,17 @@ public final class Templates {
             }
 
             // --- (b) ---
-            int templateId = -1; // INVALID
             String templateName = null; // INVALID
 
             for (Directive directive : unitDirectivesOnType) {
-                Argument arg = directive.getArgument("id");
-                if (null != arg) {
-                    IntValue _id = (IntValue) arg.getValue();
-                    templateId = _id.getValue().intValue();
-                }
-
-                arg = directive.getArgument("name");
+                Argument arg = directive.getArgument("name");
                 if (null != arg) {
                     StringValue _name = (StringValue) arg.getValue();
                     templateName = _name.getValue();
                 }
             }
 
-            if (/* VALID? */ templateId > 0 || (null != templateName && !templateName.isEmpty())) {
+            if (null != templateName && !templateName.isEmpty()) {
                  List<GqlFieldShape> unitFields = new ArrayList<>();
 
                 // Handle field definitions on types
@@ -115,7 +107,7 @@ public final class Templates {
                         }
                     }
                 }
-                units.put(typeName, new GqlUnitShape(typeName, templateId, templateName, unitFields));
+                units.put(typeName, new GqlUnitTemplateShape(typeName, templateName, unitFields));
                 log.trace("Defining shape for {}: {}", typeName, units.get(typeName));
             }
         }
@@ -123,8 +115,8 @@ public final class Templates {
         return units;
     }
 
-    static Map<String, CatalogUnit> read(Repository repository) {
-        Map<String, CatalogUnit> templates = new HashMap<>();
+    static Map<String, CatalogUnitTemplate> read(Repository repository) {
+        Map<String, CatalogUnitTemplate> templates = new HashMap<>();
 
         // repo_unit_template (
         //    templateid INT,   -- from @unit(id: …)
@@ -153,10 +145,10 @@ public final class Templates {
             repository.withConnection(conn -> {
                 Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
                     try (ResultSet rs = pStmt.executeQuery()) {
-                        List<CatalogUnit> catalogTemplates = new ArrayList<>();
+                        List<CatalogUnitTemplate> catalogTemplates = new ArrayList<>();
 
                         Integer currentId = null;
-                        CatalogUnit currentTemplate = null;
+                        CatalogUnitTemplate currentTemplate = null;
 
                         while (rs.next()) {
                             // Template part
@@ -180,19 +172,19 @@ public final class Templates {
                                 // boundary => flush previous
                                 if (currentTemplate != null) catalogTemplates.add(currentTemplate);
                                 currentId = templateId;
-                                currentTemplate = new CatalogUnit(templateId, templateName);
+                                currentTemplate = new CatalogUnitTemplate(templateId, templateName);
                             }
 
-                            currentTemplate.addField(
-                                    new CatalogAttribute(
-                                            fieldAttrId, fieldAlias, fieldAttrName, fieldQualname,
-                                            AttributeType.of(fieldAttrType), isArray
-                                    )
+                            CatalogAttribute attribute = new CatalogAttribute(
+                                    fieldAlias, fieldAttrName, fieldQualname,
+                                    AttributeType.of(fieldAttrType), isArray
                             );
+                            attribute.setAttrId(fieldAttrId);
+                            currentTemplate.addField(attribute);
                         }
                         if (currentTemplate != null) catalogTemplates.add(currentTemplate); // flush last one
 
-                        for (CatalogUnit template : catalogTemplates) {
+                        for (CatalogUnitTemplate template : catalogTemplates) {
                             templates.put(template.templateName, template);
                         }
                     }
