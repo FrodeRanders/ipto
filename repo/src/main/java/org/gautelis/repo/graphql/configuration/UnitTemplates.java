@@ -48,14 +48,14 @@ public final class UnitTemplates {
             if ("query".equalsIgnoreCase(typeName)
                     || "mutation".equalsIgnoreCase(typeName)
                     || "subscription".equalsIgnoreCase(typeName)) {
-                log.debug("Ignoring type: {}", typeName);
+                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (unitDirectivesOnType.isEmpty()) {
-                log.debug("Ignoring type: {}", typeName);
+                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
@@ -108,7 +108,7 @@ public final class UnitTemplates {
                     }
                 }
                 units.put(typeName, new GqlUnitTemplateShape(typeName, templateName, unitFields));
-                log.trace("Defining shape for {}: {}", typeName, units.get(typeName));
+                log.trace("\u21af Defining shape for {}: {}", typeName, units.get(typeName));
             }
         }
 
@@ -191,7 +191,7 @@ public final class UnitTemplates {
                 });
             });
         } catch (SQLException sqle) {
-            log.error("Failed to load existing template: {}", Database.squeeze(sqle));
+            log.error("\u21af Failed to load existing template: {}", Database.squeeze(sqle));
         }
 
         return templates;

@@ -29,7 +29,7 @@ public final class BytesScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingSerializeException {
-                            log.trace("Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
+                            log.trace("\u2193 Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
                             if (dataFetcherResult instanceof byte[] b) {
                                 return ENC.encodeToString(b);
                             }
@@ -42,7 +42,7 @@ public final class BytesScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingParseValueException {
-                            log.trace("Parsing: {} of type {}", input, input.getClass().getName());
+                            log.trace("\u2193 Parsing: {} of type {}", input, input.getClass().getName());
                             try {
                                 return DEC.decode(input.toString());
                             } catch (IllegalArgumentException iae) {
@@ -57,7 +57,7 @@ public final class BytesScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingParseLiteralException {
-                            log.trace("Parsing literal: {} of type {}", input, input.getClass().getName());
+                            log.trace("\u2193 Parsing literal: {} of type {}", input, input.getClass().getName());
                             if (input instanceof graphql.language.StringValue sv) {
                                 return parseValue(sv.getValue(), graphQLContext, locale);
                             }

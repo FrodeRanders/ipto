@@ -14,7 +14,7 @@ public class UnitBox extends AttributeBox {
     UnitBox(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
         super(unit, attributes);
 
-        log.trace("Created {}", this);
+        log.trace("\u2193 Created {}", this);
     }
 
     /* package accessible only */

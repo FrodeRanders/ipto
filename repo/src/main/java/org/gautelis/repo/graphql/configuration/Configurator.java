@@ -84,7 +84,7 @@ public class Configurator {
                     default -> null;
                 };
                 if (null == operationType) {
-                    log.warn("Undefined operation type '{}' -- ignoring", otd.getName());
+                    log.warn("\u21af Undefined operation type '{}' -- ignoring", otd.getName());
                     continue;
                 }
                 operationTypes.put(otd.getTypeName().getName(), operationType);
@@ -137,14 +137,14 @@ public class Configurator {
         // --- Datatypes ---
         for (String key : gqlViewpoint.datatypes().keySet()) {
             if (!catalogViewpoint.datatypes().containsKey(key)) {
-                log.error("Datatype '{}' not found in catalog", key);
+                log.error("\u21af Datatype '{}' not found in catalog", key);
                 progress.println("Datatype '" + key + "' not found in catalog");
                 continue;
             }
             GqlDatatypeShape gqlDatatype = gqlViewpoint.datatypes().get(key);
             CatalogDatatype iptoDatatype = catalogViewpoint.datatypes().get(key);
             if (!gqlDatatype.equals(iptoDatatype)) {
-                log.error("GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
+                log.error("\u21af GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
                 progress.println("GraphQL SDL and catalog datatype do not match: " + gqlDatatype +  " != " + iptoDatatype);
             }
         }
@@ -152,7 +152,7 @@ public class Configurator {
         // Attributes
         for (String key : gqlViewpoint.attributes().keySet()) {
             if (!catalogViewpoint.attributes().containsKey(key)) {
-                log.warn("Attribute '{}' not found in catalog", key);
+                log.warn("\u21af Attribute '{}' not found in catalog", key);
                 progress.println("Attribute '" + key + "' not found in catalog");
 
                 CatalogAttribute attribute = addAttribute(repo, gqlViewpoint.attributes().get(key), progress);
@@ -162,7 +162,7 @@ public class Configurator {
             GqlAttributeShape gqlAttribute = gqlViewpoint.attributes().get(key);
             CatalogAttribute iptoAttribute = catalogViewpoint.attributes().get(key);
             if (!gqlAttribute.equals(iptoAttribute)) {
-                log.error("GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
+                log.error("\u21af GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
                 progress.println("GraphQL SDL and catalog attribute do not match: " + gqlAttribute +  " != " + iptoAttribute);
             }
         }
@@ -170,7 +170,7 @@ public class Configurator {
         // Records
         for (String key : gqlViewpoint.records().keySet()) {
             if (!catalogViewpoint.records().containsKey(key)) {
-                log.warn("Record '{}' not found in catalog", key);
+                log.warn("\u21af Record '{}' not found in catalog", key);
                 progress.println("Record '" + key + "' not found in catalog");
 
                 CatalogRecord record = addRecord(
@@ -186,7 +186,7 @@ public class Configurator {
             GqlRecordShape gqlRecord = gqlViewpoint.records().get(key);
             CatalogRecord iptoRecord = catalogViewpoint.records().get(key);
             if (!gqlRecord.equals(iptoRecord)) {
-                log.error("GraphQL SDL and catalog record do not match: {} != {}", gqlRecord, iptoRecord);
+                log.error("\u21af GraphQL SDL and catalog record do not match: {} != {}", gqlRecord, iptoRecord);
                 progress.println("GraphQL SDL and catalog record do not match: " + gqlRecord +  " != " + iptoRecord);
             }
         }
@@ -194,7 +194,7 @@ public class Configurator {
         // Templates
         for (String key : gqlViewpoint.units.keySet()) {
             if (!catalogViewpoint.units().containsKey(key)) {
-                log.warn("Unit template '{}' not found in catalog", key);
+                log.warn("\u21af Unit template '{}' not found in catalog", key);
                 progress.println("Unit template '" + key + "' not found in catalog");
 
                 CatalogUnitTemplate template = addUnitTemplate(
@@ -211,7 +211,7 @@ public class Configurator {
             CatalogUnitTemplate iptoTemplate = catalogViewpoint.units().get(key);
 
             if (!gqlTemplate.equals(iptoTemplate)) {
-                log.error("GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
+                log.error("\u21af GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
                 progress.println("GraphQL SDL and catalog template do not match: " + gqlTemplate +  " != " + iptoTemplate);
             }
         }
@@ -298,7 +298,7 @@ public class Configurator {
                     GqlAttributeShape attributeShape = attributes.get(attributeNameForField);
                     boolean isRecord = AttributeType.RECORD.name().equalsIgnoreCase(attributeShape.typeName);
 
-                    //log.debug("Wiring field '{}' for record '{}'", fieldName, typeName);
+                    //log.debug("↯ Wiring field '{}' for record '{}'", fieldName, typeName);
 
                     final List<String> fieldNames = new ArrayList<>();
 
@@ -313,7 +313,7 @@ public class Configurator {
                         // This field refers to a union type, so the
                         // actual instances will be of a union member type.
                         List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
-                        log.debug("Record '{}' contains a union field '{} : {}' with members {}",
+                        log.debug("\u21af Record '{}' contains a union field '{} : {}' with members {}",
                                 typeName, fieldName, union.unionName(), unionMemberTypes
                         );
 
@@ -322,7 +322,7 @@ public class Configurator {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("Adding alternative {} for union {}", memberType, union.unionName());
+                                    log.debug("\u21af Adding alternative {} for union {}", memberType, union.unionName());
                                     fieldNames.add(attributeEnumName);
                                 }
                             }
@@ -343,7 +343,7 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching {}attribute '{}' from record '{}': {}",
+                        log.trace("\u21a9 Fetching {}attribute '{}' from record '{}': {}",
                                 isRecord ? "record " : "",
                                 isArray ? fieldName + "[]" : fieldName,
                                 typeName, box.getUnit().getReference());
@@ -380,13 +380,13 @@ public class Configurator {
                                     return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                                 }
                             } else {
-                                log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                                log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
                                 return null;
                             }
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
-                    log.info("Wiring: {} > {}", typeName, fieldName);
+                    log.info("\u21af Wiring: {} > {}", typeName, fieldName);
                 }
 
                 return builder;
@@ -441,7 +441,7 @@ public class Configurator {
                         // This field refers to a union type, so the
                         // actual instances will be of a union member type.
                         List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
-                        log.debug("Record '{}' contains a union field '{} : {}' with members {}",
+                        log.debug("\u21af Record '{}' contains a union field '{} : {}' with members {}",
                                 typeName, fieldName, union.unionName(), unionMemberTypes
                         );
 
@@ -450,7 +450,7 @@ public class Configurator {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("Adding alternative {} for union {}", memberType, union.unionName());
+                                    log.debug("\u21af Adding alternative {} for union {}", memberType, union.unionName());
                                     fieldNames.add(attributeEnumName);
                                 }
                             }
@@ -471,10 +471,10 @@ public class Configurator {
                             return null;
                         }
 
-                        log.trace("Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
+                        log.trace("\u21a9 Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
 
                         if (box instanceof RecordBox recordBox) {
-                            log.debug("DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
+                            log.debug("\u21a9 DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
                             if (isArray) {
                                 return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
                             } else {
@@ -488,12 +488,12 @@ public class Configurator {
                                 return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                             }
                         } else {
-                            log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                            log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
                             return null;
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
-                    log.info("Wiring: {} > {}", typeName, fieldName);
+                    log.info("\u21af Wiring: {} > {}", typeName, fieldName);
                 }
 
                 return builder;
@@ -533,7 +533,7 @@ public class Configurator {
                             // now so it is captured for later.
                             //***********************************************************
                             if (log.isTraceEnabled()) {
-                                log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                             }
 
                             Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -551,7 +551,7 @@ public class Configurator {
                             // now so it is captured for later.
                             //***********************************************************
                             if (log.isTraceEnabled()) {
-                                log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                             }
 
                             Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -560,7 +560,7 @@ public class Configurator {
 
                         runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitById));
                     }
-                    log.info("Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                    log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
                 }
 
                 //
@@ -575,7 +575,7 @@ public class Configurator {
                             //***********************************************************
 
                             if (log.isTraceEnabled()) {
-                                log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                             }
 
                             Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -594,7 +594,7 @@ public class Configurator {
                             // now so it is captured for later.
                             //***********************************************************
                             if (log.isTraceEnabled()) {
-                                log.trace("{}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                             }
 
                             Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -604,7 +604,7 @@ public class Configurator {
 
                         runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitsByFilter));
                     }
-                    log.info("Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                    log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
                 }
             }
         }
@@ -631,12 +631,12 @@ public class Configurator {
             List<UnionMember> members = gqlUnion.members();
             for (UnionMember member : members) {
                 String memberName = member.memberType();
-                log.info("Wiring union: {} > {}", unionName, memberName);
+                log.info("\u21af Wiring union: {} > {}", unionName, memberName);
 
                 GqlRecordShape gqlRecord = gqlRecords.get(memberName);
                 String attributeAlias = gqlRecord.attributeEnumName();
 
-                log.trace("Union '{}': attribute alias '{}' => type '{}'", unionName, attributeAlias, gqlRecord.typeName());
+                log.trace("\u21af Union '{}': attribute alias '{}' => type '{}'", unionName, attributeAlias, gqlRecord.typeName());
                 aliasToTypeName.put(attributeAlias, gqlRecord.typeName());
             }
 
@@ -654,20 +654,20 @@ public class Configurator {
                     // now so it is captured for later.
                     //***********************************************************
                     Object value = env.getObject(); // box
-                    log.info("union wire: '{}' <- {}", unionName, value);
+                    log.info("\u21a9 Union: '{}' <- {}", unionName, value);
 
                     if (value instanceof RecordBox recordBox) {
                         String typeName = aliasToTypeName.get(recordBox.getRecordAttribute().getAlias());
                         return env.getSchema().getObjectType(typeName);
                     }
-                    log.warn("No resolver for union '{}': No (record) box: {}", unionName, value);
+                    log.warn("\u21a9 No resolver for union '{}': No (record) box: {}", unionName, value);
                     return null;
                 };
 
                 runtimeWiring.type(unionName,t -> t.typeResolver(unionResolver));
 
             } catch (StrictModeWiringException smwe) {
-                log.warn("Could not wire unions for type {}", unionName, smwe);
+                log.warn("\u21af Could not wire unions for type {}", unionName, smwe);
             }
         }
     }
@@ -709,7 +709,7 @@ public class Configurator {
                                 int attriId = rs.getInt(1);
                                 attribute.setAttrId(attriId);
                             } else {
-                                String info = "Failed to determine auto-generated attribute ID";
+                                String info = "\u21af Failed to determine auto-generated attribute ID";
                                 log.error(info); // This is nothing we can recover from
                                 throw new ConfigurationException(info);
                             }
@@ -717,10 +717,10 @@ public class Configurator {
                     }
 
                     conn.commit();
-                    log.info("Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
+                    log.info("\u21af Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
 
                 } catch (Throwable t) {
-                    log.error("Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, t.getMessage(), t);
+                    log.error("\u21af Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -728,12 +728,12 @@ public class Configurator {
                         try {
                             conn.rollback();
                         } catch (SQLException rbe) {
-                            log.error("Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint "repo_attribute_pk"
-                            log.info("Attribute '{}' ({}, '{}') seems to already have been loaded", attribute.alias(), attribute.attrId(), attribute.attrName());
+                            log.info("\u21af Attribute '{}' ({}, '{}') seems to already have been loaded", attribute.alias(), attribute.attrId(), attribute.attrName());
                         }
                     }
                 }
@@ -754,7 +754,7 @@ public class Configurator {
         // Determine attrId of record attribute
         CatalogAttribute recordAttribute = catalogAttributes.get(recordAttributeName);
         if (null == recordAttribute) {
-            log.warn("No matching record attribute in catalog: {}", recordAttributeName);
+            log.warn("\u21af No matching record attribute in catalog: {}", recordAttributeName);
             throw new RuntimeException("No matching record attribute: " + recordAttributeName);
         }
 
@@ -807,7 +807,7 @@ public class Configurator {
 
                             if (sqlState.startsWith("23")) {
                                 // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                                log.info("Record '{}' seems to already have been loaded", recordName);
+                                log.info("\u21af Record '{}' seems to already have been loaded", recordName);
                             } else {
                                 throw sqle;
                             }
@@ -822,13 +822,13 @@ public class Configurator {
                             GqlAttributeShape fieldAttribute = gqlAttributes.get(field.fieldName());
 
                             if (null == fieldAttribute) {
-                                log.warn("No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("\u21af No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
                             CatalogAttribute attribute = catalogAttributes.get(field.fieldName());
                             if (null == attribute) {
-                                log.warn("No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("\u21af No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
@@ -847,10 +847,10 @@ public class Configurator {
                     });
 
                     conn.commit();
-                    log.info("Loaded record '{}'", recordName);
+                    log.info("\u21af Loaded record '{}'", recordName);
 
                 } catch (Throwable t) {
-                    log.error("Failed to store record '{}': {}", recordName, t.getMessage(), t);
+                    log.error("\u21af Failed to store record '{}': {}", recordName, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -859,18 +859,18 @@ public class Configurator {
                             conn.rollback();
 
                         } catch (SQLException rbe) {
-                            log.error("Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                            log.info("Record '{}' seems to already have been loaded", recordName);
+                            log.info("\u21af Record '{}' seems to already have been loaded", recordName);
                         }
                     }
                 }
             });
         } catch (SQLException sqle) {
-            log.error("Failed to store record: {}", Database.squeeze(sqle));
+            log.error("\u21af Failed to store record: {}", Database.squeeze(sqle));
         }
 
         return catalogRecord;
@@ -909,7 +909,7 @@ public class Configurator {
                                 int templateId = rs.getInt(1);
                                 template.setTemplateId(templateId);
                             } else {
-                                String info = "Failed to determine auto-generated unit template ID";
+                                String info = "\u21af Failed to determine auto-generated unit template ID";
                                 log.error(info); // This is nothing we can recover from
                                 throw new ConfigurationException(info);
                             }
@@ -923,7 +923,7 @@ public class Configurator {
                             // Determine attrId of field in record
                             CatalogAttribute attribute  = catalogAttributes.get(field.fieldName());
                             if (null == attribute) {
-                                log.warn("No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("\u21af No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
@@ -942,10 +942,10 @@ public class Configurator {
                     });
 
                     conn.commit();
-                    log.info("Loaded unit template '{}'", template.templateName);
+                    log.info("\u21af Loaded unit template '{}'", template.templateName);
 
                 } catch (Throwable t) {
-                    log.error("Failed to store unit template '{}': {}", template.templateName, t.getMessage(), t);
+                    log.error("\u21af Failed to store unit template '{}': {}", template.templateName, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -954,18 +954,18 @@ public class Configurator {
                             conn.rollback();
 
                         } catch (SQLException rbe) {
-                            log.error("Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint
-                            log.info("Unit template '{}' seems to already have been loaded", template.templateName);
+                            log.info("\u21af Unit template '{}' seems to already have been loaded", template.templateName);
                         }
                     }
                 }
             });
         } catch (SQLException sqle) {
-            log.error("Failed to store template: {}", Database.squeeze(sqle));
+            log.error("\u21af Failed to store template: {}", Database.squeeze(sqle));
         }
 
         return template;

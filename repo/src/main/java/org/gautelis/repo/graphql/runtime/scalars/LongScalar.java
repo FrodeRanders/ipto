@@ -25,7 +25,7 @@ public final class LongScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingSerializeException {
-                            log.trace("Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
+                            log.trace("\u2193 Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
                             if (dataFetcherResult instanceof Number n)
                                 return n.toString();
                             throw new CoercingSerializeException("Expected Long but was " + dataFetcherResult);
@@ -37,7 +37,7 @@ public final class LongScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingParseValueException {
-                            log.trace("Parsing: {} of type {}", input, input.getClass().getName());
+                            log.trace("\u2193 Parsing: {} of type {}", input, input.getClass().getName());
                             if (input instanceof String str) {
                                 return Long.parseLong(str);
                             } else {
@@ -52,7 +52,7 @@ public final class LongScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingParseLiteralException {
-                            log.trace("Parsing literal: {} of type {}", input, input.getClass().getName());
+                            log.trace("\u2193 Parsing literal: {} of type {}", input, input.getClass().getName());
                             if (input instanceof graphql.language.IntValue iv) {
                                 return iv.getValue().longValue();
                             }

@@ -49,14 +49,14 @@ public final class Records {
             if ("query".equalsIgnoreCase(typeName)
              || "mutation".equalsIgnoreCase(typeName)
              || "subscription".equalsIgnoreCase(typeName)) {
-                log.debug("Ignoring type: {}", typeName);
+                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (!unitDirectivesOnType.isEmpty()) {
-                log.debug("Ignoring type: {}", typeName);
+                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
@@ -80,7 +80,7 @@ public final class Records {
                     recordAttributeName = attribute.name; // or even typeName
 
                 } else {
-                    String info = "Not a valid record definition: " + typeName;
+                    String info = "\u21af Not a valid record definition: " + typeName;
                     log.error(info);
                     System.out.println(info);
                     throw new ConfigurationException(info, new Exception("Synthetic exception"));
@@ -116,7 +116,7 @@ public final class Records {
                                     recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
                                     break; // In the unlikely case there are several @use
                                 } else {
-                                    log.debug("Not a valid record field definition (with @use): " + fieldName);
+                                    log.debug("\u21af Not a valid record field definition (with @use): " + fieldName);
                                 }
                             }
                         } else {
@@ -125,16 +125,16 @@ public final class Records {
                             if (null != attributeShape) {
                                 recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
                             } else {
-                                log.debug("Not a valid record field definition: " + fieldName);
+                                log.debug("\u21af Not a valid record field definition: " + fieldName);
                             }
                         }
                     }
 
                     records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, catalogAttributeName, recordFields));
-                    log.trace("Defining shape for {}: {}", typeName, records.get(typeName));
+                    log.trace("\u21af Defining shape for {}: {}", typeName, records.get(typeName));
                 }
             } else {
-                String info = "Not a valid record definition: " + typeName;
+                String info = "\u21af Not a valid record definition: " + typeName;
                 log.error(info);
                 System.out.println(info);
                 throw new ConfigurationException(info, new Exception("Synthetic exception"));
@@ -228,7 +228,7 @@ public final class Records {
                 });
             });
         } catch (SQLException sqle) {
-            log.error("Failed to load existing record: {}", Database.squeeze(sqle));
+            log.error("\u21af Failed to load existing record: {}", Database.squeeze(sqle));
         }
 
         return records;

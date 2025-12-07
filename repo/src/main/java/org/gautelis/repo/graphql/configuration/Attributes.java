@@ -62,7 +62,7 @@ public final class Attributes {
                                 if (null != dataTypeDef) {
                                     attrType = dataTypeDef.id;
                                 } else {
-                                    log.error("Not a valid datatype: {}", datatype.getName());
+                                    log.error("\u21af Not a valid datatype: {}", datatype.getName());
                                 }
                             } else {
                                 // If no datatype is specified, we assume this is a record
@@ -149,7 +149,7 @@ public final class Attributes {
                             String qualifiedName = rs.getString("qualname");
                             String alias = rs.getString("alias");
                             if (rs.wasNull()) {
-                                log.warn("No alias for attribute '{}'. This may break comparison.",  attributeName);
+                                log.warn("\u21af No alias for attribute '{}'. This may break comparison.",  attributeName);
                                 alias = attributeName;
                             }
                             int attributeTypeId = rs.getInt("attrtype");
@@ -169,7 +169,7 @@ public final class Attributes {
                 });
             });
         } catch (SQLException sqle) {
-            log.error("Failed to read attributes: {}", Database.squeeze(sqle));
+            log.error("\u21af Failed to read attributes: {}", Database.squeeze(sqle));
         }
 
         return attributes;

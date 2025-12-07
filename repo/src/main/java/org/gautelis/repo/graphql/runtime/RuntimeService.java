@@ -47,7 +47,7 @@ public class RuntimeService {
 
     public byte[] storeRawUnit(byte[] bytes) {
         // TODO!!!  Not implemented
-        log.error("NOT IMPLEMENTED: storeRawUnit");
+        log.error("\u21aa NOT IMPLEMENTED: storeRawUnit");
 
         log.trace("Store raw unit bytes {}", bytes);
 
@@ -60,11 +60,11 @@ public class RuntimeService {
     }
 
     public Box loadUnit(int tenantId, long unitId) {
-        log.trace("RuntimeService::loadUnit({}, {})", tenantId, unitId);
+        log.trace("\u21aa RuntimeService::loadUnit({}, {})", tenantId, unitId);
 
         Optional<Unit> _unit = repo.getUnit(tenantId, unitId);
         if (_unit.isEmpty()) {
-            log.trace("No unit with id {}.{}", tenantId, unitId);
+            log.trace("\u21aa No unit with id {}.{}", tenantId, unitId);
             return null;
         }
         Unit unit = _unit.get();
@@ -81,18 +81,18 @@ public class RuntimeService {
         });
 
         if (attributes.isEmpty()) {
-            log.debug("No attributes for unit with id {}.{}", tenantId, unitId);
+            log.debug("\u21aa No attributes for unit with id {}.{}", tenantId, unitId);
         }
 
         return new /* outermost */ UnitBox(unit, attributes);
     }
 
     public byte[] loadRawUnit(int tenantId, long unitId) {
-        log.trace("RuntimeService::loadRawUnit({}, {})", tenantId, unitId);
+        log.trace("\u21aa RuntimeService::loadRawUnit({}, {})", tenantId, unitId);
 
         Optional<Unit> unit = repo.getUnit(tenantId, unitId);
         if (unit.isEmpty()) {
-            log.trace("No unit with id {}.{}", tenantId, unitId);
+            log.trace("\u21aa No unit with id {}.{}", tenantId, unitId);
             return null;
         }
 
@@ -101,7 +101,7 @@ public class RuntimeService {
     }
 
     public Object getValueArray(List<String> fieldNames, RecordBox box, boolean isMandatory) {
-        log.trace("RuntimeService::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("\u21aa RuntimeService::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
 
         Attribute<?> attribute = null;
         String fieldName = null;
@@ -121,18 +121,18 @@ public class RuntimeService {
         }
 
         if (null == attribute) {
-            log.trace("Attribute(s) not present: {}", fieldNames);
+            log.trace("\u21aa Attribute(s) not present: {}", fieldNames);
             if (isMandatory) {
-                log.info("Mandatory field(s) not present: {}", fieldNames);
+                log.info("\u21aa Mandatory field(s) not present: {}", fieldNames);
             }
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.trace("No values for attribute '{}'.", fieldName);
+            log.trace("\u21aa No values for attribute '{}'.", fieldName);
             if (isMandatory) {
-                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+                log.info("\u21aa Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
@@ -167,7 +167,7 @@ public class RuntimeService {
     }
 
     public Object getAttributeArray(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
-        log.trace("RuntimeService::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("\u21aa RuntimeService::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
         Attribute<?> attribute = null;
@@ -178,11 +178,11 @@ public class RuntimeService {
 
             attribute = box.getAttribute(fieldName);
             if (null == attribute) {
-                log.trace("No attribute '{}'.", fieldName);
+                log.trace("\u21aa No attribute '{}'.", fieldName);
 
                 while (fnit.hasNext()) {
                     fieldName = fnit.next();
-                    log.debug(" ... trying '{}'.", fieldName);
+                    log.debug("\u21aa  ... trying '{}'.", fieldName);
 
                     attribute = box.getAttribute(fieldName);
                     if (attribute != null) {
@@ -190,23 +190,23 @@ public class RuntimeService {
                         //      and not break after first, since we are operating on an array
                         break;
                     }
-                    log.trace("No attribute '{}'.", fieldName);
+                    log.trace("\u21aa No attribute '{}'.", fieldName);
                 }
             }
         }
 
         if (null == attribute) {
             if (isMandatory) {
-                log.info("Mandatory field(s) not present: {}", fieldNames);
+                log.info("\u21aa Mandatory field(s) not present: {}", fieldNames);
             }
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.trace("No values for attribute '{}'.", fieldName);
+            log.trace("\u21aa No values for attribute '{}'.", fieldName);
             if (isMandatory) {
-                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+                log.info("\u21aa Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
@@ -245,7 +245,7 @@ public class RuntimeService {
     }
 
     public Object getValueScalar(List<String> fieldNames, RecordBox box, boolean isMandatory) {
-        log.trace("RuntimeService::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("\u21aa RuntimeService::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         Attribute<?> attribute = null;
         String fieldName = null;
@@ -265,18 +265,18 @@ public class RuntimeService {
         }
 
         if (null == attribute) {
-            log.trace("Attribute(s) not present: {}", fieldNames);
+            log.trace("\u21aa Attribute(s) not present: {}", fieldNames);
             if (isMandatory) {
-                log.info("Mandatory field(s) not present: {}", fieldNames);
+                log.info("\u21aa Mandatory field(s) not present: {}", fieldNames);
             }
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.trace("No values for attribute '{}'.", fieldName);
+            log.trace("\u21aa No values for attribute '{}'.", fieldName);
             if (isMandatory) {
-                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+                log.info("\u21aa Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
@@ -306,7 +306,7 @@ public class RuntimeService {
     }
 
     public Object getAttributeScalar(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
-        log.trace("RuntimeService::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("\u21aa RuntimeService::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
         Attribute<?> attribute = null;
@@ -317,33 +317,33 @@ public class RuntimeService {
 
             attribute = box.getAttribute(fieldName);
             if (null == attribute) {
-                log.trace("No attribute '{}'.", fieldName);
+                log.trace("\u21aa No attribute '{}'.", fieldName);
 
                 while (fnit.hasNext()) {
                     fieldName = fnit.next();
-                    log.debug(" ... trying '{}'.", fieldName);
+                    log.debug("\u21aa  ... trying '{}'.", fieldName);
 
                     attribute = box.getAttribute(fieldName);
                     if (attribute != null) {
                         break;
                     }
-                    log.trace("No attribute '{}'.", fieldName);
+                    log.trace("\u21aa No attribute '{}'.", fieldName);
                 }
             }
         }
 
         if (null == attribute) {
             if (isMandatory) {
-                log.info("Mandatory field(s) not present: {}", fieldNames);
+                log.info("\u21aa Mandatory field(s) not present: {}", fieldNames);
             }
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.trace("No values for attribute '{}'.", fieldName);
+            log.trace("\u21aa No values for attribute '{}'.", fieldName);
             if (isMandatory) {
-                log.info("Mandatory value(s) for field '{}' not present", fieldName);
+                log.info("\u21aa Mandatory value(s) for field '{}' not present", fieldName);
             }
             return null;
         }
@@ -397,7 +397,7 @@ public class RuntimeService {
                     Timestamp _created = rs.getTimestamp(++j);
                     Timestamp _modified = rs.getTimestamp(++j);
 
-                    log.debug("Found: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
+                    log.debug("\u21aa Found: unit=" + _tenantId + "." + _unitId + ":" + _unitVer + " created=" + _created + " modified=" + _modified);
                     ids.add(new Unit.Id(_tenantId, _unitId));
                 }
             }));
@@ -410,7 +410,7 @@ public class RuntimeService {
     }
 
     public List<Box> search(Query.Filter filter) {
-        log.trace("RuntimeService::search");
+        log.trace("\u21aa RuntimeService::search");
 
         Collection<Unit.Id> ids = search0(filter);
 
@@ -437,7 +437,7 @@ public class RuntimeService {
                         units.add(new /* outermost */ AttributeBox(unit, attributes));
 
                     } else {
-                        log.error("Unknown unit: {}", id);
+                        log.error("\u21aa Unknown unit: {}", id);
                     }
                 } catch (Throwable t) {
                     log.error(t.getMessage(), t);
@@ -448,7 +448,7 @@ public class RuntimeService {
     }
 
     public byte[] searchRaw(Query.Filter filter) {
-        log.trace("RuntimeService::searchRaw");
+        log.trace("\u21aa RuntimeService::searchRaw");
 
         Collection<Unit.Id> ids = search0(filter);
 
@@ -460,7 +460,7 @@ public class RuntimeService {
                     units.add(_unit.get());
 
                 } else {
-                    log.error("Unknown unit: {}", id);
+                    log.error("\u21aa Unknown unit: {}", id);
                 }
             } catch (Throwable t) {
                 log.error(t.getMessage(), t);
