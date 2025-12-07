@@ -158,7 +158,7 @@ The declared queries are automatically handled, based on declared parameters and
 
 ```graphql
 #
-# These queries alternates between a GraphQL type of return or ```Bytes``` (effectively JSON)
+# These queries alternates between a GraphQL type of return or Bytes (effectively JSON)
 #
 type Query {
     order(id : UnitIdentification!) : PurchaseOrder
