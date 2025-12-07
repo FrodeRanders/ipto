@@ -102,6 +102,7 @@ type RattenTillPeriod {
 }
 
 union ProduceratResultat = Ersattning | Krav | Intyg | BedomdArbetsformaga | RattenTillPeriod
+
 type Yrkan {
     person : Person
     beskrivning : String
