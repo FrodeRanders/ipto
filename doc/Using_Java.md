@@ -254,10 +254,10 @@ The result is something like:
 ```json
 {
   "@type": "ipto:unit",
-  "@version": 4,
+  "@version": 2,
   "tenantid": 1,
   "unitid": 1560,
-  "unitver": 1,
+  "unitver": 4,
   "corrid": "019afa74-8f53-71f7-9550-211ec1646ce6",
   "status": 30,
   "unitname": null,
