@@ -37,7 +37,10 @@ public final class UnitTemplates {
      *     ^           ^                         ^
      *     | (c)       | (d)                     | (e)
      */
-    static Map<String, GqlUnitTemplateShape> derive(TypeDefinitionRegistry registry, Map<String, GqlAttributeShape> attributes) {
+    static Map<String, GqlUnitTemplateShape> derive(
+            TypeDefinitionRegistry registry,
+            Map<String, GqlAttributeShape> attributes
+    ) {
         Map<String, GqlUnitTemplateShape> units = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
@@ -48,14 +51,12 @@ public final class UnitTemplates {
             if ("query".equalsIgnoreCase(typeName)
                     || "mutation".equalsIgnoreCase(typeName)
                     || "subscription".equalsIgnoreCase(typeName)) {
-                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (unitDirectivesOnType.isEmpty()) {
-                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
@@ -99,10 +100,9 @@ public final class UnitTemplates {
                             }
                         }
                     } else {
-                        // No @use, but we will fall back on aliases
+                        // No @use, so we will fall back on aliases
                         GqlAttributeShape attributeShape = attributes.get(fieldName);
                         if (null != attributeShape) {
-
                             unitFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
                         }
                     }
@@ -115,7 +115,9 @@ public final class UnitTemplates {
         return units;
     }
 
-    static Map<String, CatalogUnitTemplate> read(Repository repository) {
+    static Map<String, CatalogUnitTemplate> read(
+            Repository repository
+    ) {
         Map<String, CatalogUnitTemplate> templates = new HashMap<>();
 
         // repo_unit_template (

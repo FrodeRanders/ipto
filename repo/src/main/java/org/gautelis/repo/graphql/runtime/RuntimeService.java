@@ -100,7 +100,11 @@ public class RuntimeService {
         return json.getBytes(StandardCharsets.UTF_8);
     }
 
-    public Object getValueArray(List<String> fieldNames, RecordBox box, boolean isMandatory) {
+    public Object getValueArray(
+            List<String> fieldNames,
+            RecordBox box,
+            boolean isMandatory
+    ) {
         log.trace("\u21aa RuntimeService::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
 
         Attribute<?> attribute = null;
@@ -166,7 +170,11 @@ public class RuntimeService {
         return boxes;
     }
 
-    public Object getAttributeArray(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
+    public Object getAttributeArray(
+            List<String> fieldNames,
+            AttributeBox box,
+            boolean isMandatory
+    ) {
         log.trace("\u21aa RuntimeService::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
@@ -240,11 +248,18 @@ public class RuntimeService {
         return boxes;
     }
 
-    public Object getAttributeArray(List<String> fieldNames, AttributeBox box) {
+    public Object getAttributeArray(
+            List<String> fieldNames,
+            AttributeBox box
+    ) {
         return getAttributeArray(fieldNames, box, false);
     }
 
-    public Object getValueScalar(List<String> fieldNames, RecordBox box, boolean isMandatory) {
+    public Object getValueScalar(
+            List<String> fieldNames,
+            RecordBox box,
+            boolean isMandatory
+    ) {
         log.trace("\u21aa RuntimeService::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         Attribute<?> attribute = null;
@@ -305,7 +320,11 @@ public class RuntimeService {
         return new /* inner */ RecordBox(/* outer */ box, attributeAsRecord, attributes);
     }
 
-    public Object getAttributeScalar(List<String> fieldNames, AttributeBox box, boolean isMandatory) {
+    public Object getAttributeScalar(
+            List<String> fieldNames,
+            AttributeBox box,
+            boolean isMandatory
+    ) {
         log.trace("\u21aa RuntimeService::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         String fieldName = null;
@@ -372,11 +391,16 @@ public class RuntimeService {
         return new /* inner */ RecordBox(/* outer */ box, attributeAsRecord, attributes);
     }
 
-    public Object getAttributeScalar(List<String> fieldNames, AttributeBox box) {
+    public Object getAttributeScalar(
+            List<String> fieldNames,
+            AttributeBox box
+    ) {
         return getAttributeScalar(fieldNames, box,false);
     }
 
-    private Collection<Unit.Id> search0(Query.Filter filter) {
+    private Collection<Unit.Id> search0(
+            Query.Filter filter
+    ) {
         SearchExpression expr = assembleConstraints(filter);
 
         // Result set constraints (paging)
@@ -409,7 +433,9 @@ public class RuntimeService {
         return ids;
     }
 
-    public List<Box> search(Query.Filter filter) {
+    public List<Box> search(
+            Query.Filter filter
+    ) {
         log.trace("\u21aa RuntimeService::search");
 
         Collection<Unit.Id> ids = search0(filter);
@@ -447,7 +473,9 @@ public class RuntimeService {
         }
     }
 
-    public byte[] searchRaw(Query.Filter filter) {
+    public byte[] searchRaw(
+            Query.Filter filter
+    ) {
         log.trace("\u21aa RuntimeService::searchRaw");
 
         Collection<Unit.Id> ids = search0(filter);
@@ -477,7 +505,9 @@ public class RuntimeService {
 
     /****************** Search related ******************/
 
-    private SearchExpression assembleConstraints(Query.Filter filter) {
+    private SearchExpression assembleConstraints(
+            Query.Filter filter
+    ) {
         // Implicit unit constraints
         int tenantId = filter.tenantId();
         SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
@@ -487,7 +517,9 @@ public class RuntimeService {
         return new AndExpression(expr, assembleConstraints(filter.where()));
     }
 
-    private SearchExpression assembleConstraints(Query.Node node) {
+    private SearchExpression assembleConstraints(
+            Query.Node node
+    ) {
         Query.AttributeExpression attrExpr = node.attrExpr();
         Query.TreeExpression treeExpr = node.treeExpr();
 
@@ -502,7 +534,9 @@ public class RuntimeService {
         }
     }
 
-    private SearchExpression assembleTreeConstraints(Query.TreeExpression treeExpr) {
+    private SearchExpression assembleTreeConstraints(
+            Query.TreeExpression treeExpr
+    ) {
         Query.Logical op = treeExpr.op();
         Query.Node left = treeExpr.left();
         Query.Node right = treeExpr.right();
@@ -514,7 +548,9 @@ public class RuntimeService {
 
     }
 
-    private LeafExpression<?> assembleAttributeConstraints(Query.AttributeExpression attrExpr) {
+    private LeafExpression<?> assembleAttributeConstraints(
+            Query.AttributeExpression attrExpr
+    ) {
         String attrName = attrExpr.attr();
         Query.FilterOperator op = attrExpr.op();
         String value = attrExpr.value();

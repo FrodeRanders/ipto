@@ -38,7 +38,6 @@ public class Configurator {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-
     public record GqlViewpoint(
             Map<String, GqlDatatypeShape> datatypes,
             Map<String, GqlAttributeShape> attributes,
@@ -58,7 +57,11 @@ public class Configurator {
     private Configurator() {
     }
 
-    public static Optional<GraphQL> load(Repository repo, Reader reader, PrintStream progress) {
+    public static Optional<GraphQL> load(
+            Repository repo,
+            Reader reader,
+            PrintStream progress
+    ) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
 
         // Prepare wiring up
@@ -103,7 +106,7 @@ public class Configurator {
         reconcile(repo, gql, ipto, ResolutionPolicy.PREFER_GQL, progress);
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
-        wire(registry, runtimeWiring, repo, runtimeService, operationTypes, gql, ipto);
+        wire(runtimeWiring, runtimeService, gql, ipto);
 
         return Optional.of(
                 GraphQL.newGraphQL(
@@ -117,7 +120,7 @@ public class Configurator {
         Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
         Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
         Map<String, GqlUnitTemplateShape> templates = UnitTemplates.derive(registry, attributes);
-        Map<String, GqlUnionShape> unions = Unions.derive(registry, attributes, records);
+        Map<String, GqlUnionShape> unions = Unions.derive(registry);
         Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
 
         return new GqlViewpoint(datatypes, attributes, records, templates, unions, operations);
@@ -132,7 +135,13 @@ public class Configurator {
         return new CatalogViewpoint(datatypes, attributes, records, templates);
     }
 
-    private static void reconcile(Repository repo, GqlViewpoint gqlViewpoint, CatalogViewpoint catalogViewpoint, ResolutionPolicy policy, PrintStream progress) {
+    private static void reconcile(
+            Repository repo,
+            GqlViewpoint gqlViewpoint,
+            CatalogViewpoint catalogViewpoint,
+            ResolutionPolicy policy,
+            PrintStream progress
+    ) {
 
         // --- Datatypes ---
         for (String key : gqlViewpoint.datatypes().keySet()) {
@@ -191,7 +200,7 @@ public class Configurator {
             }
         }
 
-        // Templates
+        // Unit templates
         for (String key : gqlViewpoint.units.keySet()) {
             if (!catalogViewpoint.units().containsKey(key)) {
                 log.warn("\u21af Unit template '{}' not found in catalog", key);
@@ -200,7 +209,6 @@ public class Configurator {
                 CatalogUnitTemplate template = addUnitTemplate(
                         repo,
                         gqlViewpoint.units.get(key),
-                        gqlViewpoint.attributes(),
                         catalogViewpoint.attributes(),
                         progress
                 );
@@ -223,68 +231,40 @@ public class Configurator {
     }
 
     private static void wire(
-            TypeDefinitionRegistry registry,
             RuntimeWiring.Builder runtimeWiring,
-            Repository repository,
-            RuntimeService runtimeService,
-            Map<String, SchemaOperation> operationTypes,
-            GqlViewpoint gqlViewpoint,
-            CatalogViewpoint catalogViewpoint
-    ) {
-        wireAttributes(runtimeWiring, repository, runtimeService, gqlViewpoint, catalogViewpoint);
-        wireRecords(runtimeWiring, repository, runtimeService, gqlViewpoint, catalogViewpoint);
-        wireUnits(runtimeWiring, repository, runtimeService, gqlViewpoint, catalogViewpoint);
-        wireOperations(runtimeWiring, repository, runtimeService, operationTypes, gqlViewpoint, catalogViewpoint);
-        wireUnions(registry, runtimeWiring, runtimeService, gqlViewpoint, catalogViewpoint);
-    }
-
-    private static void wireAttributes(
-            RuntimeWiring.Builder runtimeWiring,
-            Repository repository,
             RuntimeService runtimeService,
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint
     ) {
-        Map<String, GqlAttributeShape> gqlAttributes = gqlViewpoint.attributes();
-        Map<String, CatalogAttribute> iptoAttributes = catalogViewpoint.attributes();
-
-        for (String key : gqlAttributes.keySet()) {
-            GqlAttributeShape gqlAttribute = gqlAttributes.get(key);
-            CatalogAttribute iptoAttribute = iptoAttributes.get(key);
-        }
+        wireRecords(runtimeWiring, runtimeService, gqlViewpoint);
+        wireUnits(runtimeWiring, runtimeService, gqlViewpoint, catalogViewpoint);
+        wireOperations(runtimeWiring, runtimeService, gqlViewpoint);
+        wireUnions(runtimeWiring, gqlViewpoint);
     }
 
     private static void wireRecords(
             RuntimeWiring.Builder runtimeWiring,
-            Repository repository,
             RuntimeService runtimeService,
-            GqlViewpoint gqlViewpoint,
-            CatalogViewpoint catalogViewpoint
+            GqlViewpoint gqlViewpoint
     ) {
         Map<String, GqlAttributeShape> attributes = gqlViewpoint.attributes();
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
-        //Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
 
         for (String key : gqlRecords.keySet()) {
             GqlRecordShape gqlRecord = gqlRecords.get(key);
-            //CatalogRecord iptoRecord = iptoRecords.get(key);
 
             final String typeName = gqlRecord.typeName();
 
             Iterator<GqlFieldShape> fit = gqlRecord.fields().iterator();
-            //Iterator<CatalogAttribute> ait = iptoRecord.fields().iterator();
 
             runtimeWiring.type(typeName, builder -> {
-
-                while (fit.hasNext() /* && ait.hasNext() */) {
+                while (fit.hasNext()) {
                     GqlFieldShape field = fit.next();
-                    //CatalogAttribute attribute = ait.next();
 
                     final String fieldName = field.fieldName();
                     final String backingAttributeName = field.usedAttributeName();
                     final String fieldType = field.gqlTypeRef();
-                    //final int fieldAttrId = attribute.attrId();
                     final boolean isArray = field.isArray();
                     final boolean isMandatory = field.isMandatory();
 
@@ -362,7 +342,7 @@ public class Configurator {
                                     return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                                 }
                             } else {
-                                log.warn("Unknown box: {}", box.getClass().getCanonicalName());
+                                log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
                                 return null;
                             }
                         }
@@ -396,7 +376,6 @@ public class Configurator {
 
     private static void wireUnits(
             RuntimeWiring.Builder runtimeWiring,
-            Repository repository,
             RuntimeService runtimeService,
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint
@@ -504,11 +483,8 @@ public class Configurator {
 
     private static void wireOperations(
             RuntimeWiring.Builder runtimeWiring,
-            Repository repository,
             RuntimeService runtimeService,
-            Map<String, SchemaOperation> operationTypes,
-            GqlViewpoint gqlViewpoint,
-            CatalogViewpoint catalogViewpoint
+            GqlViewpoint gqlViewpoint
     ) {
         Map<String, GqlOperationShape> gqlOperations = gqlViewpoint.operations();
 
@@ -611,15 +587,11 @@ public class Configurator {
     }
 
     private static void wireUnions(
-            TypeDefinitionRegistry registry,
-            RuntimeWiring.Builder  runtimeWiring,
-            RuntimeService runtimeService,
-            GqlViewpoint gqlViewpoint,
-            CatalogViewpoint catalogViewpoint
+            RuntimeWiring.Builder runtimeWiring,
+            GqlViewpoint gqlViewpoint
     ) {
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
-        //Map<String, CatalogRecord> iptoRecords = catalogViewpoint.records();
 
         for (String key : gqlUnions.keySet()) {
             GqlUnionShape  gqlUnion = gqlUnions.get(key);
@@ -672,8 +644,11 @@ public class Configurator {
         }
     }
 
-    private static CatalogAttribute addAttribute(Repository repo, GqlAttributeShape gqlAttribute, PrintStream progress) {
-
+    private static CatalogAttribute addAttribute(
+            Repository repo,
+            GqlAttributeShape gqlAttribute,
+            PrintStream progress
+    ) {
         // NOTE: attribute.attrId is adjusted later, after writing to repo_attribute
         CatalogAttribute attribute = new CatalogAttribute(
                 gqlAttribute.alias,
@@ -745,7 +720,13 @@ public class Configurator {
         return attribute;
     }
 
-    private static CatalogRecord addRecord(Repository repo, GqlRecordShape gqlRecord, Map<String, GqlAttributeShape> gqlAttributes, Map<String, CatalogAttribute> catalogAttributes, PrintStream progress) {
+    private static CatalogRecord addRecord(
+            Repository repo,
+            GqlRecordShape gqlRecord,
+            Map<String, GqlAttributeShape> gqlAttributes,
+            Map<String, CatalogAttribute> catalogAttributes,
+            PrintStream progress
+    ) {
 
         String recordName = gqlRecord.typeName();
         String recordAttributeName = gqlRecord.attributeEnumName();
@@ -876,7 +857,12 @@ public class Configurator {
         return catalogRecord;
     }
 
-    private static CatalogUnitTemplate addUnitTemplate(Repository repo, GqlUnitTemplateShape gqlUnitTemplate, Map<String, GqlAttributeShape> _gqlAttributes, Map<String, CatalogAttribute> catalogAttributes, PrintStream progress) {
+    private static CatalogUnitTemplate addUnitTemplate(
+            Repository repo,
+            GqlUnitTemplateShape gqlUnitTemplate,
+            Map<String, CatalogAttribute> catalogAttributes,
+            PrintStream progress
+    ) {
 
         // NOTE: template.templateId is adjusted later, after writing to repo_unit_template
         CatalogUnitTemplate template = new CatalogUnitTemplate(gqlUnitTemplate.typeName());

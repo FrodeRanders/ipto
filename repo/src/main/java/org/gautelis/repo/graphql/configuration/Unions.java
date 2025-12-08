@@ -29,13 +29,9 @@ public final class Unions {
      *        | (a)         | (b)            | (...)
      */
     static Map<String, GqlUnionShape> derive(
-            TypeDefinitionRegistry registry,
-            Map<String, GqlAttributeShape> attributes,
-            Map<String, GqlRecordShape> records
+            TypeDefinitionRegistry registry
     ) {
         Objects.requireNonNull(registry, "registry");
-        Objects.requireNonNull(attributes, "attributes");
-        Objects.requireNonNull(records, "records");
 
         Map<String, GqlUnionShape> unions = new HashMap<>();
 
@@ -58,12 +54,6 @@ public final class Unions {
 
                 if (memberType instanceof TypeName unionTypeName) {
                     String memberName = unionTypeName.getName();
-
-                    // TODO??
-                    //log.trace("Looking up '{}' among records {}",  memberName, records.keySet());
-                    //GqlRecordShape gqlRecord = records.get(memberName);
-                    //String attributeAlias = gqlRecord.attributeEnumName();
-
                     members.add(new UnionMember(unionName, memberName));
                 } else {
                     log.warn("\u21af Ignoring member '{}' in union '{}'", memberType, unionName);

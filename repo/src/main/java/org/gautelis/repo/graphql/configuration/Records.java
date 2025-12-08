@@ -49,14 +49,12 @@ public final class Records {
             if ("query".equalsIgnoreCase(typeName)
              || "mutation".equalsIgnoreCase(typeName)
              || "subscription".equalsIgnoreCase(typeName)) {
-                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
             // Filter unit template definitions, that has a @unit directive
             List<Directive> unitDirectivesOnType = type.getDirectives("unit");
             if (!unitDirectivesOnType.isEmpty()) {
-                log.debug("\u21af Ignoring type: {}", typeName);
                 continue;
             }
 
