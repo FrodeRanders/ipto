@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+
+    <entry key="url">
+        jdbc:postgresql://localhost:5432/repo
+    </entry>
+
+    <entry key="user">
+        repo
+    </entry>
+
+    <entry key="password">
+        repo
+    </entry>
+
+    <entry key="repository.database.adapter">
+        org.gautelis.ipto.repo.search.query.adapters.PostgresAdapter
+    </entry>
+
+    <!--
+    <entry key="url">
+        jdbc:db2://localhost:50000/REPO:currentSchema=REPO;currentFunctionPath=REPO,SYSIBM,SYSFUN,SYSPROC,SYSIBMADM;
+    </entry>
+
+    <entry key="user">
+        DB2INST1
+    </entry>
+
+    <entry key="password">
+        H0nd@666
+    </entry>
+
+    <entry key="repository.database.adapter">
+        org.gautelis.ipto.repo.search.query.adapters.DB2Adapter
+    </entry>
+    -->
+
+    <!--
+        Non-db related configuration
+    -->
+    <entry key="repository.events.threshold">
+        60
+    </entry>
+
+    <entry key="repository.events.listeners">
+        org.gautelis.ipto.repo.listeners.NopActionListener
+    </entry>
+
+    <entry key="repository.cache.look_behind">
+        true
+    </entry>
+
+    <entry key="repository.cache.max_size">
+        1000
+    </entry>
+
+    <entry key="repository.cache.idle_check_interval">
+        60
+    </entry>
+
+    <!--
+        Unused, since we have a 'url'.
+    -->
+    <entry key="driver" />
+    <entry key="manager" />
+    <entry key="server" />
+    <entry key="port" />
+    <entry key="database" />
+</properties>
+
+
+

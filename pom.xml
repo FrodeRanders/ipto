@@ -11,6 +11,7 @@
 
     <modules>
         <module>repo</module>
+        <module>graphql</module>
         <module>db/java</module>
     </modules>
 
