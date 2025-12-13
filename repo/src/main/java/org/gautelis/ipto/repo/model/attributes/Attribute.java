@@ -208,8 +208,8 @@ public class Attribute<T> {
         unitVersionFrom = node.path("unitverfrom").asInt();
         unitVersionTo = node.path("unitverto").asInt();
         valueId = node.path("valueid").asLong();
-        name = node.path("attrname").asText();
-        alias = node.path("alias").asText();
+        name = node.path("attrname").asString();
+        alias = node.path("alias").asString();
         type = AttributeType.of(node.path("attrtype").asInt());
 
         // Continue with value vector

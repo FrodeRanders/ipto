@@ -80,7 +80,7 @@ public final class RecordValue extends Value<Attribute<?>> {
     */
 
     /**
-     * Inflate an <I>existing</I> string value from a result set.
+     * Inflate an <I>existing</I> record value from a result set.
      * <p>
      * Called from the Value constructor.
      */

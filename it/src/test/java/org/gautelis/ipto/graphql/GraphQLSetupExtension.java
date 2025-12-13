@@ -23,7 +23,7 @@ public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolv
     public void beforeAll(ExtensionContext context) throws Exception {
         // Ensure GraphQL is initialized once in the root context
         ExtensionContext.Store store = context.getRoot().getStore(GLOBAL);
-        store.getOrComputeIfAbsent(KEY, k -> {
+        store.computeIfAbsent(KEY, k -> {
             try {
                 try (InputStreamReader reader = new InputStreamReader(
                         Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("schema2.graphqls"))
@@ -44,10 +44,10 @@ public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolv
     }
 
     private GraphQL getGraphQL(ExtensionContext context) {
-        GraphQLResource resource = (GraphQLResource) context.getRoot()
+        GraphQLResource resource = context.getRoot()
                 .getStore(GLOBAL)
                 .get(KEY, GraphQLResource.class);
-        return resource.graphQL;
+        return Objects.requireNonNull(resource, "Lookup failed").graphQL;
     }
 
     @Override

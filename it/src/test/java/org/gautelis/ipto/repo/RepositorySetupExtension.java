@@ -6,6 +6,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 
+import java.util.Objects;
+
 import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 
 public class RepositorySetupExtension implements BeforeAllCallback, ParameterResolver {
@@ -16,7 +18,7 @@ public class RepositorySetupExtension implements BeforeAllCallback, ParameterRes
     public void beforeAll(ExtensionContext context) throws Exception {
         // Ensure the Repository is initialized once in the root context
         ExtensionContext.Store store = context.getRoot().getStore(GLOBAL);
-        store.getOrComputeIfAbsent(KEY, k -> {
+        store.computeIfAbsent(KEY, k -> {
             try {
                 Repository repo = RepositoryFactory.getRepository();
                 return new RepositoryResource(repo);
@@ -31,7 +33,7 @@ public class RepositorySetupExtension implements BeforeAllCallback, ParameterRes
         RepositoryResource resource = context.getRoot()
                 .getStore(GLOBAL)
                 .get(KEY, RepositoryResource.class);
-        return resource.repo;
+        return Objects.requireNonNull(resource, "Lookup failed").repo;
     }
 
     @Override

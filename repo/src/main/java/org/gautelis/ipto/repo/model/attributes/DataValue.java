@@ -51,7 +51,7 @@ final class DataValue extends Value<Object> {
     }
 
     /**
-     * Inflate an <I>existing</I> string value from a result set.
+     * Inflate an <I>existing</I> data value from a result set.
      * <p>
      * Called from the Value constructor.
      */
@@ -70,20 +70,6 @@ final class DataValue extends Value<Object> {
         // the supported databases.
         //
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * idx,
-             * string_val,    -- string value at index idx
-             * time_val,      -- time value at index idx
-             * int_val,       -- int value at index idx
-             * long_val,      -- long value at index idx
-             * double_val,    -- double value at index idx
-             * bool_val,      -- boolean value at index idx
-             * data_val       -- data value at index idx
-            * ----------------------------------------------------------- */
             byte[] value;
             try {
                 // SQL Server: Works with the VARBINARY type
@@ -103,7 +89,7 @@ final class DataValue extends Value<Object> {
     }
 
     private void inflate(ArrayNode node) {
-        node.forEach(value -> values.add( Base64.getDecoder().decode(value.asText())));
+        node.forEach(value -> values.add( Base64.getDecoder().decode(value.asString())));
     }
 
     @Override

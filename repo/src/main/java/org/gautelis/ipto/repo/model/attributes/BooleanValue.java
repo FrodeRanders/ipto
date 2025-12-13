@@ -50,27 +50,13 @@ final class BooleanValue extends Value<Boolean> {
     }
 
     /**
-     * Inflate an <I>existing</I> string value from a result set.
+     * Inflate an <I>existing</I> boolean value from a result set.
      * <p>
      * Called from the Value constructor.
      */
     /* package accessible only */
     void inflateSingleElement(ResultSet rs) throws DatabaseReadException {
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * idx,
-             * string_val,    -- string value at index idx
-             * time_val,      -- time value at index idx
-             * int_val,       -- int value at index idx
-             * long_val,      -- long value at index idx
-             * double_val,    -- double value at index idx
-             * bool_val,      -- boolean value at index idx
-             * data_val       -- data value at index idx
-             * ----------------------------------------------------------- */
             Boolean value = rs.getBoolean("bool_val");
             values.add(value);
 

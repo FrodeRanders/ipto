@@ -18,6 +18,18 @@
             </Policies>
             <DefaultRolloverStrategy max="9"/>
         </RollingFile>
+
+        <RollingFile name="STATISTICS"
+                     fileName="${log-path}/statistics.txt"
+                     filePattern="${log-path}/statistics-%i.txt">
+            <PatternLayout>
+                <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS}: %m%n</pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="9"/>
+        </RollingFile>
     </Appenders>
 
     <Loggers>
@@ -25,6 +37,10 @@
         <logger name="org.gautelis.ipto.repo" level="INFO" />
         <logger name="org.gautelis.ipto.graphql" level="INFO" />
         <logger name="org.apache" level="WARN" />
+
+        <logger name="STATISTICS" level="INFO">
+            <appender-ref ref="STATISTICS"/>
+        </logger>
 
         <Root level="INFO">
             <appender-ref ref="INTERNAL"/>

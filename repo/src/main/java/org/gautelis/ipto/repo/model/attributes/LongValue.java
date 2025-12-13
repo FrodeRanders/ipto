@@ -51,7 +51,7 @@ final class LongValue extends Value<Long> {
     }
 
     /**
-     * Inflate an <I>existing</I> string value from a result set.
+     * Inflate an <I>existing</I> long value from a result set.
      * <p>
      * Called from the Value constructor.
      */

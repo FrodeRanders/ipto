@@ -55,20 +55,6 @@ final class StringValue extends Value<String> {
     /* package accessible only */
     void inflateSingleElement(ResultSet rs) throws DatabaseReadException {
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * idx,
-             * string_val,    -- string value at index idx
-             * time_val,      -- time value at index idx
-             * int_val,       -- int value at index idx
-             * long_val,      -- long value at index idx
-             * double_val,    -- double value at index idx
-             * bool_val,      -- boolean value at index idx
-             * data_val       -- data value at index idx
-            * ----------------------------------------------------------- */
             String value = rs.getString("string_val");
             values.add(value);
 
@@ -78,7 +64,7 @@ final class StringValue extends Value<String> {
     }
 
     private void inflate(ArrayNode node) {
-        node.forEach(value -> values.add(value.asText()));
+        node.forEach(value -> values.add(value.asString()));
     }
 
 
