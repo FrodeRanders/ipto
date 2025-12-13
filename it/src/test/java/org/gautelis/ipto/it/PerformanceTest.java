@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo;
+package org.gautelis.ipto.it;
 
 import com.fasterxml.uuid.Generators;
 import org.gautelis.ipto.repo.db.Column;
@@ -51,7 +51,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-import static org.gautelis.ipto.repo.Statistics.dumpStatistics;
+import static org.gautelis.ipto.it.Statistics.dumpStatistics;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 

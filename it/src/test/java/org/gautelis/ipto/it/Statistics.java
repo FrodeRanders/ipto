@@ -1,4 +1,4 @@
-package org.gautelis.ipto.repo;
+package org.gautelis.ipto.it;
 
 import com.sun.management.OperatingSystemMXBean;
 import org.gautelis.ipto.repo.db.Database;

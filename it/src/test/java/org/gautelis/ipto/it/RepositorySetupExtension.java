@@ -1,5 +1,6 @@
-package org.gautelis.ipto.repo;
+package org.gautelis.ipto.it;
 
+import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.model.Repository;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;

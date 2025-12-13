@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.graphql;
+package org.gautelis.ipto.it;
 
 import com.fasterxml.uuid.Generators;
 import graphql.ExecutionInput;

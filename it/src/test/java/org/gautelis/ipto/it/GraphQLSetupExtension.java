@@ -1,4 +1,4 @@
-package org.gautelis.ipto.graphql;
+package org.gautelis.ipto.it;
 
 import graphql.GraphQL;
 import org.gautelis.ipto.graphql.configuration.Configurator;

@@ -1,4 +1,4 @@
-package org.gautelis.ipto.graphql;
+package org.gautelis.ipto.it;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo;
+package org.gautelis.ipto.it;
 
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.UnitLockedException;
