@@ -1,5 +1,6 @@
 package org.gautelis.ipto.graphql.runtime;
 
+import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.graphql.configuration.Configurator;
@@ -43,6 +44,17 @@ public class RuntimeService {
                 allAttributesByAlias.put(alias, attribute);
             }
         }
+    }
+
+    public void wire(
+            RuntimeWiring.Builder runtimeWiring,
+            Configurator.GqlViewpoint gqlViewpoint,
+            Configurator.CatalogViewpoint catalogViewpoint
+    ) {
+        RuntimeOperators.wireRecords(runtimeWiring, this, gqlViewpoint);
+        RuntimeOperators.wireUnits(runtimeWiring, this, gqlViewpoint, catalogViewpoint);
+        RuntimeOperators.wireOperations(runtimeWiring, this, gqlViewpoint);
+        RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
     }
 
     public byte[] storeRawUnit(byte[] bytes) {

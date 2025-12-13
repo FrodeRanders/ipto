@@ -96,7 +96,7 @@ public class Unit implements Cloneable {
     protected Instant createdTime = null;
     protected Instant modifiedTime = null;
 
-    // Attributes associated with this unit, organized by name (and not attribute id)
+    // Attributes associated with this unit, organized by name
     private Map<String, Attribute<?>> attributes = null;
 
     // Predicates

@@ -60,7 +60,7 @@ public final class Operations {
                 String inputName = input.getName();
                 TypeDefinition inputType = TypeDefinition.of(input.getType());
 
-                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY.name(), inputName, inputType.typeName(), resultType.typeName()));
+                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, inputName, inputType.typeName(), resultType.typeName()));
             }
         }
     }
@@ -79,7 +79,7 @@ public final class Operations {
                 String inputName = input.getName();
                 TypeDefinition inputType = TypeDefinition.of(input.getType());
 
-                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION.name(), inputName, inputType.typeName(), resultType.typeName()));
+                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, inputName, inputType.typeName(), resultType.typeName()));
             }
         }
     }
