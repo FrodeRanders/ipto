@@ -21,7 +21,7 @@ public class DebugStep {
 
     public static void main(String... args) {
         try (InputStreamReader reader = new InputStreamReader(
-                Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("unit-schema.graphqls"))
+                Objects.requireNonNull(GraphQLIT.class.getResourceAsStream("unit-schema.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
             Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);

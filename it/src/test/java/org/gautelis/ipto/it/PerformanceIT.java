@@ -62,8 +62,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(RepositorySetupExtension.class)
-public class PerformanceTest {
-    private static final Logger log = LoggerFactory.getLogger(PerformanceTest.class);
+public class PerformanceIT {
+    private static final Logger log = LoggerFactory.getLogger(PerformanceIT.class);
 
     @Test
     @Order(1)

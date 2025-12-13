@@ -39,8 +39,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(RepositorySetupExtension.class)
-public class UnitTest {
-    private static final Logger log = LoggerFactory.getLogger(UnitTest.class);
+public class UnitIT {
+    private static final Logger log = LoggerFactory.getLogger(UnitIT.class);
 
     private record Counters(
             long unitCount,

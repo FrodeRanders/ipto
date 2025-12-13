@@ -26,7 +26,7 @@ public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolv
         store.computeIfAbsent(KEY, k -> {
             try {
                 try (InputStreamReader reader = new InputStreamReader(
-                        Objects.requireNonNull(GraphQLTest.class.getResourceAsStream("schema2.graphqls"))
+                        Objects.requireNonNull(GraphQLIT.class.getResourceAsStream("schema2.graphqls"))
                 )) {
                     Repository repo = RepositoryFactory.getRepository();
                     Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);

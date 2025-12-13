@@ -40,8 +40,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @ExtendWith(RepositorySetupExtension.class)
-public class RecordsTest {
-    private static final Logger log = LoggerFactory.getLogger(RecordsTest.class);
+public class RecordsIT {
+    private static final Logger log = LoggerFactory.getLogger(RecordsIT.class);
 
     @Test
     public void test(Repository repo) {
