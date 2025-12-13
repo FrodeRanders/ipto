@@ -1,5 +1,7 @@
 # IPTO - A data management framework
 
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FrodeRanders/ipto)
+
 A data management system which automates handling of dynamically defined data sets. Specifically, the
 definition of data sets can be done using GraphQL SDL. 
 
