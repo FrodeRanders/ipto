@@ -19,12 +19,6 @@
         <maven.compiler.target>21</maven.compiler.target>
         <maven.compiler.source>21</maven.compiler.source>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <jackson.version>3.0.2</jackson.version>
-        <graphql-java.version>25.0</graphql-java.version>
-        <guid-gen.version>5.1.1</guid-gen.version>
-        <log4j.version>2.25.2</log4j.version>
-        <slf4j.version>2.0.17</slf4j.version>
-        <vopn.version>3.0-SNAPSHOT</vopn.version> <!-- sibling project -->
     </properties>
 
     <dependencies>
@@ -32,13 +26,13 @@
             <!-- https://github.com/FrodeRanders/java-vopn.git -->
             <groupId>org.gautelis</groupId>
             <artifactId>vopn</artifactId>
-            <version>${vopn.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.gautelis.ipto</groupId>
-            <artifactId>repo</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <artifactId>ipto-repo</artifactId>
+            <version>${project.version}</version>
+            <scope>compile</scope>
         </dependency>
 
         <!-- Logging
@@ -47,20 +41,17 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>${slf4j.version}</version>
         </dependency>
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>${log4j.version}</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j2-impl</artifactId>
-            <version>${log4j.version}</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -73,33 +64,22 @@
         <dependency>
             <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
-            <version>${jackson.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.fasterxml.uuid</groupId>
             <artifactId>java-uuid-generator</artifactId>
-            <version>${guid-gen.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.graphql-java</groupId>
             <artifactId>graphql-java</artifactId>
-            <version>${graphql-java.version}</version>
         </dependency>
 
-        <!-- test -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
-            <version>6.0.1</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.gautelis.ipto</groupId>
-            <artifactId>repo</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>compile</scope>
         </dependency>
     </dependencies>
 
@@ -108,15 +88,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.5.2</version>
                 <configuration>
                     <useModulePath>false</useModulePath>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-clean-plugin</artifactId>
-                <version>3.3.2</version>
                 <configuration>
                     <filesets>
                         <fileset>

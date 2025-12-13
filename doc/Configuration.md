@@ -210,4 +210,4 @@ Prints:
 
 ### Test and demo configuration
 
-For testing and demo purposes, we ship this [GraphQL SDL](../repo/src/test/resources/org/gautelis/repo/schema2.graphqls).
+For testing and demo purposes, we ship this [GraphQL SDL](../it/src/test/resources/org/gautelis/ipto/graphql/schema2.graphqls).

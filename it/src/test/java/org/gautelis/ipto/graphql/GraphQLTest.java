@@ -16,24 +16,23 @@
  */
 package org.gautelis.ipto.graphql;
 
-import org.gautelis.ipto.repo.model.attributes.Attribute;
-import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import com.fasterxml.uuid.Generators;
-import graphql.GraphQL;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQL;
 import graphql.GraphQLError;
 import graphql.language.SourceLocation;
-
 import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
+import org.gautelis.ipto.repo.model.attributes.Attribute;
+import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;

@@ -8,8 +8,8 @@
     <!-- Appenders (writing to file in various ways) -->
     <Appenders>
         <RollingFile name="INTERNAL"
-                     fileName="${log-path}/test.log"
-                     filePattern="${log-path}/test-%d{yyyy-MM-dd}-%i.log">
+                     fileName="${log-path}/component-test.log"
+                     filePattern="${log-path}/%d{yyyy-MM-dd}-component-test-%i.log">
             <PatternLayout>
                 <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%-5level] %c{1}: %m%n</pattern>
             </PatternLayout>
@@ -35,8 +35,6 @@
     <Loggers>
         <logger name="org.gautelis.vopn" level="WARN" />
         <logger name="org.gautelis.ipto.repo" level="INFO" />
-        <logger name="org.gautelis.ipto.repo.search.query.CommonAdapter" level="DEBUG" />
-        <logger name="org.gautelis.ipto.repo.model.cache.UnitFactory" level="TRACE" />
         <logger name="org.apache" level="WARN" />
         <logger name="com.zaxxer.hikari" level="INFO" />
 

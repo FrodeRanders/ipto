@@ -17,32 +17,29 @@
 package org.gautelis.ipto.repo.model;
 
 import com.fasterxml.uuid.Generators;
-import graphql.GraphQL;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.*;
 import org.gautelis.ipto.repo.listeners.ActionListener;
 import org.gautelis.ipto.repo.model.associations.ExternalAssociation;
 import org.gautelis.ipto.repo.model.associations.InternalRelation;
-
 import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.cache.UnitFactory;
 import org.gautelis.ipto.repo.model.locks.Lock;
 import org.gautelis.ipto.repo.model.locks.LockType;
 import org.gautelis.ipto.repo.model.utils.TimedExecution;
 import org.gautelis.ipto.repo.model.utils.TimingData;
+import org.gautelis.ipto.repo.search.SearchResult;
+import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.query.DatabaseAdapter;
 import org.gautelis.ipto.repo.search.query.QueryBuilder;
 import org.gautelis.ipto.repo.search.query.SearchExpression;
 import org.gautelis.ipto.repo.search.query.SearchOrder;
-import org.gautelis.ipto.repo.search.SearchResult;
-import org.gautelis.ipto.repo.search.UnitSearch;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintStream;
 import java.io.PrintWriter;
-import java.io.Reader;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.ResultSet;
 import java.util.*;
 
 
