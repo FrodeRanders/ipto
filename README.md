@@ -2,13 +2,25 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FrodeRanders/ipto)
 
-A data management system which automates handling of dynamically defined data sets. Specifically, the
-definition of data sets can be done using GraphQL SDL. 
+This framework solves the problem of managing structured metadata in systems where the schema 
+evolves over time or varies across different use cases. Rather than creating database tables 
+for each entity type, IPTO uses an Entity-Attribute-Value (EAV) pattern with type-specific 
+storage optimizations. 
 
-As such, this system operates on two levels: GraphQL and Java. Configuration of data sets is done using
-GraphQL SDL. Data can be stored and retrieved via GraphQL, but it is also possible to use the Java API
-directly.
+IPTO is a data management framework that treats GraphQL SDL as executable configuration. 
+Instead of writing code to define data models, schemas, and persistence logic, developers 
+declare their domain model using GraphQL SDL (with custom directives), and the system 
+automatically generates a complete data management solution with full versioning, 
+multi-tenancy, and search capabilities.
 
+IPTO exposes two interfaces for data interaction, each serving different use cases:
+* The GraphQL API (the ```ipto-graphql``` module) provides declarative data access through standard 
+GraphQL queries and mutations. The API surface is automatically generated from the SDL 
+schema, ensuring type safety and schema alignment.
+* The Java API (the ```ipto-repo``` module) provides programmatic access through the Repository 
+interface for applications that need fine-grained control or operate in non-GraphQL contexts.
+
+Details on setup and configuration:
 * [Setup](doc/Setup.md)
 * [Configuration](doc/Configuration.md)
 * [Using GraphQL for retrieving data](doc/Retrieving_using_GraphQL.md)
