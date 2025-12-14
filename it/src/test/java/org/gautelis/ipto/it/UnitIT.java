@@ -153,6 +153,9 @@ public class UnitIT {
         });
 
         unit.requestStatusTransition(Unit.Status.PENDING_DISPOSITION);
+
+        System.out.println("---------------------------------------------------------------------------------------");
         repo.dispose(tenantId, new PrintWriter(System.out));
+        System.out.println("---------------------------------------------------------------------------------------");
     }
 }
