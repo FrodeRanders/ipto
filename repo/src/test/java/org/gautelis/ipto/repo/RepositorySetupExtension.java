@@ -1,6 +1,5 @@
-package org.gautelis.ipto.it;
+package org.gautelis.ipto.repo;
 
-import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.model.Repository;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -11,6 +10,10 @@ import java.util.Objects;
 
 import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 
+/**
+ * Annotate test classes with
+ *   @ExtendWith(RepositorySetupExtension.class)
+ */
 public class RepositorySetupExtension implements BeforeAllCallback, ParameterResolver {
 
     private static final String KEY = "GLOBAL_REPO";

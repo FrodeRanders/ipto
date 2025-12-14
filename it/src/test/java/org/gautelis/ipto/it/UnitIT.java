@@ -38,7 +38,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @Tag("units")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(RepositorySetupExtension.class)
+@IptoIT
 public class UnitIT {
     private static final Logger log = LoggerFactory.getLogger(UnitIT.class);
 

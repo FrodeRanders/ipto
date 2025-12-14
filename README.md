@@ -12,5 +12,5 @@ directly.
 * [Setup](doc/Setup.md)
 * [Configuration](doc/Configuration.md)
 * [Using GraphQL for retrieving data](doc/Retrieving_using_GraphQL.md)
-* [Using Java for creating and retreiving data](doc/Using_Java.md)
+* [Using Java for creating and retrieving data](doc/Using_Java.md)
 

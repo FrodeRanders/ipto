@@ -1,4 +1,4 @@
-package org.gautelis.ipto.it;
+package org.gautelis.ipto.graphql;
 
 import graphql.GraphQL;
 import org.gautelis.ipto.graphql.configuration.Configurator;
@@ -15,6 +15,10 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.extension.ExtensionContext.Namespace.GLOBAL;
 
+/**
+ * Annotate test classes with
+ *   @ExtendWith(GraphQLSetupExtension.class)
+ */
 public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolver {
 
     private static final String KEY = "GLOBAL_GRAPHQL";
@@ -26,7 +30,7 @@ public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolv
         store.computeIfAbsent(KEY, k -> {
             try {
                 try (InputStreamReader reader = new InputStreamReader(
-                        Objects.requireNonNull(GraphQLIT.class.getResourceAsStream("schema2.graphqls"))
+                        Objects.requireNonNull(GraphQLSetupExtension.class.getResourceAsStream("schema.graphqls"))
                 )) {
                     Repository repo = RepositoryFactory.getRepository();
                     Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);

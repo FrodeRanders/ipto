@@ -46,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Tag("GraphQL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(GraphQLSetupExtension.class)
+@IptoIT
 public class GraphQLIT {
     private static final Logger log = LoggerFactory.getLogger(GraphQLIT.class);
 

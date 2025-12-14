@@ -61,7 +61,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Tag("performance")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(RepositorySetupExtension.class)
+@IptoIT
 public class PerformanceIT {
     private static final Logger log = LoggerFactory.getLogger(PerformanceIT.class);
 
@@ -79,8 +79,12 @@ public class PerformanceIT {
         int numThreads = Math.max(numProcessors/2, 1);
         ExecutorService executor = Executors.newFixedThreadPool(numThreads);
 
-        System.out.println("Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
-        System.out.println("*** If this is run immediately after PostgreSQL startup and without warm-up, the statistics will not be accurate!");
+        System.out.println("---------------------------------------------------------------------------------------");
+        System.out.println(" Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
+        System.out.println();
+        System.out.println(" If this is run immediately after PostgreSQL startup and without warm-up,");
+        System.out.println(" the statistics will not be accurate. In fact, this test *is* the warm-up.");
+        System.out.println("---------------------------------------------------------------------------------------");
         System.out.flush();
 
         RunningStatistics storeStats = new RunningStatistics();
@@ -250,8 +254,8 @@ public class PerformanceIT {
     public void test(Repository repo) {
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 50; //
-        final int numberOfChildren = 10; //
+        final int numberOfParents = 10; //
+        final int numberOfChildren = 100; //
 
         try {
             Instant firstParentCreated = null;
@@ -265,7 +269,9 @@ public class PerformanceIT {
             int pageOffset = 5;  // skip 'pageOffset' first results
             int pageSize = 5;    // pick next 'pageSize' results
 
-            System.out.println("Generating " + (numberOfParents * numberOfChildren) + " units...");
+            System.out.println("---------------------------------------------------------------------------------------");
+            System.out.println(" Generating " + (numberOfParents * numberOfChildren) + " units...");
+            System.out.println("---------------------------------------------------------------------------------------");
             System.out.flush();
 
             RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration

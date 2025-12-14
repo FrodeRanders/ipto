@@ -39,7 +39,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @Tag("records")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-@ExtendWith(RepositorySetupExtension.class)
+@IptoIT
 public class RecordsIT {
     private static final Logger log = LoggerFactory.getLogger(RecordsIT.class);
 
