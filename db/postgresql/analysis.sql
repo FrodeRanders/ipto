@@ -144,3 +144,173 @@ SELECT pglinter.perform_base_check();
 -- Save results to file
 SELECT pglinter.perform_base_check('/tmp/results.sarif');
 
+
+----------------------------------------------------------------
+--
+-- https://boringsql.com/posts/vacuum-is-lie/
+--
+CREATE EXTENSION IF NOT EXISTS pgstattuple;
+
+SELECT
+    relname,
+    pg_size_pretty(file_size_bytes)  AS file_size,
+    pg_size_pretty(actual_data_bytes) AS actual_data
+FROM (
+         SELECT
+             c.relname,
+             pg_relation_size(c.oid)                     AS file_size_bytes,
+             (pgstattuple(c.oid)).tuple_len::bigint      AS actual_data_bytes
+         FROM pg_class c
+         WHERE c.relname IN (
+             'repo_attr_name_unique',
+             'repo_attr_qualname_unique',
+             'repo_attribute',
+             'repo_attribute_current_value',
+             'repo_attribute_current_value_pk',
+             'repo_attribute_description',
+             'repo_attribute_description_pk',
+             'repo_attribute_pk',
+             'repo_attribute_value',
+             'repo_attribute_value_id_unique',
+             'repo_attribute_value_pk',
+             'repo_av_ind1',
+             'repo_av_ind2',
+             'repo_boolean_vector',
+             'repo_boolean_vector_pk',
+             'repo_data_vector',
+             'repo_data_vector_pk',
+             'repo_double_vector',
+             'repo_double_vector_pk',
+             'repo_eassoc_idx1',
+             'repo_external_assoc',
+             'repo_external_assoc_pk',
+             'repo_iassoc_idx1',
+             'repo_iassoc_idx2',
+             'repo_integer_vector',
+             'repo_integer_vector_pk',
+             'repo_internal_assoc',
+             'repo_internal_assoc_pk',
+             'repo_lock',
+             'repo_lock_pk',
+             'repo_log',
+             'repo_log_ind1',
+             'repo_long_vector',
+             'repo_long_vector_pk',
+             'repo_namespace',
+             'repo_namespace_pk',
+             'repo_record_template',
+             'repo_record_template_elements',
+             'repo_record_template_elements_pk',
+             'repo_record_template_name_uq',
+             'repo_record_template_pk',
+             'repo_record_vector',
+             'repo_record_vector_pk',
+             'repo_rv_ind1',
+             'repo_rv_ind2',
+             'repo_string_vector',
+             'repo_string_vector_pk',
+             'repo_sv_ind1',
+             'repo_sv_ind2',
+             'repo_tenant',
+             'repo_tenant_name_unique',
+             'repo_tenant_pk',
+             'repo_time_vector',
+             'repo_time_vector_pk',
+             'repo_tiv_ind1',
+             'repo_uk_corrid_unique',
+             'repo_uk_ind1',
+             'repo_uk_ind2',
+             'repo_unit_kernel',
+             'repo_unit_kernel_pk',
+             'repo_unit_template',
+             'repo_unit_template_elements',
+             'repo_unit_template_elements_pk',
+             'repo_unit_template_name_uq',
+             'repo_unit_template_pk',
+             'repo_unit_version',
+             'repo_unit_version_pk',
+             'repo_uv_ind1',
+             'repo_uv_ind2',
+             'repo_eassoc_idx2'
+             )
+     ) s
+ORDER BY actual_data_bytes DESC, file_size_bytes DESC, relname;
+
+--
+-- Units: total=1.110.336 locks=0 vectors=6.638.208
+-- Values: string=3.343.329 time=1.103.116 integer=0 long=0 double=40 boolean=0 data=0 record=3.309.836
+-- Assocs: internal=0 external=0
+--
+-- +--------------------------------+----------+-----------+
+-- |relname                         |file_size |actual_data|
+-- +--------------------------------+----------+-----------+
+-- |repo_attribute_value            |432 MB    |405 MB     |
+-- |repo_attribute_value_pk         |377 MB    |304 MB     |
+-- |repo_av_ind2                    |377 MB    |304 MB     |
+-- |repo_record_vector              |165 MB    |152 MB     |
+-- |repo_string_vector              |168 MB    |147 MB     |
+-- |repo_attribute_value_id_unique  |142 MB    |101 MB     |
+-- |repo_sv_ind2                    |120 MB    |94 MB      |
+-- |repo_string_vector_pk           |100 MB    |77 MB      |
+-- |repo_unit_kernel                |81 MB     |76 MB      |
+-- |repo_unit_version               |81 MB     |76 MB      |
+-- |repo_record_vector_pk           |99 MB     |76 MB      |
+-- |repo_rv_ind2                    |99 MB     |76 MB      |
+-- |repo_uv_ind1                    |72 MB     |60 MB      |
+-- |repo_uv_ind2                    |91 MB     |51 MB      |
+-- |repo_rv_ind1                    |80 MB     |51 MB      |
+-- |repo_time_vector                |55 MB     |50 MB      |
+-- |repo_av_ind1                    |41 MB     |39 MB      |
+-- |repo_unit_version_pk            |43 MB     |34 MB      |
+-- |repo_uk_ind1                    |74 MB     |34 MB      |
+-- |repo_uk_ind2                    |43 MB     |34 MB      |
+-- |repo_uk_corrid_unique           |33 MB     |25 MB      |
+-- |repo_unit_kernel_pk             |33 MB     |25 MB      |
+-- |repo_time_vector_pk             |33 MB     |25 MB      |
+-- |repo_sv_ind1                    |21 MB     |20 MB      |
+-- |repo_tiv_ind1                   |24 MB     |17 MB      |
+-- |repo_attribute                  |8192 bytes|4784 bytes |
+-- |repo_double_vector              |8192 bytes|2400 bytes |
+-- |repo_attr_qualname_unique       |16 kB     |1768 bytes |
+-- |repo_attr_name_unique           |16 kB     |1352 bytes |
+-- |repo_record_template_elements   |8192 bytes|1317 bytes |
+-- |repo_double_vector_pk           |16 kB     |1200 bytes |
+-- |repo_attribute_pk               |16 kB     |784 bytes  |
+-- |repo_record_template_elements_pk|16 kB     |448 bytes  |
+-- |repo_record_template            |8192 bytes|422 bytes  |
+-- |repo_record_template_name_uq    |16 kB     |232 bytes  |
+-- |repo_record_template_pk         |16 kB     |176 bytes  |
+-- |repo_tenant                     |8192 bytes|112 bytes  |
+-- |repo_namespace                  |8192 bytes|60 bytes   |
+-- |repo_namespace_pk               |16 kB     |48 bytes   |
+-- |repo_lock_pk                    |16 kB     |32 bytes   |
+-- |repo_tenant_name_unique         |16 kB     |32 bytes   |
+-- |repo_tenant_pk                  |16 kB     |32 bytes   |
+-- |repo_attribute_description_pk   |8192 bytes|0 bytes    |
+-- |repo_boolean_vector_pk          |8192 bytes|0 bytes    |
+-- |repo_data_vector_pk             |8192 bytes|0 bytes    |
+-- |repo_eassoc_idx1                |8192 bytes|0 bytes    |
+-- |repo_eassoc_idx2                |8192 bytes|0 bytes    |
+-- |repo_external_assoc_pk          |8192 bytes|0 bytes    |
+-- |repo_iassoc_idx1                |8192 bytes|0 bytes    |
+-- |repo_iassoc_idx2                |8192 bytes|0 bytes    |
+-- |repo_integer_vector_pk          |8192 bytes|0 bytes    |
+-- |repo_internal_assoc_pk          |8192 bytes|0 bytes    |
+-- |repo_lock                       |8192 bytes|0 bytes    |
+-- |repo_log_ind1                   |8192 bytes|0 bytes    |
+-- |repo_long_vector_pk             |8192 bytes|0 bytes    |
+-- |repo_unit_template_elements_pk  |8192 bytes|0 bytes    |
+-- |repo_unit_template_name_uq      |8192 bytes|0 bytes    |
+-- |repo_unit_template_pk           |8192 bytes|0 bytes    |
+-- |repo_attribute_description      |0 bytes   |0 bytes    |
+-- |repo_boolean_vector             |0 bytes   |0 bytes    |
+-- |repo_data_vector                |0 bytes   |0 bytes    |
+-- |repo_external_assoc             |0 bytes   |0 bytes    |
+-- |repo_integer_vector             |0 bytes   |0 bytes    |
+-- |repo_internal_assoc             |0 bytes   |0 bytes    |
+-- |repo_log                        |0 bytes   |0 bytes    |
+-- |repo_long_vector                |0 bytes   |0 bytes    |
+-- |repo_unit_template              |0 bytes   |0 bytes    |
+-- |repo_unit_template_elements     |0 bytes   |0 bytes    |
+-- +--------------------------------+----------+-----------+
+
