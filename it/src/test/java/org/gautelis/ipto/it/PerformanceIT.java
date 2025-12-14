@@ -254,8 +254,8 @@ public class PerformanceIT {
     public void test(Repository repo) {
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 10; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = 100; //
+        final int numberOfChildren = 10; //
 
         try {
             Instant firstParentCreated = null;
