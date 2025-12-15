@@ -102,7 +102,8 @@ final class StringValue extends Value<String> {
     void toJson(
             ArrayNode _ignored,
             ObjectNode attributeNode,
-            boolean _isChatty
+            boolean _isChatty,
+            boolean _forPersistence
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (String value : values) {

@@ -104,7 +104,8 @@ final class DoubleValue extends Value<Double> {
     void toJson(
             ArrayNode _ignored,
             ObjectNode attributeNode,
-            boolean _isChatty
+            boolean _isChatty,
+            boolean _forPersistence
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Double value : values) {

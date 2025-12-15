@@ -176,7 +176,7 @@ public class Attribute<T> {
         return valueId;
     }
 
-    public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty) {
+    public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty, boolean forPersistence) {
         if (isChatty) {
             String _type = type.name().toLowerCase();
             if (value.isScalar()) {
@@ -185,21 +185,24 @@ public class Attribute<T> {
                 _type += "-vector";
             }
             attributeNode.put("@type", _type);
-            attributeNode.put("attrname", name);
             attributeNode.put("alias", alias);
             attributeNode.put("attrtype", type.name());
         } else {
             attributeNode.put("attrtype", type.getType());
         }
 
-        attributeNode.put("attrid", id);
+        attributeNode.put("attrname", name);
+
+        if (forPersistence) {
+            attributeNode.put("attrid", id);
+        }
 
         if (AttributeType.RECORD == type) {
             // push local record 'attributes', effectively hiding unit attributes
             attributes = attributeNode.putArray("attributes");
         }
 
-        value.toJson(attributes, attributeNode, isChatty);
+        value.toJson(attributes, attributeNode, isChatty, forPersistence);
     }
 
     private void readEntry(JsonNode node) throws JacksonException {

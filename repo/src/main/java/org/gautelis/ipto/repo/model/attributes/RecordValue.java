@@ -155,12 +155,13 @@ public final class RecordValue extends Value<Attribute<?>> {
     void toJson(
             ArrayNode attributes,
             ObjectNode attributeNode,
-            boolean isChatty
+            boolean isChatty,
+            boolean forPersitence
     ) throws AttributeTypeException, AttributeValueException {
         for (Attribute<?> nestedAttribute : values) {
             // 'attributes' are represented in record parent attribute.
             ObjectNode nestedAttributeNode = attributes.addObject();
-            nestedAttribute.toJson(attributes, nestedAttributeNode, isChatty);
+            nestedAttribute.toJson(attributes, nestedAttributeNode, isChatty, forPersitence);
         }
     }
 

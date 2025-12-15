@@ -1,4 +1,4 @@
-package org.gautelis.repo.udpf;
+package org.gautelis.ipto.repo.udpf;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -29,7 +29,7 @@ public class Utilities {
      * PARAMETER STYLE JAVA
      * MODIFIES SQL DATA
      * FENCED
-     * EXTERNAL NAME 'IPTOJAR:org.gautelis.repo.udpf.Utilities.log_java_version';
+     * EXTERNAL NAME 'IPTOJAR:org.gautelis.ipto.repo.udpf.Utilities.log_java_version';
      *
      * @throws SQLException
      */

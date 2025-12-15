@@ -82,8 +82,8 @@ public class PerformanceIT {
         System.out.println("---------------------------------------------------------------------------------------");
         System.out.println(" Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
         System.out.println();
-        System.out.println(" If this is run immediately after PostgreSQL startup and without warm-up,");
-        System.out.println(" the statistics will not be accurate. In fact, this test *is* the warm-up.");
+        System.out.println(" If this is run immediately after database startup and without warm-up, the");
+        System.out.println(" statistics may not be accurate. In fact, this test *may be* the warm-up.");
         System.out.println("---------------------------------------------------------------------------------------");
         System.out.flush();
 

@@ -327,9 +327,9 @@ BEGIN
                           AND uk.unitid = uv.unitid
                           AND uv.unitver = COALESCE(NULLIF(p_unitver, -1), uk.lastver)
         WHERE uk.tenantid = p_tenantid
-          AND uk.unitid   = p_unitid
+          AND uk.unitid = p_unitid
     ),
-         attrs AS (
+        attrs AS (
              SELECT av.attrid,
                     a.attrtype,
                     a.attrname,
@@ -380,15 +380,14 @@ BEGIN
              FROM repo_attribute_value av
                       JOIN repo_attribute a
                            ON a.attrid = av.attrid
-                      JOIN repo_unit_kernel uk
-                           ON uk.tenantid = av.tenantid
-                               AND uk.unitid   = av.unitid
-             WHERE uk.lastver <= av.unitverto
-               AND uk.lastver >= av.unitverfrom
-               AND av.tenantid = p_tenantid
-               AND av.unitid   = p_unitid
+                      JOIN unit_hdr uh
+                           ON uh.tenantid = av.tenantid AND uh.unitid = av.unitid
+             WHERE av.tenantid = p_tenantid
+               AND av.unitid = p_unitid
+               AND uh.unitver BETWEEN av.unitverfrom AND av.unitverto
          )
-    SELECT jsonb_build_object(
+
+       SELECT jsonb_build_object(
                    '@type', 'unit',
                    '@version', 2,
                    'tenantid', u.tenantid,

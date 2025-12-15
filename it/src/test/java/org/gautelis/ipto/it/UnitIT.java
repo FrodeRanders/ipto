@@ -17,9 +17,11 @@
 package org.gautelis.ipto.it;
 
 import org.gautelis.ipto.repo.db.Database;
+import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
 import org.gautelis.ipto.repo.exceptions.UnitLockedException;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
+import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.locks.LockType;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +29,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Stack;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -95,10 +101,118 @@ public class UnitIT {
 
         if (_pre != null) {
             if (!_pre.equals(_post)) {
-                System.out.println("Imbalance");
+                System.out.println();
+                System.out.println("   <<<Imbalance>>>   pre != post --> delete and disposition failed");
+                System.out.println();
             }
         }
     }
+
+    private void assertVersionIs(final int expectedVersion, Unit unit, Repository repo) {
+        try {
+            repo.withConnection(conn -> {
+                //
+                String sql = "SELECT lastver FROM repo_unit_kernel uk WHERE tenantid = ? AND unitid = ?";
+                try (PreparedStatement pStmt = conn.prepareStatement(sql)) {
+                    int i = 0;
+                    pStmt.setInt(++i, unit.getTenantId());
+                    pStmt.setLong(++i, unit.getUnitId());
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        if (!rs.next()) {
+                            fail("Could not locate unit in repo_unit_kernel: " + unit.getReference());
+                        }
+
+                        int lastver = rs.getInt("lastver");
+                        if (lastver != expectedVersion) {
+                            fail("Unexpected last version: " + lastver + " != " + expectedVersion);
+                        }
+                    }
+                } catch (SQLException sqle) {
+                    String info = "Could not query repo_unit_kernel: " + Database.squeeze(sqle);
+                    log.warn(info, sqle);
+                    fail(info);
+                }
+
+                //
+                sql = "SELECT COUNT(*) FROM repo_unit_version WHERE tenantid = ? AND unitid = ?";
+                try (PreparedStatement pStmt = conn.prepareStatement(sql)) {
+                    int i = 0;
+                    pStmt.setInt(++i, unit.getTenantId());
+                    pStmt.setLong(++i, unit.getUnitId());
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        if (!rs.next()) {
+                            fail("Could not count versions in repo_unit_version: " + unit.getReference());
+                        }
+
+                        int count = rs.getInt(1);
+                        if (count != expectedVersion) {
+                            fail("Unexpected number of versions: " + count + " != " + expectedVersion);
+                        }
+                    }
+                } catch (SQLException sqle) {
+                    String info = "Could not assert unit versions: " + Database.squeeze(sqle);
+                    log.warn(info, sqle);
+                    fail(info);
+                }
+            });
+        } catch (SQLException sqle) {
+            String info = "Could not verify data in database: " + Database.squeeze(sqle);
+            log.warn(info, sqle);
+            fail(info);
+        }
+    }
+
+    private void assertAttributeExists(final String attributeName, Unit unit, Repository repo) {
+
+        Optional<Attribute<?>> attribute = unit.getAttribute(attributeName, /* create if missing? */ false);
+        attribute.ifPresentOrElse(attr -> {
+            try {
+            repo.withConnection(conn -> {
+                String sql = """
+                    SELECT valueid, unitverfrom, unitverto
+                    FROM repo_attribute_value av
+                    WHERE tenantid = ?
+                      AND unitid = ?
+                      AND attrid = ?
+                    """;
+
+                try (PreparedStatement pStmt = conn.prepareStatement(sql)) {
+                    int i = 0;
+                    pStmt.setInt(++i, unit.getTenantId());
+                    pStmt.setLong(++i, unit.getUnitId());
+                    pStmt.setInt(++i, attr.getId());
+
+                    try (ResultSet rs = pStmt.executeQuery()) {
+                        if (!rs.next()) {
+                            fail("Could not locate value in repo_attribute_value: unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attr.getId() + ")");
+                        }
+
+                        long valueid = rs.getLong("valueid");
+                        int verFrom = rs.getInt("unitverfrom");
+                        int verTo = rs.getInt("unitverto");
+
+                        if (verFrom != 1) {
+                            fail("Unexpected version-from: " + verFrom + " != " + 1);
+                        }
+                        if (verTo != unit.getVersion()) {
+                            fail("Unexpected version-to: " + verTo + " != " + unit.getVersion() + " for: unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attr.getId() + ") value=" + valueid);
+                        }
+                    }
+                } catch (SQLException sqle) {
+                    String info = "Could not query repo_attribute_value: " + Database.squeeze(sqle);
+                    log.warn(info, sqle);
+                    fail(info);
+                }
+            });
+            } catch (SQLException sqle) {
+                String info = "Could not verify data in database: " + Database.squeeze(sqle);
+                log.warn(info, sqle);
+                fail(info);
+            }
+        }, fail("No attribute: " + attributeName));
+   }
 
     @Test
     public void test(Repository repo) {
@@ -117,6 +231,7 @@ public class UnitIT {
         //
         repo.storeUnit(unit);
 
+        assertVersionIs(1, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -131,6 +246,7 @@ public class UnitIT {
         assertThrows(UnitLockedException.class, () -> {
             repo.storeUnit(unit);
         });
+        assertVersionIs(/* still */ 1, unit, repo);
 
         repo.unlockUnit(unit);
         assertFalse(unit.isLocked());
@@ -141,6 +257,8 @@ public class UnitIT {
         assertDoesNotThrow(() -> {
             repo.storeUnit(unit);
         });
+
+        assertVersionIs(2, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -151,6 +269,8 @@ public class UnitIT {
         assertDoesNotThrow(() -> {
             repo.storeUnit(unit);
         });
+
+        assertVersionIs(3, unit, repo);
 
         unit.requestStatusTransition(Unit.Status.PENDING_DISPOSITION);
 

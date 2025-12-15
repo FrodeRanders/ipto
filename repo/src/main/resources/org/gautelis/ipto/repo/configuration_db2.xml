@@ -3,23 +3,6 @@
 <properties>
 
     <entry key="url">
-        jdbc:postgresql://localhost:5432/repo
-    </entry>
-
-    <entry key="user">
-        repo
-    </entry>
-
-    <entry key="password">
-        repo
-    </entry>
-
-    <entry key="repository.database.adapter">
-        org.gautelis.ipto.repo.search.query.adapters.PostgresAdapter
-    </entry>
-
-    <!--
-    <entry key="url">
         jdbc:db2://localhost:50000/REPO:currentSchema=REPO;currentFunctionPath=REPO,SYSIBM,SYSFUN,SYSPROC,SYSIBMADM;
     </entry>
 
@@ -34,7 +17,6 @@
     <entry key="repository.database.adapter">
         org.gautelis.ipto.repo.search.query.adapters.DB2Adapter
     </entry>
-    -->
 
     <!--
         Non-db related configuration

@@ -1,4 +1,4 @@
-package org.gautelis.repo.udpf;
+package org.gautelis.ipto.repo.udpf;
 
 import javax.sql.rowset.serial.SerialBlob;
 import java.sql.Blob;

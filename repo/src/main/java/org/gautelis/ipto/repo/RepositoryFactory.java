@@ -47,6 +47,8 @@ public class RepositoryFactory {
 
     private static final boolean DEBUG_DATABASE_SETUP = false;
 
+
+
     private static Repository repo;
 
     private RepositoryFactory() {}
@@ -63,8 +65,8 @@ public class RepositoryFactory {
         return ConfigurationTool.bindProperties(Configuration.class, properties);
     }
 
-    private static Configuration getConfiguration() throws IOException {
-        return getConfiguration(ConfigurationTool.loadFromResource(RepositoryFactory.class, "configuration.xml"));
+    private static Configuration getConfiguration(String configurationFile) throws IOException {
+        return getConfiguration(ConfigurationTool.loadFromResource(RepositoryFactory.class, configurationFile));
     }
 
     public static Repository getRepository() {
@@ -87,7 +89,16 @@ public class RepositoryFactory {
         //
         Configuration config;
         try {
-            config = getConfiguration();
+            String dbProvider = System.getenv("IPTO_DB_PROVIDER");
+            if (null == dbProvider || dbProvider.isEmpty()) {
+                config = getConfiguration("configuration_pg.xml");
+            } else {
+                config = switch (dbProvider) {
+                    case "DB2" -> getConfiguration("configuration_db2.xml");
+                    case "PG" -> getConfiguration("configuration_pg.xml");
+                    default -> getConfiguration("configuration_pg.xml");
+                };
+            }
         }
         catch (IOException ioe) {
             String info = "Failed to load configuration: " + ioe.getMessage();

@@ -230,7 +230,7 @@ public class Unit implements Cloneable {
         return "#NOID#";
     }
 
-    private ObjectNode getJson(boolean isChatty) {
+    private ObjectNode getJson(boolean isChatty, boolean forPersistence) {
         ObjectNode unitNode = MAPPER.createObjectNode();
 
         if (isChatty) {
@@ -262,7 +262,7 @@ public class Unit implements Cloneable {
         try {
             for (Attribute<?> attribute : attributes.values()) {
                 ObjectNode attributeNode = attrs.addObject();
-                attribute.toJson(attrs, attributeNode, isChatty);
+                attribute.toJson(attrs, attributeNode, isChatty, forPersistence);
             }
         } catch (java.lang.StackOverflowError soe) {
             log.error("Cannot unwrap attributes of {}: {}", getReference(), soe.getMessage(), soe);
@@ -273,7 +273,7 @@ public class Unit implements Cloneable {
 
     public String asJson(boolean pretty) {
         try {
-            ObjectNode unitNode = getJson(/* be chatty and use type names */ true);
+            ObjectNode unitNode = getJson(/* be chatty and use type names */ true, /* for persistence? */ false);
             if (pretty) {
                 return MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(unitNode);
             } else {
@@ -426,7 +426,7 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_unit_json(?, ?, ?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            ObjectNode json = getJson(/* don't be chatty */ false);
+            ObjectNode json = getJson(/* don't be chatty */ false, /* for persistence? */ true);
             log.trace("Storing new unit {}", json);
 
             cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
@@ -455,7 +455,7 @@ public class Unit implements Cloneable {
         String sql = "CALL ingest_new_version_json(?, ?, ?)";
 
         try (CallableStatement cs = conn.prepareCall(sql)) {
-            ObjectNode json = getJson(/* don't be chatty */ false);
+            ObjectNode json = getJson(/* don't be chatty */ false, /* for persistence? */ true);
             log.trace("Storing unit version {}", json);
 
             cs.setString(1, json.toString()); // optionally cs.setCharacterStream(1, new StringReader(json), json.length());
@@ -1030,7 +1030,7 @@ public class Unit implements Cloneable {
 
     public void withRecordAttribute(String name, RecordAttributeRunnable runnable) {
         Optional<Attribute<?>> _attribute = getAttribute(name, /* create if missing? */ true);
-        if (!_attribute.isPresent()) {
+        if (_attribute.isEmpty()) {
             throw new IllegalArgumentException("Unknown attribute: " + name);
         } else {
             Attribute<?> attribute = _attribute.get();

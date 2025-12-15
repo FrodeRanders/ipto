@@ -58,20 +58,6 @@ final class LongValue extends Value<Long> {
     /* package accessible only */
     void inflateSingleElement(ResultSet rs) throws DatabaseReadException {
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * idx,
-             * string_val,    -- string value at index idx
-             * time_val,      -- time value at index idx
-             * int_val,       -- int value at index idx
-             * long_val,      -- long value at index idx
-             * double_val,    -- double value at index idx
-             * bool_val,      -- boolean value at index idx
-             * data_val       -- data value at index idx
-             * ----------------------------------------------------------- */
             Long value = rs.getLong("long_val");
             values.add(value);
 
@@ -118,7 +104,8 @@ final class LongValue extends Value<Long> {
     void toJson(
             ArrayNode _ignored,
             ObjectNode attributeNode,
-            boolean _isChatty
+            boolean _isChatty,
+            boolean _forPersistence
     ) throws AttributeTypeException, AttributeValueException {
         ArrayNode array = attributeNode.putArray(VALUE_PROPERTY_NAME);
         for (Long value : values) {

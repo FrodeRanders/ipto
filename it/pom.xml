@@ -30,6 +30,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.ibm.db2</groupId>
+            <artifactId>jcc</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>

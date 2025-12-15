@@ -72,20 +72,6 @@ public abstract class Value<T> {
         isNew = false;
 
         try {
-            /* -------------------- Result set layout -------------------- *
-             * valueid,                       -- value vector id
-             * attrid, attrtype, attrname,    -- attribute
-             * parent_valueid, record_idx,    -- records
-             * depth,
-             * string_idx, string_val,  -- string value at index string_idx
-             * time_idx, time_val,      -- time value at index time_idx
-             * int_idx, int_val,        -- int value at index int_idx
-             * long_idx, long_val,      -- long value at index long_idx
-             * double_idx, double_val,  -- double value at index double_idx
-             * bool_idx, bool_val,      -- boolean value at index bool_idx
-             * data_idx, data_val       -- data value at index data_idx
-             * ----------------------------------------------------------- */
-
             // We will only pick the value vector elements associated with
             // the current (attribute) value.
             final long valueId = rs.getLong("valueid");
@@ -354,7 +340,8 @@ public abstract class Value<T> {
     abstract void toJson(
             ArrayNode attributes,
             ObjectNode attributeNode,
-            boolean isChatty
+            boolean isChatty,
+            boolean forPersistence
     ) throws AttributeTypeException, AttributeValueException;
 
     /**
