@@ -1,5 +1,6 @@
 package org.gautelis.ipto.graphql.runtime;
 
+import com.fasterxml.uuid.Generators;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
@@ -46,6 +47,12 @@ public class RuntimeService {
         }
     }
 
+    static String headHex(byte[] bytes, int n) {
+        int len = Math.min(bytes.length, n);
+        String hex = HexFormat.of().formatHex(bytes, 0, len);
+        return hex.replaceAll("..(?!$)", "$0 ");
+    }
+
     public void wire(
             RuntimeWiring.Builder runtimeWiring,
             Configurator.GqlViewpoint gqlViewpoint,
@@ -57,18 +64,19 @@ public class RuntimeService {
         RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
     }
 
-    public byte[] storeRawUnit(byte[] bytes) {
-        // TODO!!!  Not implemented
-        log.error("\u21aa NOT IMPLEMENTED: storeRawUnit");
+    public Object storeRawUnit(int tenantId, byte[] bytes) {
+        log.trace("\u21aa RuntimeService::storeRawUnit({}, {}...)", tenantId, headHex(bytes, 16));
 
-        log.trace("Store raw unit bytes {}", bytes);
+        //String json = new String(bytes);
 
-        Repository repo = RepositoryFactory.getRepository();
-        int tenantId = 1;
-        Unit unit = repo.createUnit(tenantId);
+        //Repository repo = RepositoryFactory.getRepository();
+        //Unit unit = repo.createUnit(tenantId);
 
-        String json = unit.asJson(/* pretty? */ false);
-        return json.getBytes(StandardCharsets.UTF_8);
+        UUID dataleveransId = Generators.timeBasedEpochGenerator().generate();
+        return Map.of(
+                "dataleveransid", dataleveransId.toString(),
+                "data", bytes // Currently just an echo
+        );
     }
 
     public Box loadUnit(int tenantId, long unitId) {

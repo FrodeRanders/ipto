@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Base64;
+import java.util.HexFormat;
 import java.util.Locale;
 
 public final class BytesScalar {
@@ -16,6 +17,12 @@ public final class BytesScalar {
 
     private static final Base64.Encoder ENC = Base64.getEncoder();
     private static final Base64.Decoder DEC = Base64.getDecoder();
+
+    static String headHex(byte[] bytes, int n) {
+        int len = Math.min(bytes.length, n);
+        String hex = HexFormat.of().formatHex(bytes, 0, len);
+        return hex.replaceAll("..(?!$)", "$0 ");
+    }
 
     public static final GraphQLScalarType INSTANCE =
             GraphQLScalarType.newScalar()
@@ -29,7 +36,7 @@ public final class BytesScalar {
                                 @NonNull GraphQLContext graphQLContext,
                                 @NonNull Locale locale
                         ) throws CoercingSerializeException {
-                            log.trace("\u2193 Serializing: {} of type {}", dataFetcherResult, dataFetcherResult.getClass().getName());
+                            log.trace("\u2193 Serializing: {}... of type {}", headHex((byte[]) dataFetcherResult, 16), dataFetcherResult.getClass().getName());
                             if (dataFetcherResult instanceof byte[] b) {
                                 return ENC.encodeToString(b);
                             }

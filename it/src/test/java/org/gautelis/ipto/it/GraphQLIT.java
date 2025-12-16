@@ -595,4 +595,112 @@ public class GraphQLIT {
         }
         System.out.println("---------------------------------------------------------------------------------------");
     }
+
+    @Test
+    @Order(7)
+    public void storeRaw(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
+        final int tenantId = 1;
+        byte[] data = """
+                {
+                  "@type" : "ipto:unit",
+                  "@version" : 2,
+                  "tenantid" : 1,
+                  "unitid" : 113572,
+                  "unitver" : 1,
+                  "corrid" : "019b290c-7c5c-7353-bcf5-4ee9390fff46",
+                  "status" : 30,
+                  "unitname" : "child-1-10",
+                  "created" : "2025-12-16T22:24:02.779110Z",
+                  "modified" : "2025-12-16T22:24:02.779110Z",
+                  "attributes" : [ {
+                    "@type" : "record-scalar",
+                    "alias" : "producerade_resultat",
+                    "attrtype" : "RECORD",
+                    "attrname" : "ffa:producerade_resultat",
+                    "attributes" : [ {
+                      "@type" : "record-vector",
+                      "alias" : "ratten_till_period",
+                      "attrtype" : "RECORD",
+                      "attrname" : "ffa:ratten_till_period",
+                      "attributes" : [ {
+                        "@type" : "string-scalar",
+                        "alias" : "ersattningstyp",
+                        "attrtype" : "STRING",
+                        "attrname" : "ffa:ersattningstyp",
+                        "value" : [ "HUNDBIDRAG" ]
+                      }, {
+                        "@type" : "string-scalar",
+                        "alias" : "omfattning",
+                        "attrtype" : "STRING",
+                        "attrname" : "ffa:omfattning",
+                        "value" : [ "HEL" ]
+                      } ]
+                    } ]
+                  }, {
+                    "@type" : "string-vector",
+                    "alias" : "title",
+                    "attrtype" : "STRING",
+                    "attrname" : "dce:title",
+                    "value" : [ "Replaced value", "019b290c-7c4b-7592-8298-ced722f531c1" ]
+                  }, {
+                    "@type" : "time-scalar",
+                    "alias" : "date",
+                    "attrtype" : "TIME",
+                    "attrname" : "dce:date",
+                    "value" : [ "2025-12-16T21:24:02.780162Z" ]
+                  } ]
+                }
+                """.getBytes();
+
+        final Base64.Encoder ENC = Base64.getEncoder();
+        final String b64Data = new String(ENC.encode(data));
+
+        String mutation = """
+            mutation Unit($tenantId : Int!, $data : Bytes!) {
+              lagraDataleveransRaw(tenantId: $tenantId, data: $data) {
+                  dataleveransid
+              }
+            }
+            """;
+
+        log.info(mutation);
+        System.out.println(mutation);
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(mutation)
+                        .variables(Map.of(
+                                "tenantId", tenantId,
+                                "data", b64Data
+                        ))
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            Map<String, Object> dataMap = result.getData();
+            Map<String, Object> payload = (Map<String, Object>) dataMap.get("lagraDataleveransRaw");
+            if (null != payload) {
+                String id = (String) payload.get("dataleveransid");
+
+                System.out.print("--> ");
+                System.out.println(id);
+            } else {
+                log.error("Got: {}", dataMap);
+            }
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
+        }
+        System.out.println("---------------------------------------------------------------------------------------");
+    }
 }

@@ -89,10 +89,8 @@ public class RuntimeOperators {
                     // Tell GraphQL how to fetch this specific (record) type
                     DataFetcher<?> fetcher = env -> {
                         //**** Executed at runtime **********************************
-                        // My mission in life is to resolve a specific attribute
-                        // (the current 'fieldName') in a specific type (the current
-                        // record). Everything needed at runtime is accessible
-                        // right now so we capture it for later.
+                        // This closure captures its environment, so at runtime
+                        // the wiring preamble will be available.
                         //***********************************************************
                         Box box = env.getSource();
                         if (null == box) {
@@ -217,10 +215,8 @@ public class RuntimeOperators {
                     // Tell GraphQL how to fetch this specific (template) type
                     DataFetcher<?> fetcher = env -> {
                         //**** Executed at runtime **********************************
-                        // My mission in life is to resolve a specific attribute
-                        // (the current 'fieldName') in a specific type (the current
-                        // unit). Everything needed at runtime is accessible
-                        // right now so we capture it for later.
+                        // This closure captures its environment, so at runtime
+                        // the wiring preamble will be available.
                         //***********************************************************
                         Box box = env.getSource();
                         if (null == box) {
@@ -275,91 +271,113 @@ public class RuntimeOperators {
             final String parameterName = gqlOperation.parameterName();
             final String inputType = gqlOperation.inputTypeName();
             final String outputType = gqlOperation.outputTypeName();
+            final SchemaOperation category = gqlOperation.category();
 
-            switch (inputType) {
-                // "Hardcoded" point lookup for specific unit
-                case "UnitIdentification" -> {
-                    if ("Bytes".equals(outputType)) {
-                        DataFetcher<?> rawUnitById = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'fieldName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
-                            if (log.isTraceEnabled()) {
-                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+            switch (category) {
+                case QUERY -> {
+                    switch (inputType) {
+                        // "Hardcoded" point lookup for specific unit
+                        case "UnitIdentification" -> {
+                            if ("Bytes".equals(outputType)) {
+                                DataFetcher<?> rawUnitById = env -> {
+                                    //**** Executed at runtime **********************************
+                                    // This closure captures its environment, so at runtime
+                                    // the wiring preamble will be available.
+                                    //***********************************************************
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                    }
+
+                                    Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
+                                    return runtimeService.loadRawUnit(id.tenantId(), id.unitId());
+                                };
+
+                                runtimeWiring.type(type, t -> t.dataFetcher(operationName, rawUnitById));
+
+                            } else {
+                                DataFetcher<?> unitById = env -> {
+                                    //**** Executed at runtime **********************************
+                                    // This closure captures its environment, so at runtime
+                                    // the wiring preamble will be available.
+                                    //***********************************************************
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                    }
+
+                                    Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
+                                    return runtimeService.loadUnit(id.tenantId(), id.unitId());
+                                };
+
+                                runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitById));
                             }
+                            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                        }
 
-                            Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
-                            return runtimeService.loadRawUnit(id.tenantId(), id.unitId());
-                        };
+                        //
+                        case "Filter" -> {
+                            if ("Bytes".equals(outputType)) {
+                                DataFetcher<?> rawUnitsByFilter = env -> {
+                                    //**** Executed at runtime **********************************
+                                    // This closure captures its environment, so at runtime
+                                    // the wiring preamble will be available.
+                                    //***********************************************************
 
-                        runtimeWiring.type(type, t -> t.dataFetcher(operationName, rawUnitById));
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                    }
 
-                    } else {
-                        DataFetcher<?> unitById = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'operationName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
-                            if (log.isTraceEnabled()) {
-                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                    Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
+
+                                    return runtimeService.searchRaw(filter);
+                                };
+
+                                runtimeWiring.type(type, t -> t.dataFetcher(operationName, rawUnitsByFilter));
+                            } else {
+                                DataFetcher<?> unitsByFilter = env -> {
+                                    //**** Executed at runtime **********************************
+                                    // This closure captures its environment, so at runtime
+                                    // the wiring preamble will be available.
+                                    //***********************************************************
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                    }
+
+                                    Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
+
+                                    return runtimeService.search(filter);
+                                };
+
+                                runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitsByFilter));
                             }
-
-                            Query.UnitIdentification id = objectMapper.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
-                            return runtimeService.loadUnit(id.tenantId(), id.unitId());
-                        };
-
-                        runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitById));
+                            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                        }
                     }
-                    log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
                 }
+                case MUTATION -> {
+                    switch (inputType) {
+                        case "Bytes" -> {
+                            DataFetcher<?> storeJson = env -> {
+                                //**** Executed at runtime **********************************
+                                // This closure captures its environment, so at runtime
+                                // the wiring preamble will be available.
+                                //***********************************************************
 
-                //
-                case "Filter" -> {
-                    if ("Bytes".equals(outputType)) {
-                        DataFetcher<?> rawUnitsByFilter = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'operationName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
+                                if (log.isTraceEnabled()) {
+                                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                                }
 
-                            if (log.isTraceEnabled()) {
-                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                            }
+                                Map<String, Object> args = env.getArguments();
+                                int tenantId = (int) args.get("tenantId");
+                                byte[] data = (byte[]) args.get("data");
 
-                            Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
+                                return runtimeService.storeRawUnit(tenantId, data);
+                            };
 
-                            return runtimeService.searchRaw(filter);
-                        };
+                            runtimeWiring.type(type, t -> t.dataFetcher(operationName, storeJson));
 
-                        runtimeWiring.type(type, t -> t.dataFetcher(operationName, rawUnitsByFilter));
-
-                    } else {
-                        DataFetcher<?> unitsByFilter = env -> {
-                            //**** Executed at runtime **********************************
-                            // My mission in life is to resolve a specific query
-                            // (the current 'operationName').
-                            // Everything needed at runtime is accessible right
-                            // now so it is captured for later.
-                            //***********************************************************
-                            if (log.isTraceEnabled()) {
-                                log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                            }
-
-                            Query.Filter filter = objectMapper.convertValue(env.getArgument(parameterName), Query.Filter.class);
-
-                            return runtimeService.search(filter);
-                        };
-
-                        runtimeWiring.type(type, t -> t.dataFetcher(operationName, unitsByFilter));
+                            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                        }
                     }
-                    log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
                 }
             }
         }
@@ -400,10 +418,8 @@ public class RuntimeOperators {
 
                 TypeResolver unionResolver = env -> {
                     //**** Executed at runtime **********************************
-                    // My mission in life is to resolve a specific union
-                    // (the current 'unionName').
-                    // Everything needed at runtime is accessible right
-                    // now so it is captured for later.
+                    // This closure captures its environment, so at runtime
+                    // the wiring preamble will be available.
                     //***********************************************************
                     Object value = env.getObject(); // box
                     log.debug("\u21a9 Union: '{}' <- {}", unionName, value);

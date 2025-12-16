@@ -1,6 +1,6 @@
 schema {
     query: Query
-    #mutation: Mutation
+    mutation: Mutation
 }
 
 ##############  directive definitions ############################
@@ -362,5 +362,5 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraDataleveransRaw(data : Bytes!) : Dataleverans
+    lagraDataleveransRaw(tenantId : Int!, data : Bytes!) : Dataleverans
 }
