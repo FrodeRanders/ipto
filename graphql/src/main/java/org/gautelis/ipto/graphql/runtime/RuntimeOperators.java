@@ -231,7 +231,7 @@ public class RuntimeOperators {
                         log.trace("\u21a9 Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
 
                         if (box instanceof RecordBox recordBox) {
-                            log.debug("\u21a9 DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
+                            log.info("\u21a9 DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
                             if (isArray) {
                                 return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
                             } else {
@@ -406,7 +406,7 @@ public class RuntimeOperators {
                     // now so it is captured for later.
                     //***********************************************************
                     Object value = env.getObject(); // box
-                    log.info("\u21a9 Union: '{}' <- {}", unionName, value);
+                    log.debug("\u21a9 Union: '{}' <- {}", unionName, value);
 
                     if (value instanceof RecordBox recordBox) {
                         String typeName = aliasToTypeName.get(recordBox.getRecordAttribute().getAlias());

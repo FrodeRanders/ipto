@@ -26,7 +26,7 @@
     </entry>
 
     <entry key="repository.events.listeners">
-        org.gautelis.ipto.repo.listeners.NopActionListener
+        org.gautelis.ipto.repo.listeners.LoggingActionListener
     </entry>
 
     <entry key="repository.cache.look_behind">

@@ -151,8 +151,8 @@ public class Configurator {
         // Attributes
         for (String key : gqlViewpoint.attributes().keySet()) {
             if (!catalogViewpoint.attributes().containsKey(key)) {
-                log.warn("\u21af Attribute '{}' not found in catalog", key);
-                progress.println("Attribute '" + key + "' not found in catalog");
+                log.info("\u21af Reconciling attribute '{}'...", key);
+                progress.println("Reconciling attribute '" + key + "'...");
 
                 CatalogAttribute attribute = addAttribute(repo, gqlViewpoint.attributes().get(key), progress);
                 catalogViewpoint.attributes().put(key, attribute); // replace
@@ -169,8 +169,8 @@ public class Configurator {
         // Records
         for (String key : gqlViewpoint.records().keySet()) {
             if (!catalogViewpoint.records().containsKey(key)) {
-                log.warn("\u21af Record '{}' not found in catalog", key);
-                progress.println("Record '" + key + "' not found in catalog");
+                log.info("\u21af Reconciling record '{}'...", key);
+                progress.println("Reconciling record '" + key + "'...");
 
                 CatalogRecord record = addRecord(
                         repo,
@@ -193,8 +193,8 @@ public class Configurator {
         // Unit templates
         for (String key : gqlViewpoint.units.keySet()) {
             if (!catalogViewpoint.units().containsKey(key)) {
-                log.warn("\u21af Unit template '{}' not found in catalog", key);
-                progress.println("Unit template '" + key + "' not found in catalog");
+                log.info("\u21af Reconciling unit template '{}'...", key);
+                progress.println("Reconciling unit template '" + key + "'...");
 
                 CatalogUnitTemplate template = addUnitTemplate(
                         repo,
