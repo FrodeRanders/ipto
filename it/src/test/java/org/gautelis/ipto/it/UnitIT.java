@@ -164,11 +164,18 @@ public class UnitIT {
         }
     }
 
+    private int getAttributeId(String attributeName, Repository repo) {
+        Optional<Integer> attributeId = repo.attributeNameToId(attributeName);
+        if (attributeId.isEmpty()) {
+            throw new RuntimeException("Unknown attribute: " + attributeName);
+        }
+        return attributeId.get();
+    }
+
     private void assertAttributeExists(final String attributeName, Unit unit, Repository repo) {
 
-        Optional<Attribute<?>> attribute = unit.getAttribute(attributeName, /* create if missing? */ false);
-        attribute.ifPresentOrElse(attr -> {
-            try {
+        final int attrId = getAttributeId(attributeName, repo);
+        try {
             repo.withConnection(conn -> {
                 String sql = """
                     SELECT valueid, unitverfrom, unitverto
@@ -182,23 +189,23 @@ public class UnitIT {
                     int i = 0;
                     pStmt.setInt(++i, unit.getTenantId());
                     pStmt.setLong(++i, unit.getUnitId());
-                    pStmt.setInt(++i, attr.getId());
+                    pStmt.setInt(++i, attrId);
 
                     try (ResultSet rs = pStmt.executeQuery()) {
                         if (!rs.next()) {
-                            fail("Could not locate value in repo_attribute_value: unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attr.getId() + ")");
+                            fail("Could not locate value in repo_attribute_value: unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attrId + ")");
                         }
 
-                        long valueid = rs.getLong("valueid");
-                        int verFrom = rs.getInt("unitverfrom");
-                        int verTo = rs.getInt("unitverto");
+                        do {
+                            long valueid = rs.getLong("valueid");
+                            int verFrom = rs.getInt("unitverfrom");
+                            int verTo = rs.getInt("unitverto");
 
-                        if (verFrom != 1) {
-                            fail("Unexpected version-from: " + verFrom + " != " + 1);
-                        }
-                        if (verTo != unit.getVersion()) {
-                            fail("Unexpected version-to: " + verTo + " != " + unit.getVersion() + " for: unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attr.getId() + ") value=" + valueid);
-                        }
+                            // CURRENTLY!! Since optimizing for store latency
+                            if (verFrom != verTo) {
+                                fail("Version-from <> version-to: " + verFrom + " <> " + verTo + ": unit=" + unit.getReference() + " attribute=" + attributeName + "(" + attrId + ")");
+                            }
+                        } while (rs.next());
                     }
                 } catch (SQLException sqle) {
                     String info = "Could not query repo_attribute_value: " + Database.squeeze(sqle);
@@ -206,12 +213,11 @@ public class UnitIT {
                     fail(info);
                 }
             });
-            } catch (SQLException sqle) {
-                String info = "Could not verify data in database: " + Database.squeeze(sqle);
-                log.warn(info, sqle);
-                fail(info);
-            }
-        }, fail("No attribute: " + attributeName));
+        } catch (SQLException sqle) {
+            String info = "Could not verify data in database: " + Database.squeeze(sqle);
+            log.warn(info, sqle);
+            fail(info);
+        }
    }
 
     @Test
@@ -232,6 +238,7 @@ public class UnitIT {
         repo.storeUnit(unit);
 
         assertVersionIs(1, unit, repo);
+        assertAttributeExists("dce:title", unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -259,6 +266,7 @@ public class UnitIT {
         });
 
         assertVersionIs(2, unit, repo);
+        assertAttributeExists("dce:title", unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -271,6 +279,7 @@ public class UnitIT {
         });
 
         assertVersionIs(3, unit, repo);
+        assertAttributeExists("dce:title", unit, repo);
 
         unit.requestStatusTransition(Unit.Status.PENDING_DISPOSITION);
 

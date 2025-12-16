@@ -34,7 +34,6 @@ public class Example {
         return attributeId.get();
     }
     
-
     public void createAUnitAndAssignAttributes() {
         Repository repo = RepositoryFactory.getRepository();
         int tenantId = getTenantId("SCRATCH", repo); // SCRATCH is the default space

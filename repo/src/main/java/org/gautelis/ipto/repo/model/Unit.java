@@ -230,6 +230,16 @@ public class Unit implements Cloneable {
         return "#NOID#";
     }
 
+    /*
+     * Returns a standardised ID string, if the Unit has been persisted
+     */
+    public static String id2String(int tenantId, long unitId, int unitVersion) {
+        if (unitId > 0L) {
+            return tenantId + "." + unitId + ":" + unitVersion;
+        }
+        return "#NOID#";
+    }
+
     private ObjectNode getJson(boolean isChatty, boolean forPersistence) {
         ObjectNode unitNode = MAPPER.createObjectNode();
 
@@ -1067,6 +1077,7 @@ public class Unit implements Cloneable {
 
             return Optional.of(addAttribute(new Attribute<>(attributeInfo.get())));
         }
+
         return Optional.empty();
     }
 
@@ -1344,7 +1355,7 @@ public class Unit implements Cloneable {
      * Gets string reference to unit.
      */
     public String getReference() {
-        return id2String(tenantId, unitId);
+        return id2String(tenantId, unitId, unitVersion);
     }
 
     /**
