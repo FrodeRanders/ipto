@@ -601,8 +601,7 @@ public class GraphQLIT {
     public void storeRaw(GraphQL graphQL) {
         final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
-        final int tenantId = 1;
-        byte[] data = """
+        byte[] unitBytes = """
                 {
                   "@type" : "ipto:unit",
                   "@version" : 2,
@@ -655,11 +654,11 @@ public class GraphQLIT {
                 """.getBytes();
 
         final Base64.Encoder ENC = Base64.getEncoder();
-        final String b64Data = new String(ENC.encode(data));
+        final String b64Data = new String(ENC.encode(unitBytes));
 
         String mutation = """
-            mutation Unit($tenantId : Int!, $data : Bytes!) {
-              lagraDataleveransRaw(tenantId: $tenantId, data: $data) {
+            mutation Unit($data : Bytes!) {
+              lagraUnitRaw(data: $data) {
                   dataleveransid
               }
             }
@@ -672,7 +671,6 @@ public class GraphQLIT {
                 ExecutionInput.newExecutionInput()
                         .query(mutation)
                         .variables(Map.of(
-                                "tenantId", tenantId,
                                 "data", b64Data
                         ))
                         .build());
@@ -680,7 +678,7 @@ public class GraphQLIT {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             Map<String, Object> dataMap = result.getData();
-            Map<String, Object> payload = (Map<String, Object>) dataMap.get("lagraDataleveransRaw");
+            Map<String, Object> payload = (Map<String, Object>) dataMap.get("lagraUnitRaw");
             if (null != payload) {
                 String id = (String) payload.get("dataleveransid");
 

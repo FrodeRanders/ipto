@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.org/schemas/ipto-unit.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["@type", "@version", "tenantid", "unitid", "unitver", "corrid", "status", "unitname", "created", "modified", "attributes"],
+  "properties": {
+    "@type": { "const": "ipto:unit" },
+    "@version": { "type": "integer", "minimum": 1 },
+
+    "tenantid": { "type": "integer", "minimum": 1 },
+    "unitid":   { "type": "integer", "minimum": 1 },
+    "unitver":  { "type": "integer", "minimum": 1 },
+
+    "corrid": { "type": "string", "format": "uuid" },
+    "status": { "type": "integer" },
+
+    "unitname": { "type": "string", "minLength": 1 },
+    "created":  { "type": "string", "format": "date-time" },
+    "modified": { "type": "string", "format": "date-time" },
+
+    "attributes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/attribute" }
+    }
+  },
+
+  "$defs": {
+    "prefixedName": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]*:[^\\s]+$"
+    },
+
+    "attribute": {
+      "oneOf": [
+        { "$ref": "#/$defs/stringScalar" },
+        { "$ref": "#/$defs/stringVector" },
+        { "$ref": "#/$defs/timeScalar" },
+        { "$ref": "#/$defs/timeVector" },
+        { "$ref": "#/$defs/recordScalar" },
+        { "$ref": "#/$defs/recordVector" }
+      ]
+    },
+
+    "stringScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type":   { "const": "string-scalar" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "STRING" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "value": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 0,
+          "maxItems": 1
+        }
+      }
+    },
+
+    "stringVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type":   { "const": "string-vector" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "STRING" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "value": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 0
+        }
+      }
+    },
+
+    "timeScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type":   { "const": "time-scalar" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "TIME" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "value": {
+          "type": "array",
+          "items": { "type": "string", "format": "date-time" },
+          "minItems": 0,
+          "maxItems": 1
+        }
+      }
+    },
+
+    "timeVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type":   { "const": "time-vector" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "TIME" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "value": {
+          "type": "array",
+          "items": { "type": "string", "format": "date-time" },
+          "minItems": 0
+        }
+      }
+    },
+
+    "recordScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "attributes"],
+      "properties": {
+        "@type":   { "const": "record-scalar" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "RECORD" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute" },
+          "minItems": 0
+        }
+      }
+    },
+
+    "recordVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "attributes"],
+      "properties": {
+        "@type":   { "const": "record-vector" },
+        "alias":   { "type": "string", "minLength": 1 },
+        "attrtype":{ "const": "RECORD" },
+        "attrname":{ "$ref": "#/$defs/prefixedName" },
+
+        "attributes": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/attribute" },
+          "minItems": 0
+        }
+      }
+    }
+  }
+}

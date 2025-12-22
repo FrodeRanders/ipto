@@ -362,5 +362,5 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraDataleveransRaw(tenantId : Int!, data : Bytes!) : Dataleverans
+    lagraUnitRaw(data : Bytes!) : Dataleverans
 }

@@ -1,8 +1,8 @@
 package org.gautelis.ipto.graphql.runtime;
 
 import com.fasterxml.uuid.Generators;
+import com.networknt.schema.*;
 import graphql.schema.idl.RuntimeWiring;
-import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.model.CatalogAttribute;
@@ -17,6 +17,7 @@ import org.gautelis.ipto.repo.search.query.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.Error;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -31,6 +32,8 @@ public class RuntimeService {
     private final Repository repo;
     private final Map</* attribute alias */ String, CatalogAttribute> allAttributesByAlias = new HashMap<>();
 
+    private final Schema unitSchema;
+
     public RuntimeService(
             Repository repo,
             Configurator.CatalogViewpoint catalogView
@@ -44,6 +47,14 @@ public class RuntimeService {
             if (alias != null && !alias.isEmpty()) {
                 allAttributesByAlias.put(alias, attribute);
             }
+        }
+
+        SchemaRegistry schemaRegistry = SchemaRegistry.withDefaultDialect(SpecificationVersion.DRAFT_2020_12);
+        unitSchema = schemaRegistry.getSchema(SchemaLocation.of("classpath:schema/unit.json"));
+        if (null != unitSchema) {
+            unitSchema.initializeValidators();
+        } else {
+            log.warn("No schema for validation");
         }
     }
 
@@ -64,19 +75,31 @@ public class RuntimeService {
         RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
     }
 
-    public Object storeRawUnit(int tenantId, byte[] bytes) {
-        log.trace("\u21aa RuntimeService::storeRawUnit({}, {}...)", tenantId, headHex(bytes, 16));
+    public Object storeRawUnit(byte[] bytes) {
+        log.trace("\u21aa RuntimeService::storeRawUnit({}...)", headHex(bytes, 16));
 
-        //String json = new String(bytes);
+        String json = new String(bytes);
 
-        //Repository repo = RepositoryFactory.getRepository();
-        //Unit unit = repo.createUnit(tenantId);
+        List<com.networknt.schema.Error> errors = unitSchema.validate(json, InputFormat.JSON,
+                executionContext -> executionContext
+                        .executionConfig(executionConfig -> executionConfig.formatAssertionsEnabled(true)));
 
-        UUID dataleveransId = Generators.timeBasedEpochGenerator().generate();
-        return Map.of(
-                "dataleveransid", dataleveransId.toString(),
-                "data", bytes // Currently just an echo
-        );
+        if (errors.isEmpty()) {
+
+            //Repository repo = RepositoryFactory.getRepository();
+            //Unit unit = repo.createUnit(tenantId);
+
+            UUID dataleveransId = Generators.timeBasedEpochGenerator().generate();
+            return Map.of(
+                    "dataleveransid", dataleveransId.toString(),
+                    "data", bytes // Currently just an echo
+            );
+        } else {
+            StringBuilder buf = new StringBuilder();
+            errors.forEach(e -> buf.append('\n').append(e.getMessage()));
+            log.info("\u21aa JSON validation errors: {}", buf);
+            return Map.of("validation-errors", buf.toString());
+        }
     }
 
     public Box loadUnit(int tenantId, long unitId) {

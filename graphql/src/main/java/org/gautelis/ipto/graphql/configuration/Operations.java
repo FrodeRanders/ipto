@@ -3,17 +3,21 @@ package org.gautelis.ipto.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.graphql.model.GqlOperationShape;
+import org.gautelis.ipto.graphql.model.ParameterDefinition;
 import org.gautelis.ipto.graphql.model.SchemaOperation;
 import org.gautelis.ipto.graphql.model.TypeDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public final class Operations {
     private static final Logger log = LoggerFactory.getLogger(Operations.class);
+
+    private static final ParameterDefinition[] T = {};
 
     private Operations() {}
 
@@ -52,16 +56,16 @@ public final class Operations {
         for (FieldDefinition f : type.getFieldDefinitions()) {
             final String operationName = f.getName(); // field name
             final TypeDefinition resultType = TypeDefinition.of(f.getType());
-
             List<InputValueDefinition> inputs = f.getInputValueDefinitions();
 
-            if (!inputs.isEmpty()) {
-                InputValueDefinition input = inputs.getFirst();
-                String inputName = input.getName();
-                TypeDefinition inputType = TypeDefinition.of(input.getType());
-
-                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, inputName, inputType.typeName(), resultType.typeName()));
+            List<ParameterDefinition> params = new ArrayList<>();
+            for (InputValueDefinition ivd : inputs) {
+                params.add(
+                        new ParameterDefinition(ivd.getName(), TypeDefinition.of(ivd.getType()))
+                );
             }
+
+            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, params.toArray(T), resultType.typeName()));
         }
     }
 
@@ -71,16 +75,17 @@ public final class Operations {
         for (FieldDefinition f : type.getFieldDefinitions()) {
             final String operationName = f.getName(); // field name
             final TypeDefinition resultType = TypeDefinition.of(f.getType());
-
             List<InputValueDefinition> inputs = f.getInputValueDefinitions();
 
-            if (!inputs.isEmpty()) {
-                InputValueDefinition input = inputs.getFirst();
-                String inputName = input.getName();
-                TypeDefinition inputType = TypeDefinition.of(input.getType());
-
-                operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, inputName, inputType.typeName(), resultType.typeName()));
+            List<ParameterDefinition> params = new ArrayList<>();
+            for (InputValueDefinition ivd : inputs) {
+                params.add(
+                        new ParameterDefinition(ivd.getName(), TypeDefinition.of(ivd.getType()))
+                );
             }
+
+            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, params.toArray(T), resultType.typeName()));
+
         }
     }
 }

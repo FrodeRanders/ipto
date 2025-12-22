@@ -4,8 +4,7 @@ public record GqlOperationShape(
         String typeName,
         String operationName,
         SchemaOperation category,    // QUERY | MUTATION | SUBSCRIPTION
-        String parameterName,
-        String inputTypeName,     // Type of input to operation (e.g. UnitIdentification, Filter, ...)
+        ParameterDefinition[] parameters, // Parameters to operation (e.g. UnitIdentification, Filter, ...)
         String outputTypeName     // Type of output from operation (e.g. Bytes, <domain specific type>, ...)
 ) {
     @Override
@@ -14,9 +13,11 @@ public record GqlOperationShape(
         info += "type-name='" + typeName + '\'';
         info += ", operation-name='" + operationName + '\'';
         info += ", category='" + category.name() + '\'';
-        info += ", parameter-name='" + parameterName + '\'';
-        info += ", type-of-input='" + inputTypeName + '\'';
-        info += ", type-of-output='" + outputTypeName + '\'';
+        info += ", parameters=[";
+        for (ParameterDefinition def : parameters) {
+            info += "'" + def.parameterName() + " " + def.parameterType() + "', ";
+        }
+        info += "], type-of-output='" + outputTypeName + '\'';
         info += "]}";
         return info;
     }
