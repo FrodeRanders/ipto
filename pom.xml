@@ -28,6 +28,7 @@
 
         <!-- JSON related -->
         <jackson.version>3.0.3</jackson.version>
+        <networknt.version>3.0.0</networknt.version>
 
         <!-- GraphQL related -->
         <graphql-java.version>25.0</graphql-java.version>
@@ -36,7 +37,7 @@
         <junit.version>6.0.1</junit.version>
 
         <!-- logging related -->
-        <log4j.version>2.25.2</log4j.version>
+        <log4j.version>2.25.3</log4j.version>
         <slf4j.version>2.0.17</slf4j.version>
 
         <!-- db related -->
@@ -87,6 +88,12 @@
                 <groupId>tools.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.networknt</groupId>
+                <artifactId>json-schema-validator</artifactId>
+                <version>${networknt.version}</version>
             </dependency>
 
             <dependency>
