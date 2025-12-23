@@ -13,6 +13,8 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 
+import static org.gautelis.ipto.graphql.runtime.RuntimeService.headHex;
+
 public class RuntimeOperators {
     private static final Logger log = LoggerFactory.getLogger(RuntimeOperators.class);
 
@@ -375,12 +377,12 @@ public class RuntimeOperators {
                                     // the wiring preamble will be available.
                                     //***********************************************************
 
-                                    if (log.isTraceEnabled()) {
-                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                                    }
-
                                     Map<String, Object> args = env.getArguments();
                                     byte[] bytes = (byte[]) args.get("data"); // Connection to schema
+
+                                    if (log.isTraceEnabled()) {
+                                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
+                                    }
 
                                     return runtimeService.storeRawUnit(bytes);
                                 };

@@ -681,6 +681,7 @@ public class GraphQLIT {
             Map<String, Object> payload = (Map<String, Object>) dataMap.get("lagraUnitRaw");
             if (null != payload) {
                 String id = (String) payload.get("dataleveransid");
+                log.info("Result (dataleveransid): {}", id);
 
                 System.out.print("--> ");
                 System.out.println(id);

@@ -116,6 +116,119 @@
       }
     },
 
+    "integerScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "integer-scalar" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "INTEGER" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 0,
+          "maxItems": 1
+        }
+      }
+    },
+
+    "integerVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "integer-vector" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "INTEGER" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "minItems": 0
+        }
+      }
+    },
+
+    "longScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "long-scalar" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "LONG" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -9223372036854775808,
+            "maximum": 9223372036854775807
+          },
+          "minItems": 0,
+          "maxItems": 1
+        }
+      }
+    },
+
+    "longVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "long-vector" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "LONG" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": -9223372036854775808,
+            "maximum": 9223372036854775807
+          },
+          "minItems": 0
+        }
+      }
+    },
+
+    "booleanScalar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "boolean-scalar" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "BOOLEAN" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": { "type": "boolean" },
+          "minItems": 0,
+          "maxItems": 1
+        }
+      }
+    },
+
+    "booleanVector": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["@type", "alias", "attrtype", "attrname", "value"],
+      "properties": {
+        "@type": { "const": "boolean-vector" },
+        "alias": { "type": "string", "minLength": 1 },
+        "attrtype": { "const": "BOOLEAN" },
+        "attrname": { "$ref": "#/$defs/prefixedName" },
+        "value": {
+          "type": "array",
+          "items": { "type": "boolean" },
+          "minItems": 0
+        }
+      }
+    },
+
     "recordScalar": {
       "type": "object",
       "additionalProperties": false,
