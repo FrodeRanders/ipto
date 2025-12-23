@@ -614,23 +614,23 @@ public class GraphQLIT {
                   "created" : "2025-12-16T22:24:02.779110Z",
                   "modified" : "2025-12-16T22:24:02.779110Z",
                   "attributes" : [ {
-                    "@type" : "record-scalar",
+                    "@type" : "ipto:record-scalar",
                     "alias" : "producerade_resultat",
                     "attrtype" : "RECORD",
                     "attrname" : "ffa:producerade_resultat",
                     "attributes" : [ {
-                      "@type" : "record-vector",
+                      "@type" : "ipto:record-vector",
                       "alias" : "ratten_till_period",
                       "attrtype" : "RECORD",
                       "attrname" : "ffa:ratten_till_period",
                       "attributes" : [ {
-                        "@type" : "string-scalar",
+                        "@type" : "ipto:string-scalar",
                         "alias" : "ersattningstyp",
                         "attrtype" : "STRING",
                         "attrname" : "ffa:ersattningstyp",
                         "value" : [ "HUNDBIDRAG" ]
                       }, {
-                        "@type" : "string-scalar",
+                        "@type" : "ipto:string-scalar",
                         "alias" : "omfattning",
                         "attrtype" : "STRING",
                         "attrname" : "ffa:omfattning",
@@ -638,13 +638,13 @@ public class GraphQLIT {
                       } ]
                     } ]
                   }, {
-                    "@type" : "string-vector",
+                    "@type" : "ipto:string-vector",
                     "alias" : "title",
                     "attrtype" : "STRING",
                     "attrname" : "dce:title",
                     "value" : [ "Replaced value", "019b290c-7c4b-7592-8298-ced722f531c1" ]
                   }, {
-                    "@type" : "time-scalar",
+                    "@type" : "ipto:time-scalar",
                     "alias" : "date",
                     "attrtype" : "TIME",
                     "attrname" : "dce:date",

@@ -178,7 +178,7 @@ public class Attribute<T> {
 
     public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty, boolean forPersistence) {
         if (isChatty) {
-            String _type = type.name().toLowerCase();
+            String _type = "ipto:" + type.name().toLowerCase();
             if (value.isScalar()) {
                 _type += "-scalar";
             } else {
