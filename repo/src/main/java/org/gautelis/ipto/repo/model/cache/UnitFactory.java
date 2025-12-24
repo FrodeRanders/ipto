@@ -102,6 +102,7 @@ public final class UnitFactory {
 
                         try (ResultSet rs = Database.executeQuery(pStmt)) {
                             if (rs.next()) {
+                                log.trace("Resurrecting unit {}.{}:{}", tenantId, unitId, unitVersion);
                                 unit[0] = resurrect(ctx, rs);
                                 cacheStore(ctx, unit[0]);
                             }
@@ -115,6 +116,7 @@ public final class UnitFactory {
 
                         try (ResultSet rs = Database.executeQuery(pStmt)) {
                             if (rs.next()) {
+                                log.trace("Resurrecting unit {}.{} (latest)", tenantId, unitId);
                                 unit[0] = resurrect(ctx, rs);
                                 cacheStore(ctx, unit[0]);
                             }
@@ -162,8 +164,13 @@ public final class UnitFactory {
                                 default -> out.toString(); // Fall back on driver behaviour
                             };
 
-                            //log.trace("Resurrecting unit {}.{}: {}", tenantId, unitId, json);
-                            log.trace("Resurrecting unit {}.{}", tenantId, unitId);
+                            if (log.isTraceEnabled()) {
+                                if (unitVersion > 0) {
+                                    log.trace("Resurrecting unit {}.{}:{}", tenantId, unitId, unitVersion);
+                                } else {
+                                    log.trace("Resurrecting unit {}.{} (latest)", tenantId, unitId);
+                                }
+                            }
 
                             unit[0] = resurrect(ctx, json);
                             cacheStore(ctx, unit[0]);

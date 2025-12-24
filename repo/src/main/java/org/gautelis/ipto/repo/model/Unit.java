@@ -67,7 +67,7 @@ public class Unit implements Cloneable {
                     return s;
                 }
             }
-            throw new StatusException("Unknown status: " + status);
+            throw new StatusException("Unknown unit status: " + status);
         }
 
         public int getStatus() {
