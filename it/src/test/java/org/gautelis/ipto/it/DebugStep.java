@@ -21,10 +21,10 @@ public class DebugStep {
 
     public static void main(String... args) {
         try (InputStreamReader reader = new InputStreamReader(
-                Objects.requireNonNull(GraphQLIT.class.getResourceAsStream("unit-schema.graphqls"))
+                Objects.requireNonNull(GraphQLIT.class.getResourceAsStream("schema2.graphqls"))
         )) {
             Repository repo = RepositoryFactory.getRepository();
-            Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);
+            Optional<GraphQL> _graphQL = Configurator.load(repo, reader, null, System.out);
 
             if (_graphQL.isEmpty()) {
                 log.error("Could not load configuration");

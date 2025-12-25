@@ -58,7 +58,7 @@ public class RuntimeService {
         }
     }
 
-    static String headHex(byte[] bytes, int n) {
+    public static String headHex(byte[] bytes, int n) {
         int len = Math.min(bytes.length, n);
         String hex = HexFormat.of().formatHex(bytes, 0, len);
         return hex.replaceAll("..(?!$)", "$0 ");
@@ -71,8 +71,8 @@ public class RuntimeService {
     ) {
         RuntimeOperators.wireRecords(runtimeWiring, this, gqlViewpoint);
         RuntimeOperators.wireUnits(runtimeWiring, this, gqlViewpoint, catalogViewpoint);
-        RuntimeOperators.wireOperations(runtimeWiring, this, gqlViewpoint);
         RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
+        // Operations are wired separately
     }
 
     public Object storeRawUnit(byte[] bytes) {
