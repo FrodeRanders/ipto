@@ -52,12 +52,13 @@ public sealed abstract class BinaryExpression implements SearchExpression
 
     @Override public final String toSql(
             boolean usePrepare,
-            Map<String, SearchItem<?>> commonConstraintValues
+            Map<String, SearchItem<?>> commonConstraintValues,
+            Map<String, Integer> attributeNameToId
     ) {
         StringBuilder sb = new StringBuilder();
-        sb.append("(").append(left.toSql(usePrepare, commonConstraintValues)).append(" OR ");
+        sb.append("(").append(left.toSql(usePrepare, commonConstraintValues, attributeNameToId)).append(" OR ");
         sb.append(" ").append(operator).append(" ");
-        sb.append(right.toSql(usePrepare, commonConstraintValues)).append(")");
+        sb.append(right.toSql(usePrepare, commonConstraintValues, attributeNameToId)).append(")");
         return sb.toString();
     }
 }

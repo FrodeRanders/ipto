@@ -60,6 +60,7 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
             throw new InvalidParameterException("No name provided");
         }
 
+        name = name.replace('\'', ' ').replace('\"', ' ');
         name = name.replace('*', '%');
         boolean useLIKE = (name.indexOf('%') >= 0 || name.indexOf('_') >= 0);  // Uses wildcard
 

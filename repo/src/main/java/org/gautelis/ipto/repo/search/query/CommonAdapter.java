@@ -49,6 +49,9 @@ public abstract class CommonAdapter extends DatabaseAdapter {
     //------------------------------------------------------------------
     public static final String INSTANT_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
 
+    protected CommonAdapter() {
+    }
+
     /**
      * Unload issues for this database adapter.
      * <p>
@@ -218,13 +221,13 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             case LeafExpression<?> leaf -> {
                 if (leaf.getItem() instanceof UnitSearchItem<?> usi) {
                     preparedItems.add(usi);
-                    return Optional.of(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues));
+                    return Optional.of(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
                 } else {
                     return Optional.empty();
                 }
             }
             case NotExpression notExpr -> {
-                return Optional.of(notExpr.toSql(USE_PREPARED_STATEMENT, commonConstraintValues));
+                return Optional.of(notExpr.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
             }
             case BinaryExpression binExpr -> {
                 Optional<String> left = buildUnitConstraintLogic(binExpr.getLeft(), preparedItems, commonConstraintValues);
@@ -268,7 +271,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         SearchItem<?> item = leaf.getItem();
         if (item instanceof AttributeSearchItem<?> asi) {
             preparedItems.add(asi);
-            constraints.add(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues));
+            constraints.add(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
         }
     }
 

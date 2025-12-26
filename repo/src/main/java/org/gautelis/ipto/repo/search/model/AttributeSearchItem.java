@@ -21,14 +21,15 @@ import org.gautelis.ipto.repo.model.AttributeType;
 
 public abstract class AttributeSearchItem<T> extends SearchItem<T> {
 
-    private final int attrId;
+    //private final int attrId;
+    private final String attrName;
 
-    protected AttributeSearchItem(AttributeType type, Operator operator, int attrId) {
+    protected AttributeSearchItem(AttributeType type, Operator operator, String attrName) {
         super(type, operator);
-        this.attrId = attrId;
+        this.attrName = attrName;
     }
 
-    public int getAttrId() {
-        return attrId;
+    public String getAttrName() {
+        return attrName;
     }
 }

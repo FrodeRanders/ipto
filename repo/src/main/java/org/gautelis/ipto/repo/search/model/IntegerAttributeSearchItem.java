@@ -23,8 +23,8 @@ public class IntegerAttributeSearchItem extends AttributeSearchItem<Integer> {
 
     private final int value;
 
-    public IntegerAttributeSearchItem(int attrId, Operator operator, int value) {
-        super(AttributeType.INTEGER, operator, attrId);
+    public IntegerAttributeSearchItem(String attrName, Operator operator, int value) {
+        super(AttributeType.INTEGER, operator, attrName);
         this.value = value;
     }
 
@@ -34,17 +34,17 @@ public class IntegerAttributeSearchItem extends AttributeSearchItem<Integer> {
 
     /**
      * Generates constraint "integer attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<IntegerAttributeSearchItem> constrainOnEQ(int attrId, int value) {
-        return new LeafExpression<>(new IntegerAttributeSearchItem(attrId, Operator.EQ, value));
+    public static LeafExpression<IntegerAttributeSearchItem> constrainOnEQ(String attrName, int value) {
+        return new LeafExpression<>(new IntegerAttributeSearchItem(attrName, Operator.EQ, value));
     }
 
     /**
      * Generates constraint "integer attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<IntegerAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new IntegerAttributeSearchItem(attrId, Operator.EQ, Integer.parseInt(value)));
+    public static LeafExpression<IntegerAttributeSearchItem> constrainOnEQ(String attrName, String value) {
+        return new LeafExpression<>(new IntegerAttributeSearchItem(attrName, Operator.EQ, Integer.parseInt(value)));
     }
 }

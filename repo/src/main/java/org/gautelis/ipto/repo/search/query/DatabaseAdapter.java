@@ -41,7 +41,13 @@ import java.util.regex.Pattern;
 public abstract class DatabaseAdapter implements Adapter {
     private static final Logger log = LoggerFactory.getLogger(DatabaseAdapter.class);
 
+    protected final Map<String, Integer> attributeNameToId = new HashMap<>();
+
     public DatabaseAdapter() {}
+
+    public Map<String, Integer> getAttributeNameToIdMap() {
+        return attributeNameToId;
+    }
 
     public abstract String getTimePattern();
 

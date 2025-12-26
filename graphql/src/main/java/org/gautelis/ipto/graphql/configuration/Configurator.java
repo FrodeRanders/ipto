@@ -14,6 +14,8 @@ import org.gautelis.ipto.graphql.runtime.scalars.DateTimeScalar;
 import org.gautelis.ipto.graphql.runtime.scalars.LongScalar;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
+import org.gautelis.ipto.repo.model.Context;
+import org.gautelis.ipto.repo.model.KnownAttributes;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,6 +100,10 @@ public class Configurator {
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
         runtimeService.wire(runtimeWiring, gql, ipto);
 
+        //
+        repo.sync();
+
+        //
         return Optional.of(
                 GraphQL.newGraphQL(
                         new SchemaGenerator().makeExecutableSchema(registry, runtimeWiring.build())

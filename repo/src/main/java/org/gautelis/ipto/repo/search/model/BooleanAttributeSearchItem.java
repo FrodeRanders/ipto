@@ -23,8 +23,8 @@ public class BooleanAttributeSearchItem extends AttributeSearchItem<Boolean> {
 
     private final boolean value;
 
-    public BooleanAttributeSearchItem(int attrId, Operator operator, boolean value) {
-        super(AttributeType.BOOLEAN, operator, attrId);
+    public BooleanAttributeSearchItem(String attrName, Operator operator, boolean value) {
+        super(AttributeType.BOOLEAN, operator, attrName);
         this.value = value;
     }
 
@@ -34,17 +34,17 @@ public class BooleanAttributeSearchItem extends AttributeSearchItem<Boolean> {
 
     /**
      * Generates constraint "boolean attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<BooleanAttributeSearchItem> constrainOnEQ(int attrId, boolean value) {
-        return new LeafExpression<>(new BooleanAttributeSearchItem(attrId, Operator.EQ, value));
+    public static LeafExpression<BooleanAttributeSearchItem> constrainOnEQ(String attrName, boolean value) {
+        return new LeafExpression<>(new BooleanAttributeSearchItem(attrName, Operator.EQ, value));
     }
 
     /**
      * Generates constraint "boolean attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<BooleanAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new BooleanAttributeSearchItem(attrId, Operator.EQ, Boolean.parseBoolean(value)));
+    public static LeafExpression<BooleanAttributeSearchItem> constrainOnEQ(String attrName, String value) {
+        return new LeafExpression<>(new BooleanAttributeSearchItem(attrName, Operator.EQ, Boolean.parseBoolean(value)));
     }
 }

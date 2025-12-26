@@ -25,8 +25,8 @@ public class StringAttributeSearchItem extends AttributeSearchItem<String> {
 
     private final String value;
 
-    public StringAttributeSearchItem(int attrId, Operator operator, String value) {
-        super(AttributeType.STRING, operator, attrId);
+    public StringAttributeSearchItem(String attrName, Operator operator, String value) {
+        super(AttributeType.STRING, operator, attrName);
         this.value = value;
     }
 
@@ -36,18 +36,19 @@ public class StringAttributeSearchItem extends AttributeSearchItem<String> {
 
     /**
      * Generates constraint "string attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<StringAttributeSearchItem> constrainOnEQ(int attrId, String value) {
+    public static LeafExpression<StringAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         Objects.requireNonNull(value, "value");
 
+        value = value.replace('\'', ' ').replace('\"', ' ');
         value = value.replace('*', '%');
         boolean useLIKE = value.indexOf('%') >= 0 || value.indexOf('_') >= 0;  // Uses wildcard
 
         if (useLIKE) {
-            return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.LIKE, value));
+            return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.LIKE, value));
         } else {
-            return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.EQ, value));
+            return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.EQ, value));
         }
     }
 }

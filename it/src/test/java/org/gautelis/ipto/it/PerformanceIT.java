@@ -170,8 +170,6 @@ public class PerformanceIT {
                 });
             }
 
-            int attributeId = getAttributeId(someKnownAttribute, repo);
-
             for (int i=0; i<numberOfUnits; i++) {
                 final int j = i;
 
@@ -184,7 +182,7 @@ public class PerformanceIT {
 
                         // Attribute constraint
                         String attribValue = attribValues.get(j);
-                        SearchItem<String> nameSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, attribValue);
+                        SearchItem<String> nameSearchItem = new StringAttributeSearchItem(someKnownAttribute, Operator.EQ, attribValue);
                         expr = QueryBuilder.assembleAnd(expr, nameSearchItem);
 
                         // Result set constraints (paging)
@@ -400,19 +398,11 @@ public class PerformanceIT {
                 expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
 
                 // First attribute constraint
-                Optional<Integer> _timeAttributeId = repo.attributeNameToId("dce:date");
-                int[] timeAttributeId = { 0 };
-                _timeAttributeId.ifPresent(attrId -> timeAttributeId[0] = attrId);
-
-                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem(timeAttributeId[0], Operator.GEQ, someInstant);
+                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dce:date", Operator.GEQ, someInstant);
                 expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
 
                 // Second attribute constraint
-                Optional<Integer> _stringAttributeId = repo.attributeNameToId("dce:title");
-                int[] stringAttributeId = { 0 };
-                _stringAttributeId.ifPresent(attrId -> stringAttributeId[0] = attrId);
-
-                SearchItem<String> stringSearchItem = new StringAttributeSearchItem(stringAttributeId[0], Operator.EQ, someSpecificString);
+                SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dce:title", Operator.EQ, someSpecificString);
                 expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
 
                 // Result set constraints (paging)

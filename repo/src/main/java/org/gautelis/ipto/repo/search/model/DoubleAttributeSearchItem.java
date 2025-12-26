@@ -23,8 +23,8 @@ public class DoubleAttributeSearchItem extends AttributeSearchItem<Double> {
 
     private final double value;
 
-    public DoubleAttributeSearchItem(int attrId, Operator operator, double value) {
-        super(AttributeType.DOUBLE, operator, attrId);
+    public DoubleAttributeSearchItem(String attrName, Operator operator, double value) {
+        super(AttributeType.DOUBLE, operator, attrName);
         this.value = value;
     }
 
@@ -34,17 +34,17 @@ public class DoubleAttributeSearchItem extends AttributeSearchItem<Double> {
 
     /**
      * Generates constraint "double attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<DoubleAttributeSearchItem> constrainOnEQ(int attrId, double value) {
-        return new LeafExpression<>(new DoubleAttributeSearchItem(attrId, Operator.EQ, value));
+    public static LeafExpression<DoubleAttributeSearchItem> constrainOnEQ(String attrName, double value) {
+        return new LeafExpression<>(new DoubleAttributeSearchItem(attrName, Operator.EQ, value));
     }
 
     /**
      * Generates constraint "double attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<DoubleAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new DoubleAttributeSearchItem(attrId, Operator.EQ, Double.parseDouble(value)));
+    public static LeafExpression<DoubleAttributeSearchItem> constrainOnEQ(String attrName, String value) {
+        return new LeafExpression<>(new DoubleAttributeSearchItem(attrName, Operator.EQ, Double.parseDouble(value)));
     }
 }

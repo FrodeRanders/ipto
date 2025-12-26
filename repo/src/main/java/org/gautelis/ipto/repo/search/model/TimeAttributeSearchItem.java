@@ -26,8 +26,8 @@ public class TimeAttributeSearchItem extends AttributeSearchItem<Instant> {
 
     private final Instant value;
 
-    public TimeAttributeSearchItem(int attrId, Operator operator, Instant value) {
-        super(AttributeType.TIME, operator, attrId);
+    public TimeAttributeSearchItem(String attrName, Operator operator, Instant value) {
+        super(AttributeType.TIME, operator, attrName);
         this.value = value;
     }
 
@@ -37,17 +37,17 @@ public class TimeAttributeSearchItem extends AttributeSearchItem<Instant> {
 
     /**
      * Generates constraint "date attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(int attrId, Instant value) {
-        return new LeafExpression<>(new TimeAttributeSearchItem(attrId, Operator.EQ, value));
+    public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(String attrName, Instant value) {
+        return new LeafExpression<>(new TimeAttributeSearchItem(attrName, Operator.EQ, value));
     }
 
     /**
      * Generates constraint "date attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new TimeAttributeSearchItem(attrId, Operator.EQ, Instant.parse(value)));
+    public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(String attrName, String value) {
+        return new LeafExpression<>(new TimeAttributeSearchItem(attrName, Operator.EQ, Instant.parse(value)));
     }
 }

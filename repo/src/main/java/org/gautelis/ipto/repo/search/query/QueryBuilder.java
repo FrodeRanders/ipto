@@ -155,16 +155,16 @@ public class QueryBuilder {
             Attribute<?> attribute, String value, Locale locale
     ) throws NumberFormatException, InvalidParameterException {
 
-        int attrId = attribute.getId();
+        String attrName = attribute.getName();
         AttributeType type = attribute.getType();
 
         return switch (type) {
-            case STRING -> StringAttributeSearchItem.constrainOnEQ(attrId, value);
-            case TIME -> TimeAttributeSearchItem.constrainOnEQ(attrId, value); // ISO time
-            case INTEGER -> IntegerAttributeSearchItem.constrainOnEQ(attrId, value);
-            case LONG -> LongAttributeSearchItem.constrainOnEQ(attrId, value);
-            case DOUBLE -> DoubleAttributeSearchItem.constrainOnEQ(attrId, value);
-            case BOOLEAN -> BooleanAttributeSearchItem.constrainOnEQ(attrId, value);
+            case STRING -> StringAttributeSearchItem.constrainOnEQ(attrName, value);
+            case TIME -> TimeAttributeSearchItem.constrainOnEQ(attrName, value); // ISO time
+            case INTEGER -> IntegerAttributeSearchItem.constrainOnEQ(attrName, value);
+            case LONG -> LongAttributeSearchItem.constrainOnEQ(attrName, value);
+            case DOUBLE -> DoubleAttributeSearchItem.constrainOnEQ(attrName, value);
+            case BOOLEAN -> BooleanAttributeSearchItem.constrainOnEQ(attrName, value);
             default -> throw new InvalidParameterException("Attribute type " + type + " is not searchable: " + attribute);
         };
     }

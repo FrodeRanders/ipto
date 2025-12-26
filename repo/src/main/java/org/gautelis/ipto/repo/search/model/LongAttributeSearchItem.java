@@ -23,8 +23,8 @@ public class LongAttributeSearchItem extends AttributeSearchItem<Long> {
 
     private final long value;
 
-    public LongAttributeSearchItem(int attrId, Operator operator, long value) {
-        super(AttributeType.LONG, operator, attrId);
+    public LongAttributeSearchItem(String attrName, Operator operator, long value) {
+        super(AttributeType.LONG, operator, attrName);
         this.value = value;
     }
 
@@ -34,17 +34,17 @@ public class LongAttributeSearchItem extends AttributeSearchItem<Long> {
 
     /**
      * Generates constraint "long attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<LongAttributeSearchItem> constrainOnEQ(int attrId, long value) {
-        return new LeafExpression<>(new LongAttributeSearchItem(attrId, Operator.EQ, value));
+    public static LeafExpression<LongAttributeSearchItem> constrainOnEQ(String attrName, long value) {
+        return new LeafExpression<>(new LongAttributeSearchItem(attrName, Operator.EQ, value));
     }
 
     /**
      * Generates constraint "long attribute == value" for
-     * specified attribute id.
+     * specified attribute.
      */
-    public static LeafExpression<LongAttributeSearchItem> constrainOnEQ(int attrId, String value) {
-        return new LeafExpression<>(new LongAttributeSearchItem(attrId, Operator.EQ, Long.parseLong(value)));
+    public static LeafExpression<LongAttributeSearchItem> constrainOnEQ(String attrName, String value) {
+        return new LeafExpression<>(new LongAttributeSearchItem(attrName, Operator.EQ, Long.parseLong(value)));
     }
 }

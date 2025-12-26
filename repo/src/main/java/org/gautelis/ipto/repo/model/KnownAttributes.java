@@ -80,6 +80,20 @@ public final class KnownAttributes {
     }
 
     /**
+     * Fetch attribute name to id map
+     */
+    public static Map<String, Integer> fetchAttributeNameToIdMap(Context ctx) {
+        Map<String, Integer> name2Id = new HashMap<>();
+
+        Map<String, AttributeInfo> attributes = fetchAttributes(ctx);
+        for (Map.Entry<String, AttributeInfo> entry : attributes.entrySet()) {
+            name2Id.put(entry.getKey(), entry.getValue().id);
+        }
+
+        return name2Id;
+    }
+
+    /**
      * Get attribute identified by id
      *
      * @param attrId id of attribute

@@ -65,14 +65,11 @@ public class Example {
         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         // Constrain to time-related attribute
-        int attributeId = getAttributeId("dce:date", repo);
-
-        SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem(attributeId, Operator.LEQ, Instant.now());
+        SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dce:date", Operator.LEQ, Instant.now());
         expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
 
         // Constrain to string attribute
-        attributeId = getAttributeId("dce:title", repo);
-        SearchItem<String> stringSearchItem = new StringAttributeSearchItem(attributeId, Operator.EQ, "Ajj som bara den");
+        SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dce:title", Operator.EQ, "Ajj som bara den");
         expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
 
         // 

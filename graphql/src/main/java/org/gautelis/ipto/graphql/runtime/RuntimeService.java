@@ -608,7 +608,6 @@ public class RuntimeService {
             throw new InvalidParameterException("Unknown attribute " + attrName);
         }
 
-        int attrId = catalogAttribute.attrId();
         AttributeType attrType = catalogAttribute.attrType();
         switch (attrType) {
             case STRING -> {
@@ -616,27 +615,27 @@ public class RuntimeService {
                     value = value.replace('*', '%');
                     boolean useLIKE = value.indexOf('%') >= 0 || value.indexOf('_') >= 0;  // Uses wildcard
                     if (useLIKE) {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.LIKE, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.LIKE, value));
                     } else {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrId, Operator.EQ, value));
+                        return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.EQ, value));
                     }
                 }
-                return new LeafExpression<>(new StringAttributeSearchItem(attrId, op.iptoOp(), value));
+                return new LeafExpression<>(new StringAttributeSearchItem(attrName, op.iptoOp(), value));
             }
             case TIME -> {
-                return new LeafExpression<>(new TimeAttributeSearchItem(attrId, op.iptoOp(), Instant.parse(value)));
+                return new LeafExpression<>(new TimeAttributeSearchItem(attrName, op.iptoOp(), Instant.parse(value)));
             }
             case INTEGER -> {
-                return new LeafExpression<>(new IntegerAttributeSearchItem(attrId, op.iptoOp(), Integer.parseInt(value)));
+                return new LeafExpression<>(new IntegerAttributeSearchItem(attrName, op.iptoOp(), Integer.parseInt(value)));
             }
             case LONG -> {
-                return new LeafExpression<>(new LongAttributeSearchItem(attrId, op.iptoOp(), Long.parseLong(value)));
+                return new LeafExpression<>(new LongAttributeSearchItem(attrName, op.iptoOp(), Long.parseLong(value)));
             }
             case DOUBLE -> {
-                return new LeafExpression<>(new DoubleAttributeSearchItem(attrId, op.iptoOp(), Double.parseDouble(value)));
+                return new LeafExpression<>(new DoubleAttributeSearchItem(attrName, op.iptoOp(), Double.parseDouble(value)));
             }
             case BOOLEAN -> {
-                return new LeafExpression<>(new BooleanAttributeSearchItem(attrId, op.iptoOp(), Boolean.parseBoolean(value)));
+                return new LeafExpression<>(new BooleanAttributeSearchItem(attrName, op.iptoOp(), Boolean.parseBoolean(value)));
             }
             default -> throw new InvalidParameterException("Attribute type " + attrType.name() + " is not searchable: " + attrName);
         }

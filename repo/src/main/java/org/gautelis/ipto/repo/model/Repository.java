@@ -823,5 +823,13 @@ public class Repository {
             runnable.run(conn);
         }
     }
+
+    /**
+     * Synchronize state after external initialisation.
+     */
+    public void sync() {
+        Map<String, Integer> attributeNameToIdMap = context.getDatabaseAdapter().getAttributeNameToIdMap();
+        attributeNameToIdMap.putAll(KnownAttributes.fetchAttributeNameToIdMap(context));
+    }
 }
 

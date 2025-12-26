@@ -59,11 +59,12 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
     @Override
     public String toSql(
             boolean usePrepare,
-            Map<String, SearchItem<?>> commonConstraintValues
+            Map<String, SearchItem<?>> commonConstraintValues,
+            Map<String, Integer> attributeNameToId
     ) {
         StringBuilder sb = new StringBuilder();
         if (item instanceof AttributeSearchItem<?> asi) {
-            attributeConstraint(sb, label, asi, usePrepare, commonConstraintValues);
+            attributeConstraint(sb, label, asi, usePrepare, commonConstraintValues, attributeNameToId);
         }
         else if (item instanceof UnitSearchItem<?> usi) {
             unitConstraint(sb, usi, usePrepare);
@@ -99,7 +100,8 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
             String label,
             AttributeSearchItem<?> item,
             boolean usePrepare,
-            Map<String, SearchItem<?>> commonConstraintValues
+            Map<String, SearchItem<?>> commonConstraintValues,
+            Map<String, Integer> attributeNameToId
     ) {
         sb.append(label).append(" AS (");
         sb.append("SELECT ").append(ATTRIBUTE_VALUE_TENANTID).append(", ").append(ATTRIBUTE_VALUE_UNITID).append(" ");
@@ -134,7 +136,12 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
                 sb.append(" AND ");
             }
         }
-        sb.append(ATTRIBUTE_VALUE_ATTRID).append(" = ").append(item.getAttrId()).append(" ");
+        Integer attrId = attributeNameToId.get(item.getAttrName());
+        if (null == attrId) {
+            throw new InvalidParameterException(item.getAttrName() + " is not a known attribute");
+        }
+
+        sb.append(ATTRIBUTE_VALUE_ATTRID).append(" = ").append(attrId).append(" ");
         switch(item.getType()) {
             case STRING -> {
                 sb.append("AND lower(").append(ATTRIBUTE_VALUE_VECTOR_ENTRY).append(") ");
