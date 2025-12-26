@@ -26,6 +26,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
@@ -52,6 +53,7 @@ public class Configurator {
     public static Optional<GraphQL> load(
             Repository repo,
             Reader reader,
+            Consumer<OperationsWireParameters> operationsWireBlock,
             PrintStream progress
     ) {
         final TypeDefinitionRegistry registry = new SchemaParser().parse(reader);
@@ -99,6 +101,11 @@ public class Configurator {
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
         runtimeService.wire(runtimeWiring, gql, ipto);
+
+        // Wire operations
+        if (null != operationsWireBlock) {
+            operationsWireBlock.accept(new OperationsWireParameters(runtimeWiring, runtimeService, repo));
+        }
 
         //
         repo.sync();

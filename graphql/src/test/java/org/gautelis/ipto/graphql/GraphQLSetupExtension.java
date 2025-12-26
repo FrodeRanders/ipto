@@ -33,7 +33,7 @@ public class GraphQLSetupExtension implements BeforeAllCallback, ParameterResolv
                         Objects.requireNonNull(GraphQLSetupExtension.class.getResourceAsStream("schema.graphqls"))
                 )) {
                     Repository repo = RepositoryFactory.getRepository();
-                    Optional<GraphQL> _graphQL = Configurator.load(repo, reader, System.out);
+                    Optional<GraphQL> _graphQL = Configurator.load(repo, reader, null, System.out);
 
                     if (_graphQL.isEmpty()) {
                         throw new RuntimeException("Failed to load configuration");
