@@ -87,7 +87,15 @@ public final class KnownAttributes {
 
         Map<String, AttributeInfo> attributes = fetchAttributes(ctx);
         for (Map.Entry<String, AttributeInfo> entry : attributes.entrySet()) {
-            name2Id.put(entry.getKey(), entry.getValue().id);
+            AttributeInfo attribute = entry.getValue();
+
+            String alias = attribute.alias;
+            String name = attribute.name;
+            String qualName = attribute.qualName;
+
+            name2Id.put(alias, attribute.id);
+            name2Id.put(name, attribute.id);
+            name2Id.put(qualName, attribute.id);
         }
 
         return name2Id;
