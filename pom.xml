@@ -1,12 +1,10 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <groupId>org.gautelis</groupId>
     <artifactId>ipto</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
-
     <name>ipto</name>
 
     <modules>
@@ -14,6 +12,7 @@
         <module>graphql</module>
         <module>db/java</module>
         <module>it</module>
+        <module>quarkus-app</module>
     </modules>
 
     <properties>
@@ -23,7 +22,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <!-- Development and support -->
-        <vopn.version>3.0-SNAPSHOT</vopn.version> <!-- sibling project -->
+        <vopn.version>3.0-SNAPSHOT</vopn.version>
+
+        <!-- sibling project -->
         <guid-gen.version>5.2.0</guid-gen.version>
 
         <!-- JSON related -->
@@ -54,7 +55,6 @@
                 <artifactId>vopn</artifactId>
                 <version>${vopn.version}</version>
             </dependency>
-
             <!-- Logging
                  We use SLF4J as logging facade and during test we use LOG4J as backend
               -->
@@ -63,14 +63,12 @@
                 <artifactId>slf4j-api</artifactId>
                 <version>${slf4j.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-core</artifactId>
                 <version>${log4j.version}</version>
                 <scope>test</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-slf4j2-impl</artifactId>
@@ -83,51 +81,43 @@
                     </exclusion>
                 </exclusions>
             </dependency>
-
             <dependency>
                 <groupId>tools.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
                 <version>${jackson.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.networknt</groupId>
                 <artifactId>json-schema-validator</artifactId>
                 <version>${networknt.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.fasterxml.uuid</groupId>
                 <artifactId>java-uuid-generator</artifactId>
                 <version>${guid-gen.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.graphql-java</groupId>
                 <artifactId>graphql-java</artifactId>
                 <version>${graphql-java.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.zaxxer</groupId>
                 <artifactId>HikariCP</artifactId>
                 <version>${hikari.version}</version>
             </dependency>
-
             <!-- Compile dependency on org.postgresql.util.PGobject in org.gautelis.ipto.repo.model.cache.UnitFactory -->
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
                 <version>${postgresql.version}</version>
             </dependency>
-
             <dependency>
                 <groupId>com.ibm.db2</groupId>
                 <artifactId>jcc</artifactId>
                 <version>${db2.version}</version>
                 <scope>test</scope>
             </dependency>
-
             <!-- test -->
             <dependency>
                 <groupId>org.junit.jupiter</groupId>
@@ -149,7 +139,6 @@
                         <useModulePath>false</useModulePath>
                     </configuration>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-clean-plugin</artifactId>
@@ -169,21 +158,32 @@
                         </filesets>
                     </configuration>
                 </plugin>
-
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>3.5.4</version>
                 </plugin>
-
+                <plugin>
+                    <groupId>io.smallrye</groupId>
+                    <artifactId>jandex-maven-plugin</artifactId>
+                    <version>3.5.2</version>
+                    <executions>
+                        <execution>
+                            <id>make-index</id>
+                            <goals>
+                                <goal>jandex</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
             </plugins>
         </pluginManagement>
     </build>
 
-
     <profiles>
         <profile>
-            <id>deps</id>          <!-- mvn -Pdeps validate -->
+            <id>deps</id>
+            <!-- mvn -Pdeps validate -->
             <build>
                 <plugins>
                     <plugin>
@@ -193,7 +193,8 @@
                         <executions>
                             <execution>
                                 <id>show‑updates</id>
-                                <phase>validate</phase>   <!-- any phase works; validate is fast -->
+                                <phase>validate</phase>
+                                <!-- any phase works; validate is fast -->
                                 <goals>
                                     <goal>display-dependency-updates</goal>
                                 </goals>
@@ -205,4 +206,3 @@
         </profile>
     </profiles>
 </project>
-
