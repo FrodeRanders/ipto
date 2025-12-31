@@ -50,6 +50,19 @@ public class Configurator {
     private Configurator() {
     }
 
+    /**
+     * Loads GraphQL SDL and infers attributes, records and unit templates
+     * from the various 'type' definitions. Will populate the Ipto database
+     * accordingly.
+     * <p>
+     * Note: callers are responsible for invoking repo.sync() after load().
+     * <p>
+     * @param repo
+     * @param reader
+     * @param operationsWireBlock
+     * @param progress
+     * @return
+     */
     public static Optional<GraphQL> load(
             Repository repo,
             Reader reader,
@@ -106,9 +119,6 @@ public class Configurator {
         if (null != operationsWireBlock) {
             operationsWireBlock.accept(new OperationsWireParameters(runtimeWiring, runtimeService, repo));
         }
-
-        //
-        repo.sync();
 
         //
         return Optional.of(

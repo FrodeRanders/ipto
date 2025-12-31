@@ -1,0 +1,34 @@
+quarkus:
+  log:
+    category:
+       "org.gautelis":
+           level: DEBUG
+    file:
+      enabled: true
+      level: ALL
+      path: logs/app.log
+
+  index-dependency:
+    ipto-repo-cdi:
+      group-id: org.gautelis.ipto
+      artifact-id: ipto-repo-cdi
+  datasource:
+    db-kind: postgresql
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/repo
+      max-size: 10
+    username: repo
+    password: repo
+
+ipto:
+  repository:
+    database-adapter: org.gautelis.ipto.repo.search.query.adapters.PostgresAdapter
+    events-threshold: 1000
+    events-listeners:
+      - org.gautelis.ipto.repo.listeners.NopActionListener
+    cache:
+      look-behind: true
+      max-size: 1000
+      idle-check-interval: 60
+  graphql:
+    sdl-resource: /ipto.graphqls

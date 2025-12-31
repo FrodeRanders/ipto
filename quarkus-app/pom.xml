@@ -11,6 +11,8 @@
     <groupId>org.gautelis.ipto</groupId>
     <artifactId>ipto-quarkus-app</artifactId>
 
+    <!--<name>${project.groupId}:${project.artifactId}:${project.version}</name>-->
+
     <properties>
         <compiler-plugin.version>3.14.1</compiler-plugin.version>
         <maven.compiler.release>21</maven.compiler.release>
@@ -38,18 +40,21 @@
     <dependencies>
         <dependency>
             <groupId>org.gautelis.ipto</groupId>
-            <artifactId>ipto-repo</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.gautelis.ipto</groupId>
-            <artifactId>ipto-graphql</artifactId>
+            <artifactId>ipto-repo-cdi</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-rest-jackson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-config-yaml</artifactId>
         </dependency>
         <dependency>
             <groupId>io.quarkus</groupId>

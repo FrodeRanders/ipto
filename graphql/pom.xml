@@ -12,7 +12,7 @@
     <artifactId>ipto-graphql</artifactId>
     <packaging>jar</packaging>
 
-    <name>${project.groupId}:${project.artifactId}:${project.version}</name>
+    <!--<name>${project.groupId}:${project.artifactId}:${project.version}</name>-->
 
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
@@ -104,11 +104,6 @@
                         <include>**/*Test.java</include>
                     </includes>
                 </configuration>
-            </plugin>
-
-            <plugin>
-                <groupId>io.smallrye</groupId>
-                <artifactId>jandex-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>
