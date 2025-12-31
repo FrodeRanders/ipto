@@ -246,7 +246,7 @@ public class UnitIT {
 
         assertVersionIs(1, unit, repo);
         assertAttributeExists("dce:description", 1, 1, unit, repo);
-        assertAttributeExists("dce:title", /* CURRENTLY! */ 1, 1, unit, repo); // Subject to trade-off
+        assertAttributeExists("dce:title", 1, 1, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -275,7 +275,7 @@ public class UnitIT {
 
         assertVersionIs(2, unit, repo);
         assertAttributeExists("dce:description", 2, 2, unit, repo);
-        assertAttributeExists("dce:title", /* CURRENTLY! */ 2, 2, unit, repo); // Subject to trade-off
+        assertAttributeExists("dce:title", 1, 2, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
@@ -289,7 +289,7 @@ public class UnitIT {
 
         assertVersionIs(3, unit, repo);
         assertAttributeExists("dce:description", 3, 3, unit, repo);
-        assertAttributeExists("dce:title", /* CURRENTLY! */ 3, 3, unit, repo); // Subject to trade-off
+        assertAttributeExists("dce:title", 1, 3, unit, repo);
 
         unit.requestStatusTransition(Unit.Status.PENDING_DISPOSITION);
 

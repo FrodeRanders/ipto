@@ -300,6 +300,9 @@ public abstract class Value<T> {
      * Have any values been modified?
      */
     public boolean isModified() {
+        if (isNew) {
+            return true;
+        }
         return initialHashCode != values.hashCode();
     }
 

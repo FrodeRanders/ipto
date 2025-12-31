@@ -177,6 +177,9 @@ public class Attribute<T> {
     }
 
     public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty, boolean forPersistence) {
+        /*
+         * If children are reordered inside a record, treat that as a modification (set modified:true appropriately).
+         */
         if (isChatty) {
             String _type = "ipto:" + type.name().toLowerCase();
             if (value.isScalar()) {
@@ -195,6 +198,7 @@ public class Attribute<T> {
 
         if (forPersistence) {
             attributeNode.put("attrid", id);
+            attributeNode.put("modified", isModified());
         }
 
         if (AttributeType.RECORD == type) {
