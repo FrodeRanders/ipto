@@ -66,7 +66,9 @@ public class IptoBootstrap {
                 throw new IllegalStateException("Failed to load GraphQL configuration");
             }
             this.graphQL = gql.get();
-            repository.sync();
+
+            repository.sync(); // see note in Configurator::load
+
         } catch (Exception e) {
             throw new RuntimeException("Failed to bootstrap IPTO", e);
         }

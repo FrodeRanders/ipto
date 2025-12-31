@@ -83,6 +83,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                         throw new IllegalStateException("Failed to load GraphQL configuration");
                     }
                     this.graphQL = g.get();
+
                     repo.sync(); // see note in Configurator::load
                 }
 
