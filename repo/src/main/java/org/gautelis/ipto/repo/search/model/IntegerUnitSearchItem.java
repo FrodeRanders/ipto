@@ -37,4 +37,13 @@ public class IntegerUnitSearchItem extends UnitSearchItem<Integer> {
     public Integer getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("IntegerUnitSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

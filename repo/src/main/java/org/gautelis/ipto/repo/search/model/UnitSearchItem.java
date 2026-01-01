@@ -34,4 +34,12 @@ public abstract class UnitSearchItem<T> extends SearchItem<T> {
     public Column getColumn() {
         return column;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(super.toString());
+        buf.append(", column='").append(column).append("'");
+        return buf.toString();
+    }
 }

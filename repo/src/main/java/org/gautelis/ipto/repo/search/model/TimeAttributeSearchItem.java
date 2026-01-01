@@ -50,4 +50,13 @@ public class TimeAttributeSearchItem extends AttributeSearchItem<Instant> {
     public static LeafExpression<TimeAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         return new LeafExpression<>(new TimeAttributeSearchItem(attrName, Operator.EQ, Instant.parse(value)));
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("TimeAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

@@ -47,4 +47,13 @@ public class IntegerAttributeSearchItem extends AttributeSearchItem<Integer> {
     public static LeafExpression<IntegerAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         return new LeafExpression<>(new IntegerAttributeSearchItem(attrName, Operator.EQ, Integer.parseInt(value)));
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("IntegerAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

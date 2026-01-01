@@ -44,4 +44,13 @@ public class RightAssociationSearchItem extends AssociationSearchItem<String> {
     public String getValue() {
         return assocString;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("RightAssociationSearchItem{");
+        buf.append(super.toString());
+        buf.append(", assoc='").append(assocString).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

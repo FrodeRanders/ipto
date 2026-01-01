@@ -44,4 +44,13 @@ public class LeftAssociationSearchItem extends AssociationSearchItem<Unit.Id> {
     public Unit.Id getValue() {
         return id;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("LeftAssociationSearchItem{");
+        buf.append(super.toString());
+        buf.append(", id='").append(id).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

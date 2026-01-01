@@ -49,6 +49,22 @@ public abstract class CommonAdapter extends DatabaseAdapter {
     //------------------------------------------------------------------
     public static final String INSTANT_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss.SSS";
 
+
+    /**
+     * Strategy hook with default suggestion 'EXISTS', which generally performs
+     * better with LIMIT + kernel constraints.
+     * TODO add analysis of search expression
+     */
+    protected SearchStrategy chooseStrategy(
+            UnitSearch sd,
+            SearchExpression expression
+    ) {
+        // Some heuristics.
+        //    EXISTS is typically preferable with kernel constraints and LIMIT.
+        //
+        return SearchStrategy.SET_OPS;
+    }
+
     protected CommonAdapter() {
     }
 
@@ -95,7 +111,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
     protected SearchExpression optimize(
             SearchExpression sex
     ) {
-        // No optimisation
+        // Currently no optimisation :-p
         return sex;
     }
 
@@ -202,6 +218,61 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         return Optional.empty();
     }
 
+    private Optional<String> buildAttributeExistsLogic(
+            SearchExpression expression,
+            Map<String, String> attributeLeafSqlByLabel
+    ) {
+        Objects.requireNonNull(expression, "expression");
+        Objects.requireNonNull(attributeLeafSqlByLabel, "attributeLeafSqlByLabel");
+
+        switch (expression) {
+            case LeafExpression<?> leaf -> {
+                if (leaf.getItem() instanceof AttributeSearchItem<?>) {
+                    String label = leaf.getLabel().orElseThrow(() ->
+                            new IllegalArgumentException("Leaf expression must have a label"));
+
+                    String cteSql = attributeLeafSqlByLabel.get(label);
+                    if (cteSql == null) {
+                        throw new IllegalStateException("No SQL for label: " + label);
+                    }
+                    return Optional.of(cteSql);
+                }
+                return Optional.empty();
+            }
+
+            case NotExpression(SearchExpression inner) -> {
+                Optional<String> innerLogic = buildAttributeExistsLogic(inner, attributeLeafSqlByLabel);
+                return innerLogic.map(s -> "NOT (" + s + ")");
+            }
+
+            case BinaryExpression binExpr -> {
+                Optional<String> left = buildAttributeExistsLogic(binExpr.getLeft(), attributeLeafSqlByLabel);
+                Optional<String> right = buildAttributeExistsLogic(binExpr.getRight(), attributeLeafSqlByLabel);
+
+                boolean hasLeft = left.isPresent();
+                boolean hasRight = right.isPresent();
+                boolean hasBoth = hasLeft && hasRight;
+
+                if (hasBoth) {
+                    String op = switch (binExpr.operator()) {
+                        case AND -> " AND ";
+                        case OR -> " OR ";
+                        default -> throw new IllegalStateException("Unexpected operator: " + binExpr.operator());
+                    };
+                    return Optional.of("(" + left.get() + op + right.get() + ")");
+                } else if (hasLeft) {
+                    return left;
+                } else {
+                    return right; // may be empty
+                }
+            }
+
+            default -> {
+                return Optional.empty();
+            }
+        }
+    }
+
     /**
      * Builds unit constraint logic.
      * Results in things like: UNIT_STATUS = ... AND UNIT_CREATED >= ...
@@ -209,6 +280,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
      * @return
      */
     private Optional<String> buildUnitConstraintLogic(
+            SearchStrategy strategy,
             SearchExpression expression,
             Collection<SearchItem<?>> preparedItems,
             Map<String, SearchItem<?>> commonConstraintValues
@@ -221,17 +293,17 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             case LeafExpression<?> leaf -> {
                 if (leaf.getItem() instanceof UnitSearchItem<?> usi) {
                     preparedItems.add(usi);
-                    return Optional.of(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
+                    return Optional.of(leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
                 } else {
                     return Optional.empty();
                 }
             }
             case NotExpression notExpr -> {
-                return Optional.of(notExpr.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
+                return Optional.of(notExpr.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
             }
             case BinaryExpression binExpr -> {
-                Optional<String> left = buildUnitConstraintLogic(binExpr.getLeft(), preparedItems, commonConstraintValues);
-                Optional<String> right = buildUnitConstraintLogic(binExpr.getRight(), preparedItems, commonConstraintValues);
+                Optional<String> left = buildUnitConstraintLogic(strategy, binExpr.getLeft(), preparedItems, commonConstraintValues);
+                Optional<String> right = buildUnitConstraintLogic(strategy, binExpr.getRight(), preparedItems, commonConstraintValues);
 
                 boolean hasLeft = left.isPresent();
                 boolean hasRight = right.isPresent();
@@ -258,6 +330,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
      * @param constraints
      */
     private void generateAttributeConstraint(
+            SearchStrategy strategy,
             LeafExpression<?> leaf,
             Collection<String> constraints,
             Map<String, SearchItem<?>> commonConstraintValues,
@@ -271,108 +344,171 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         SearchItem<?> item = leaf.getItem();
         if (item instanceof AttributeSearchItem<?> asi) {
             preparedItems.add(asi);
-            constraints.add(leaf.toSql(USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
+            constraints.add(leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
         }
     }
 
-    /**
-     *
-     * @param sd search tree with associated configuration
-     * @return generated SQL statement
-     */
-    protected GeneratedStatement generateStatement(
-            UnitSearch sd
-    ) {
+    protected GeneratedStatement generateStatement(UnitSearch sd) {
         Objects.requireNonNull(sd, "sd");
 
-        Collection<SearchItem<?>> preparedItems = new ArrayList<>();
         Map<String, SearchItem<?>> commonConstraintValues = new HashMap<>();
 
-        //
         SearchExpression expression = optimize(sd.getExpression());
+        SearchStrategy strategy = chooseStrategy(sd, expression);
 
-        // Identify attribute constraints: c1, c2, ...
+        // Identify constraints: label attribute leaves as c1, c2, ...
         Collection<LeafExpression<?>> unitLeaves = new LinkedList<>();
         Collection<LeafExpression<?>> attributeLeaves = new LinkedList<>();
         identifyConstraints(expression, unitLeaves, attributeLeaves);
 
-        // Some unit constraints *may* affect attribute search, such as tenantId.
-        for (LeafExpression<?> leaf : unitLeaves) {
-            if (leaf.getItem() instanceof UnitSearchItem<?> usi) {
-                switch (usi.getColumn()) {
-                    case UNIT_KERNEL_TENANTID -> commonConstraintValues.put(UNIT_KERNEL_TENANTID.toString(), usi);
-                }
+        // Generate SQL for attribute leaves (via leaf.toSql)
+        Collection<SearchItem<?>> preparedAttributeItems = new ArrayList<>();
+        Map<String, String> attributeLeafSqlByLabel = new LinkedHashMap<>();
+        Collection<String> attributeConstraints = new LinkedList<>();
+        for (LeafExpression<?> leaf : attributeLeaves) {
+            SearchItem<?> item = leaf.getItem();
+            if (item instanceof AttributeSearchItem<?> asi) {
+                preparedAttributeItems.add(asi);
+                String cteSql = leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId);
+                attributeConstraints.add(cteSql);
+
+                // Keep a map label -> cteSql
+                String label = leaf.getLabel().orElseThrow(() ->
+                        new IllegalArgumentException("Attribute leaf must have a label"));
+                attributeLeafSqlByLabel.put(label, cteSql);
             }
         }
 
-        // Generate SQL for individual attribute constraints
-        Collection<String> attributeConstraints = new LinkedList<>();
-        for (LeafExpression<?> leaf : attributeLeaves) {
-            generateAttributeConstraint(leaf, attributeConstraints, commonConstraintValues, preparedItems);
-        }
+        // Unit constraints
+        Collection<SearchItem<?>> preparedUnitItems = new ArrayList<>();
+        Optional<String> unitConstraints = buildUnitConstraintLogic(strategy, expression, preparedUnitItems, commonConstraintValues);
 
-        // Generate SQL for attribute constraint logic,
-        // i.e. along the lines of "(c1 INTERSECT c2) UNION ..."
-        Optional<String> attributeConstraintLogic = buildAttributeConstraintLogic(expression);
-
-        // Generate SQL for unit constraints
-        Optional<String> unitConstraints = buildUnitConstraintLogic(expression, preparedItems, commonConstraintValues);
-
-        // Generate SQL for the ORDER BY-clause
+        // ORDER BY
         StringBuilder orderBy = new StringBuilder();
         SearchOrder order = sd.getOrder();
-        for (int i=0; i < order.columns().length; i++) {
+        for (int i = 0; i < order.columns().length; i++) {
             orderBy.append(order.columns()[i]);
             orderBy.append(order.ascending()[i] ? " ASC" : " DESC");
         }
 
-        /*-----------------------------------------------------------------------------------
-         * WITH
-         *      (* attribute constraints *)
-         *      c1 AS (SELECT av.tenantid, av.unitid
-         *             FROM repo_attribute_value av
-         *                      JOIN repo_time_vector vv ON av.valueid = vv.valueid
-         *             WHERE av.tenantid = 1
-         *               AND av.attrid = 7
-         *               AND vv.val >= TIMESTAMP '2025-06-01T14:42:19.183831Z'),
-         *
-         *      c2 AS (SELECT av.tenantid, av.unitid
-         *             FROM repo_attribute_value av
-         *                      JOIN repo_string_vector vv ON av.valueid = vv.valueid
-         *             WHERE av.tenantid = 1
-         *               AND av.attrid = 1
-         *               AND lower(vv.val) = lower('01972bf1-8953-7da4-9fbd-03d00eb7b33d')),
-         *
-         *      (* attribute constraint logic *)
-         *      final AS ((SELECT * FROM c1) INTERSECT (SELECT * FROM c2))
-         *
-         * SELECT ut.tenantid, ut.unitid, ut.created
-         * FROM repo_unit ut
-         *      JOIN final f USING (tenantid, unitid)
-         * WHERE
-         *      (* unit constraints *)
-         *      ((ut.tenantid = 1 AND ut.status = 30) AND ut.created >= TIMESTAMP '2025-06-01T14:42:19.155499Z')
-         *
-         * ORDER BY
-         *      (* order by *)
-         *      ut.created DESC
-         *----------------------------------------------------------------------------------*/
+        Collection<SearchItem<?>> preparedItems = new ArrayList<>();
+        switch (strategy) {
+            case SET_OPS -> {
+                preparedItems.addAll(preparedAttributeItems);
+                preparedItems.addAll(preparedUnitItems);
+            }
+            case EXISTS -> {
+                preparedItems.addAll(preparedUnitItems);
+                preparedItems.addAll(preparedAttributeItems);
+            }
+        }
+
+        return switch (strategy) {
+            case SET_OPS -> generateStatementSetOps(
+                    expression,
+                    unitLeaves, unitConstraints.orElse(""),
+                    attributeLeaves, attributeConstraints,
+                    orderBy.toString(),
+                    preparedItems,
+                    commonConstraintValues
+            );
+
+            case EXISTS -> generateStatementExists(
+                    expression,
+                    unitLeaves, unitConstraints.orElse(""),
+                    attributeLeaves, attributeLeafSqlByLabel,
+                    orderBy.toString(),
+                    preparedItems,
+                    commonConstraintValues
+            );
+        };
+    }
+
+    private GeneratedStatement generateStatementSetOps(
+            SearchExpression expression,
+            Collection<LeafExpression<?>> unitLeaves,
+            String unitConstraints,
+            Collection<LeafExpression<?>> attributeLeaves,
+            Collection<String> attributeConstraints,
+            String orderBy,
+            Collection<SearchItem<?>> preparedItems,
+            Map<String, SearchItem<?>> commonConstraintValues
+    ) {
+        Optional<String> attributeConstraintLogic = buildAttributeConstraintLogic(expression);
+
         String statement = "";
         if (!attributeLeaves.isEmpty() && attributeConstraintLogic.isPresent()) {
             statement += "WITH " + join(attributeConstraints, ", ") + ", ";
             statement += "final AS " + attributeConstraintLogic.get() + " ";
         }
-        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " + UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
+
+        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " +
+                UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
+
         statement += "FROM " + UNIT_KERNEL + ", " + UNIT_VERSION + " ";
         if (!attributeLeaves.isEmpty() && attributeConstraintLogic.isPresent()) {
             statement += "JOIN final f USING (" + UNIT_KERNEL_TENANTID.plain() + ", " + UNIT_KERNEL_UNITID.plain() + ") ";
         }
+
         statement += "WHERE " + UNIT_KERNEL_TENANTID + " = " + UNIT_VERSION_TENANTID + " ";
         statement += "AND " + UNIT_KERNEL_UNITID + " = " + UNIT_VERSION_UNITID + " ";
         statement += "AND " + UNIT_KERNEL_LASTVER + " = " + UNIT_VERSION_UNITVER + " ";
-        if (!unitLeaves.isEmpty() && unitConstraints.isPresent()) {
-            statement += "AND " + unitConstraints.get() + " ";
+
+        if (!unitLeaves.isEmpty() && !unitConstraints.isEmpty()) {
+            statement += "AND " + unitConstraints + " ";
         }
+
+        if (!orderBy.isEmpty()) {
+            statement += "ORDER BY " + orderBy + " ";
+        }
+
+        return new GeneratedStatement(statement, preparedItems, commonConstraintValues);
+    }
+
+    private GeneratedStatement generateStatementExists(
+            SearchExpression expression,
+            Collection<LeafExpression<?>> unitLeaves,
+            String unitConstraints,
+            Collection<LeafExpression<?>> attributeLeaves,
+            Map<String, String> attributeLeafSqlByLabel,
+            String orderBy,
+            Collection<SearchItem<?>> preparedItems,
+            Map<String, SearchItem<?>> commonConstraintValues
+    ) {
+        //
+        Optional<String> attributeExistsLogic = buildAttributeExistsLogic(expression, attributeLeafSqlByLabel);
+
+        //
+        String statement = "";
+        statement += "SELECT " + UNIT_KERNEL_TENANTID + ", " + UNIT_KERNEL_UNITID + ", " +
+                UNIT_VERSION_UNITVER + ", " + UNIT_KERNEL_CREATED + ", " + UNIT_VERSION_MODIFIED + " ";
+
+        statement += "FROM " + UNIT_KERNEL + " ";
+        statement += "JOIN " + UNIT_VERSION + " ON " +
+                UNIT_KERNEL_TENANTID + " = " + UNIT_VERSION_TENANTID + " AND " +
+                UNIT_KERNEL_UNITID + " = " + UNIT_VERSION_UNITID + " AND " +
+                UNIT_KERNEL_LASTVER + " = " + UNIT_VERSION_UNITVER + " ";
+
+        statement += "WHERE ";
+
+        boolean noWhereClause = true;
+        if (!unitLeaves.isEmpty() && !unitConstraints.isEmpty()) {
+            statement += unitConstraints + " ";
+            noWhereClause = false;
+        }
+
+        if (!attributeLeaves.isEmpty() && attributeExistsLogic.isPresent()) {
+            if (!noWhereClause) {
+                statement += "AND ";
+            }
+            statement += attributeExistsLogic.get() + " ";
+            noWhereClause = false;
+        }
+
+        if (noWhereClause) {
+            statement += "1 = 1 ";
+        }
+
         if (!orderBy.isEmpty()) {
             statement += "ORDER BY " + orderBy + " ";
         }
@@ -394,7 +530,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
         GeneratedStatement generatedStatement = generateStatement(sd);
         String statement = generatedStatement.statement();
-        log.trace("Search statement: {}", statement);
+        log.debug("Search statement: {}", statement);
 
         Collection<SearchItem<?>> preparedItems = generatedStatement.preparedItems();
         Map<String, SearchItem<?>> ccv = generatedStatement.commonConstraintValues();
@@ -410,6 +546,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
                         int i = 0;
                         for (SearchItem<?> item : preparedItems) {
+                            //log.trace("Prepared item: {}", item);
                             if (item instanceof AttributeSearchItem<?>) {
                                 if (ccv.containsKey(UNIT_KERNEL_TENANTID.toString())) {
                                     int tenantId = (Integer) ccv.get(UNIT_KERNEL_TENANTID.toString()).getValue();

@@ -45,4 +45,13 @@ public class RightRelationSearchItem extends RelationSearchItem<Unit.Id> {
     public Unit.Id getValue() {
         return leftId;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("RightRelationSearchItem{");
+        buf.append(super.toString());
+        buf.append(", left-id='").append(leftId).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

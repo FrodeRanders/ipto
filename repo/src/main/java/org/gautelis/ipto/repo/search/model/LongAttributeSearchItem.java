@@ -47,4 +47,13 @@ public class LongAttributeSearchItem extends AttributeSearchItem<Long> {
     public static LeafExpression<LongAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         return new LeafExpression<>(new LongAttributeSearchItem(attrName, Operator.EQ, Long.parseLong(value)));
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("LongAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

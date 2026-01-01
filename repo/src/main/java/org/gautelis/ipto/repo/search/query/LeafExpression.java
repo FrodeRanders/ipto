@@ -58,13 +58,17 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
 
     @Override
     public String toSql(
+            SearchStrategy strategy,
             boolean usePrepare,
             Map<String, SearchItem<?>> commonConstraintValues,
             Map<String, Integer> attributeNameToId
     ) {
         StringBuilder sb = new StringBuilder();
         if (item instanceof AttributeSearchItem<?> asi) {
-            attributeConstraint(sb, label, asi, usePrepare, commonConstraintValues, attributeNameToId);
+            switch (strategy) {
+                case SET_OPS -> attributeConstraintSetOps(sb, label, asi, usePrepare, commonConstraintValues, attributeNameToId);
+                case EXISTS -> attributeConstraintExists(sb, asi, usePrepare, attributeNameToId); // label not specified in SQL
+            }
         }
         else if (item instanceof UnitSearchItem<?> usi) {
             unitConstraint(sb, usi, usePrepare);
@@ -85,17 +89,126 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
         sb.append(item.getOperator());
         sb.append(" ");
         if (usePrepare) {
-            sb.append("?");
+            switch (item.getType()) {
+                case STRING -> sb.append("lower(?)"); // TODO ((String)item.getValue()).toLowerCase(locale) when substituting String parameter
+                default -> sb.append("?");
+            }
         } else {
             switch (item.getType()) {
                 case TIME -> sb.append("TIMESTAMP '").append(item.getValue()).append("'");
-                case STRING -> sb.append("lower('").append(item.getValue()).append("')");
+                case STRING -> sb.append("lower('").append(item.getValue()).append("')"); // TODO ((String)item.getValue()).toLowerCase(locale)
                 default -> sb.append(item.getValue());
             }
         }
     }
 
-    private void attributeConstraint(
+    /**
+     * Examples of produced attribute constraints:
+     * <p>
+     *   EXISTS (
+     *         SELECT 1
+     *         FROM repo_attribute_value av
+     *            JOIN repo_time_vector vv ON av.valueid = vv.valueid
+     *         WHERE av.attrid = 1
+     *           AND vv.value >= TIMESTAMP '2026-01-01T13:15:15.689010Z'
+     *           AND av.tenantid = uk.tenantid
+     *           AND av.unitid = uk.unitid
+     *           AND uk.lastver BETWEEN av.unitverfrom AND av.unitverto
+     *   )
+     * <p>
+     * @param sb
+     * @param item
+     * @param usePrepare
+     * @param attributeNameToId
+     */
+    private void attributeConstraintExists(
+            StringBuilder sb,
+            AttributeSearchItem<?> item,
+            boolean usePrepare,
+            Map<String, Integer> attributeNameToId
+    ) {
+        sb.append("EXISTS ( ");
+        sb.append("SELECT 1 ");
+        sb.append("FROM ").append(ATTRIBUTE_VALUE).append(" ");
+
+        sb.append("JOIN ");
+        switch(item.getType()) {
+            case STRING ->  sb.append(ATTRIBUTE_STRING_VALUE_VECTOR);
+            case TIME ->    sb.append(ATTRIBUTE_TIME_VALUE_VECTOR);
+            case INTEGER -> sb.append(ATTRIBUTE_INTEGER_VALUE_VECTOR);
+            case LONG ->    sb.append(ATTRIBUTE_LONG_VALUE_VECTOR);
+            case DOUBLE ->  sb.append(ATTRIBUTE_DOUBLE_VALUE_VECTOR);
+            case BOOLEAN -> sb.append(ATTRIBUTE_BOOLEAN_VALUE_VECTOR);
+            default -> {
+                throw new InvalidParameterException("Invalid attribute type: " + item.getType());
+            }
+        }
+        sb.append(" ON ").append(ATTRIBUTE_VALUE_VALUEID).append(" ");
+        sb.append(EQ);
+        sb.append(" ").append(ATTRIBUTE_VALUE_VECTOR_VALUEID).append(" ");
+
+        sb.append("WHERE ");
+        Integer attrId = attributeNameToId.get(item.getAttrName());
+        if (null == attrId) {
+            throw new InvalidParameterException(item.getAttrName() + " is not a known attribute");
+        }
+        sb.append(ATTRIBUTE_VALUE_ATTRID).append(" = ").append(attrId).append(" ");
+
+        switch(item.getType()) {
+            case STRING -> {
+                sb.append("AND lower(").append(ATTRIBUTE_VALUE_VECTOR_ENTRY).append(") ");
+                sb.append(item.getOperator());
+                if (usePrepare) {
+                    sb.append(" lower(?) "); // TODO ((String)item.getValue()).toLowerCase(locale) when substituting parameter
+                } else {
+                    sb.append(" lower('").append(item.getValue()).append("') "); // TODO ((String)item.getValue()).toLowerCase(locale)
+                }
+            }
+            case TIME -> {
+                sb.append("AND ").append(ATTRIBUTE_VALUE_VECTOR_ENTRY).append(" ");
+                sb.append(item.getOperator());
+                if (usePrepare) {
+                    sb.append(" ? ");
+                } else {
+                    sb.append(" TIMESTAMP '").append(item.getValue()).append("' ");
+                }
+            }
+            default -> {
+                sb.append("AND ").append(ATTRIBUTE_VALUE_VECTOR_ENTRY).append(" ");
+                sb.append(item.getOperator());
+                if (usePrepare) {
+                    sb.append(" ? ");
+                } else {
+                    sb.append(" ").append(item.getValue()).append(" ");
+                }
+            }
+        }
+
+        sb.append("AND av.tenantid = uv.tenantid ");
+        sb.append("AND av.unitid = uv.unitid ");
+        sb.append("AND uv.unitver BETWEEN av.unitverfrom AND av.unitverto ");
+        sb.append(") ");
+    }
+
+    /**
+     * Examples of produced attribute constraints:
+     * <p>
+     *   c1 AS (
+     *        SELECT av.tenantid, av.unitid
+     *        FROM repo_attribute_value av
+     *           JOIN repo_time_vector vv ON av.valueid = vv.valueid
+     *        WHERE av.attrid = 1
+     *          AND vv.value >= TIMESTAMP '2026-01-01T13:15:15.689010Z'
+     *   )
+     * <p>
+     * @param sb
+     * @param label
+     * @param item
+     * @param usePrepare
+     * @param commonConstraintValues
+     * @param attributeNameToId
+     */
+    private void attributeConstraintSetOps(
             StringBuilder sb,
             String label,
             AttributeSearchItem<?> item,
@@ -147,9 +260,9 @@ public final class LeafExpression<T extends SearchItem<?>> implements SearchExpr
                 sb.append("AND lower(").append(ATTRIBUTE_VALUE_VECTOR_ENTRY).append(") ");
                 sb.append(item.getOperator());
                 if (usePrepare) {
-                    sb.append(" lower(?)");
+                    sb.append(" lower(?)"); // TODO ((String)item.getValue()).toLowerCase(locale) when substituting parameter
                 } else {
-                    sb.append(" lower('").append(item.getValue()).append("')");
+                    sb.append(" lower('").append(item.getValue()).append("')"); // TODO ((String)item.getValue()).toLowerCase(locale)
                 }
             }
             case TIME -> {

@@ -106,4 +106,12 @@ public abstract class SearchItem<T> {
 
         return new Timestamp(calendar.getTime().getTime());
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append("type=").append(type);
+        buf.append(", operator='").append(operator).append("'");
+        return buf.toString();
+    }
 }

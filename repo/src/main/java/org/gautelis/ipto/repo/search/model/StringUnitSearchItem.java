@@ -70,4 +70,13 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
             return new LeafExpression<>(new StringUnitSearchItem(Column.UNIT_VERSION_UNITNAME, Operator.EQ, name));
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("StringUnitSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

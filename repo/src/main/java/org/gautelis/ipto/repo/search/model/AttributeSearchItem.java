@@ -21,7 +21,6 @@ import org.gautelis.ipto.repo.model.AttributeType;
 
 public abstract class AttributeSearchItem<T> extends SearchItem<T> {
 
-    //private final int attrId;
     private final String attrName;
 
     protected AttributeSearchItem(AttributeType type, Operator operator, String attrName) {
@@ -31,5 +30,13 @@ public abstract class AttributeSearchItem<T> extends SearchItem<T> {
 
     public String getAttrName() {
         return attrName;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder();
+        buf.append(super.toString());
+        buf.append(", attribute-name='").append(attrName).append("'");
+        return buf.toString();
     }
 }

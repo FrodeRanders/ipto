@@ -26,16 +26,25 @@ import java.time.Instant;
  */
 public class TimeUnitSearchItem extends UnitSearchItem<Instant> {
 
-    private final Instant instant;
+    private final Instant value;
 
     public TimeUnitSearchItem(Column column, Operator operator, Instant instant) {
         // This isn't an attribute, but we currently use AttributeType.STRING
         // to tell how we want to treat the value when searching.
         super(AttributeType.TIME, column, operator);
-        this.instant = instant;
+        this.value = instant;
     }
 
     public Instant getValue() {
-        return instant;
+        return value;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("TimeUnitSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
     }
 }

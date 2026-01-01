@@ -22,7 +22,7 @@ import java.util.Map;
 
 public record NotExpression(SearchExpression inner) implements SearchExpression {
     @Override
-    public String toSql(boolean doPrepare, Map<String, SearchItem<?>> commonConstraintValues, Map<String, Integer> attributeNameToId) {
-        return "NOT (" + inner.toSql(doPrepare, commonConstraintValues, attributeNameToId) + ")";
+    public String toSql(SearchStrategy strategy, boolean doPrepare, Map<String, SearchItem<?>> commonConstraintValues, Map<String, Integer> attributeNameToId) {
+        return "NOT (" + inner.toSql(strategy, doPrepare, commonConstraintValues, attributeNameToId) + ")";
     }
 }

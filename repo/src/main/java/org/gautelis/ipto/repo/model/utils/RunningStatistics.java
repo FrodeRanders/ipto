@@ -14,6 +14,15 @@ public final class RunningStatistics {
     private double max    = Double.NaN;
     private long   total  = 0L; // integral total (where meaningful)
 
+    public void reset() {
+        count = 0L;
+        mean = 0.0;
+        m2 = 0.0;
+        min = Double.NaN;
+        max = Double.NaN;
+        total = 0L;
+    }
+
     public void addSample(double x) {
         if (count == 0) {
             min = max = x;

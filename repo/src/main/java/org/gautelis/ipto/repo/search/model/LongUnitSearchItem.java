@@ -36,4 +36,13 @@ public class LongUnitSearchItem extends UnitSearchItem<Long> {
     public Long getValue() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("LongUnitSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

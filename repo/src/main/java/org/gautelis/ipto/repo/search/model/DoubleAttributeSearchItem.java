@@ -47,4 +47,13 @@ public class DoubleAttributeSearchItem extends AttributeSearchItem<Double> {
     public static LeafExpression<DoubleAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         return new LeafExpression<>(new DoubleAttributeSearchItem(attrName, Operator.EQ, Double.parseDouble(value)));
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("DoubleAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

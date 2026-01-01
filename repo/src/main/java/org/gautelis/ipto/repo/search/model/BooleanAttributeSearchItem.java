@@ -47,4 +47,13 @@ public class BooleanAttributeSearchItem extends AttributeSearchItem<Boolean> {
     public static LeafExpression<BooleanAttributeSearchItem> constrainOnEQ(String attrName, String value) {
         return new LeafExpression<>(new BooleanAttributeSearchItem(attrName, Operator.EQ, Boolean.parseBoolean(value)));
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("BooleanAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }

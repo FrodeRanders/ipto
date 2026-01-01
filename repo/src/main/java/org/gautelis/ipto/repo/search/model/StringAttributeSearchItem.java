@@ -51,4 +51,13 @@ public class StringAttributeSearchItem extends AttributeSearchItem<String> {
             return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.EQ, value));
         }
     }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder("StringAttributeSearchItem{");
+        buf.append(super.toString());
+        buf.append(", value='").append(value).append("'");
+        buf.append("}");
+        return buf.toString();
+    }
 }
