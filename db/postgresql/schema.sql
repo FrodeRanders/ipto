@@ -64,7 +64,7 @@ CREATE TABLE repo_unit_kernel (
 
 CREATE INDEX repo_uk_ind1
     ON repo_unit_kernel (tenantid, status, created DESC)
-    INCLUDE (unitid);
+    INCLUDE (unitid, lastver);
 
 CREATE INDEX repo_uk_ind2
     ON repo_unit_kernel (tenantid, unitid, lastver);
