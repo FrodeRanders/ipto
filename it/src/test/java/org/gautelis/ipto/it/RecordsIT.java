@@ -70,7 +70,7 @@ public class RecordsIT {
             });
         });
 
-        yrkan.withAttributeValue("dce:description", String.class, value -> {
+        yrkan.withAttributeValue("dcterms:description", String.class, value -> {
             value.add(processDescription);
         });
 
@@ -244,7 +244,7 @@ public class RecordsIT {
             if (beslut.isPresent()) {
                 RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
 
-                beslutsRecord.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+                beslutsRecord.withNestedAttributeValue("dcterms:date", Instant.class, datum -> {
                     datum.add(Instant.now());
                 });
 
@@ -287,19 +287,19 @@ public class RecordsIT {
         }
 
         Unit sameUnit = _sameUnit.get();
-        Optional<Attribute<String>> _description = sameUnit.getStringAttribute("dce:description");
+        Optional<Attribute<String>> _description = sameUnit.getStringAttribute("dcterms:description");
         if (_description.isEmpty()) {
-            fail("Attribute 'dce:description' not found in unit " + yrkan.getReference() + " but is known to exist");
+            fail("Attribute ':description' not found in unit " + yrkan.getReference() + " but is known to exist");
         }
         Attribute<String> description = _description.get();
         ArrayList<String> valueVector = description.getValueVector();
 
         if (valueVector.size() != 1) {
-            fail("Attribute 'dce:description' must have exactly one value");
+            fail("Attribute ':description' must have exactly one value");
         }
 
         if (!processDescription.equals(valueVector.get(0))) {
-            fail("Attribute 'dce:description' does not have expected value: \"" + processDescription + "\" != \"" + valueVector.get(0) + "\"");
+            fail("Attribute ':description' does not have expected value: \"" + processDescription + "\" != \"" + valueVector.get(0) + "\"");
         }
     }
 }

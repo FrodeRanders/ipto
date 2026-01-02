@@ -72,7 +72,7 @@ public class PerformanceIT {
         final int numberOfUnits = 1000;
 
         final int tenantId = 1; // SCRATCH
-        final String someKnownAttribute = "dce:description";
+        final String someKnownAttribute = "dcterms:description";
 
         Runtime runtime = Runtime.getRuntime();
         int numProcessors = runtime.availableProcessors();
@@ -83,7 +83,7 @@ public class PerformanceIT {
         System.out.println(" Running concurrent test with " + numThreads + " threads, creating " + numberOfUnits + " units with subsequent searches");
         System.out.println();
         System.out.println(" If this is run immediately after database startup and without warm-up, the");
-        System.out.println(" statistics may not be accurate. In fact, this test *may be* the warm-up.");
+        System.out.println(" statistics may not be accurate. In fact, this test may *be* the warm-up.");
         System.out.println("---------------------------------------------------------------------------------------");
         System.out.flush();
 
@@ -104,7 +104,7 @@ public class PerformanceIT {
                         Unit parentUnit = repo.createUnit(tenantId, uniqueName);
                         unitNames.add(uniqueName);
 
-                        parentUnit.withAttributeValue("dce:title", String.class, value -> {
+                        parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
                             value.add("First value");
                             value.add("Second value");
                             value.add("Third value");
@@ -278,12 +278,12 @@ public class PerformanceIT {
                 Instant startTime = Instant.now();
 
                 Unit parentUnit = repo.createUnit(tenantId, "parent-" + j);
-                parentUnit.withAttributeValue("dce:title", String.class, value -> {
+                parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
                     value.add("First value");
                     value.add("Second value");
                     value.add("Third value");
                 });
-                parentUnit.withAttributeValue("dce:description", String.class, value -> {
+                parentUnit.withAttributeValue("dcterms:description", String.class, value -> {
                     value.add("A test unit");
                 });
                 repo.storeUnit(parentUnit);
@@ -295,7 +295,7 @@ public class PerformanceIT {
                 }
 
                 if (true) {
-                    parentUnit.withAttributeValue("dce:title", String.class, value -> {
+                    parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
                         value.clear();
                         value.add("Replaced value");
                     });
@@ -325,7 +325,7 @@ public class PerformanceIT {
                     Unit childUnit = repo.createUnit(tenantId, "child-" + j + "-" + i);
 
                     //
-                    parentUnit.withAttribute("dce:title", String.class, attr -> {
+                    parentUnit.withAttribute("dcterms:title", String.class, attr -> {
                         try {
                             childUnit.addAttribute(attr);
                         } catch (BaseException be) {
@@ -335,7 +335,7 @@ public class PerformanceIT {
 
                     final Instant now = Instant.now();
 
-                    childUnit.withAttributeValue("dce:date", Instant.class, value -> {
+                    childUnit.withAttributeValue("dcterms:date", Instant.class, value -> {
                         value.add(now);
                     });
 
@@ -361,7 +361,7 @@ public class PerformanceIT {
                     if (/* i within page, that we will search for later down under */
                             i > pageOffset && i == pageOffset + pageSize && numberOfUnitsToHaveSpecificString-- > 0
                     ) {
-                        childUnit.withAttributeValue("dce:title", String.class, value -> {
+                        childUnit.withAttributeValue("dcterms:title", String.class, value -> {
                             value.add(someSpecificString);
                         });
 
@@ -398,11 +398,11 @@ public class PerformanceIT {
                 expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
 
                 // First attribute constraint
-                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dce:date", Operator.GEQ, someInstant);
+                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dcterms:date", Operator.GEQ, someInstant);
                 expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
 
                 // Second attribute constraint
-                SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dce:title", Operator.EQ, someSpecificString);
+                SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dcterms:title", Operator.EQ, someSpecificString);
                 expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
 
                 // Result set constraints (paging)

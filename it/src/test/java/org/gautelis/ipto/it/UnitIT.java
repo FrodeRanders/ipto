@@ -230,11 +230,11 @@ public class UnitIT {
         //
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
-        unit.withAttributeValue("dce:title", String.class, value -> {
+        unit.withAttributeValue("dcterms:title", String.class, value -> {
             value.add("This testcase has a title");
         });
 
-        unit.withAttributeValue("dce:description", String.class, value -> {
+        unit.withAttributeValue("dcterms:description", String.class, value -> {
             value.add("First description");
         });
 
@@ -245,15 +245,15 @@ public class UnitIT {
         repo.storeUnit(unit);
 
         assertVersionIs(1, unit, repo);
-        assertAttributeExists("dce:description", 1, 1, unit, repo);
-        assertAttributeExists("dce:title", 1, 1, unit, repo);
+        assertAttributeExists("dcterms:description", 1, 1, unit, repo);
+        assertAttributeExists("dcterms:title", 1, 1, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
         repo.lockUnit(unit, LockType.WRITE, "unit must not be modified");
         assertTrue(unit.isLocked());
 
-        unit.withAttributeValue("dce:description", String.class, value -> {
+        unit.withAttributeValue("dcterms:description", String.class, value -> {
             value.add("Second additional description");
         });
 
@@ -274,12 +274,12 @@ public class UnitIT {
         });
 
         assertVersionIs(2, unit, repo);
-        assertAttributeExists("dce:description", 2, 2, unit, repo);
-        assertAttributeExists("dce:title", 1, 2, unit, repo);
+        assertAttributeExists("dcterms:description", 2, 2, unit, repo);
+        assertAttributeExists("dcterms:title", 1, 2, unit, repo);
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
-        unit.withAttributeValue("dce:description", String.class, value -> {
+        unit.withAttributeValue("dcterms:description", String.class, value -> {
             value.add("Third additional description");
         });
 
@@ -288,8 +288,8 @@ public class UnitIT {
         });
 
         assertVersionIs(3, unit, repo);
-        assertAttributeExists("dce:description", 3, 3, unit, repo);
-        assertAttributeExists("dce:title", 1, 3, unit, repo);
+        assertAttributeExists("dcterms:description", 3, 3, unit, repo);
+        assertAttributeExists("dcterms:title", 1, 3, unit, repo);
 
         unit.requestStatusTransition(Unit.Status.PENDING_DISPOSITION);
 

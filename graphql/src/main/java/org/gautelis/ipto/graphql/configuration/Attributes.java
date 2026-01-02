@@ -29,15 +29,15 @@ public final class Attributes {
     /*
      * enum Attributes @attributeRegistry {
      *     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
-     *     title @attribute(datatype: STRING, array: false, alias: "dc:title", uri: "http://purl.org/dc/elements/1.1/title", description: "Namnet som ges till resursen...")
+     *     title @attribute(datatype: STRING, array: false, alias: "dcterms:title", uri: "http://purl.org/dc/terms/title", description: "Namnet som ges till resursen...")
      *     ...
      *     shipmentId  @attribute(datatype: STRING)
      *     shipment    @attribute(datatype: RECORD, array: false)
      * }
      *
-     * title @attribute(datatype: STRING, array: false, alias: "dc:title", qualname: "http:...", description: "...")
-     *   ^                          ^              ^               ^                    ^                       ^
-     *   | (a)                      | (c)          | (d)           | (e)                | (f)                   | (g)
+     * title @attribute(datatype: STRING, array: false, alias: "dcterms:title", qualname: "http:...", description: "...")
+     *   ^                          ^              ^                    ^                    ^                       ^
+     *   | (a)                      | (c)          | (d)                | (e)                | (f)                   | (g)
      */
     static Map<String, GqlAttributeShape> derive(TypeDefinitionRegistry registry, Map<String, GqlDatatypeShape> datatypes) {
         Map<String, GqlAttributeShape> attributes = new HashMap<>();

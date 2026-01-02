@@ -36,7 +36,7 @@ public class DebugStep {
             {
                 Unit unit = repo.createUnit(tenantId, "graphql test");
 
-                unit.withAttribute("dce:title", String.class, attr -> {
+                unit.withAttribute("dcterms:title", String.class, attr -> {
                     ArrayList<String> value = attr.getValueVector();
                     value.add("abc");
                 });

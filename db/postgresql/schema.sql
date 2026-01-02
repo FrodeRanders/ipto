@@ -295,7 +295,7 @@ ON repo_string_vector (valueid ASC, LOWER(value) ASC);
 -- CREATE INDEX repo_sv_val_trgm ON repo_string_vector
 --     USING gin (lower(val) gin_trgm_ops);
 
--- Considering attribute-targeted partial indexes, e.g. attribute "dc:title" with attrid = 1
+-- Considering attribute-targeted partial indexes, e.g. attribute "dcterms:title" with attrid = 1
 -- CREATE INDEX repo_sv_title_trgm ON repo_string_vector
 --    USING gin (lower(val) gin_trgm_ops)
 --    WHERE valueid IN (SELECT valueid FROM repo_attribute_value WHERE attrid = 1);

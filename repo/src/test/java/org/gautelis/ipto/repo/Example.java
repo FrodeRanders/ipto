@@ -42,13 +42,13 @@ public class Example {
         // as they are not normally used to identify units.
         Unit unit = repo.createUnit(tenantId, "unit five");
 
-        // Add "dc:title" (already known to the system).
-        unit.withAttributeValue("dce:title", String.class, value -> {
+        // Add "dcterms:title" (already known to the system).
+        unit.withAttributeValue("dcterms:title", String.class, value -> {
             value.add("Æ e nordlending æ");
         });
 
-        // Add "dc:date" (already known to the system).
-        unit.withAttributeValue("dce:date", Instant.class, value -> {
+        // Add "dcterms:date" (already known to the system).
+        unit.withAttributeValue("dcterms:date", Instant.class, value -> {
             value.add(Instant.now());
         });
 
@@ -65,11 +65,11 @@ public class Example {
         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         // Constrain to time-related attribute
-        SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dce:date", Operator.LEQ, Instant.now());
+        SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dcterms:date", Operator.LEQ, Instant.now());
         expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
 
         // Constrain to string attribute
-        SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dce:title", Operator.EQ, "Ajj som bara den");
+        SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dcterms:title", Operator.EQ, "Ajj som bara den");
         expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
 
         // 

@@ -61,8 +61,8 @@ metadata for the backing management system.
 
 Attributes are identified with different names at different levels. At the backing management level, by
 a namespaced name (and the corresponding qualified name). Take for instance the attribute ```title``` from
-the Dublic Core Elements namespace ```http://purl.org/dc/elements/1.1/```. This attribute is identified
-by the name ```dce:title```, when operating through the Java API on top of the management system, and as
+the Dublic Core Elements namespace ```http://purl.org/dc/terms/```. This attribute is identified
+by the name ```dcterms:title```, when operating through the Java API on top of the management system, and as
 such globally understood as "The name given to a resource, as a human-readable identifier that provides a 
 concise representation of the resource's content." 
 
@@ -79,7 +79,7 @@ You can choose to add other well known vocabularies as a base for your data mode
 enum Attributes @attributeRegistry {
     "The name given to the resource. It''s a human-readable identifier that provides a concise representation of the resource''s content."
     title @attribute(datatype: STRING, array: false,
-        name: "dce:title", uri: "http://purl.org/dc/elements/1.1/title"   
+        name: "dcterms:title", uri: "http://purl.org/dc/terms/title"   
     ...
 
     # Domain specific attributes (e.g. related to orders and shipments)

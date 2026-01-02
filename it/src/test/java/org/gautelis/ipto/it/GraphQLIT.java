@@ -64,7 +64,7 @@ public class GraphQLIT {
             });
         });
 
-        yrkan.withAttributeValue("dce:description", String.class, value -> {
+        yrkan.withAttributeValue("dcterms:description", String.class, value -> {
             value.add("Yrkan om vård av husdjur");
         });
 
@@ -126,7 +126,7 @@ public class GraphQLIT {
         });
 
         yrkan.withRecordAttribute("ffa:beslut", beslut -> {
-            beslut.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+            beslut.withNestedAttributeValue("dcterms:date", Instant.class, datum -> {
                 datum.add(aSpecificInstant);
             });
 
@@ -641,13 +641,13 @@ public class GraphQLIT {
                     "@type" : "ipto:string-vector",
                     "alias" : "title",
                     "attrtype" : "STRING",
-                    "attrname" : "dce:title",
+                    "attrname" : "dcterms:title",
                     "value" : [ "Replaced value", "019b290c-7c4b-7592-8298-ced722f531c1" ]
                   }, {
                     "@type" : "ipto:time-scalar",
                     "alias" : "date",
                     "attrtype" : "TIME",
-                    "attrname" : "dce:date",
+                    "attrname" : ":date",
                     "value" : [ "2025-12-16T21:24:02.780162Z" ]
                   } ]
                 }

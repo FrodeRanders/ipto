@@ -35,7 +35,7 @@ yrkan.withRecordAttribute("ffa:fysisk_person", person -> {
     });
 });
 
-yrkan.withAttributeValue("dce:description", String.class, value -> {
+yrkan.withAttributeValue(":description", String.class, value -> {
     value.add("Yrkan om vård av husdjur");
 });
 
@@ -215,7 +215,7 @@ yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -
     if (beslut.isPresent()) {
         RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
 
-        beslutsRecord.withNestedAttributeValue("dce:date", Instant.class, datum -> {
+        beslutsRecord.withNestedAttributeValue(":date", Instant.class, datum -> {
             datum.add(Instant.now());
         });
 
@@ -408,7 +408,7 @@ The result is something like:
       "attributes": [
         {
           "@type": "time-scalar",
-          "attrname": "dce:date",
+          "attrname": ":date",
           "alias": "date",
           "attrtype": "TIME",
           "attrid": 1,
@@ -478,7 +478,7 @@ The result is something like:
     },
     {
       "@type": "string-scalar",
-      "attrname": "dce:description",
+      "attrname": ":description",
       "alias": "description",
       "attrtype": "STRING",
       "attrid": 27,
