@@ -1,12 +1,32 @@
 quarkus:
   log:
-    category:
-       "org.gautelis":
-           level: DEBUG
+    # Root level (applies unless overridden by category)
+    level: INFO
+
+    console:
+      enabled: false
+      level: TRACE
+
     file:
       enabled: true
-      level: ALL
       path: logs/app.log
+      level: TRACE
+
+    category:
+      "org.gautelis":
+        level: DEBUG
+
+      # Quarkus internals
+      "io.quarkus":
+        level: DEBUG
+
+      # JBoss Logging facade and backend
+      "org.jboss.logging":
+        level: TRACE
+      "org.jboss.logmanager":
+        level: TRACE
+      "org.jboss.logmanager.handlers":
+        level: TRACE
 
   index-dependency:
     ipto-repo-cdi:
