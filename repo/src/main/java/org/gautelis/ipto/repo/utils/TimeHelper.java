@@ -30,10 +30,7 @@ public class TimeHelper {
         // local time to UTC
         Instant inst = ldt.toInstant(ZoneOffset.UTC);
 
-        // time in UTC to epoch milliseconds
-        long millis = inst.toEpochMilli();
-
-        return new Timestamp(millis);
+        return Timestamp.from(inst);
     }
 
     /**
