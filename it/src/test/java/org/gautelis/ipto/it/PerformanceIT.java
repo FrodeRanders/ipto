@@ -28,10 +28,7 @@ import org.gautelis.ipto.repo.model.locks.LockType;
 import org.gautelis.ipto.repo.model.utils.RunningStatistics;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
-import org.gautelis.ipto.repo.search.query.DatabaseAdapter;
-import org.gautelis.ipto.repo.search.query.QueryBuilder;
-import org.gautelis.ipto.repo.search.query.SearchExpression;
-import org.gautelis.ipto.repo.search.query.SearchOrder;
+import org.gautelis.ipto.repo.search.query.*;
 import org.gautelis.vopn.lang.TimeDelta;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -138,7 +135,7 @@ public class PerformanceIT {
 
                         // Result set constraints (paging)
                         SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
-                        UnitSearch usd = new UnitSearch(expr, order, /* no selection limit */ 0);
+                        UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, /* no selection limit */ 0);
 
                         // Build SQL statement for search
                         DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
@@ -187,7 +184,7 @@ public class PerformanceIT {
 
                         // Result set constraints (paging)
                         SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
-                        UnitSearch usd = new UnitSearch(expr, order, /* no selection limit */ 0);
+                        UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, /* no selection limit */ 0);
 
                         // Build SQL statement for search
                         DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
@@ -407,7 +404,7 @@ public class PerformanceIT {
 
                 // Result set constraints (paging)
                 SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time
-                UnitSearch usd = new UnitSearch(expr, order, /* selectionSize */ 5);
+                UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, /* selectionSize */ 5);
 
                 // Build SQL statement for search
                 DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();

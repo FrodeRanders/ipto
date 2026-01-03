@@ -30,10 +30,7 @@ import org.gautelis.ipto.repo.model.utils.TimedExecution;
 import org.gautelis.ipto.repo.model.utils.TimingData;
 import org.gautelis.ipto.repo.search.SearchResult;
 import org.gautelis.ipto.repo.search.UnitSearch;
-import org.gautelis.ipto.repo.search.query.DatabaseAdapter;
-import org.gautelis.ipto.repo.search.query.QueryBuilder;
-import org.gautelis.ipto.repo.search.query.SearchExpression;
-import org.gautelis.ipto.repo.search.query.SearchOrder;
+import org.gautelis.ipto.repo.search.query.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -659,9 +656,9 @@ public class Repository {
         try {
             UnitSearch sd;
             if (maxhits > 0) {
-                sd = new UnitSearch(expr, order, maxhits);
+                sd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, maxhits);
             } else {
-                sd = new UnitSearch(expr, order, reqlow, (reqhigh - reqlow));
+                sd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, reqlow, (reqhigh - reqlow));
             }
 
             Database.useConnection(context.getDataSource(),

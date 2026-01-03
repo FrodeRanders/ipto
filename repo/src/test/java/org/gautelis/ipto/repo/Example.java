@@ -4,10 +4,7 @@ import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.search.model.*;
-import org.gautelis.ipto.repo.search.query.DatabaseAdapter;
-import org.gautelis.ipto.repo.search.query.QueryBuilder;
-import org.gautelis.ipto.repo.search.query.SearchExpression;
-import org.gautelis.ipto.repo.search.query.SearchOrder;
+import org.gautelis.ipto.repo.search.query.*;
 import org.gautelis.ipto.repo.search.SearchResult;
 import org.gautelis.ipto.repo.search.UnitSearch;
 
@@ -91,7 +88,7 @@ public class Example {
         } else {
             // Search "manually", in which case no Unit:s are instantiated
             DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
-            UnitSearch usd = new UnitSearch(expr, order, /* selectionSize */ 5);
+            UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, /* selectionSize */ 5);
 
             try {
                 repo.withConnection(conn -> searchAdapter.search(conn, usd, repo.getTimingData(),

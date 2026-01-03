@@ -18,6 +18,7 @@ package org.gautelis.ipto.repo.search;
 
 import org.gautelis.ipto.repo.search.query.SearchExpression;
 import org.gautelis.ipto.repo.search.query.SearchOrder;
+import org.gautelis.ipto.repo.search.query.SearchStrategy;
 
 import java.util.Objects;
 
@@ -30,6 +31,7 @@ public class UnitSearch {
     private final int selectionSize;
 
     private final SearchExpression expression;
+    private final SearchStrategy strategy;
     private final SearchOrder order;
 
     /**
@@ -38,11 +40,13 @@ public class UnitSearch {
      * @param expression
      */
     public UnitSearch(
-            SearchExpression expression
+            SearchExpression expression,
+            SearchStrategy strategy
     ) {
         Objects.requireNonNull(expression, "expression");
 
         this.expression = expression;
+        this.strategy = strategy;
         this.order = SearchOrder.getDefaultOrder();
         this.pageOffset = 0;
         this.pageSize = 0;
@@ -57,12 +61,14 @@ public class UnitSearch {
      */
     public UnitSearch(
             SearchExpression expression,
+            SearchStrategy strategy,
             SearchOrder order
     ) {
         Objects.requireNonNull(expression, "expression");
         Objects.requireNonNull(order, "order");
 
         this.expression = expression;
+        this.strategy = strategy;
         this.order = order;
         this.pageOffset = 0;
         this.pageSize = 0;
@@ -79,6 +85,7 @@ public class UnitSearch {
      */
     public UnitSearch(
             SearchExpression expression,
+            SearchStrategy strategy,
             SearchOrder order,
             int selectionSize
     ) {
@@ -86,6 +93,7 @@ public class UnitSearch {
         Objects.requireNonNull(order, "order");
 
         this.expression = expression;
+        this.strategy = strategy;
         this.order = order;
         this.pageOffset = 0;
         this.pageSize = 0;
@@ -103,6 +111,7 @@ public class UnitSearch {
      */
     public UnitSearch(
             SearchExpression expression,
+            SearchStrategy strategy,
             SearchOrder order,
             int pageOffset,
             int pageSize
@@ -111,6 +120,7 @@ public class UnitSearch {
         Objects.requireNonNull(order, "order");
 
         this.expression = expression;
+        this.strategy = strategy;
         this.order = order;
         this.pageOffset = pageOffset;
         this.pageSize = pageSize;
@@ -119,6 +129,10 @@ public class UnitSearch {
 
     public SearchExpression getExpression() {
         return expression;
+    }
+
+    public SearchStrategy getStrategy() {
+        return strategy;
     }
 
     public SearchOrder getOrder() {

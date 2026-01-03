@@ -354,7 +354,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         Map<String, SearchItem<?>> commonConstraintValues = new HashMap<>();
 
         SearchExpression expression = optimize(sd.getExpression());
-        SearchStrategy strategy = chooseStrategy(sd, expression);
+        SearchStrategy strategy = sd.getStrategy();
 
         // Identify constraints: label attribute leaves as c1, c2, ...
         Collection<LeafExpression<?>> unitLeaves = new LinkedList<>();

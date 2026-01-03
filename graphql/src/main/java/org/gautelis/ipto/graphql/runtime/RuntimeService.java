@@ -448,7 +448,7 @@ public class RuntimeService {
 
         // Result set constraints (paging)
         SearchOrder order = SearchOrder.orderByUnitId(true); // ascending on unit id
-        UnitSearch usd = new UnitSearch(expr, order, filter.offset(), filter.size());
+        UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, filter.offset(), filter.size());
 
         // Build SQL statement for search
         DatabaseAdapter searchAdapter = repo.getDatabaseAdapter();
