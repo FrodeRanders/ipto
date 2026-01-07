@@ -136,7 +136,13 @@ public class Repository {
             int tenantId,
             UUID correlationId
     ) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, ConfigurationException {
-        return new Unit(context, tenantId, /* no name */ null, correlationId);
+        Unit unit = new Unit(context, tenantId, /* no name */ null, correlationId);
+        generateActionEvent(
+                unit,
+                ActionEvent.Type.CREATED,
+                "Unit created"
+        );
+        return unit;
     }
 
     /**
@@ -186,13 +192,17 @@ public class Repository {
             if (printProgress) {
                 writer.println(" * chunk of " + count + " were removed");
                 writer.flush();
+
+                if (count == 0) {
+                    writer.println(" ! ending");
+                    writer.flush();
+                }
             }
 
             if (count == 0) {
-                writer.println(" ! ending");
-                writer.flush();
                 break;
             }
+
             result = getDisposedUnits(tenantId, /* low */ 0, /* high */ MAX_HITS, MAX_HITS);
         }
     }
@@ -651,7 +661,7 @@ public class Repository {
         }
 
         Collection<Unit> result = new LinkedList<>();
-        int totalNumberOfHits[] = { 0 };
+        int[] totalNumberOfHits = { 0 };
 
         try {
             UnitSearch sd;

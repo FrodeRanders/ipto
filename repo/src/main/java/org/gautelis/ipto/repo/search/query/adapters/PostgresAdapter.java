@@ -17,7 +17,6 @@
 package org.gautelis.ipto.repo.search.query.adapters;
 
 import org.gautelis.ipto.repo.db.Database;
-import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.search.query.CommonAdapter;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.slf4j.Logger;
@@ -28,7 +27,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
-import java.util.Map;
 
 /**
  *

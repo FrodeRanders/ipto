@@ -22,7 +22,6 @@ import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,15 +63,9 @@ public class RecordsIT {
          *     personnummer : String
          * }
          */
-        yrkan.withRecordAttribute("ffa:fysisk_person", person -> {
-            person.withNestedAttributeValue("ffa:personnummer", String.class, value -> {
-                value.add("19121212-1212");
-            });
-        });
+        yrkan.withRecordAttribute("ffa:fysisk_person", person -> person.withNestedAttributeValue("ffa:personnummer", String.class, value -> value.add("19121212-1212")));
 
-        yrkan.withAttributeValue("dcterms:description", String.class, value -> {
-            value.add(processDescription);
-        });
+        yrkan.withAttributeValue("dcterms:description", String.class, value -> value.add(processDescription));
 
         repo.storeUnit(yrkan);
 
@@ -100,13 +93,9 @@ public class RecordsIT {
             if (rattenTill.isPresent()) {
                 RecordAttribute rattenTillRecord = RecordAttribute.from(yrkan, rattenTill.get());
 
-                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
-                    ersattningstyp.add("HUNDBIDRAG");
-                });
+                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> ersattningstyp.add("HUNDBIDRAG"));
 
-                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
-                    omfattning.add("HEL");
-                });
+                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> omfattning.add("HEL"));
 
                 Attribute<?> attribute = rattenTill.get();
                 resultat.add(attribute);
@@ -163,36 +152,22 @@ public class RecordsIT {
             if (ersattning.isPresent()) {
                 RecordAttribute ersattningRecord = RecordAttribute.from(yrkan, ersattning.get());
 
-                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> {
-                    value.add("HUNDBIDRAG");
-                });
+                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> value.add("HUNDBIDRAG"));
 
                 ersattningRecord.withNestedAttribute("ffa:belopp", Attribute.class, belopp -> {
                     RecordAttribute beloppRecord = RecordAttribute.wrap(yrkan, belopp);
 
-                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> {
-                        beloppsvarde.add(1000.0);
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> {
-                        beloppsperiodisering.add("PER_DAG");
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> {
-                        valuta.add("SEK");
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> {
-                        skattestatus.add("SKATTEPLIKTIG");
-                    });
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> beloppsvarde.add(1000.0));
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> beloppsperiodisering.add("PER_DAG"));
+                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> valuta.add("SEK"));
+                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> skattestatus.add("SKATTEPLIKTIG"));
                 });
 
                 ersattningRecord.withNestedAttribute("ffa:period", Attribute.class, period -> {
                     RecordAttribute periodRecord = RecordAttribute.wrap(yrkan, period);
 
-                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> {
-                        value.add(Instant.now());
-                    });
-                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> {
-                        value.add(Instant.now());
-                    });
+                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> value.add(Instant.now()));
+                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> value.add(Instant.now()));
                 });
 
                 resultat.add(ersattningRecord.getDelegate());
@@ -244,29 +219,17 @@ public class RecordsIT {
             if (beslut.isPresent()) {
                 RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
 
-                beslutsRecord.withNestedAttributeValue("dcterms:date", Instant.class, datum -> {
-                    datum.add(Instant.now());
-                });
+                beslutsRecord.withNestedAttributeValue("dcterms:date", Instant.class, datum -> datum.add(Instant.now()));
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
-                    beslutsfattare.add("Beslut Person");
-                });
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> beslutsfattare.add("Beslut Person"));
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
-                    beslutstyp.add("SLUTLIGT");
-                });
+                beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> beslutstyp.add("SLUTLIGT"));
 
-                beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
-                    beslutsutfall.add("BEVILJAT");
-                });
+                beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> beslutsutfall.add("BEVILJAT"));
 
-                beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
-                    organisation.add("Myndigheten");
-                });
+                beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> organisation.add("Myndigheten"));
 
-                beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
-                    lagrum.add("FL_P38");
-                });
+                beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> lagrum.add("FL_P38"));
 
                 beslutsRecord.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
                     // Ingen
@@ -289,17 +252,17 @@ public class RecordsIT {
         Unit sameUnit = _sameUnit.get();
         Optional<Attribute<String>> _description = sameUnit.getStringAttribute("dcterms:description");
         if (_description.isEmpty()) {
-            fail("Attribute ':description' not found in unit " + yrkan.getReference() + " but is known to exist");
+            fail("Attribute 'dcterms:description' not found in unit " + yrkan.getReference() + " but is known to exist");
         }
         Attribute<String> description = _description.get();
         ArrayList<String> valueVector = description.getValueVector();
 
         if (valueVector.size() != 1) {
-            fail("Attribute ':description' must have exactly one value");
+            fail("Attribute 'dcterms:description' must have exactly one value");
         }
 
-        if (!processDescription.equals(valueVector.get(0))) {
-            fail("Attribute ':description' does not have expected value: \"" + processDescription + "\" != \"" + valueVector.get(0) + "\"");
+        if (!processDescription.equals(valueVector.getFirst())) {
+            fail("Attribute 'dcterms:description' does not have expected value: \"" + processDescription + "\" != \"" + valueVector.getFirst() + "\"");
         }
     }
 }

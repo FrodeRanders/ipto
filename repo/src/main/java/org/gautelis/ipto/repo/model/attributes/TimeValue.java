@@ -23,7 +23,6 @@ import org.gautelis.ipto.repo.exceptions.AttributeTypeException;
 import org.gautelis.ipto.repo.exceptions.AttributeValueException;
 import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
 import org.gautelis.ipto.repo.model.AttributeType;
-import org.gautelis.ipto.repo.utils.TimeHelper;
 
 import java.sql.*;
 import java.time.Instant;

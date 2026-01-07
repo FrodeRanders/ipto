@@ -191,7 +191,7 @@ repo_attribute_value ||--o{ repo_record_vector  : "records (parent)"
 # Instructions for retrieving, running and preparing PostgreSQL
 
 The name of the database ('repo'), the user ('repo') and the password ('repo'), 
-matches the [configuration](../../src/main/resources/org/gautelis/repo/configuration.xml) 
+matches the [configuration](../../repo/src/main/resources/org/gautelis/ipto/repo/configuration_pg.xml) 
 that is currently stored among the resources. This is not ideal for production use, 
 but makes demonstrating the functionality a breeze.
 

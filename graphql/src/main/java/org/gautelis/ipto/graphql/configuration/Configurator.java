@@ -30,8 +30,6 @@ import org.gautelis.ipto.graphql.runtime.scalars.DateTimeScalar;
 import org.gautelis.ipto.graphql.runtime.scalars.LongScalar;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
-import org.gautelis.ipto.repo.model.Context;
-import org.gautelis.ipto.repo.model.KnownAttributes;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +108,7 @@ public class Configurator {
                     default -> null;
                 };
                 if (null == operationType) {
-                    log.warn("\u21af Undefined operation type '{}' -- ignoring", otd.getName());
+                    log.warn("↯ Undefined operation type '{}' -- ignoring", otd.getName());
                     continue;
                 }
                 operationTypes.put(otd.getTypeName().getName(), operationType);
@@ -175,14 +173,14 @@ public class Configurator {
         // --- Datatypes ---
         for (String key : gqlViewpoint.datatypes().keySet()) {
             if (!catalogViewpoint.datatypes().containsKey(key)) {
-                log.error("\u21af Datatype '{}' not found in catalog", key);
+                log.error("↯ Datatype '{}' not found in catalog", key);
                 progress.println("Datatype '" + key + "' not found in catalog");
                 continue;
             }
             GqlDatatypeShape gqlDatatype = gqlViewpoint.datatypes().get(key);
             CatalogDatatype iptoDatatype = catalogViewpoint.datatypes().get(key);
             if (!gqlDatatype.equals(iptoDatatype)) {
-                log.error("\u21af GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
+                log.error("↯ GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
                 progress.println("GraphQL SDL and catalog datatype do not match: " + gqlDatatype +  " != " + iptoDatatype);
             }
         }
@@ -190,7 +188,7 @@ public class Configurator {
         // Attributes
         for (String key : gqlViewpoint.attributes().keySet()) {
             if (!catalogViewpoint.attributes().containsKey(key)) {
-                log.info("\u21af Reconciling attribute '{}'...", key);
+                log.info("↯ Reconciling attribute '{}'...", key);
                 progress.println("Reconciling attribute '" + key + "'...");
 
                 CatalogAttribute attribute = addAttribute(repo, gqlViewpoint.attributes().get(key), progress);
@@ -200,7 +198,7 @@ public class Configurator {
             GqlAttributeShape gqlAttribute = gqlViewpoint.attributes().get(key);
             CatalogAttribute iptoAttribute = catalogViewpoint.attributes().get(key);
             if (!gqlAttribute.equals(iptoAttribute)) {
-                log.error("\u21af GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
+                log.error("↯ GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
                 progress.println("GraphQL SDL and catalog attribute do not match: " + gqlAttribute +  " != " + iptoAttribute);
             }
         }
@@ -208,7 +206,7 @@ public class Configurator {
         // Records
         for (String key : gqlViewpoint.records().keySet()) {
             if (!catalogViewpoint.records().containsKey(key)) {
-                log.info("\u21af Reconciling record '{}'...", key);
+                log.info("↯ Reconciling record '{}'...", key);
                 progress.println("Reconciling record '" + key + "'...");
 
                 CatalogRecord record = addRecord(
@@ -224,7 +222,7 @@ public class Configurator {
             GqlRecordShape gqlRecord = gqlViewpoint.records().get(key);
             CatalogRecord iptoRecord = catalogViewpoint.records().get(key);
             if (!gqlRecord.equals(iptoRecord)) {
-                log.error("\u21af GraphQL SDL and catalog record do not match: {} != {}", gqlRecord, iptoRecord);
+                log.error("↯ GraphQL SDL and catalog record do not match: {} != {}", gqlRecord, iptoRecord);
                 progress.println("GraphQL SDL and catalog record do not match: " + gqlRecord +  " != " + iptoRecord);
             }
         }
@@ -232,7 +230,7 @@ public class Configurator {
         // Unit templates
         for (String key : gqlViewpoint.units.keySet()) {
             if (!catalogViewpoint.units().containsKey(key)) {
-                log.info("\u21af Reconciling unit template '{}'...", key);
+                log.info("↯ Reconciling unit template '{}'...", key);
                 progress.println("Reconciling unit template '" + key + "'...");
 
                 CatalogUnitTemplate template = addUnitTemplate(
@@ -248,7 +246,7 @@ public class Configurator {
             CatalogUnitTemplate iptoTemplate = catalogViewpoint.units().get(key);
 
             if (!gqlTemplate.equals(iptoTemplate)) {
-                log.error("\u21af GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
+                log.error("↯ GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
                 progress.println("GraphQL SDL and catalog template do not match: " + gqlTemplate +  " != " + iptoTemplate);
             }
         }
@@ -299,7 +297,7 @@ public class Configurator {
                                 int attriId = rs.getInt(1);
                                 attribute.setAttrId(attriId);
                             } else {
-                                String info = "\u21af Failed to determine auto-generated attribute ID";
+                                String info = "↯ Failed to determine auto-generated attribute ID";
                                 log.error(info); // This is nothing we can recover from
                                 throw new ConfigurationException(info);
                             }
@@ -307,10 +305,10 @@ public class Configurator {
                     }
 
                     conn.commit();
-                    log.info("\u21af Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
+                    log.info("↯ Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
 
                 } catch (Throwable t) {
-                    log.error("\u21af Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, t.getMessage(), t);
+                    log.error("↯ Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -318,12 +316,12 @@ public class Configurator {
                         try {
                             conn.rollback();
                         } catch (SQLException rbe) {
-                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint "repo_attribute_pk"
-                            log.info("\u21af Attribute '{}' ({}, '{}') seems to already have been loaded", attribute.alias(), attribute.attrId(), attribute.attrName());
+                            log.info("↯ Attribute '{}' ({}, '{}') seems to already have been loaded", attribute.alias(), attribute.attrId(), attribute.attrName());
                         }
                     }
                 }
@@ -350,7 +348,7 @@ public class Configurator {
         // Determine attrId of record attribute
         CatalogAttribute recordAttribute = catalogAttributes.get(recordAttributeName);
         if (null == recordAttribute) {
-            log.warn("\u21af No matching record attribute in catalog: {}", recordAttributeName);
+            log.warn("↯ No matching record attribute in catalog: {}", recordAttributeName);
             throw new RuntimeException("No matching record attribute: " + recordAttributeName);
         }
 
@@ -403,7 +401,7 @@ public class Configurator {
 
                             if (sqlState.startsWith("23")) {
                                 // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                                log.info("\u21af Record '{}' seems to already have been loaded", recordName);
+                                log.info("↯ Record '{}' seems to already have been loaded", recordName);
                             } else {
                                 throw sqle;
                             }
@@ -418,13 +416,13 @@ public class Configurator {
                             GqlAttributeShape fieldAttribute = gqlAttributes.get(field.fieldName());
 
                             if (null == fieldAttribute) {
-                                log.warn("\u21af No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("↯ No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
                             CatalogAttribute attribute = catalogAttributes.get(field.fieldName());
                             if (null == attribute) {
-                                log.warn("\u21af No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("↯ No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
@@ -443,10 +441,10 @@ public class Configurator {
                     });
 
                     conn.commit();
-                    log.info("\u21af Loaded record '{}'", recordName);
+                    log.info("↯ Loaded record '{}'", recordName);
 
                 } catch (Throwable t) {
-                    log.error("\u21af Failed to store record '{}': {}", recordName, t.getMessage(), t);
+                    log.error("↯ Failed to store record '{}': {}", recordName, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -455,18 +453,18 @@ public class Configurator {
                             conn.rollback();
 
                         } catch (SQLException rbe) {
-                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                            log.info("\u21af Record '{}' seems to already have been loaded", recordName);
+                            log.info("↯ Record '{}' seems to already have been loaded", recordName);
                         }
                     }
                 }
             });
         } catch (SQLException sqle) {
-            log.error("\u21af Failed to store record: {}", Database.squeeze(sqle));
+            log.error("↯ Failed to store record: {}", Database.squeeze(sqle));
         }
 
         return catalogRecord;
@@ -510,7 +508,7 @@ public class Configurator {
                                 int templateId = rs.getInt(1);
                                 template.setTemplateId(templateId);
                             } else {
-                                String info = "\u21af Failed to determine auto-generated unit template ID";
+                                String info = "↯ Failed to determine auto-generated unit template ID";
                                 log.error(info); // This is nothing we can recover from
                                 throw new ConfigurationException(info);
                             }
@@ -524,7 +522,7 @@ public class Configurator {
                             // Determine attrId of field in record
                             CatalogAttribute attribute  = catalogAttributes.get(field.fieldName());
                             if (null == attribute) {
-                                log.warn("\u21af No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
+                                log.warn("↯ No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
                                 continue;
                             }
 
@@ -543,10 +541,10 @@ public class Configurator {
                     });
 
                     conn.commit();
-                    log.info("\u21af Loaded unit template '{}'", template.templateName);
+                    log.info("↯ Loaded unit template '{}'", template.templateName);
 
                 } catch (Throwable t) {
-                    log.error("\u21af Failed to store unit template '{}': {}", template.templateName, t.getMessage(), t);
+                    log.error("↯ Failed to store unit template '{}': {}", template.templateName, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -555,18 +553,18 @@ public class Configurator {
                             conn.rollback();
 
                         } catch (SQLException rbe) {
-                            log.error("\u21af Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
+                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
                         }
 
                         if (sqlState.startsWith("23")) {
                             // 23505 : duplicate key value violates unique constraint
-                            log.info("\u21af Unit template '{}' seems to already have been loaded", template.templateName);
+                            log.info("↯ Unit template '{}' seems to already have been loaded", template.templateName);
                         }
                     }
                 }
             });
         } catch (SQLException sqle) {
-            log.error("\u21af Failed to store template: {}", Database.squeeze(sqle));
+            log.error("↯ Failed to store template: {}", Database.squeeze(sqle));
         }
 
         return template;

@@ -58,13 +58,14 @@ public final class Unions {
 
             List<UnionMember> members = new ArrayList<>();
 
+            @SuppressWarnings("rawtypes")
             List<Type> memberTypes = union.getMemberTypes();
-            for (Type memberType : memberTypes) {
+            for (Type<?> memberType : memberTypes) {
                 if (log.isTraceEnabled()) {
                     if (memberType instanceof TypeName memberTypeName) {
-                        log.trace("\u21af Inspecting union : {} > {}", unionName, memberTypeName.getName());
+                        log.trace("↯ Inspecting union : {} > {}", unionName, memberTypeName.getName());
                     } else {
-                        log.trace("\u21af Inspecting union : {} > {}", unionName, memberType);
+                        log.trace("↯ Inspecting union : {} > {}", unionName, memberType);
                     }
                 }
 
@@ -72,12 +73,12 @@ public final class Unions {
                     String memberName = unionTypeName.getName();
                     members.add(new UnionMember(unionName, memberName));
                 } else {
-                    log.warn("\u21af Ignoring member '{}' in union '{}'", memberType, unionName);
+                    log.warn("↯ Ignoring member '{}' in union '{}'", memberType, unionName);
                 }
             }
 
             unions.put(unionName, new GqlUnionShape(unionName, members));
-            log.trace("\u21af Defining shape for {}: {}", unionName, unions.get(unionName));
+            log.trace("↯ Defining shape for {}: {}", unionName, unions.get(unionName));
         }
 
         return unions;

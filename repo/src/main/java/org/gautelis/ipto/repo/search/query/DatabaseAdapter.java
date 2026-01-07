@@ -17,8 +17,6 @@
 package org.gautelis.ipto.repo.search.query;
 
 import org.gautelis.ipto.repo.db.Adapter;
-import org.gautelis.ipto.repo.db.Column;
-import org.gautelis.ipto.repo.model.attributes.Value;
 import org.gautelis.ipto.repo.model.utils.TimingData;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
@@ -30,10 +28,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Database adapter base class implementation.

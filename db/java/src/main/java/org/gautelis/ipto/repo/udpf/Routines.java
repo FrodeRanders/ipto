@@ -21,14 +21,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.IOException;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
-import java.util.logging.*;
 
 /**
  * Java implementations of repo_* routines for DB2 LUW.

@@ -40,7 +40,7 @@ public record TypeDefinition(
         boolean isArray,
         boolean isMandatory
 ) {
-    public static TypeDefinition of(Type t) {
+    public static TypeDefinition of(Type<?> t) {
         boolean isArray = false;
         boolean isMandatory = false;
         String name = null;

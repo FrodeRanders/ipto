@@ -54,21 +54,15 @@ public class Utilities {
         String vendor = System.getProperty("java.vendor");
         String home = System.getProperty("java.home");
 
-        Connection con = DriverManager.getConnection("jdbc:default:connection");
-        try {
+        try (Connection con = DriverManager.getConnection("jdbc:default:connection")) {
             String sql = "INSERT INTO JAVA_ENV_LOG(TS, JAVA_VERSION, JAVA_VENDOR, JAVA_HOME) VALUES (CURRENT_TIMESTAMP, ?, ?, ?)";
 
-            PreparedStatement ps = con.prepareStatement(sql);
-            try {
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
                 ps.setString(1, version);
                 ps.setString(2, vendor);
                 ps.setString(3, home);
                 ps.executeUpdate();
-            } finally {
-                ps.close();
             }
-        } finally {
-            con.close();
         }
     }
 }

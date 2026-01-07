@@ -16,9 +16,7 @@
  */
 package org.gautelis.ipto.repo.search.model;
 
-import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AssociationType;
-import org.gautelis.ipto.repo.search.query.LeafExpression;
 
 public abstract class AssociationSearchItem<T> extends SearchItem<T> {
     protected AssociationSearchItem(AssociationType type, Operator operator) {

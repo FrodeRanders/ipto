@@ -124,7 +124,7 @@ public final class UnitTemplates {
                     }
                 }
                 units.put(typeName, new GqlUnitTemplateShape(typeName, templateName, unitFields));
-                log.trace("\u21af Defining shape for {}: {}", typeName, units.get(typeName));
+                log.trace("↯ Defining shape for {}: {}", typeName, units.get(typeName));
             }
         }
 
@@ -160,56 +160,54 @@ public final class UnitTemplates {
         """;
 
         try {
-            repository.withConnection(conn -> {
-                Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
-                    try (ResultSet rs = pStmt.executeQuery()) {
-                        List<CatalogUnitTemplate> catalogTemplates = new ArrayList<>();
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+                try (ResultSet rs = pStmt.executeQuery()) {
+                    List<CatalogUnitTemplate> catalogTemplates = new ArrayList<>();
 
-                        Integer currentId = null;
-                        CatalogUnitTemplate currentTemplate = null;
+                    Integer currentId = null;
+                    CatalogUnitTemplate currentTemplate = null;
 
-                        while (rs.next()) {
-                            // Template part
-                            int templateId = rs.getInt("templateid");
-                            String templateName = rs.getString("name");
+                    while (rs.next()) {
+                        // Template part
+                        int templateId = rs.getInt("templateid");
+                        String templateName = rs.getString("name");
 
-                            // Field part
-                            int idx = rs.getInt("idx");
-                            if (rs.wasNull()) {
-                                continue;
-                            }
-
-                            int fieldAttrId = rs.getInt("attrid");
-                            String fieldAlias = rs.getString("alias");
-                            String fieldAttrName = rs.getString("attrname");
-                            String fieldQualname = rs.getString("qualname");
-                            int fieldAttrType = rs.getInt("attrtype");
-                            boolean isArray = !rs.getBoolean("scalar"); // Note negation
-
-                            if (currentId == null || templateId != currentId) {
-                                // boundary => flush previous
-                                if (currentTemplate != null) catalogTemplates.add(currentTemplate);
-                                currentId = templateId;
-                                currentTemplate = new CatalogUnitTemplate(templateId, templateName);
-                            }
-
-                            CatalogAttribute attribute = new CatalogAttribute(
-                                    fieldAlias, fieldAttrName, fieldQualname,
-                                    AttributeType.of(fieldAttrType), isArray
-                            );
-                            attribute.setAttrId(fieldAttrId);
-                            currentTemplate.addField(attribute);
+                        // Field part
+                        int idx = rs.getInt("idx");
+                        if (rs.wasNull()) {
+                            continue;
                         }
-                        if (currentTemplate != null) catalogTemplates.add(currentTemplate); // flush last one
 
-                        for (CatalogUnitTemplate template : catalogTemplates) {
-                            templates.put(template.templateName, template);
+                        int fieldAttrId = rs.getInt("attrid");
+                        String fieldAlias = rs.getString("alias");
+                        String fieldAttrName = rs.getString("attrname");
+                        String fieldQualname = rs.getString("qualname");
+                        int fieldAttrType = rs.getInt("attrtype");
+                        boolean isArray = !rs.getBoolean("scalar"); // Note negation
+
+                        if (currentId == null || templateId != currentId) {
+                            // boundary => flush previous
+                            if (currentTemplate != null) catalogTemplates.add(currentTemplate);
+                            currentId = templateId;
+                            currentTemplate = new CatalogUnitTemplate(templateId, templateName);
                         }
+
+                        CatalogAttribute attribute = new CatalogAttribute(
+                                fieldAlias, fieldAttrName, fieldQualname,
+                                AttributeType.of(fieldAttrType), isArray
+                        );
+                        attribute.setAttrId(fieldAttrId);
+                        currentTemplate.addField(attribute);
                     }
-                });
-            });
+                    if (currentTemplate != null) catalogTemplates.add(currentTemplate); // flush last one
+
+                    for (CatalogUnitTemplate template : catalogTemplates) {
+                        templates.put(template.templateName, template);
+                    }
+                }
+            }));
         } catch (SQLException sqle) {
-            log.error("\u21af Failed to load existing template: {}", Database.squeeze(sqle));
+            log.error("↯ Failed to load existing template: {}", Database.squeeze(sqle));
         }
 
         return templates;

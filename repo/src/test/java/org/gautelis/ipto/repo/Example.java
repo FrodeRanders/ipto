@@ -56,14 +56,10 @@ public class Example {
         Unit unit = repo.createUnit(tenantId, "unit five");
 
         // Add "dcterms:title" (already known to the system).
-        unit.withAttributeValue("dcterms:title", String.class, value -> {
-            value.add("Æ e nordlending æ");
-        });
+        unit.withAttributeValue("dcterms:title", String.class, value -> value.add("Æ e nordlending æ"));
 
         // Add "dcterms:date" (already known to the system).
-        unit.withAttributeValue("dcterms:date", Instant.class, value -> {
-            value.add(Instant.now());
-        });
+        unit.withAttributeValue("dcterms:date", Instant.class, value -> value.add(Instant.now()));
 
         // Store this new unit to database
         repo.storeUnit(unit);

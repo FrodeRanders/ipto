@@ -35,7 +35,6 @@ import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 import static org.gautelis.ipto.graphql.runtime.RuntimeOperators.MAPPER;
 import static org.gautelis.ipto.graphql.runtime.RuntimeService.headHex;
@@ -78,13 +77,6 @@ public class IptoBootstrap {
                         sdlResource + " not found on classpath"
                 )
         )) {
-            //Consumer<OperationsWireParameters> operationsWireBlock = null;
-            //if (!wiring.isUnsatisfied()) {
-            //    operationsWireBlock = params -> wiring.forEach(w -> w.wire(params));
-            //}
-            //
-            //Optional<GraphQL> gql = Configurator.load(repository, reader, operationsWireBlock, System.out);
-
             Optional<GraphQL> gql = Configurator.load(repository, reader, IptoBootstrap::wireOperations, System.out);
             if (gql.isEmpty()) {
                 throw new IllegalStateException("Failed to load GraphQL configuration");
@@ -116,7 +108,7 @@ public class IptoBootstrap {
                 // the wiring preamble will be available.
                 //***********************************************************
                 if (log.isTraceEnabled()) {
-                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                    log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                 }
 
                 Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -124,7 +116,7 @@ public class IptoBootstrap {
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitById));
-            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
         }
 
         // Query::yrkan(id : UnitIdentification!) : Yrkan
@@ -140,7 +132,7 @@ public class IptoBootstrap {
                 // the wiring preamble will be available.
                 //***********************************************************
                 if (log.isTraceEnabled()) {
-                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                    log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                 }
 
                 Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -148,7 +140,7 @@ public class IptoBootstrap {
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitById));
-            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
         }
 
         // Query::yrkandenRaw(filter: Filter!) : Bytes
@@ -165,7 +157,7 @@ public class IptoBootstrap {
                 //***********************************************************
 
                 if (log.isTraceEnabled()) {
-                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                    log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                 }
 
                 Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -174,7 +166,7 @@ public class IptoBootstrap {
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitsByFilter));
-            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
         }
 
         // Query::yrkanden(filter: Filter!) : [Yrkan]
@@ -190,7 +182,7 @@ public class IptoBootstrap {
                 // the wiring preamble will be available.
                 //***********************************************************
                 if (log.isTraceEnabled()) {
-                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                    log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                 }
 
                 Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -199,7 +191,7 @@ public class IptoBootstrap {
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitsByFilter));
-            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
         }
 
         // Mutations::lagraUnitRaw(data : Bytes!) : Dataleverans
@@ -219,14 +211,14 @@ public class IptoBootstrap {
                 byte[] bytes = (byte[]) args.get("data"); // Connection to schema
 
                 if (log.isTraceEnabled()) {
-                    log.trace("\u21a9 {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
+                    log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
                 }
 
                 return params.runtimeService().storeRawUnit(bytes);
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeJson));
-            log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
         }
     }
 }

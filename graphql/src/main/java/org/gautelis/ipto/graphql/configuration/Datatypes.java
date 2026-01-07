@@ -74,7 +74,7 @@ public final class Datatypes {
                                 try {
                                     var _officialType = AttributeType.of(_id.getValue().intValue());
                                 } catch (AttributeTypeException ate) {
-                                    log.error("\u21af Not an official data type: {} with numeric attrId {}", enumValueDefinition.getName(), _id.getValue().intValue(), ate);
+                                    log.error("↯ Not an official data type: {} with numeric attrId {}", enumValueDefinition.getName(), _id.getValue().intValue(), ate);
                                     throw ate;
                                 }
                             }

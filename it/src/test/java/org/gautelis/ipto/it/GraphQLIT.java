@@ -28,7 +28,6 @@ import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
@@ -58,28 +57,18 @@ public class GraphQLIT {
 
         Unit yrkan = repo.createUnit(tenantId, processId);
 
-        yrkan.withRecordAttribute("ffa:fysisk_person", person -> {
-            person.withNestedAttributeValue("ffa:personnummer", String.class, value -> {
-                value.add("19121212-1212");
-            });
-        });
+        yrkan.withRecordAttribute("ffa:fysisk_person", person -> person.withNestedAttributeValue("ffa:personnummer", String.class, value -> value.add("19121212-1212")));
 
-        yrkan.withAttributeValue("dcterms:description", String.class, value -> {
-            value.add("Yrkan om vård av husdjur");
-        });
+        yrkan.withAttributeValue("dcterms:description", String.class, value -> value.add("Yrkan om vård av husdjur"));
 
         yrkan.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
             Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
             if (rattenTill.isPresent()) {
                 RecordAttribute rattenTillRecord = RecordAttribute.from(yrkan, rattenTill.get());
 
-                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
-                    ersattningstyp.add("HUNDBIDRAG");
-                });
+                rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> ersattningstyp.add("HUNDBIDRAG"));
 
-                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
-                    omfattning.add("HEL");
-                });
+                rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> omfattning.add("HEL"));
 
                 Attribute<?> attribute = rattenTill.get();
                 resultat.add(attribute);
@@ -89,36 +78,22 @@ public class GraphQLIT {
             if (ersattning.isPresent()) {
                 RecordAttribute ersattningRecord = RecordAttribute.from(yrkan, ersattning.get());
 
-                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> {
-                    value.add("HUNDBIDRAG");
-                });
+                ersattningRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, value -> value.add("HUNDBIDRAG"));
 
                 ersattningRecord.withNestedAttribute("ffa:belopp", Attribute.class, belopp -> {
                     RecordAttribute beloppRecord = RecordAttribute.wrap(yrkan, belopp);
 
-                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> {
-                        beloppsvarde.add(1000.0);
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> {
-                        beloppsperiodisering.add("PER_DAG");
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> {
-                        valuta.add("SEK");
-                    });
-                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> {
-                        skattestatus.add("SKATTEPLIKTIG");
-                    });
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsvarde", Double.class, beloppsvarde -> beloppsvarde.add(1000.0));
+                    beloppRecord.withNestedAttributeValue("ffa:beloppsperiodisering", String.class, beloppsperiodisering -> beloppsperiodisering.add("PER_DAG"));
+                    beloppRecord.withNestedAttributeValue("ffa:valuta", String.class, valuta -> valuta.add("SEK"));
+                    beloppRecord.withNestedAttributeValue("ffa:skattestatus", String.class, skattestatus -> skattestatus.add("SKATTEPLIKTIG"));
                 });
 
                 ersattningRecord.withNestedAttribute("ffa:period", Attribute.class, period -> {
                     RecordAttribute periodRecord = RecordAttribute.wrap(yrkan, period);
 
-                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> {
-                        value.add(Instant.now());
-                    });
-                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> {
-                        value.add(Instant.now());
-                    });
+                    periodRecord.withNestedAttributeValue("ffa:from", Instant.class, value -> value.add(Instant.now()));
+                    periodRecord.withNestedAttributeValue("ffa:tom", Instant.class, value -> value.add(Instant.now()));
                 });
 
                 resultat.add(ersattningRecord.getDelegate());
@@ -126,29 +101,17 @@ public class GraphQLIT {
         });
 
         yrkan.withRecordAttribute("ffa:beslut", beslut -> {
-            beslut.withNestedAttributeValue("dcterms:date", Instant.class, datum -> {
-                datum.add(aSpecificInstant);
-            });
+            beslut.withNestedAttributeValue("dcterms:date", Instant.class, datum -> datum.add(aSpecificInstant));
 
-            beslut.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> {
-                beslutsfattare.add(aSpecificString);
-            });
+            beslut.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> beslutsfattare.add(aSpecificString));
 
-            beslut.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> {
-                beslutstyp.add("SLUTLIGT");
-            });
+            beslut.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> beslutstyp.add("SLUTLIGT"));
 
-            beslut.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> {
-                beslutsutfall.add("BEVILJAT");
-            });
+            beslut.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> beslutsutfall.add("BEVILJAT"));
 
-            beslut.withNestedAttributeValue("ffa:organisation", String.class, organisation -> {
-                organisation.add("Myndigheten");
-            });
+            beslut.withNestedAttributeValue("ffa:organisation", String.class, organisation -> organisation.add("Myndigheten"));
 
-            beslut.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> {
-                lagrum.add("FL_P38");
-            });
+            beslut.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> lagrum.add("FL_P38"));
 
             beslut.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
                 // Ingen

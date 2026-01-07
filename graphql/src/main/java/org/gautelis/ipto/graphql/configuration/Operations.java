@@ -58,7 +58,7 @@ public final class Operations {
                     switch (operation) {
                         case QUERY -> deriveQueryOperations(type, operations);
                         case MUTATION -> deriveMutationOperations(type, operations);
-                    };
+                    }
                 }
             }
         }

@@ -26,18 +26,11 @@ import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Statements;
 import org.gautelis.ipto.repo.search.query.DatabaseAdapter;
 import org.gautelis.ipto.repo.utils.PluginsHelper;
-import org.gautelis.vopn.db.Database;
-import org.gautelis.vopn.db.utils.PostgreSQL;
-import org.gautelis.vopn.db.utils.Manager;
-import org.gautelis.vopn.db.utils.Options;
 import org.gautelis.vopn.lang.ConfigurationTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.*;
 
 
@@ -95,7 +88,6 @@ public class RepositoryFactory {
             } else {
                 config = switch (dbProvider) {
                     case "DB2" -> getConfiguration("configuration_db2.xml");
-                    case "PG" -> getConfiguration("configuration_pg.xml");
                     default -> getConfiguration("configuration_pg.xml");
                 };
             }
@@ -112,7 +104,7 @@ public class RepositoryFactory {
         String url = config.url();
         if (null == url || url.isEmpty()) {
             url = "jdbc:" + config.manager() + "://" + config.server() + ":" + config.port() +"/" + config.database();
-            log.info("Synthesizing a JDBC URL: " + url);
+            log.info("Synthesizing a JDBC URL: {}", url);
         }
         hConfig.setJdbcUrl(url);
         String user = config.user();

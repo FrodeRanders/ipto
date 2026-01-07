@@ -16,9 +16,6 @@
  */
 package org.gautelis.ipto.graphql.model;
 
-import graphql.language.ObjectTypeDefinition;
-import graphql.language.Type;
-
 import java.util.List;
 
 /*

@@ -279,16 +279,14 @@ public class Statistics {
             "%" + colSize[4] + "s\n";
 
         // Actual table data
-        indexData.stream().sorted(new IndexDataComparator()).forEach(idd -> {
-            buf.append(String.format(
-                    format,
-                    idd.tablename(),
-                    idd.totalseqscan(),
-                    idd.totalindexscan(),
-                    idd.tablerows(),
-                    idd.tablesize()
-            ));
-        });
+        indexData.stream().sorted(new IndexDataComparator()).forEach(idd -> buf.append(String.format(
+                format,
+                idd.tablename(),
+                idd.totalseqscan(),
+                idd.totalindexscan(),
+                idd.tablerows(),
+                idd.tablesize()
+        )));
         buf.append("\n");
         return buf.toString();
     }

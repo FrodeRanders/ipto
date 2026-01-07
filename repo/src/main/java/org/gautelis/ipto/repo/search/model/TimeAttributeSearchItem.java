@@ -18,7 +18,6 @@ package org.gautelis.ipto.repo.search.model;
 
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.search.query.LeafExpression;
-import org.gautelis.ipto.repo.utils.TimeHelper;
 
 import java.time.Instant;
 

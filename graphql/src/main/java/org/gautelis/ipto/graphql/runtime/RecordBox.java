@@ -35,7 +35,7 @@ public class RecordBox extends AttributeBox {
         Objects.requireNonNull(recordAttribute, "recordAttribute");
         this.recordAttribute = recordAttribute;
 
-        log.trace("\u2193 Created {}", this);
+        log.trace("↓ Created {}", this);
     }
 
     /* package accessible only */

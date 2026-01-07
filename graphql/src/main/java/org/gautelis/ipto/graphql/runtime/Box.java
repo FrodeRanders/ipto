@@ -17,7 +17,6 @@
 package org.gautelis.ipto.graphql.runtime;
 
 import org.gautelis.ipto.repo.model.Unit;
-import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

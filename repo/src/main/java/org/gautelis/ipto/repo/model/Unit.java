@@ -27,7 +27,6 @@ import org.gautelis.ipto.repo.model.cache.UnitFactory;
 import org.gautelis.ipto.repo.model.locks.Lock;
 import org.gautelis.ipto.repo.model.locks.LockType;
 import org.gautelis.ipto.repo.model.utils.TimedExecution;
-import org.gautelis.ipto.repo.utils.TimeHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
@@ -557,9 +556,9 @@ public class Unit implements Cloneable {
             // Kernel information
             tenantId = root.path("tenantid").asInt();
             unitId = root.path("unitid").asLong();
-            corrId = UUID.fromString(root.path("corrid").asText());
+            corrId = UUID.fromString(root.path("corrid").asString());
             unitStatus = Status.of(root.path("status").asInt());
-            String _created = root.path("created").asText();
+            String _created = root.path("created").asString();
             if (_created.toLowerCase().endsWith("z")) {
                 createdTime = Instant.parse(_created);
             } else {
@@ -570,11 +569,11 @@ public class Unit implements Cloneable {
             // Version information
             unitVersion = root.path("unitver").asInt();
             if (root.hasNonNull("unitname")) {
-                unitName = root.path("unitname").asText();
+                unitName = root.path("unitname").asString();
             } else {
                 unitName = null; // to ensure we don't end up with 'NULL' names
             }
-            String _modified = root.path("modified").asText();
+            String _modified = root.path("modified").asString();
             if (_modified.toLowerCase().endsWith("z")) {
                 modifiedTime = Instant.parse(_modified);
             } else {
@@ -936,7 +935,7 @@ public class Unit implements Cloneable {
     @SuppressWarnings("unchecked")
     public <A> Attribute<A> withAttribute(String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Optional<Attribute<?>> _attribute = getAttribute(name, createIfMissing);
-        if (!_attribute.isPresent()) {
+        if (_attribute.isEmpty()) {
             throw new IllegalArgumentException("Unknown attribute: " + name);
         } else {
             Attribute<?> attribute = _attribute.get();

@@ -17,14 +17,11 @@
 package org.gautelis.ipto.it;
 
 import org.gautelis.ipto.repo.db.Database;
-import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
 import org.gautelis.ipto.repo.exceptions.UnitLockedException;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
-import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.locks.LockType;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -230,13 +227,9 @@ public class UnitIT {
         //
         Unit unit = repo.createUnit(tenantId, "a record instance");
 
-        unit.withAttributeValue("dcterms:title", String.class, value -> {
-            value.add("This testcase has a title");
-        });
+        unit.withAttributeValue("dcterms:title", String.class, value -> value.add("This testcase has a title"));
 
-        unit.withAttributeValue("dcterms:description", String.class, value -> {
-            value.add("First description");
-        });
+        unit.withAttributeValue("dcterms:description", String.class, value -> value.add("First description"));
 
         assertTrue(unit.isNew());
         assertFalse(unit.isReadOnly());
@@ -253,14 +246,10 @@ public class UnitIT {
         repo.lockUnit(unit, LockType.WRITE, "unit must not be modified");
         assertTrue(unit.isLocked());
 
-        unit.withAttributeValue("dcterms:description", String.class, value -> {
-            value.add("Second additional description");
-        });
+        unit.withAttributeValue("dcterms:description", String.class, value -> value.add("Second additional description"));
 
         //
-        assertThrows(UnitLockedException.class, () -> {
-            repo.storeUnit(unit);
-        });
+        assertThrows(UnitLockedException.class, () -> repo.storeUnit(unit));
         assertVersionIs(/* still */ 1, unit, repo);
 
         repo.unlockUnit(unit);
@@ -269,9 +258,7 @@ public class UnitIT {
         assertFalse(unit.isReadOnly());
 
         //
-        assertDoesNotThrow(() -> {
-            repo.storeUnit(unit);
-        });
+        assertDoesNotThrow(() -> repo.storeUnit(unit));
 
         assertVersionIs(2, unit, repo);
         assertAttributeExists("dcterms:description", 2, 2, unit, repo);
@@ -279,13 +266,9 @@ public class UnitIT {
         assertFalse(unit.isNew());
         assertFalse(unit.isReadOnly());
 
-        unit.withAttributeValue("dcterms:description", String.class, value -> {
-            value.add("Third additional description");
-        });
+        unit.withAttributeValue("dcterms:description", String.class, value -> value.add("Third additional description"));
 
-        assertDoesNotThrow(() -> {
-            repo.storeUnit(unit);
-        });
+        assertDoesNotThrow(() -> repo.storeUnit(unit));
 
         assertVersionIs(3, unit, repo);
         assertAttributeExists("dcterms:description", 3, 3, unit, repo);

@@ -126,7 +126,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                     // the wiring preamble will be available.
                     //***********************************************************
                     if (log.isTraceEnabled()) {
-                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                     }
 
                     Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -134,7 +134,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 };
 
                 params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitById));
-                log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
 
             // Query::yrkan(id : UnitIdentification!) : Yrkan
@@ -150,7 +150,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                     // the wiring preamble will be available.
                     //***********************************************************
                     if (log.isTraceEnabled()) {
-                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                     }
 
                     Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
@@ -158,7 +158,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 };
 
                 params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitById));
-                log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
 
             // Query::yrkandenRaw(filter: Filter!) : Bytes
@@ -175,7 +175,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                     //***********************************************************
 
                     if (log.isTraceEnabled()) {
-                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                     }
 
                     Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -184,7 +184,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 };
 
                 params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitsByFilter));
-                log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
 
             // Query::yrkanden(filter: Filter!) : [Yrkan]
@@ -200,7 +200,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                     // the wiring preamble will be available.
                     //***********************************************************
                     if (log.isTraceEnabled()) {
-                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
+                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
                     }
 
                     Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
@@ -209,7 +209,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 };
 
                 params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitsByFilter));
-                log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
 
             // Mutations::lagraUnitRaw(data : Bytes!) : Dataleverans
@@ -229,14 +229,14 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                     byte[] bytes = (byte[]) args.get("data"); // Connection to schema
 
                     if (log.isTraceEnabled()) {
-                        log.trace("\u21a9 {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
+                        log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
                     }
 
                     return params.runtimeService().storeRawUnit(bytes);
                 };
 
                 params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeJson));
-                log.info("\u21af Wiring: {}::{}(...) : {}", type, operationName, outputType);
+                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
         }
     }

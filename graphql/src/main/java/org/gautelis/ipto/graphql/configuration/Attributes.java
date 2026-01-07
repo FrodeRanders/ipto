@@ -78,7 +78,7 @@ public final class Attributes {
                                 if (null != dataTypeDef) {
                                     attrType = dataTypeDef.id;
                                 } else {
-                                    log.error("\u21af Not a valid datatype: {}", datatype.getName());
+                                    log.error("↯ Not a valid datatype: {}", datatype.getName());
                                 }
                             } else {
                                 // If no datatype is specified, we assume this is a record
@@ -106,7 +106,7 @@ public final class Attributes {
                             }
 
                             // --- (f) ---
-                            String qualName = null;
+                            String qualName;
                             arg = enumValueDirective.getArgument("uri");
                             if (null != arg) {
                                 StringValue uri = (StringValue) arg.getValue();
@@ -156,36 +156,34 @@ public final class Attributes {
                 """;
 
         try {
-            repository.withConnection(conn -> {
-                Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
-                    try (ResultSet rs = pStmt.executeQuery()) {
-                        while (rs.next()) {
-                            int attributeId = rs.getInt("attrid");
-                            String attributeName = rs.getString("attrname");
-                            String qualifiedName = rs.getString("qualname");
-                            String alias = rs.getString("alias");
-                            if (rs.wasNull()) {
-                                log.warn("\u21af No alias for attribute '{}'. This may break comparison.",  attributeName);
-                                alias = attributeName;
-                            }
-                            int attributeTypeId = rs.getInt("attrtype");
-                            boolean isArray = !rs.getBoolean("scalar"); // Note negation
-
-                            CatalogAttribute attribute = new CatalogAttribute(
-                                    alias,
-                                    attributeName,
-                                    qualifiedName,
-                                    AttributeType.of(attributeTypeId),
-                                    isArray
-                            );
-                            attribute.setAttrId(attributeId);
-                            attributes.put(alias, attribute);
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+                try (ResultSet rs = pStmt.executeQuery()) {
+                    while (rs.next()) {
+                        int attributeId = rs.getInt("attrid");
+                        String attributeName = rs.getString("attrname");
+                        String qualifiedName = rs.getString("qualname");
+                        String alias = rs.getString("alias");
+                        if (rs.wasNull()) {
+                            log.warn("↯ No alias for attribute '{}'. This may break comparison.",  attributeName);
+                            alias = attributeName;
                         }
+                        int attributeTypeId = rs.getInt("attrtype");
+                        boolean isArray = !rs.getBoolean("scalar"); // Note negation
+
+                        CatalogAttribute attribute = new CatalogAttribute(
+                                alias,
+                                attributeName,
+                                qualifiedName,
+                                AttributeType.of(attributeTypeId),
+                                isArray
+                        );
+                        attribute.setAttrId(attributeId);
+                        attributes.put(alias, attribute);
                     }
-                });
-            });
+                }
+            }));
         } catch (SQLException sqle) {
-            log.error("\u21af Failed to read attributes: {}", Database.squeeze(sqle));
+            log.error("↯ Failed to read attributes: {}", Database.squeeze(sqle));
         }
 
         return attributes;

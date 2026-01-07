@@ -34,7 +34,7 @@ public class AttributeBox extends Box {
     //    We are assuming that the field names used in the SDL equals the
     //    attribute aliases used.
     //    GraphQL operates on the information in the SDL, so when assembling
-    //    results (of queries and so on), it maps Box' contents for units
+    //    results (of queries and so on), it maps Box contents for units
     //    and records to fields as described in the SDL.
     //---------------------------------------------------------------------
     private final Map</* field name */ String, Attribute<?>> attributesByFieldName;
@@ -58,17 +58,17 @@ public class AttributeBox extends Box {
     }
 
     public <A> A scalar(String alias, Class<A> expectedClass) {
-        log.trace("\u2193 Box::scalar({}, {})", alias, expectedClass.getName());
+        log.trace("↓ Box::scalar({}, {})", alias, expectedClass.getName());
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
-            log.debug("\u2193 No attribute found for alias '{}'", alias);
+            log.debug("↓ No attribute found for alias '{}'", alias);
             return null;
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.debug("\u2193 No values found for attribute with alias '{}'", alias);
+            log.debug("↓ No values found for attribute with alias '{}'", alias);
             return null;
         }
 
@@ -76,17 +76,17 @@ public class AttributeBox extends Box {
     }
 
     public <A> List<A> array(String alias, Class<A> expectedClass) {
-        log.trace("\u2193 Box::array({}, {})", alias, expectedClass.getName());
+        log.trace("↓ Box::array({}, {})", alias, expectedClass.getName());
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
-            log.debug("\u2193 No attribute found for alias '{}'", alias);
+            log.debug("↓ No attribute found for alias '{}'", alias);
             return List.of();
         }
 
         ArrayList<?> values = attribute.getValueVector();
         if (values.isEmpty()) {
-            log.debug("\u2193 No values found for attribute with alias '{}'", alias);
+            log.debug("↓ No values found for attribute with alias '{}'", alias);
             return List.of();
         }
 

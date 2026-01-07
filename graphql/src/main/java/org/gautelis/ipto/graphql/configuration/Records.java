@@ -20,7 +20,6 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.ConfigurationException;
-import org.gautelis.ipto.repo.exceptions.Stacktrace;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.graphql.model.TypeDefinition;
 import org.gautelis.ipto.repo.model.AttributeType;
@@ -94,7 +93,7 @@ public final class Records {
                     recordAttributeName = attribute.name; // or even typeName
 
                 } else {
-                    String info = "\u21af Not a valid record definition: " + typeName;
+                    String info = "↯ Not a valid record definition: " + typeName;
                     log.error(info);
                     System.out.println(info);
                     throw new ConfigurationException(info, new Exception("Synthetic exception"));
@@ -130,7 +129,7 @@ public final class Records {
                                     recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
                                     break; // In the unlikely case there are several @use
                                 } else {
-                                    log.debug("\u21af Not a valid record field definition (with @use): " + fieldName);
+                                    log.debug("↯ Not a valid record field definition (with @use): {}", fieldName);
                                 }
                             }
                         } else {
@@ -139,16 +138,16 @@ public final class Records {
                             if (null != attributeShape) {
                                 recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
                             } else {
-                                log.debug("\u21af Not a valid record field definition: " + fieldName);
+                                log.debug("↯ Not a valid record field definition: {}", fieldName);
                             }
                         }
                     }
 
                     records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, catalogAttributeName, recordFields));
-                    log.trace("\u21af Defining shape for {}: {}", typeName, records.get(typeName));
+                    log.trace("↯ Defining shape for {}: {}", typeName, records.get(typeName));
                 }
             } else {
-                String info = "\u21af Not a valid record definition: " + typeName;
+                String info = "↯ Not a valid record definition: " + typeName;
                 log.error(info);
                 System.out.println(info);
                 throw new ConfigurationException(info, new Exception("Synthetic exception"));
@@ -196,53 +195,51 @@ public final class Records {
         """;
 
         try {
-            repository.withConnection(conn -> {
-                Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
-                    try (ResultSet rs = pStmt.executeQuery()) {
-                        List<CatalogRecord> catalogRecords = new ArrayList<>();
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+                try (ResultSet rs = pStmt.executeQuery()) {
+                    List<CatalogRecord> catalogRecords = new ArrayList<>();
 
-                        Integer currentId = null;
-                        CatalogRecord currentRecord = null;
+                    Integer currentId = null;
+                    CatalogRecord currentRecord = null;
 
-                        while (rs.next()) {
-                            // Record part
-                            int recordId = rs.getInt("record_id");
-                            String recordName = rs.getString("record_name");
+                    while (rs.next()) {
+                        // Record part
+                        int recordId = rs.getInt("record_id");
+                        String recordName = rs.getString("record_name");
 
-                            // Field part
-                            int recordFieldAttrId = rs.getInt("field_attrid");
-                            String recordFieldAttrName = rs.getString("field_attrname");
-                            String recordFieldQualname = rs.getString("field_qualname");
-                            int recordFieldAttrType = rs.getInt("field_attrtype");
-                            boolean isArray = !rs.getBoolean("field_scalar"); // Note negation
-                            String alias = rs.getString("field_alias");
+                        // Field part
+                        int recordFieldAttrId = rs.getInt("field_attrid");
+                        String recordFieldAttrName = rs.getString("field_attrname");
+                        String recordFieldQualname = rs.getString("field_qualname");
+                        int recordFieldAttrType = rs.getInt("field_attrtype");
+                        boolean isArray = !rs.getBoolean("field_scalar"); // Note negation
+                        String alias = rs.getString("field_alias");
 
 
-                            if (currentId == null || recordId != currentId) {
-                                // boundary => flush previous
-                                if (currentRecord != null) catalogRecords.add(currentRecord);
-                                currentId = recordId;
-                                currentRecord = new CatalogRecord(recordId, recordName);
-                            }
-
-                            CatalogAttribute attribute = new CatalogAttribute(
-                                    alias, recordFieldAttrName,
-                                    recordFieldQualname, AttributeType.of(recordFieldAttrType),
-                                    isArray
-                            );
-                            attribute.setAttrId(recordFieldAttrId);
-                            currentRecord.addField(attribute);
+                        if (currentId == null || recordId != currentId) {
+                            // boundary => flush previous
+                            if (currentRecord != null) catalogRecords.add(currentRecord);
+                            currentId = recordId;
+                            currentRecord = new CatalogRecord(recordId, recordName);
                         }
-                        if (currentRecord != null) catalogRecords.add(currentRecord); // flush last one
 
-                        for (CatalogRecord iptoRecord : catalogRecords) {
-                            records.put(iptoRecord.recordName, iptoRecord);
-                        }
+                        CatalogAttribute attribute = new CatalogAttribute(
+                                alias, recordFieldAttrName,
+                                recordFieldQualname, AttributeType.of(recordFieldAttrType),
+                                isArray
+                        );
+                        attribute.setAttrId(recordFieldAttrId);
+                        currentRecord.addField(attribute);
                     }
-                });
-            });
+                    if (currentRecord != null) catalogRecords.add(currentRecord); // flush last one
+
+                    for (CatalogRecord iptoRecord : catalogRecords) {
+                        records.put(iptoRecord.recordName, iptoRecord);
+                    }
+                }
+            }));
         } catch (SQLException sqle) {
-            log.error("\u21af Failed to load existing record: {}", Database.squeeze(sqle));
+            log.error("↯ Failed to load existing record: {}", Database.squeeze(sqle));
         }
 
         return records;

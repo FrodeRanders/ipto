@@ -16,17 +16,11 @@
  */
 package org.gautelis.ipto.repo.model.attributes;
 
-import org.gautelis.ipto.repo.exceptions.SystemInconsistencyException;
 import org.gautelis.ipto.repo.model.AttributeType;
-import org.gautelis.ipto.repo.model.Context;
-import org.gautelis.ipto.repo.model.KnownAttributes;
 import org.gautelis.ipto.repo.model.Unit;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 
 public class RecordAttribute {
     private final Attribute<Attribute<?>> delegate;

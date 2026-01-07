@@ -63,7 +63,6 @@ public class ActionEvent extends EventObject {
         return actionType + " - " + description;
     }
 
-
     public enum Type {
         ACCESSED(10, "accessed"),
         ASSOCIATION_ADDED(20, "associated"),

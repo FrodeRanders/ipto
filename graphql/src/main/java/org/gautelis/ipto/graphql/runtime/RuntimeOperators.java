@@ -29,8 +29,6 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.util.*;
 
-import static org.gautelis.ipto.graphql.runtime.RuntimeService.headHex;
-
 public class RuntimeOperators {
     private static final Logger log = LoggerFactory.getLogger(RuntimeOperators.class);
 
@@ -88,7 +86,7 @@ public class RuntimeOperators {
                         // This field refers to a union type, so the
                         // actual instances will be of a union member type.
                         List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
-                        log.debug("\u21af Record '{}' contains a union field '{} : {}' with members {}",
+                        log.debug("↯ Record '{}' contains a union field '{} : {}' with members {}",
                                 typeName, fieldName, union.unionName(), unionMemberTypes
                         );
 
@@ -97,7 +95,7 @@ public class RuntimeOperators {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("\u21af Adding alternative {} for union {}", memberType, union.unionName());
+                                    log.debug("↯ Adding alternative {} for union {}", memberType, union.unionName());
                                     fieldNames.add(attributeEnumName);
                                 }
                             }
@@ -116,7 +114,7 @@ public class RuntimeOperators {
                             return null;
                         }
 
-                        log.trace("\u21a9 Fetching {}attribute '{}' from record '{}': {}",
+                        log.trace("↩ Fetching {}attribute '{}' from record '{}': {}",
                                 isRecord ? "record " : "",
                                 isArray ? fieldName + "[]" : fieldName,
                                 typeName, box.getUnit().getReference());
@@ -135,7 +133,7 @@ public class RuntimeOperators {
                                     return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                                 }
                             } else {
-                                log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
+                                log.warn("↩ Unknown box: {}", box.getClass().getCanonicalName());
                                 return null;
                             }
                         }
@@ -153,13 +151,13 @@ public class RuntimeOperators {
                                     return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                                 }
                             } else {
-                                log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
+                                log.warn("↩ Unknown box: {}", box.getClass().getCanonicalName());
                                 return null;
                             }
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
-                    log.info("\u21af Wiring: {} > {}", typeName, fieldName);
+                    log.info("↯ Wiring: {} > {}", typeName, fieldName);
                 }
 
                 return builder;
@@ -214,7 +212,7 @@ public class RuntimeOperators {
                         // This field refers to a union type, so the
                         // actual instances will be of a union member type.
                         List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
-                        log.debug("\u21af Record '{}' contains a union field '{} : {}' with members {}",
+                        log.debug("↯ Record '{}' contains a union field '{} : {}' with members {}",
                                 typeName, fieldName, union.unionName(), unionMemberTypes
                         );
 
@@ -223,7 +221,7 @@ public class RuntimeOperators {
                                 String unionMember = recrd.typeName();
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
-                                    log.debug("\u21af Adding alternative {} for union {}", memberType, union.unionName());
+                                    log.debug("↯ Adding alternative {} for union {}", memberType, union.unionName());
                                     fieldNames.add(attributeEnumName);
                                 }
                             }
@@ -242,10 +240,10 @@ public class RuntimeOperators {
                             return null;
                         }
 
-                        log.trace("\u21a9 Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
+                        log.trace("↩ Fetching attribute '{}' ({}) from unit '{}': {}", isArray ? fieldName + "[]" : fieldName, fieldAttrId, typeName, box.getUnit().getReference());
 
                         if (box instanceof RecordBox recordBox) {
-                            log.info("\u21a9 DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
+                            log.info("↩ DID NOT EXPECT RECORD BOX IN THIS CONTEXT: {}", typeName);
                             if (isArray) {
                                 return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
                             } else {
@@ -259,12 +257,12 @@ public class RuntimeOperators {
                                 return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                             }
                         } else {
-                            log.warn("\u21a9 Unknown box: {}", box.getClass().getCanonicalName());
+                            log.warn("↩ Unknown box: {}", box.getClass().getCanonicalName());
                             return null;
                         }
                     };
                     builder.dataFetcher(fieldName, fetcher);
-                    log.info("\u21af Wiring: {} > {}", typeName, fieldName);
+                    log.info("↯ Wiring: {} > {}", typeName, fieldName);
                 }
 
                 return builder;
@@ -291,12 +289,12 @@ public class RuntimeOperators {
             List<UnionMember> members = gqlUnion.members();
             for (UnionMember member : members) {
                 String memberName = member.memberType();
-                log.info("\u21af Wiring union: {} > {}", unionName, memberName);
+                log.info("↯ Wiring union: {} > {}", unionName, memberName);
 
                 GqlRecordShape gqlRecord = gqlRecords.get(memberName);
                 String attributeAlias = gqlRecord.attributeEnumName();
 
-                log.trace("\u21af Union '{}': attribute alias '{}' => type '{}'", unionName, attributeAlias, gqlRecord.typeName());
+                log.trace("↯ Union '{}': attribute alias '{}' => type '{}'", unionName, attributeAlias, gqlRecord.typeName());
                 aliasToTypeName.put(attributeAlias, gqlRecord.typeName());
             }
 
@@ -312,20 +310,20 @@ public class RuntimeOperators {
                     // the wiring preamble will be available.
                     //***********************************************************
                     Object value = env.getObject(); // box
-                    log.debug("\u21a9 Union: '{}' <- {}", unionName, value);
+                    log.debug("↩ Union: '{}' <- {}", unionName, value);
 
                     if (value instanceof RecordBox recordBox) {
                         String typeName = aliasToTypeName.get(recordBox.getRecordAttribute().getAlias());
                         return env.getSchema().getObjectType(typeName);
                     }
-                    log.warn("\u21a9 No resolver for union '{}': No (record) box: {}", unionName, value);
+                    log.warn("↩ No resolver for union '{}': No (record) box: {}", unionName, value);
                     return null;
                 };
 
                 runtimeWiring.type(unionName,t -> t.typeResolver(unionResolver));
 
             } catch (StrictModeWiringException smwe) {
-                log.warn("\u21af Could not wire unions for type {}", unionName, smwe);
+                log.warn("↯ Could not wire unions for type {}", unionName, smwe);
             }
         }
     }

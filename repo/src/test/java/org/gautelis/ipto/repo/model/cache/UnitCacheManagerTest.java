@@ -39,7 +39,8 @@ class UnitCacheManagerTest {
 
         long deadline = System.currentTimeMillis() + 1000;
         while (!cache.isEmpty() && System.currentTimeMillis() < deadline) {
-            Thread.sleep(10);
+            //noinspection BusyWait
+            Thread.sleep(10); // OK since we are testing
         }
 
         assertTrue(cache.isEmpty());

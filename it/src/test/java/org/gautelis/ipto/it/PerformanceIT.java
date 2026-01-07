@@ -31,7 +31,6 @@ import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
 import org.gautelis.vopn.lang.TimeDelta;
 import org.junit.jupiter.api.*;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -280,9 +279,7 @@ public class PerformanceIT {
                     value.add("Second value");
                     value.add("Third value");
                 });
-                parentUnit.withAttributeValue("dcterms:description", String.class, value -> {
-                    value.add("A test unit");
-                });
+                parentUnit.withAttributeValue("dcterms:description", String.class, value -> value.add("A test unit"));
                 repo.storeUnit(parentUnit);
 
                 averageTPI.addSample(startTime, /* endTime */ Instant.now());
@@ -332,22 +329,16 @@ public class PerformanceIT {
 
                     final Instant now = Instant.now();
 
-                    childUnit.withAttributeValue("dcterms:date", Instant.class, value -> {
-                        value.add(now);
-                    });
+                    childUnit.withAttributeValue("dcterms:date", Instant.class, value -> value.add(now));
 
                     childUnit.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
                         Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
                         if (rattenTill.isPresent()) {
                             RecordAttribute rattenTillRecord = RecordAttribute.from(childUnit, rattenTill.get());
 
-                            rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> {
-                                ersattningstyp.add("HUNDBIDRAG");
-                            });
+                            rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> ersattningstyp.add("HUNDBIDRAG"));
 
-                            rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> {
-                                omfattning.add("HEL");
-                            });
+                            rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> omfattning.add("HEL"));
 
                             Attribute<?> attribute = rattenTill.get();
                             resultat.add(attribute);
@@ -358,9 +349,7 @@ public class PerformanceIT {
                     if (/* i within page, that we will search for later down under */
                             i > pageOffset && i == pageOffset + pageSize && numberOfUnitsToHaveSpecificString-- > 0
                     ) {
-                        childUnit.withAttributeValue("dcterms:title", String.class, value -> {
-                            value.add(someSpecificString);
-                        });
+                        childUnit.withAttributeValue("dcterms:title", String.class, value -> value.add(someSpecificString));
 
                         someInstant = now.minus(Duration.ofHours(2)); // For testing purposes
                     }
