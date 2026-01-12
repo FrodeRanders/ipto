@@ -23,6 +23,9 @@ import org.gautelis.ipto.repo.listeners.ActionListener;
 import org.gautelis.ipto.repo.model.associations.ExternalAssociation;
 import org.gautelis.ipto.repo.model.associations.InternalRelation;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
+import org.gautelis.ipto.repo.model.attributes.AttributeValueRunnable;
+import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
+import org.gautelis.ipto.repo.model.attributes.RecordValue;
 import org.gautelis.ipto.repo.model.cache.UnitFactory;
 import org.gautelis.ipto.repo.model.locks.Lock;
 import org.gautelis.ipto.repo.model.locks.LockType;
@@ -33,11 +36,19 @@ import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.query.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 
 public class Repository {
@@ -362,6 +373,208 @@ public class Repository {
                 ActionEvent.Type.UPDATED,
                 "Unit stored"
         );
+    }
+
+    interface AttributeWriter {
+        <T> void writeValue(String attrName, Class<T> type, AttributeValueRunnable<T> updater);
+
+        void writeRecord(String attrName, Consumer<AttributeWriter> updater);
+    }
+
+    private AttributeWriter unitWriter(Unit unit) {
+        return new AttributeWriter() {
+            @Override
+            public <T> void writeValue(String attrName, Class<T> type, AttributeValueRunnable<T> updater) {
+                unit.withAttributeValue(attrName, type, updater);
+            }
+
+            @Override
+            public void writeRecord(String attrName, Consumer<AttributeWriter> updater) {
+                unit.withRecordAttribute(attrName, record -> updater.accept(recordWriter(record)));
+            }
+        };
+    }
+
+    private AttributeWriter recordWriter(RecordAttribute record) {
+        return new AttributeWriter() {
+            @Override
+            public <T> void writeValue(String attrName, Class<T> type, AttributeValueRunnable<T> updater) {
+                record.withNestedAttributeValue(attrName, type, updater);
+            }
+
+            @Override
+            public void writeRecord(String attrName, Consumer<AttributeWriter> updater) {
+                record.withRecordAttribute(attrName, nested -> updater.accept(recordWriter(nested)));
+            }
+        };
+    }
+
+    void storeAttributes(AttributeWriter writer, Iterable<JsonNode> attributes) {
+        for (JsonNode attribute : attributes) {
+            storeAttribute(writer, attribute);
+        }
+    }
+
+    void storeAttribute(AttributeWriter writer, JsonNode attribute) {
+        String attrName = requiredField(attribute, "attrname", "Attribute 'attrname' is mandatory, but missing");
+        AttributeType attrType = AttributeType.of(requiredField(attribute, "attrtype", "Attribute 'attrtype' is mandatory, but missing"));
+
+        switch (attrType) {
+            case STRING -> storeValue(writer, attrName, String.class, attribute, JsonNode::asString);
+            case TIME -> storeValue(writer, attrName, Instant.class, attribute, node -> parseInstantValue(node.asString()));
+            case INTEGER -> storeValue(writer, attrName, Integer.class, attribute, JsonNode::asInt);
+            case LONG -> storeValue(writer, attrName, Long.class, attribute, JsonNode::asLong);
+            case DOUBLE -> storeValue(writer, attrName, Double.class, attribute, JsonNode::asDouble);
+            case BOOLEAN -> storeValue(writer, attrName, Boolean.class, attribute, JsonNode::asBoolean);
+            case DATA -> {
+                Base64.Decoder decoder = Base64.getDecoder();
+                storeValue(writer, attrName, Object.class, attribute, node -> decoder.decode(node.asString()));
+            }
+            case RECORD -> storeRecord(writer, attrName, attribute);
+        }
+    }
+
+    private String requiredField(JsonNode node, String field, String missingMessage) {
+        JsonNode value = node.path(field);
+        if (value.isMissingNode() || value.isNull()) {
+            throw new InvalidParameterException(missingMessage);
+        }
+        return value.asString();
+    }
+
+    private void storeRecord(AttributeWriter writer, String attrName, JsonNode attribute) {
+        ArrayNode attributes = readArray(attribute, "attributes");
+        if (attributes == null) {
+            return;
+        }
+        writer.writeRecord(attrName, recordWriter -> storeAttributes(recordWriter, attributes));
+    }
+
+    private <T> void storeValue(AttributeWriter writer, String attrName, Class<T> type, JsonNode attribute, Function<JsonNode, T> mapper) {
+        ArrayNode values = readArray(attribute, "value");
+        if (values == null) {
+            return;
+        }
+        writer.writeValue(attrName, type, value -> {
+            value.clear();
+            for (JsonNode node : values) {
+                value.add(mapper.apply(node));
+            }
+        });
+    }
+
+    private ArrayNode readArray(JsonNode node, String field) {
+        JsonNode value = node.path(field);
+        if (value.isMissingNode() || !(value instanceof ArrayNode arrayNode)) {
+            return null;
+        }
+        return arrayNode;
+    }
+
+    private Instant parseInstantValue(String value) {
+        if (value.toLowerCase().endsWith("z")) {
+            return Instant.parse(value);
+        }
+        return Instant.parse(value + "Z");
+    }
+
+    public Unit storeUnit(
+            JsonNode root
+    ) {
+        try {
+            // Kernel information
+            JsonNode node = root.path("tenantid");
+            if (node.isMissingNode() || node.isNull()) {
+                String info = "'tenantid' is mandatory, but missing";
+                throw new InvalidParameterException(info);
+            }
+            int tenantId = node.asInt();
+
+            Unit unit;
+            node = root.path("unitid");
+            if (node.isMissingNode() || node.isNull()) {
+                UUID corrId;
+                node = root.path("corrid");
+                if (node.isMissingNode() || node.isNull()) {
+                    corrId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
+                } else {
+                    corrId = UUID.fromString(node.asString());
+                }
+
+                unit = createUnit(tenantId, corrId);
+            } else {
+                long unitId = node.asLong();
+
+                int unitVersion;
+                node = root.path("unitver");
+                if (node.isMissingNode() || node.isNull()) {
+                    Optional<Unit> _unit = getUnit(tenantId, unitId);
+                    if (_unit.isEmpty()) {
+                        String info = "No such unit: " + tenantId + "." + unitId;
+                        throw new UnitNotFoundException(info);
+                    }
+                    unit = _unit.get();
+                } else {
+                    unitVersion = node.asInt();
+
+                    Optional<Unit> __unit = getUnit(tenantId, unitId, unitVersion);
+                    if (__unit.isEmpty()) {
+                        String info = "No such unit: " + tenantId + "." + unitId + ":" + unitVersion;
+                        throw new UnitNotFoundException(info);
+                    }
+                    unit = __unit.get();
+                }
+            }
+
+            if (unit.isReadOnly()) {
+                String info = "Unit is readonly: " + unit.getReference();
+                throw new UnitReadOnlyException(info);
+            }
+
+            if (unit.isLocked()) {
+                String info = "Unit is locked: " + unit.getReference();
+                throw new UnitLockedException(info);
+            }
+
+            // Status
+            Unit.Status _unitStatus;
+            node = root.path("status");
+            if (node.isMissingNode() || node.isNull()) {
+                _unitStatus = Unit.Status.EFFECTIVE;
+            } else {
+                _unitStatus = Unit.Status.of(node.asInt());
+            }
+
+            if (!unit.getStatus().equals(_unitStatus)) {
+                unit.requestStatusTransition(_unitStatus);
+            }
+
+            // Name
+            if (root.hasNonNull("unitname")) {
+                String _unitName = root.path("unitname").asString();
+                unit.setName(_unitName);
+            }
+
+            // Attributes
+            node = root.path("attributes");
+            if (!node.isMissingNode() && node instanceof ArrayNode arrayNode) {
+                storeAttributes(unitWriter(unit), arrayNode);
+            }
+
+            log.debug("Storing unit {}", unit.getReference());
+            TimedExecution.run(context.getTimingData(), "store unit", unit::store);
+
+            generateActionEvent(
+                    unit,
+                    ActionEvent.Type.UPDATED,
+                    "Unit stored"
+            );
+
+            return unit;
+
+        } catch (JacksonException jpe) {
+            throw new SystemInconsistencyException("Cannot read unit JSON", jpe);
+        }
     }
 
     /**
@@ -839,4 +1052,3 @@ public class Repository {
         attributeNameToIdMap.putAll(KnownAttributes.fetchAttributeNameToIdMap(context));
     }
 }
-

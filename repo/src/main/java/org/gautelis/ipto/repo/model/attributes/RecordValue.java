@@ -59,17 +59,13 @@ public final class RecordValue extends Value<Attribute<?>> {
 
     /**
      * Have any values been modified?
-     * TODO! NOT SURE IF THIS IS NEEDED.
+     */
+    @Override
     public boolean isModified() {
-        // The generic 'isModified()' in superclass 'Value' only checks structure.
-        // In this case it means that it does not check if individual attributes
-        // in record 'values' has been modified.
-        boolean _isModified = super.isModified();
-        if (_isModified) {
+        // Preserve structural detection from Value, but also inspect nested attributes.
+        if (super.isModified()) {
             return true;
         }
-
-        // Specialisation for record values
         for (Attribute<?> value : values) {
             if (value.isModified()) {
                 return true;
@@ -77,7 +73,6 @@ public final class RecordValue extends Value<Attribute<?>> {
         }
         return false;
     }
-    */
 
     /**
      * Inflate an <I>existing</I> record value from a result set.
@@ -150,6 +145,14 @@ public final class RecordValue extends Value<Attribute<?>> {
 
     public Attribute<?> getScalar() {
         return values.getFirst();
+    }
+
+    @Override
+    protected void setStored() {
+        super.setStored();
+        for (Attribute<?> value : values) {
+            value.setStored();
+        }
     }
 
     void toJson(

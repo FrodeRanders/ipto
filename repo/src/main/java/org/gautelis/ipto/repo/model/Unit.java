@@ -636,7 +636,9 @@ public class Unit implements Cloneable {
                         // All initial references should be resolved by now
                         if (!refs.isEmpty()) {
                             // Is our algorithm sound?
-                            log.error("There are unresolved attribute references in record: {}", recordAttribute);
+                            log.error("There are unresolved attribute references in record: {}", recordAttribute,
+                                    new Exception("Synthetic exception used to gain stack trace")
+                            );
                         }
                     }
                 }

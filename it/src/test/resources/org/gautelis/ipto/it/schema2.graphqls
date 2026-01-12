@@ -573,5 +573,5 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraUnitRaw(data : Bytes!) : Dataleverans
+    lagraUnitRaw(data : Bytes!) : Bytes
 }

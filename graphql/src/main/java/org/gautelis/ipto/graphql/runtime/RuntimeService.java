@@ -32,6 +32,8 @@ import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -46,6 +48,8 @@ public class RuntimeService {
 
     private final Repository repo;
     private final Map</* attribute alias */ String, CatalogAttribute> allAttributesByAlias = new HashMap<>();
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private final Schema unitSchema;
 
@@ -100,16 +104,12 @@ public class RuntimeService {
                         .executionConfig(executionConfig -> executionConfig.formatAssertionsEnabled(true)));
 
         if (errors.isEmpty()) {
-
             // TODO Implement
-            //Repository repo = RepositoryFactory.getRepository();
-            //Unit unit = repo.createUnit(tenantId);
+            JsonNode root = MAPPER.readTree(json);
+            Unit unit = repo.storeUnit(root);
 
-            UUID dataleveransId = Generators.timeBasedEpochGenerator().generate();
-            return Map.of(
-                    "dataleveransid", dataleveransId.toString(),
-                    "data", bytes // Currently just an echo
-            );
+            return unit.asJson(/* pretty? */ false).getBytes(StandardCharsets.UTF_8);
+
         } else {
             StringBuilder buf = new StringBuilder();
             errors.forEach(e -> buf.append('\n').append(e.getMessage()));

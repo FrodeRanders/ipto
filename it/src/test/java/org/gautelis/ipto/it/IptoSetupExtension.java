@@ -212,12 +212,12 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
             }
 
-            // Mutations::lagraUnitRaw(data : Bytes!) : Dataleverans
+            // Mutations::lagraUnitRaw(data : Bytes!) : Bytes
             {
                 String type = "Mutation";
                 String operationName = "lagraUnitRaw";
                 String parameterName = "data";
-                String outputType = "Dataleverans";
+                String outputType = "Bytes";
 
                 DataFetcher<?> storeJson = env -> {
                     //**** Executed at runtime **********************************

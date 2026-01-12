@@ -562,16 +562,14 @@ public class GraphQLIT {
     @Test
     @Order(7)
     public void storeRaw(GraphQL graphQL) {
-        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
-
         byte[] unitBytes = """
                 {
                   "@type" : "ipto:unit",
                   "@version" : 2,
                   "tenantid" : 1,
-                  "unitid" : 113572,
-                  "unitver" : 1,
-                  "corrid" : "019b290c-7c5c-7353-bcf5-4ee9390fff46",
+                  "unitid" : null,
+                  "unitver" : null,
+                  "corrid" : null,
                   "status" : 30,
                   "unitname" : "child-1-10",
                   "created" : "2025-12-16T22:24:02.779110Z",
@@ -610,7 +608,7 @@ public class GraphQLIT {
                     "@type" : "ipto:time-scalar",
                     "alias" : "date",
                     "attrtype" : "TIME",
-                    "attrname" : ":date",
+                    "attrname" : "dcterms:date",
                     "value" : [ "2025-12-16T21:24:02.780162Z" ]
                   } ]
                 }
@@ -621,9 +619,7 @@ public class GraphQLIT {
 
         String mutation = """
             mutation Unit($data : Bytes!) {
-              lagraUnitRaw(data: $data) {
-                  dataleveransid
-              }
+              lagraUnitRaw(data: $data)
             }
             """;
 
@@ -640,16 +636,19 @@ public class GraphQLIT {
 
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
-            Map<String, Object> dataMap = result.getData();
-            Map<String, Object> payload = (Map<String, Object>) dataMap.get("lagraUnitRaw");
-            if (null != payload) {
-                String id = (String) payload.get("dataleveransid");
-                log.info("Result (dataleveransid): {}", id);
+            Map<String, String> map = result.getData();
+            String b64 = map.get("lagraUnitRaw"); // OBS! name same as fieldname in query type
+            if (null != b64) {
+                final Base64.Decoder DEC = Base64.getDecoder();
+                String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+
+                log.info("Result (base64 encoded): {}", b64);
+                log.info("Result (String/JSON): {}", json);
 
                 System.out.print("--> ");
-                System.out.println(id);
+                System.out.println(json);
             } else {
-                log.error("Got: {}", dataMap);
+                fail("No stored unit (where it is expected)");
             }
         } else {
             for (GraphQLError error : errors) {

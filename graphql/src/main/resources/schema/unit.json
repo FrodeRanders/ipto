@@ -9,10 +9,24 @@
     "@version": { "type": "integer", "minimum": 1 },
 
     "tenantid": { "type": "integer", "minimum": 1 },
-    "unitid": { "type": "integer", "minimum": 1 },
-    "unitver":  { "type": "integer", "minimum": 1 },
-
-    "corrid": { "type": "string", "format": "uuid" },
+    "unitid": {
+      "anyOf": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "unitver":  {
+      "anyOf": [
+        { "type": "integer", "minimum": 1 },
+        { "type": "null" }
+      ]
+    },
+    "corrid": {
+      "anyOf": [
+        { "type": "string", "format": "uuid" },
+        { "type": "null" }
+      ]
+    },
     "status": { "type": "integer" },
 
     "unitname": { "type": "string", "minLength": 1 },
@@ -28,7 +42,7 @@
   "$defs": {
     "prefixedName": {
       "type": "string",
-      "pattern": "^[A-Za-z][A-Za-z0-9_\\-]*:[^\\s]+$"
+      "pattern": "^(?:[A-Za-z][A-Za-z0-9_\\-]*:|:)[^\\s]+$"
     },
 
     "base64": {
