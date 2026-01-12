@@ -104,8 +104,7 @@ public class RecordAttribute {
     }
 
     private RecordAttribute requireRecordAttribute(String name, boolean createIfMissing) {
-        Objects.requireNonNull(unit, "unit");
-        Objects.requireNonNull(name, "name");
+         Objects.requireNonNull(name, "name");
 
         final RecordAttribute[] resolved = { null };
         unit.withAttribute(
