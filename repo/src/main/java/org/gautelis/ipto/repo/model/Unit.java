@@ -959,10 +959,7 @@ public class Unit implements Cloneable {
     }
 
     public <A> void withAttributeValue(String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
-        withAttribute(name, expectedClass, createIfMissing, attr -> {
-            ArrayList<A> value = attr.getValueVector();
-            runnable.run(value);
-        });
+        withAttribute(name, expectedClass, createIfMissing, asAttributeRunnable(runnable));
     }
 
 
@@ -971,10 +968,7 @@ public class Unit implements Cloneable {
     }
 
     public <A> void withAttributeValue(String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
-        withAttribute(name, expectedClass, true, attr -> {
-            ArrayList<A> value = attr.getValueVector();
-            runnable.run(value);
-        });
+        withAttribute(name, expectedClass, true, asAttributeRunnable(runnable));
     }
 
     @SuppressWarnings("unchecked")
@@ -1022,10 +1016,7 @@ public class Unit implements Cloneable {
     }
 
     public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
-        withAttribute(recordAttribute, name, expectedClass, createIfMissing, attr -> {
-            ArrayList<A> value = attr.getValueVector();
-            runnable.run(value);
-        });
+        withAttribute(recordAttribute, name, expectedClass, createIfMissing, asAttributeRunnable(runnable));
     }
 
     public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, AttributeRunnable<A> runnable) {
@@ -1033,25 +1024,30 @@ public class Unit implements Cloneable {
     }
 
     public <A> void withAttributeValue(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
-        withAttribute(recordAttribute, name, expectedClass, true, attr -> {
+        withAttribute(recordAttribute, name, expectedClass, true, asAttributeRunnable(runnable));
+    }
+
+    private static <A> AttributeRunnable<A> asAttributeRunnable(AttributeValueRunnable<A> runnable) {
+        return attr -> {
             ArrayList<A> value = attr.getValueVector();
             runnable.run(value);
-        });
+        };
     }
 
     public void withRecordAttribute(String name, RecordAttributeRunnable runnable) {
-        Optional<Attribute<?>> _attribute = getAttribute(name, /* create if missing? */ true);
-        if (_attribute.isEmpty()) {
+        runnable.run(requireRecordAttribute(name));
+    }
+
+    private RecordAttribute requireRecordAttribute(String name) {
+        Optional<Attribute<?>> attribute = getAttribute(name, /* create if missing? */ true);
+        if (attribute.isEmpty()) {
             throw new IllegalArgumentException("Unknown attribute: " + name);
-        } else {
-            Attribute<?> attribute = _attribute.get();
-
-            if (AttributeType.RECORD != attribute.getType()) {
-                throw new IllegalArgumentException("Not a record attribute: " + name);
-            }
-
-            runnable.run(new RecordAttribute(this, attribute));
         }
+        Attribute<?> resolved = attribute.get();
+        if (AttributeType.RECORD != resolved.getType()) {
+            throw new IllegalArgumentException("Not a record attribute: " + name);
+        }
+        return new RecordAttribute(this, resolved);
     }
 
     public Optional<Attribute<?>> getAttribute(

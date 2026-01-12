@@ -84,10 +84,30 @@ public class RecordAttribute {
             boolean createIfMissing,
             RecordAttributeRunnable runnable
     ) {
+        Objects.requireNonNull(runnable, "runnable");
+        runnable.run(requireRecordAttribute(name, createIfMissing));
+    }
+
+    public <A> void withNestedAttribute(String name, Class<A> type, AttributeRunnable<A> runnable) {
+        unit.withAttribute(delegate, name, type, runnable);
+    }
+
+    public <A> void withNestedAttributeValue(String name, Class<A> type, AttributeValueRunnable<A> runnable) {
+        withNestedAttribute(name, type, asAttributeRunnable(runnable));
+    }
+
+    private static <A> AttributeRunnable<A> asAttributeRunnable(AttributeValueRunnable<A> runnable) {
+        return attr -> {
+            ArrayList<A> value = attr.getValueVector();
+            runnable.run(value);
+        };
+    }
+
+    private RecordAttribute requireRecordAttribute(String name, boolean createIfMissing) {
         Objects.requireNonNull(unit, "unit");
         Objects.requireNonNull(name, "name");
-        Objects.requireNonNull(runnable, "runnable");
 
+        final RecordAttribute[] resolved = { null };
         unit.withAttribute(
                 delegate,
                 name,
@@ -98,21 +118,13 @@ public class RecordAttribute {
                     if (AttributeType.RECORD != attr.getType()) {
                         throw new IllegalArgumentException("Not a record attribute: " + name);
                     }
-
-                    runnable.run(new RecordAttribute(unit, attr));
+                    resolved[0] = new RecordAttribute(unit, attr);
                 }
         );
-    }
-
-    public <A> void withNestedAttribute(String name, Class<A> type, AttributeRunnable<A> runnable) {
-        unit.withAttribute(delegate, name, type, runnable);
-    }
-
-    public <A> void withNestedAttributeValue(String name, Class<A> type, AttributeValueRunnable<A> runnable) {
-        withNestedAttribute(name, type, attr -> {
-            ArrayList<A> value = attr.getValueVector();
-            runnable.run(value);
-        });
+        if (resolved[0] == null) {
+            throw new IllegalArgumentException("Unknown attribute: " + name);
+        }
+        return resolved[0];
     }
 
     public Attribute<Attribute<?>> getDelegate() {
