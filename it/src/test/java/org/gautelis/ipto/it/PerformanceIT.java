@@ -378,18 +378,42 @@ public class PerformanceIT {
             // In order to search here in test, we will need some "internal" objects,
             // such as Context, DataSource, etc.
             {
-                // Unit constraints
-                SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
-                expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
-                expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
+                SearchExpression expr;
+                if (true) {
+                    //---------------------------------------------------------------------------------
+                    // Variant 1: A textual representation of criteria, expressed in terms of unit
+                    // and attribute constraints. This textual representation is parsed and give
+                    // us an AST (abstract syntax tree), the SearchExpression, that we use for
+                    // searching.
+                    //---------------------------------------------------------------------------------
+                    String text = String.format(
+                            "tenantid = %d AND status = EFFECTIVE AND created >= \"%s\" AND dcterms:date >= \"%s\" AND dcterms:title = \"%s\"",
+                            tenantId,
+                            firstParentCreated,
+                            someInstant,
+                            someSpecificString
+                    );
+                    expr = SearchTextQueryParser.parse(text, repo, SearchTextQueryParser.AttributeNameMode.NAMES);
 
-                // First attribute constraint
-                SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dcterms:date", Operator.GEQ, someInstant);
-                expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
+                } else {
+                    //---------------------------------------------------------------------------------
+                    // Variant 2: We build the AST, the SearchExpression, directly ourselves with
+                    // help from a query builder, that expresses constraints on unit and attributes.
+                    //---------------------------------------------------------------------------------
 
-                // Second attribute constraint
-                SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dcterms:title", Operator.EQ, someSpecificString);
-                expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
+                    // Unit constraints
+                    expr = QueryBuilder.constrainToSpecificTenant(tenantId);
+                    expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
+                    expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToCreatedAfter(firstParentCreated));
+
+                    // First attribute constraint
+                    SearchItem<Instant> timestampSearchItem = new TimeAttributeSearchItem("dcterms:date", Operator.GEQ, someInstant);
+                    expr = QueryBuilder.assembleAnd(expr, timestampSearchItem);
+
+                    // Second attribute constraint
+                    SearchItem<String> stringSearchItem = new StringAttributeSearchItem("dcterms:title", Operator.EQ, someSpecificString);
+                    expr = QueryBuilder.assembleAnd(expr, stringSearchItem);
+                }
 
                 // Result set constraints (paging)
                 SearchOrder order = SearchOrder.getDefaultOrder(); // descending on creation time

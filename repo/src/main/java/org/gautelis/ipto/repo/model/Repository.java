@@ -959,6 +959,24 @@ public class Repository {
         return KnownAttributes.getAttribute(context, attributeId);
     }
 
+    public Optional<KnownAttributes.AttributeInfo> createAttribute(
+            String alias,
+            String attributeName,
+            String qualifiedName,
+            AttributeType type,
+            boolean isArray
+    ) throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
+        return KnownAttributes.createAttribute(context, alias, attributeName, qualifiedName, type, isArray);
+    }
+
+    public boolean canChangeAttribute(String attributeName) throws DatabaseConnectionException, DatabaseReadException {
+        return KnownAttributes.canChangeAttribute(context, attributeName);
+    }
+
+    public boolean canChangeAttribute(int attributeId) throws DatabaseConnectionException, DatabaseReadException {
+        return KnownAttributes.canChangeAttribute(context, attributeId);
+    }
+
     public Optional<Integer> attributeNameToId(String attributeName) {
         Optional<KnownAttributes.AttributeInfo> attributeInfo = getAttributeInfo(attributeName);
         Integer[] attributeId = { null };

@@ -381,13 +381,7 @@ public class GraphQLIT {
         log.info(query);
         System.out.println(query);
 
-        Map<String, Object> where = Map.of(
-            "attrExpr", Map.of(
-                        "attr", "beslutsfattare", // OBS! Expressed using GQL name
-                        "op", "EQ",
-                        "value", beslutsfattare
-                    )
-        );
+        String text = "beslutsfattare = \"" + beslutsfattare + "\"";
 
         ExecutionResult result = graphQL.execute(
                 ExecutionInput.newExecutionInput()
@@ -396,7 +390,7 @@ public class GraphQLIT {
                                 Map.of(
                                         "filter", Map.of(
                                                 "tenantId", 1,
-                                                "where", where
+                                                "text", text
                                         )
                                 )
                         )
@@ -436,7 +430,7 @@ public class GraphQLIT {
 
         String query = """
             query Unit {
-              yrkanden1: yrkanden(filter: {tenantId: %d, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "%s"}}}) {
+              yrkanden1: yrkanden(filter: {tenantId: %d, text: "beslutsfattare = \\"%s\\""}) {
                 person {
                   ... on FysiskPerson {
                     personnummer
@@ -446,7 +440,7 @@ public class GraphQLIT {
                   }
                 }
               }
-              yrkanden2: yrkanden(filter: {tenantId: %d, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "%s"}}}) {
+              yrkanden2: yrkanden(filter: {tenantId: %d, text: "beslutsfattare = \\"%s\\""}) {
                 person {
                   ... on FysiskPerson {
                     personnummer
@@ -507,13 +501,7 @@ public class GraphQLIT {
         log.info(query);
         System.out.println(query);
 
-        Map<String, Object> where = Map.of(
-                "attrExpr", Map.of(
-                        "attr", "beslutsfattare", // OBS! Expressed using GQL name
-                        "op", "EQ",
-                        "value", beslutsfattare
-                )
-        );
+        String text = "beslutsfattare = \"" + beslutsfattare + "\"";
 
         ExecutionResult result = graphQL.execute(
                 ExecutionInput.newExecutionInput()
@@ -522,7 +510,7 @@ public class GraphQLIT {
                                 Map.of(
                                         "filter", Map.of(
                                                 "tenantId", 1,
-                                                "where", where
+                                                "text", text
                                         )
                                 )
                         )
@@ -650,6 +638,69 @@ public class GraphQLIT {
             } else {
                 fail("No stored unit (where it is expected)");
             }
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
+        }
+        System.out.println("---------------------------------------------------------------------------------------");
+    }
+
+    @Test
+    @Order(8)
+    public void searchWithTextFilter(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
+
+        final int tenantId = 1;
+        final long _unitId = createUnit(tenantId, beslutsfattare, Instant.now());
+
+        String query = """
+            query Unit($filter: Filter!) {
+              yrkanden(filter: $filter) {
+                beslut {
+                  beslutsfattare
+                }
+              }
+            }
+            """;
+        log.info(query);
+        System.out.println(query);
+
+        String text = "beslutsfattare = \"" + beslutsfattare + "\"";
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(
+                                Map.of(
+                                        "filter", Map.of(
+                                                "tenantId", 1,
+                                                "text", text
+                                        )
+                                )
+                        )
+                        .build());
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            log.info("Result: {}", (Object) result.getData());
+
+            System.out.print("--> ");
+            dumpMap(result.getData());
+
+            Map<String, Object> data = result.getData();
+            List<?> units = (List<?>) data.get("yrkanden");
+            if (units == null || units.isEmpty()) {
+                fail("No search results found (where it is expected)");
+            }
+
         } else {
             for (GraphQLError error : errors) {
                 log.error("error: {}: {}", error.getMessage(), error);

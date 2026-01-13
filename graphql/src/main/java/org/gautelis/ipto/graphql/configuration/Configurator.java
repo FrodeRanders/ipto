@@ -18,6 +18,7 @@ package org.gautelis.ipto.graphql.configuration;
 
 import graphql.language.*;
 import org.gautelis.ipto.graphql.runtime.*;
+import org.gautelis.ipto.repo.exceptions.BaseException;
 import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import graphql.GraphQL;
 import graphql.schema.idl.RuntimeWiring;
@@ -30,6 +31,7 @@ import org.gautelis.ipto.graphql.runtime.scalars.DateTimeScalar;
 import org.gautelis.ipto.graphql.runtime.scalars.LongScalar;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
+import org.gautelis.ipto.repo.model.KnownAttributes;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -271,63 +273,23 @@ public class Configurator {
                 gqlAttribute.isArray
         );
 
-        String sql = """
-            INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias)
-            VALUES (?,?,?,?,?)
-            """;
-
         try {
-            repo.withConnection(conn -> {
-                try {
-                    conn.setAutoCommit(false);
+            Optional<KnownAttributes.AttributeInfo> info = repo.createAttribute(
+                    attribute.alias(),
+                    attribute.attrName(),
+                    attribute.qualifiedName(),
+                    attribute.attrType(),
+                    attribute.isArray()
+            );
 
-                    String[] generatedColumns = { "attrid" };
-                    try (PreparedStatement pStmt = conn.prepareStatement(sql, generatedColumns)) {
-                        int i = 0;
-                        pStmt.setInt(++i, attribute.attrType().getType());
-                        pStmt.setBoolean(++i, !attribute.isArray()); // Note negation
-                        pStmt.setString(++i, attribute.attrName());
-                        pStmt.setString(++i, attribute.qualifiedName());
-                        pStmt.setString(++i, attribute.alias());
-
-                        Database.executeUpdate(pStmt);
-
-                        try (ResultSet rs = pStmt.getGeneratedKeys()) {
-                            if (rs.next()) {
-                                int attriId = rs.getInt(1);
-                                attribute.setAttrId(attriId);
-                            } else {
-                                String info = "↯ Failed to determine auto-generated attribute ID";
-                                log.error(info); // This is nothing we can recover from
-                                throw new ConfigurationException(info);
-                            }
-                        }
-                    }
-
-                    conn.commit();
-                    log.info("↯ Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
-
-                } catch (Throwable t) {
-                    log.error("↯ Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, t.getMessage(), t);
-                    if (t.getCause() instanceof SQLException sqle) {
-                        log.error("  ^--- {}", Database.squeeze(sqle));
-                        String sqlState = sqle.getSQLState();
-
-                        try {
-                            conn.rollback();
-                        } catch (SQLException rbe) {
-                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
-                        }
-
-                        if (sqlState.startsWith("23")) {
-                            // 23505 : duplicate key value violates unique constraint "repo_attribute_pk"
-                            log.info("↯ Attribute '{}' ({}, '{}') seems to already have been loaded", attribute.alias(), attribute.attrId(), attribute.attrName());
-                        }
-                    }
-                }
-            });
-        } catch (SQLException sqle) {
-            log.error("Failed to store attribute: {}", Database.squeeze(sqle));
+            if (info.isPresent()) {
+                attribute.setAttrId(info.get().id);
+                log.info("↯ Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
+            } else {
+                log.error("↯ Failed to store attribute '{}' ({}, '{}')", attribute.alias(), attribute.attrId(), gqlAttribute.name);
+            }
+        } catch (BaseException ex) {
+            log.error("↯ Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, ex.getMessage(), ex);
         }
 
         return attribute;

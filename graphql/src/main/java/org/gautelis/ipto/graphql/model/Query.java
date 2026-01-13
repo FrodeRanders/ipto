@@ -61,5 +61,5 @@ public class Query {
 
     public record Node(AttributeExpression attrExpr, TreeExpression treeExpr) {}
 
-    public record Filter(int tenantId, Node where, int offset, int size) {}
+    public record Filter(int tenantId, Node where, String text, int offset, int size) {}
 }

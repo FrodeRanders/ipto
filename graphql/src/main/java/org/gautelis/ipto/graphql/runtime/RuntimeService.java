@@ -30,6 +30,7 @@ import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
+import org.gautelis.ipto.repo.search.query.SearchTextQueryParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
@@ -575,6 +576,19 @@ public class RuntimeService {
         SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
+        if (filter.text() != null && !filter.text().isBlank()) {
+            SearchExpression textExpr = SearchTextQueryParser.parse(
+                    filter.text(),
+                    this::resolveAttribute,
+                    SearchTextQueryParser.AttributeNameMode.NAMES_OR_ALIASES
+            );
+            return new AndExpression(expr, textExpr);
+        }
+
+        if (filter.where() == null) {
+            throw new InvalidParameterException("Filter.where is mandatory unless Filter.text is provided.");
+        }
+
         // attribute constraints
         return new AndExpression(expr, assembleConstraints(filter.where()));
     }
@@ -658,5 +672,18 @@ public class RuntimeService {
             }
             default -> throw new InvalidParameterException("Attribute type " + attrType.name() + " is not searchable: " + attrName);
         }
+    }
+
+    private Optional<SearchTextQueryParser.ResolvedAttribute> resolveAttribute(String name) {
+        CatalogAttribute byAlias = allAttributesByAlias.get(name);
+        if (byAlias != null) {
+            return Optional.of(new SearchTextQueryParser.ResolvedAttribute(byAlias.attrName(), byAlias.attrType()));
+        }
+        for (CatalogAttribute attribute : allAttributesByAlias.values()) {
+            if (name.equals(attribute.attrName()) || name.equals(attribute.qualifiedName())) {
+                return Optional.of(new SearchTextQueryParser.ResolvedAttribute(attribute.attrName(), attribute.attrType()));
+            }
+        }
+        return Optional.empty();
     }
 }

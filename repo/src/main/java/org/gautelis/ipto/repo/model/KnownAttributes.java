@@ -17,13 +17,18 @@
 package org.gautelis.ipto.repo.model;
 
 import org.gautelis.ipto.repo.db.Database;
+import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.repo.exceptions.DatabaseConnectionException;
 import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
+import org.gautelis.ipto.repo.exceptions.DatabaseWriteException;
+import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.utils.TimedExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.HashMap;
 import java.util.Map;
@@ -47,6 +52,117 @@ public final class KnownAttributes {
     }
 
     private static final Map<String, AttributeInfo> attributes = new HashMap<>();
+
+    public static synchronized boolean canChangeAttribute(Context ctx, int attrId)
+            throws DatabaseConnectionException, DatabaseReadException {
+        String sql = """
+            SELECT 1
+            FROM repo_attribute_value
+            WHERE attrid = ?
+            FETCH FIRST 1 ROWS ONLY
+            """;
+
+        boolean[] hasValues = { false };
+        Database.useReadonlyConnection(ctx.getDataSource(), conn ->
+            Database.useReadonlyPreparedStatement(conn, sql,
+                    pStmt -> pStmt.setInt(1, attrId),
+                    rs -> hasValues[0] = rs.next()
+            )
+        );
+
+        return !hasValues[0];
+    }
+
+    public static synchronized boolean canChangeAttribute(Context ctx, String attributeName)
+            throws DatabaseConnectionException, DatabaseReadException {
+        Integer attrId = fetchAttributeNameToIdMap(ctx).get(attributeName);
+        if (attrId == null) {
+            return true;
+        }
+        return canChangeAttribute(ctx, attrId);
+    }
+
+    public static synchronized Optional<AttributeInfo> createAttribute(
+            Context ctx,
+            String alias,
+            String attrName,
+            String qualifiedName,
+            AttributeType type,
+            boolean isArray
+    ) throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
+        Map<String, AttributeInfo> data = fetchAttributes(ctx);
+        AttributeInfo existing = data.get(attrName);
+        if (existing != null) {
+            return Optional.of(existing);
+        }
+
+        AttributeInfo[] created = { null };
+        String sql = """
+            INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias)
+            VALUES (?,?,?,?,?)
+            """;
+
+        Database.useConnection(ctx.getDataSource(), conn -> {
+            try {
+                conn.setAutoCommit(false);
+
+                String[] generatedColumns = { "attrid" };
+                try (PreparedStatement pStmt = conn.prepareStatement(sql, generatedColumns)) {
+                    int i = 0;
+                    pStmt.setInt(++i, type.getType());
+                    pStmt.setBoolean(++i, !isArray); // Note negation
+                    pStmt.setString(++i, attrName);
+                    pStmt.setString(++i, qualifiedName);
+                    pStmt.setString(++i, alias);
+
+                    Database.executeUpdate(pStmt);
+
+                    try (ResultSet rs = pStmt.getGeneratedKeys()) {
+                        if (rs.next()) {
+                            AttributeInfo info = new AttributeInfo();
+                            info.id = rs.getInt(1);
+                            info.qualName = qualifiedName;
+                            info.name = attrName;
+                            info.alias = alias;
+                            info.type = type.getType();
+                            info.forcedScalar = !isArray;
+                            created[0] = info;
+                        } else {
+                            String info = "↯ Failed to determine auto-generated attribute ID";
+                            throw new ConfigurationException(info);
+                        }
+                    }
+                }
+
+                conn.commit();
+            } catch (SQLException sqle) {
+                String sqlState = sqle.getSQLState();
+
+                try {
+                    conn.rollback();
+                } catch (SQLException rbe) {
+                    log.error("↯ Failed to rollback attribute insert: {}", Database.squeeze(rbe), rbe);
+                }
+
+                if (sqlState != null && sqlState.startsWith("23")) {
+                    if (log.isTraceEnabled()) {
+                        log.trace("↯ Attribute '{}' seems to already have been loaded", attrName);
+                    }
+                    attributes.clear();
+                    AttributeInfo refreshed = fetchAttributes(ctx).get(attrName);
+                    created[0] = refreshed;
+                    return;
+                }
+                throw new DatabaseWriteException("Failed to store attribute: " + Database.squeeze(sqle), sqle);
+            }
+        });
+
+        if (created[0] != null) {
+            attributes.put(created[0].name, created[0]);
+        }
+
+        return Optional.ofNullable(created[0]);
+    }
 
     /**
      * Fetch all data from all known attributes.
@@ -132,4 +248,3 @@ public final class KnownAttributes {
         return Optional.ofNullable(info.get(name));
     }
 }
-
