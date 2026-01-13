@@ -601,44 +601,46 @@ public class Unit implements Cloneable {
                 Map<Long, Attribute<?>> valueIdToAttribute = new HashMap<>();
 
                 //
-                ArrayNode attributeNodes = (ArrayNode) root.path("attributes");
-                for (JsonNode node : attributeNodes) {
-                    Attribute<?> attribute = new Attribute<>(node);
-                    valueIdToAttribute.put(attribute.getValueId(), attribute);
+                JsonNode attributesNode = root.path("attributes");
+                if (!attributesNode.isMissingNode()) {
+                    for (JsonNode node : attributesNode) {
+                        Attribute<?> attribute = new Attribute<>(node);
+                        valueIdToAttribute.put(attribute.getValueId(), attribute);
 
-                    if (AttributeType.RECORD.equals(attribute.getType())) {
-                        recordAttributes.add(attribute);
-                    }
-
-                    log.debug("Inflated {}", attribute);
-                }
-
-                Iterator<Attribute<?>> rait = recordAttributes.iterator();
-                while (rait.hasNext()) {
-                    Attribute<?> recordAttribute = rait.next();
-
-                    if (recordAttribute.getValue() instanceof RecordValue recValue) {
-                        Collection<RecordValue.AttributeReference> refs = recValue.getClaimedReferences();
-                        Iterator<RecordValue.AttributeReference> rit = refs.iterator();
-
-                        while (rit.hasNext()) {
-                            RecordValue.AttributeReference ref = rit.next();
-                            Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
-                            if (null != referredAttribute) {
-                                recValue.set(referredAttribute);
-                                rit.remove(); // Reference is now resolved
-
-                                // Remove attribute from unit-level, since it is owned by a nested record
-                                valueIdToAttribute.remove(ref.refValueId());
-                            }
+                        if (AttributeType.RECORD.equals(attribute.getType())) {
+                            recordAttributes.add(attribute);
                         }
 
-                        // All initial references should be resolved by now
-                        if (!refs.isEmpty()) {
-                            // Is our algorithm sound?
-                            log.error("There are unresolved attribute references in record: {}", recordAttribute,
-                                    new Exception("Synthetic exception used to gain stack trace")
-                            );
+                        log.debug("Inflated {}", attribute);
+                    }
+
+                    Iterator<Attribute<?>> rait = recordAttributes.iterator();
+                    while (rait.hasNext()) {
+                        Attribute<?> recordAttribute = rait.next();
+
+                        if (recordAttribute.getValue() instanceof RecordValue recValue) {
+                            Collection<RecordValue.AttributeReference> refs = recValue.getClaimedReferences();
+                            Iterator<RecordValue.AttributeReference> rit = refs.iterator();
+
+                            while (rit.hasNext()) {
+                                RecordValue.AttributeReference ref = rit.next();
+                                Attribute<?> referredAttribute = valueIdToAttribute.get(ref.refValueId());
+                                if (null != referredAttribute) {
+                                    recValue.set(referredAttribute);
+                                    rit.remove(); // Reference is now resolved
+
+                                    // Remove attribute from unit-level, since it is owned by a nested record
+                                    valueIdToAttribute.remove(ref.refValueId());
+                                }
+                            }
+
+                            // All initial references should be resolved by now
+                            if (!refs.isEmpty()) {
+                                // Is our algorithm sound?
+                                log.error("There are unresolved attribute references in record: {}", recordAttribute,
+                                        new Exception("Synthetic exception used to gain stack trace")
+                                );
+                            }
                         }
                     }
                 }
