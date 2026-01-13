@@ -966,7 +966,16 @@ public class Repository {
             AttributeType type,
             boolean isArray
     ) throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
-        return KnownAttributes.createAttribute(context, alias, attributeName, qualifiedName, type, isArray);
+        Optional<KnownAttributes.AttributeInfo> info =
+                KnownAttributes.createAttribute(context, alias, attributeName, qualifiedName, type, isArray);
+        if (info.isPresent()) {
+            registerAttributeNameToId(info.get());
+            return info;
+        }
+
+        Optional<KnownAttributes.AttributeInfo> existing = getAttributeInfo(attributeName);
+        existing.ifPresent(this::registerAttributeNameToId);
+        return existing;
     }
 
     public boolean canChangeAttribute(String attributeName) throws DatabaseConnectionException, DatabaseReadException {
@@ -975,6 +984,19 @@ public class Repository {
 
     public boolean canChangeAttribute(int attributeId) throws DatabaseConnectionException, DatabaseReadException {
         return KnownAttributes.canChangeAttribute(context, attributeId);
+    }
+
+    private void registerAttributeNameToId(KnownAttributes.AttributeInfo info) {
+        Map<String, Integer> attributeNameToIdMap = context.getDatabaseAdapter().getAttributeNameToIdMap();
+        if (info.alias != null) {
+            attributeNameToIdMap.put(info.alias, info.id);
+        }
+        if (info.name != null) {
+            attributeNameToIdMap.put(info.name, info.id);
+        }
+        if (info.qualName != null) {
+            attributeNameToIdMap.put(info.qualName, info.id);
+        }
     }
 
     public Optional<Integer> attributeNameToId(String attributeName) {

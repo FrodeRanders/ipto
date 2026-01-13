@@ -55,16 +55,10 @@ public final class KnownAttributes {
 
     public static synchronized boolean canChangeAttribute(Context ctx, int attrId)
             throws DatabaseConnectionException, DatabaseReadException {
-        String sql = """
-            SELECT 1
-            FROM repo_attribute_value
-            WHERE attrid = ?
-            FETCH FIRST 1 ROWS ONLY
-            """;
 
         boolean[] hasValues = { false };
         Database.useReadonlyConnection(ctx.getDataSource(), conn ->
-            Database.useReadonlyPreparedStatement(conn, sql,
+            Database.useReadonlyPreparedStatement(conn, ctx.getStatements().attributeInUse(),
                     pStmt -> pStmt.setInt(1, attrId),
                     rs -> hasValues[0] = rs.next()
             )
@@ -97,17 +91,13 @@ public final class KnownAttributes {
         }
 
         AttributeInfo[] created = { null };
-        String sql = """
-            INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias)
-            VALUES (?,?,?,?,?)
-            """;
 
         Database.useConnection(ctx.getDataSource(), conn -> {
             try {
                 conn.setAutoCommit(false);
 
                 String[] generatedColumns = { "attrid" };
-                try (PreparedStatement pStmt = conn.prepareStatement(sql, generatedColumns)) {
+                try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().attributeCreate(), generatedColumns)) {
                     int i = 0;
                     pStmt.setInt(++i, type.getType());
                     pStmt.setBoolean(++i, !isArray); // Note negation
@@ -135,6 +125,7 @@ public final class KnownAttributes {
                 }
 
                 conn.commit();
+
             } catch (SQLException sqle) {
                 String sqlState = sqle.getSQLState();
 

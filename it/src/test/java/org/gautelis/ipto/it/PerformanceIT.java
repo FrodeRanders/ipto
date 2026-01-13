@@ -393,7 +393,7 @@ public class PerformanceIT {
                             someInstant,
                             someSpecificString
                     );
-                    expr = SearchTextQueryParser.parse(text, repo, SearchTextQueryParser.AttributeNameMode.NAMES);
+                    expr = SearchExpressionQueryParser.parse(text, repo, SearchExpressionQueryParser.AttributeNameMode.NAMES);
 
                 } else {
                     //---------------------------------------------------------------------------------

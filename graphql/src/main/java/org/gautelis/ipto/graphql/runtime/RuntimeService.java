@@ -30,7 +30,7 @@ import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
-import org.gautelis.ipto.repo.search.query.SearchTextQueryParser;
+import org.gautelis.ipto.repo.search.query.SearchExpressionQueryParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
@@ -577,10 +577,10 @@ public class RuntimeService {
         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         if (filter.text() != null && !filter.text().isBlank()) {
-            SearchExpression textExpr = SearchTextQueryParser.parse(
+            SearchExpression textExpr = SearchExpressionQueryParser.parse(
                     filter.text(),
                     this::resolveAttribute,
-                    SearchTextQueryParser.AttributeNameMode.NAMES_OR_ALIASES
+                    SearchExpressionQueryParser.AttributeNameMode.NAMES_OR_ALIASES
             );
             return new AndExpression(expr, textExpr);
         }
@@ -674,14 +674,14 @@ public class RuntimeService {
         }
     }
 
-    private Optional<SearchTextQueryParser.ResolvedAttribute> resolveAttribute(String name) {
+    private Optional<SearchExpressionQueryParser.ResolvedAttribute> resolveAttribute(String name) {
         CatalogAttribute byAlias = allAttributesByAlias.get(name);
         if (byAlias != null) {
-            return Optional.of(new SearchTextQueryParser.ResolvedAttribute(byAlias.attrName(), byAlias.attrType()));
+            return Optional.of(new SearchExpressionQueryParser.ResolvedAttribute(byAlias.attrName(), byAlias.attrType()));
         }
         for (CatalogAttribute attribute : allAttributesByAlias.values()) {
             if (name.equals(attribute.attrName()) || name.equals(attribute.qualifiedName())) {
-                return Optional.of(new SearchTextQueryParser.ResolvedAttribute(attribute.attrName(), attribute.attrType()));
+                return Optional.of(new SearchExpressionQueryParser.ResolvedAttribute(attribute.attrName(), attribute.attrType()));
             }
         }
         return Optional.empty();

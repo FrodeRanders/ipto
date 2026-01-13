@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class SearchTextQueryParser {
+public final class SearchExpressionQueryParser {
 
     public interface AttributeTypeResolver {
         Optional<ResolvedAttribute> resolve(String name);
@@ -51,7 +51,7 @@ public final class SearchTextQueryParser {
 
     private static final Map<String, UnitField> UNIT_FIELDS = buildUnitFields();
 
-    private SearchTextQueryParser() {
+    private SearchExpressionQueryParser() {
     }
 
     public static SearchExpression parse(String query, AttributeTypeResolver resolver) {
@@ -63,15 +63,15 @@ public final class SearchTextQueryParser {
         Objects.requireNonNull(resolver, "resolver");
         Objects.requireNonNull(mode, "mode");
 
-        SearchTextLexer lexer = new SearchTextLexer(CharStreams.fromString(query));
+        SearchExpressionLexer lexer = new SearchExpressionLexer(CharStreams.fromString(query));
         lexer.removeErrorListeners();
-        lexer.addErrorListener(new SearchTextErrorListener(query));
+        lexer.addErrorListener(new SearchExpressionErrorListener(query));
 
-        SearchTextParser parser = new SearchTextParser(new CommonTokenStream(lexer));
+        SearchExpressionParser parser = new SearchExpressionParser(new CommonTokenStream(lexer));
         parser.removeErrorListeners();
-        parser.addErrorListener(new SearchTextErrorListener(query));
+        parser.addErrorListener(new SearchExpressionErrorListener(query));
 
-        SearchTextParser.QueryContext tree = parser.query();
+        SearchExpressionParser.QueryContext tree = parser.query();
         return new Builder(resolver, mode).visit(tree.expr());
     }
 
@@ -87,7 +87,7 @@ public final class SearchTextQueryParser {
                 .map(info -> new ResolvedAttribute(name, AttributeType.of(info.type))), mode);
     }
 
-    private static final class Builder extends SearchTextBaseVisitor<SearchExpression> {
+    private static final class Builder extends SearchExpressionBaseVisitor<SearchExpression> {
         private final AttributeTypeResolver resolver;
         private final AttributeNameMode mode;
 
@@ -97,7 +97,7 @@ public final class SearchTextQueryParser {
         }
 
         @Override
-        public SearchExpression visitOrExpr(SearchTextParser.OrExprContext ctx) {
+        public SearchExpression visitOrExpr(SearchExpressionParser.OrExprContext ctx) {
             SearchExpression expr = visit(ctx.andExpr(0));
             for (int i = 1; i < ctx.andExpr().size(); i++) {
                 expr = new OrExpression(expr, visit(ctx.andExpr(i)));
@@ -106,7 +106,7 @@ public final class SearchTextQueryParser {
         }
 
         @Override
-        public SearchExpression visitAndExpr(SearchTextParser.AndExprContext ctx) {
+        public SearchExpression visitAndExpr(SearchExpressionParser.AndExprContext ctx) {
             SearchExpression expr = visit(ctx.notExpr(0));
             for (int i = 1; i < ctx.notExpr().size(); i++) {
                 expr = new AndExpression(expr, visit(ctx.notExpr(i)));
@@ -115,7 +115,7 @@ public final class SearchTextQueryParser {
         }
 
         @Override
-        public SearchExpression visitNotExpr(SearchTextParser.NotExprContext ctx) {
+        public SearchExpression visitNotExpr(SearchExpressionParser.NotExprContext ctx) {
             if (ctx.NOT() != null) {
                 return new NotExpression(visit(ctx.notExpr()));
             }
@@ -123,7 +123,7 @@ public final class SearchTextQueryParser {
         }
 
         @Override
-        public SearchExpression visitPrimary(SearchTextParser.PrimaryContext ctx) {
+        public SearchExpression visitPrimary(SearchExpressionParser.PrimaryContext ctx) {
             if (ctx.predicate() != null) {
                 return visit(ctx.predicate());
             }
@@ -131,7 +131,7 @@ public final class SearchTextQueryParser {
         }
 
         @Override
-        public SearchExpression visitPredicate(SearchTextParser.PredicateContext ctx) {
+        public SearchExpression visitPredicate(SearchExpressionParser.PredicateContext ctx) {
             String field = ctx.field().getText();
             Operator op = toOperator(ctx.operator());
             Value value = parseValue(ctx.value());
@@ -204,7 +204,7 @@ public final class SearchTextQueryParser {
         return mode == AttributeNameMode.ALIASES || mode == AttributeNameMode.NAMES_OR_ALIASES;
     }
 
-    private static Operator toOperator(SearchTextParser.OperatorContext ctx) {
+    private static Operator toOperator(SearchExpressionParser.OperatorContext ctx) {
         if (ctx.EQ() != null) return Operator.EQ;
         if (ctx.NEQ() != null) return Operator.NEQ;
         if (ctx.GE() != null) return Operator.GEQ;
@@ -215,26 +215,26 @@ public final class SearchTextQueryParser {
         throw new InvalidParameterException("Unsupported operator: " + ctx.getText());
     }
 
-    private static Value parseValue(SearchTextParser.ValueContext ctx) {
+    private static Value parseValue(SearchExpressionParser.ValueContext ctx) {
         Token token = ctx.getStart();
         switch (token.getType()) {
-            case SearchTextParser.STRING -> {
+            case SearchExpressionParser.STRING -> {
                 return Value.of(unquote(token.getText()));
             }
-            case SearchTextParser.NUMBER -> {
+            case SearchExpressionParser.NUMBER -> {
                 String raw = token.getText();
                 if (raw.indexOf('.') >= 0) {
                     return Value.of(Double.parseDouble(raw));
                 }
                 return Value.of(Long.parseLong(raw));
             }
-            case SearchTextParser.TRUE -> {
+            case SearchExpressionParser.TRUE -> {
                 return Value.of(true);
             }
-            case SearchTextParser.FALSE -> {
+            case SearchExpressionParser.FALSE -> {
                 return Value.of(false);
             }
-            case SearchTextParser.IDENT -> {
+            case SearchExpressionParser.IDENT -> {
                 return Value.of(token.getText());
             }
             default -> throw new InvalidParameterException("Unsupported value: " + token.getText());
@@ -373,10 +373,10 @@ public final class SearchTextQueryParser {
         }
     }
 
-    private static final class SearchTextErrorListener extends BaseErrorListener {
+    private static final class SearchExpressionErrorListener extends BaseErrorListener {
         private final String input;
 
-        private SearchTextErrorListener(String input) {
+        private SearchExpressionErrorListener(String input) {
             this.input = input;
         }
 

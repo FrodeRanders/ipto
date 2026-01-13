@@ -535,7 +535,7 @@ input UnitIdentification {
 
 input Filter {
     tenantId: Int!
-    text: String
+    where: String
     offset: Int = 0
     size: Int = 20
 }

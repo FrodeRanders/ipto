@@ -1,4 +1,4 @@
-grammar SearchText;
+grammar SearchExpression;
 
 query
     : expr EOF

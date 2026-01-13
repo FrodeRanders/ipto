@@ -29,13 +29,13 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
-class SearchTextQueryParserTest {
+class SearchExpressionQueryParserTest {
 
     @Test
     void parseAndExpressionWithAttributeAndUnitConstraints() {
-        SearchExpression expr = SearchTextQueryParser.parse(
+        SearchExpression expr = SearchExpressionQueryParser.parse(
                 "tenantid = 1 AND dcterms:title = \"Hello\"",
-                name -> Optional.of(new SearchTextQueryParser.ResolvedAttribute(name, AttributeType.STRING))
+                name -> Optional.of(new SearchExpressionQueryParser.ResolvedAttribute(name, AttributeType.STRING))
         );
 
         AndExpression andExpr = assertInstanceOf(AndExpression.class, expr);
@@ -56,7 +56,7 @@ class SearchTextQueryParserTest {
 
     @Test
     void parseWildcardUsesLikeOperator() {
-        SearchExpression expr = SearchTextQueryParser.parse(
+        SearchExpression expr = SearchExpressionQueryParser.parse(
                 "unitname = \"Case*\"",
                 name -> Optional.empty()
         );

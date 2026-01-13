@@ -177,13 +177,7 @@ query Unit($filter: Filter!) {
 ```java
 int tenantId = 1;
 
-Map<String, Object> where = Map.of(
-    "attrExpr", Map.of(
-                "attr", "beslutsfattare", // OBS! Expressed using GQL name
-                "op", "EQ",
-                "value", beslutsfattare
-            )
-);
+String expr = "beslutsfattare = \"" + beslutsfattare + "\"";
 
 ExecutionResult result = graphQL.execute(
         ExecutionInput.newExecutionInput()
@@ -192,11 +186,10 @@ ExecutionResult result = graphQL.execute(
                         Map.of(
                                 "filter", Map.of(
                                         "tenantId", tenantId,
-                                        "where", where
+                                        "where", expr
                                 )
                         )
-                )
-                .build());
+                )                .build());
 ```
 &darr;
 ```json
@@ -222,7 +215,7 @@ ExecutionResult result = graphQL.execute(
 
 ```graphql
 query Unit {
-  yrkanden1: yrkanden(filter: {tenantId: 1, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "019afa74-8f49-788a-b482-128b0e590575"}}}) {
+  yrkanden1: yrkanden(filter: {tenantId: 1, where: "beslutsfattare = \"019bb927-85f4-77e5-9eb6-630a0e23f207\""}) {
     person {
       ... on FysiskPerson {
         personnummer
@@ -232,7 +225,7 @@ query Unit {
       }
     }
   }
-  yrkanden2: yrkanden(filter: {tenantId: 1, where: {attrExpr: {attr: beslutsfattare, op: EQ, value: "019afa74-8f49-7c6b-96d6-0d867dab7664"}}}) {
+  yrkanden2: yrkanden(filter: {tenantId: 1, where: "beslutsfattare = \"019afa74-8f49-7c6b-96d6-0d867dab7664\""}) {
     person {
       ... on FysiskPerson {
         personnummer
@@ -269,13 +262,7 @@ query Unit($filter: Filter!) {
 String beslutsfattare = "019afa74-8f53-7b6f-bb77-c01ec60bd52f";
 int tenantId = 1;
 
-Map<String, Object> where = Map.of(
-        "attrExpr", Map.of(
-                "attr", "beslutsfattare", // OBS! Expressed using GQL name
-                "op", "EQ",
-                "value", beslutsfattare
-        )
-);
+String expr = "beslutsfattare = \"" + beslutsfattare + "\"";
 
 ExecutionResult result = graphQL.execute(
         ExecutionInput.newExecutionInput()
@@ -284,7 +271,7 @@ ExecutionResult result = graphQL.execute(
                         Map.of(
                                 "filter", Map.of(
                                         "tenantId", tenantId,
-                                        "where", where
+                                        "where", expr
                                 )
                         )
                 )

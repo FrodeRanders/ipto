@@ -87,7 +87,7 @@
       Call with: (tenantId, unitId, attrId)
       A valueId will be generated.
     -->
-    <entry key="sql.attribute.insert">
+    <entry key="sql.unit.attribute.add">
         INSERT INTO repo_attribute_value (tenantid,unitid,attrid) VALUES (?,?,?)
     </entry>
 
@@ -95,7 +95,7 @@
       Delete all attributes associated with a unit.
       Call with: (tenantId, unitId)
     -->
-    <entry key="sql.attribute.delete">
+    <entry key="sql.unit.attribute.remove">
         DELETE FROM repo_attribute_value WHERE (tenantid=? AND unitid=?)
     </entry>
 
@@ -104,6 +104,21 @@
     -->
     <entry key="sql.attribute.get_all">
         SELECT attrid, qualname, attrname, alias, attrtype, scalar, created FROM repo_attribute
+    </entry>
+
+    <!--
+      Create attribute
+    -->
+    <entry key="sql.attribute.create">
+        INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias) VALUES (?,?,?,?,?)
+    </entry>
+
+
+    <!--
+      Attribute is in use
+    -->
+    <entry key="sql.attribute.in_use">
+        SELECT 1 FROM repo_attribute_value WHERE attrid = ? FETCH FIRST 1 ROWS ONLY
     </entry>
 
     <!--

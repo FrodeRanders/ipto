@@ -43,14 +43,20 @@ public interface Statements {
     @Configurable(property = "sql.unit.get_attributes")
     String unitGetAttributes();
 
-    @Configurable(property = "sql.attribute.insert")
-    String attributeInsert();
+    @Configurable(property = "sql.unit.attribute.add")
+    String unitAttributeAdd();
 
-    @Configurable(property = "sql.attribute.delete")
-    String attributeDelete();
+    @Configurable(property = "sql.unit.attribute.remove")
+    String unitAttributeRemove();
 
     @Configurable(property = "sql.attribute.get_all")
     String attributeGetAll();
+
+    @Configurable(property = "sql.attribute.create")
+    String attributeCreate();
+
+    @Configurable(property = "sql.attribute.in_use")
+    String attributeInUse();
 
     @Configurable(property = "sql.lock.delete_all")
     String lockDeleteAll();
