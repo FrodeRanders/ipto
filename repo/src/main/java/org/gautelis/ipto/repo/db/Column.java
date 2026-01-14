@@ -33,12 +33,12 @@ public enum Column {
     UNIT_VERSION_UNITNAME(Table.UNIT_VERSION.getTableAlias(), "unitname", false),
     UNIT_VERSION_MODIFIED(Table.UNIT_VERSION.getTableAlias(), "modified", true),
 
-    // [I]nternal [a]ssociation
-    INTERNAL_ASSOC_TENANTID(Table.INTERNAL_ASSOCIATION.getTableAlias(), "tenantid", false),
-    INTERNAL_ASSOC_UNITID(Table.INTERNAL_ASSOCIATION.getTableAlias(), "unitid", false),
-    INTERNAL_ASSOC_TYPE(Table.INTERNAL_ASSOCIATION.getTableAlias(), "assoctype", false),
-    INTERNAL_ASSOC_TO_TENANTID(Table.INTERNAL_ASSOCIATION.getTableAlias(), "assoctenantid", false),
-    INTERNAL_ASSOC_TO_UNITID(Table.INTERNAL_ASSOCIATION.getTableAlias(), "assocunitid", false),
+    // [I]nternal [r]elation
+    INTERNAL_RELATION_TENANTID(Table.INTERNAL_RELATION.getTableAlias(), "tenantid", false),
+    INTERNAL_RELATION_UNITID(Table.INTERNAL_RELATION.getTableAlias(), "unitid", false),
+    INTERNAL_RELATION_TYPE(Table.INTERNAL_RELATION.getTableAlias(), "reltype", false),
+    INTERNAL_RELATION_TO_TENANTID(Table.INTERNAL_RELATION.getTableAlias(), "reltenantid", false),
+    INTERNAL_RELATION_TO_UNITID(Table.INTERNAL_RELATION.getTableAlias(), "relunitid", false),
 
     // [E]xternal [a]ssociation
     EXTERNAL_ASSOC_TENANTID(Table.EXTERNAL_ASSOCIATION.getTableAlias(), "tenantid", false),

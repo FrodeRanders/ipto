@@ -23,6 +23,24 @@ VALUES (
 )
 ;
 
+--
+-- Root units (tree tops) per tenant.
+--
+INSERT INTO repo_unit_kernel (tenantid, unitid, corrid, status, lastver)
+VALUES (
+  0, 0, '00000000-0000-0000-0000-000000000001', 30, 1
+),(
+  1, 0, '00000000-0000-0000-0000-000000000002', 30, 1
+)
+;
+
+INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname)
+VALUES (
+  0, 0, 1, 'MALLAR'
+),(
+  1, 0, 1, 'SCRATCH'
+)
+;
 
 --
 -- The 'http://purl.org/dc/elements/1.1/' namespace was created in 2000 for the RDF representation
@@ -74,4 +92,3 @@ VALUES (
     'odrs', 'http://schema.theodi.org/odrs#'
 )
 ;
-

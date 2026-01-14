@@ -65,7 +65,9 @@ public class ActionEvent extends EventObject {
 
     public enum Type {
         ACCESSED(10, "accessed"),
+        RELATION_ADDED(19, "related"),
         ASSOCIATION_ADDED(20, "associated"),
+        RELATION_REMOVED(29, "derelated"),
         ASSOCIATION_REMOVED(30, "deassociated"),
         LOCKED(40, "locked"),
         UNLOCKED(50, "unlocked"),

@@ -18,26 +18,27 @@ package org.gautelis.ipto.repo.model;
 
 import org.gautelis.ipto.repo.exceptions.AssociationTypeException;
 
-public enum AssociationType implements Type {
-    CASE_ASSOCIATION(2, /* allows multiples? */ false);
+public enum RelationType implements Type {
+    PARENT_CHILD_RELATION(1, /* allows multiples? */ true),
+    REPLACEMENT_RELATION(3, /* allows multiples? */ false);
 
     private final int type;
 
     // Does this association accept multiple associations/relations?
     private final boolean allowsMultiples;
 
-    AssociationType(int type, boolean allowsMultiples) {
+    RelationType(int type, boolean allowsMultiples) {
         this.type = type;
         this.allowsMultiples = allowsMultiples;
     }
 
-    public static AssociationType of(int type) throws AssociationTypeException {
-        for (AssociationType t : AssociationType.values()) {
+    public static RelationType of(int type) throws AssociationTypeException {
+        for (RelationType t : RelationType.values()) {
             if (t.type == type) {
                 return t;
             }
         }
-        throw new AssociationTypeException("Unknown association type: " + type);
+        throw new AssociationTypeException("Unknown relation type: " + type);
     }
 
     public int getType() {

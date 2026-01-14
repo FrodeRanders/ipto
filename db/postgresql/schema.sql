@@ -472,34 +472,34 @@ CONSTRAINT repo_lock_unit_exists
 ----------------------------------------------------------------
 -- Associations functionality
 --
--- Internal associations describe associations between units
+-- Internal relations describe relations between units
 -- (of various types) in the archive.
 --
 -- External associations describe associations between a unit
 -- and a resource in any external system where the resource is
 -- uniquely identified by a string.
 --
-CREATE TABLE repo_internal_assoc (
-tenantid      INT       NOT NULL,
-unitid        BIGINT    NOT NULL,
-assoctype     INT       NOT NULL,
-assoctenantid INT       NOT NULL,
-assocunitid   BIGINT    NOT NULL,
-created       TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+CREATE TABLE repo_internal_relation (
+tenantid     INT       NOT NULL,
+unitid       BIGINT    NOT NULL,
+reltype      INT       NOT NULL,
+reltenantid  INT       NOT NULL,
+relunitid    BIGINT    NOT NULL,
+created      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-CONSTRAINT repo_internal_assoc_pk
-    PRIMARY KEY (tenantid, unitid, assoctype, assoctenantid, assocunitid),
-CONSTRAINT repo_ia_left_unit_exists
+CONSTRAINT repo_internal_relation_pk
+    PRIMARY KEY (tenantid, unitid, reltype, reltenantid, relunitid),
+CONSTRAINT repo_ir_left_unit_exists
     FOREIGN KEY (tenantid, unitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE,
-CONSTRAINT repo_ia_right_unit_exists
-    FOREIGN KEY (assoctenantid, assocunitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
+CONSTRAINT repo_ir_right_unit_exists
+    FOREIGN KEY (reltenantid, relunitid) REFERENCES repo_unit_kernel (tenantid, unitid) ON DELETE CASCADE
 );
 
-CREATE INDEX repo_iassoc_idx1
-ON repo_internal_assoc (assoctype, assoctenantid, assocunitid);
+CREATE INDEX repo_irelation_idx1
+ON repo_internal_relation (reltype, reltenantid, relunitid);
 
-CREATE INDEX repo_iassoc_idx2
-ON repo_internal_assoc (tenantid, unitid, assoctype);
+CREATE INDEX repo_irelation_idx2
+ON repo_internal_relation (tenantid, unitid, reltype);
 
 CREATE TABLE repo_external_assoc (
 tenantid    INT       NOT NULL,

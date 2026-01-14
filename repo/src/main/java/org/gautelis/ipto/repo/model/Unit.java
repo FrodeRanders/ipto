@@ -20,8 +20,8 @@ import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.*;
 import org.gautelis.ipto.repo.model.associations.Association;
 import org.gautelis.ipto.repo.model.associations.AssociationManager;
-import org.gautelis.ipto.repo.model.associations.ExternalAssociation;
-import org.gautelis.ipto.repo.model.associations.InternalRelation;
+import org.gautelis.ipto.repo.model.relations.Relation;
+import org.gautelis.ipto.repo.model.relations.RelationManager;
 import org.gautelis.ipto.repo.model.attributes.*;
 import org.gautelis.ipto.repo.model.cache.UnitFactory;
 import org.gautelis.ipto.repo.model.locks.Lock;
@@ -308,14 +308,7 @@ public class Unit implements Cloneable {
 
         Collection<String> v = new LinkedList<>();
         for (Association assoc : rightAssocs) {
-            if (assoc.isAssociation()) {
-                ExternalAssociation eassoc = (ExternalAssociation) assoc;
-                v.add(eassoc.getAssocString());
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Unexpected {}", assoc);
-                }
-            }
+            v.add(assoc.getAssocString());
         }
         return v;
     }
@@ -324,26 +317,19 @@ public class Unit implements Cloneable {
      * Returns references to external resources associated with this unit.
      */
     public Collection<Unit> getRelations(
-            AssociationType assocType
+            RelationType relType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        Collection<Association> rightAssocs = TimedExecution.run(ctx.getTimingData(), "get right relations", () ->
-                AssociationManager.getRightAssociations(
-                        ctx, tenantId, unitId, assocType
+        Collection<Relation> rightRelations = TimedExecution.run(ctx.getTimingData(), "get right relations", () ->
+                RelationManager.getRightRelations(
+                        ctx, tenantId, unitId, relType
                 )
         );
 
         Collection<Unit> v = new LinkedList<>();
-        for (Association assoc : rightAssocs) {
-            if (assoc.isRelational()) {
-                InternalRelation relation = (InternalRelation) assoc;
-                Optional<Unit> unit = UnitFactory.resurrectUnit(ctx, relation.getRelationTenantId(), relation.getRelationUnitId());
-                unit.ifPresent(v::add);
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Unexpected {}", assoc);
-                }
-            }
+        for (Relation relation : rightRelations) {
+            Optional<Unit> unit = UnitFactory.resurrectUnit(ctx, relation.getRelationTenantId(), relation.getRelationUnitId());
+            unit.ifPresent(v::add);
         }
         return v;
     }
@@ -610,8 +596,6 @@ public class Unit implements Cloneable {
                         if (AttributeType.RECORD.equals(attribute.getType())) {
                             recordAttributes.add(attribute);
                         }
-
-                        log.debug("Inflated {}", attribute);
                     }
 
                     Iterator<Attribute<?>> rait = recordAttributes.iterator();

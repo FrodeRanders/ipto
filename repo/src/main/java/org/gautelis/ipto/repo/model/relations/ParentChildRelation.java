@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo.model.associations;
+package org.gautelis.ipto.repo.model.relations;
 
 import org.gautelis.ipto.repo.exceptions.AssociationTypeException;
 import org.gautelis.ipto.repo.exceptions.DatabaseConnectionException;
@@ -24,12 +24,12 @@ import org.gautelis.ipto.repo.model.Context;
 
 import java.sql.ResultSet;
 
-import static org.gautelis.ipto.repo.model.AssociationType.PARENT_CHILD_RELATION;
+import static org.gautelis.ipto.repo.model.RelationType.PARENT_CHILD_RELATION;
 
 /**
  *
  */
-class ParentChildRelation extends InternalRelation {
+class ParentChildRelation extends Relation {
 
     ParentChildRelation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
         super(rs);
@@ -44,7 +44,7 @@ class ParentChildRelation extends InternalRelation {
             Context ctx, int tenantId, long unitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        return AssociationManager.countRightAssociations(ctx, tenantId, unitId, PARENT_CHILD_RELATION);
+        return RelationManager.countRightRelations(ctx, tenantId, unitId, PARENT_CHILD_RELATION);
     }
 
     /**
@@ -54,7 +54,7 @@ class ParentChildRelation extends InternalRelation {
             Context ctx, int tenantId, long unitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        return AssociationManager.countLeftAssociations(ctx, PARENT_CHILD_RELATION, tenantId, unitId);
+        return RelationManager.countLeftRelations(ctx, PARENT_CHILD_RELATION, tenantId, unitId);
     }
 
     public int getParentTenantId() {

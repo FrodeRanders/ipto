@@ -171,7 +171,7 @@ public class Statistics {
             /*
              * Number of internal associations
              */
-            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.INTERNAL_ASSOCIATION.getTableName(), rs -> {
+            Database.useReadonlyStatement(dataSource, "SELECT COUNT(*) FROM " + Table.INTERNAL_RELATION.getTableName(), rs -> {
                 if (rs.next()) {
                     buf.append("Assocs: internal=").append(rs.getLong(1)).append(" ");
                 }

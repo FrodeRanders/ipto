@@ -16,10 +16,10 @@
  */
 package org.gautelis.ipto.repo.search.model;
 
-import org.gautelis.ipto.repo.model.AssociationType;
+import org.gautelis.ipto.repo.model.RelationType;
 
 public abstract class RelationSearchItem<T> extends SearchItem<T> {
-    protected RelationSearchItem(AssociationType type, Operator operator) {
+    protected RelationSearchItem(RelationType type, Operator operator) {
         super(type, operator);
     }
 }

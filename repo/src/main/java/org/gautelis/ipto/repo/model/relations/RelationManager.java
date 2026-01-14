@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo.model.associations;
+package org.gautelis.ipto.repo.model.relations;
 
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.AssociationTypeException;
@@ -24,6 +24,7 @@ import org.gautelis.ipto.repo.exceptions.DatabaseWriteException;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AssociationType;
 import org.gautelis.ipto.repo.model.Context;
+import org.gautelis.ipto.repo.model.RelationType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,45 +36,51 @@ import java.util.Collection;
 import java.util.LinkedList;
 
 /* Should be package accessible only */
-public class AssociationManager {
-    private static final Logger log = LoggerFactory.getLogger(AssociationManager.class);
+public class RelationManager {
+    private static final Logger log = LoggerFactory.getLogger(RelationManager.class);
 
     /**
-     * Removes all external associations for specified unit.
+     * Removes all relations for specified unit.
      */
     /* package accessible only */
-    public static void removeAllAssociations(
+    public static void removeAllRelations(
             Context ctx,
             Connection conn,
             int tenantId,
             long unitId
     ) throws DatabaseWriteException {
-        try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().removeAllExternalAssocs())) {
+        try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().removeAllInternalRelations())) {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
+            pStmt.setInt(++i, tenantId); // reltenantid
+            pStmt.setLong(++i, unitId); // relunitid
             Database.executeUpdate(pStmt);
         } catch (SQLException sqle) {
             throw new DatabaseWriteException(sqle);
         }
 
         if (log.isDebugEnabled()) {
-            log.debug("Removed all associations from: {}.{}", tenantId, unitId);
+            log.debug("Removed all relations from/to: {}.{}", tenantId, unitId);
         }
     }
 
-    private static Association resurrectAssociation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
+    private static Relation resurrectRelation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
         try {
-            int _assocType = rs.getInt("assoctype");
-            AssociationType assocType = AssociationType.of(_assocType);
+            int _relType = rs.getInt("reltype");
+            RelationType relType = RelationType.of(_relType);
 
-            return switch (assocType) {
-                case CASE_ASSOCIATION -> {
-                    log.trace("Resurrecting case association from resultset");
-                    yield new CaseAssociation(rs);
+            return switch (relType) {
+                case PARENT_CHILD_RELATION -> {
+                    log.trace("Resurrecting parent-child relation from resultset");
+                    yield new ParentChildRelation(rs);
+                }
+                case REPLACEMENT_RELATION -> {
+                    log.trace("Resurrecting replacement relation from resultset");
+                    yield new ReplacementRelation(rs);
                 }
                 default -> {
-                    log.warn("Can not resurrect association of non-association type {}", assocType);
+                    log.warn("Can not resurrect relation of type {}", relType);
                     yield null;
                 }
             };
@@ -83,47 +90,47 @@ public class AssociationManager {
     }
 
     /* package accessible only */
-    static Association getRightAssociation(
-            Context ctx, int tenantId, long unitId, AssociationType assocType
+    static Relation getRightRelation(
+            Context ctx, int tenantId, long unitId, RelationType relType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        Association[] association = { null };
+        Relation[] relation = { null };
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getAllRightExternalAssocs(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getRightInternalRelation(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
-            pStmt.setInt(++i, assocType.getType());
+            pStmt.setInt(++i, relType.getType());
             try (ResultSet rs = Database.executeQuery(pStmt)) {
                 if (rs.next()) {
-                    association[0] = resurrectAssociation(rs);
+                    relation[0] = resurrectRelation(rs);
                 }
             }
         });
 
-        return association[0];
+        return relation[0];
     }
 
     /**
-     * Gets one (if only one exists) or many (if multiple exists) right associations
+     * Gets one (if only one exists) or many (if multiple exists) right relations
      * of the specified type for the specified unit.
      */
-    public static Collection<Association> getRightAssociations(
-            Context ctx, int tenantId, long unitId, AssociationType assocType
+    public static Collection<Relation> getRightRelations(
+            Context ctx, int tenantId, long unitId, RelationType relType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        Collection<Association> v = new LinkedList<>();
+        Collection<Relation> v = new LinkedList<>();
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getAllRightExternalAssocs(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getAllRightInternalRelations(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
-            pStmt.setInt(++i, assocType.getType());
+            pStmt.setInt(++i, relType.getType());
             try (ResultSet rs = Database.executeQuery(pStmt)) {
                 while (rs.next()) {
-                    Association association = resurrectAssociation(rs);
-                    if (association != null) {
-                        v.add(association);
+                    Relation relation = resurrectRelation(rs);
+                    if (relation != null) {
+                        v.add(relation);
                     }
                 }
             }
@@ -133,17 +140,17 @@ public class AssociationManager {
     }
 
     /* package accessible only */
-    static int countRightAssociations(
-            Context ctx, int tenantId, long unitId, AssociationType assocType
+    static int countRightRelations(
+            Context ctx, int tenantId, long unitId, RelationType relType
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
         int[] count = {0};
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().countRightExternalAssocs(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().countRightInternalRelations(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
-            pStmt.setInt(++i, assocType.getType());
+            pStmt.setInt(++i, relType.getType());
             try (ResultSet rs = Database.executeQuery(pStmt)) {
                 if (rs.next()) {
                     count[0] = rs.getInt(1);
@@ -155,19 +162,21 @@ public class AssociationManager {
     }
 
     /* package accessible only */
-    static int countLeftAssociations(
-            Context ctx, AssociationType assocType, String assocString
+    static int countLeftRelations(
+            Context ctx, RelationType relType, int relTenantId, long relUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
         int[] count = {0};
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().countLeftExternalAssocs(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().countLeftInternalRelations(), pStmt -> {
             int i = 0;
-            pStmt.setInt(++i, assocType.getType());
-            pStmt.setString(++i, assocString);
+            pStmt.setInt(++i, relType.getType());
+            pStmt.setInt(++i, relTenantId);
+            pStmt.setLong(++i, relUnitId);
             try (ResultSet rs = Database.executeQuery(pStmt)) {
-                rs.next();
-                count[0] = rs.getInt(1);
+                if (rs.next()) {
+                    count[0] = rs.getInt(1);
+                }
             }
         });
 
@@ -175,21 +184,22 @@ public class AssociationManager {
     }
 
     /* package accessible only */
-    Collection<Association> getLeftAssociations(
-            Context ctx, AssociationType assocType, String assocString
+    Collection<Relation> getLeftRelations(
+            Context ctx, RelationType relType, int relTenantId, long relUnitId
     ) throws DatabaseConnectionException, DatabaseReadException, InvalidParameterException {
 
-        Collection<Association> v = new LinkedList<>();
+        Collection<Relation> v = new LinkedList<>();
 
-        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getAllLeftExternalAssocs(), pStmt -> {
+        Database.useReadonlyPreparedStatement(ctx.getDataSource(), ctx.getStatements().getAllLeftInternalRelations(), pStmt -> {
             int i = 0;
-            pStmt.setInt(++i, assocType.getType());
-            pStmt.setString(++i, assocString);
+            pStmt.setInt(++i, relType.getType());
+            pStmt.setInt(++i, relTenantId);
+            pStmt.setLong(++i, relUnitId);
             try (ResultSet rs = Database.executeQuery(pStmt)) {
                 while (rs.next()) {
-                    Association association = resurrectAssociation(rs);
-                    if (association != null) {
-                        v.add(association);
+                    Relation relation = resurrectRelation(rs);
+                    if (relation != null) {
+                        v.add(relation);
                     }
                 }
             }

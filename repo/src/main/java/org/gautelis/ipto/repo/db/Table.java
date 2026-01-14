@@ -23,8 +23,8 @@ public enum Table {
     // [U]nit [v]ersion
     UNIT_VERSION("repo_unit_version", "uv"),
 
-    // [I]nternal [a]ssociation
-    INTERNAL_ASSOCIATION("repo_internal_assoc", "ia"),
+    // [I]nternal [r]elation
+    INTERNAL_RELATION("repo_internal_relation", "ir"),
 
     // [E]xternal [a]ssociation
     EXTERNAL_ASSOCIATION("repo_external_assoc", "ea"),

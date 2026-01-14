@@ -20,12 +20,11 @@ import com.fasterxml.uuid.Generators;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.*;
 import org.gautelis.ipto.repo.listeners.ActionListener;
-import org.gautelis.ipto.repo.model.associations.ExternalAssociation;
-import org.gautelis.ipto.repo.model.associations.InternalRelation;
+import org.gautelis.ipto.repo.model.associations.Association;
+import org.gautelis.ipto.repo.model.relations.Relation;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.attributes.AttributeValueRunnable;
 import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
-import org.gautelis.ipto.repo.model.attributes.RecordValue;
 import org.gautelis.ipto.repo.model.cache.UnitFactory;
 import org.gautelis.ipto.repo.model.locks.Lock;
 import org.gautelis.ipto.repo.model.locks.LockType;
@@ -38,14 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.node.ArrayNode;
 
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.time.Instant;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -578,11 +575,11 @@ public class Repository {
     }
 
     /**
-     * Associates a unit with an external resource (reference).
+     * Relates two units.
      * <p>
      */
     public void addRelation(
-            Unit unit, AssociationType assocType, Unit otherUnit
+            Unit unit, RelationType relType, Unit otherUnit
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
 
         if (null == unit) {
@@ -592,19 +589,19 @@ public class Repository {
             throw new InvalidParameterException("no other unit");
         }
 
-        TimedExecution.run(context.getTimingData(), "create relation", () -> InternalRelation.create(
-                context, unit.getTenantId(), unit.getUnitId(), assocType, otherUnit.getTenantId(), otherUnit.getUnitId()
+        TimedExecution.run(context.getTimingData(), "create relation", () -> Relation.create(
+                context, unit.getTenantId(), unit.getUnitId(), relType, otherUnit.getTenantId(), otherUnit.getUnitId()
         ));
 
         generateActionEvent(
                 unit,
-                ActionEvent.Type.ASSOCIATION_ADDED,
-                assocType + " to " + otherUnit.getReference() + " created"
+                ActionEvent.Type.RELATION_ADDED,
+                relType + " to " + otherUnit.getReference() + " created"
         );
     }
 
     /**
-     * Removes an external association (reference) from a unit.
+     * Removes a relation between two units.
      * <p>
      * <I>This method has side effects: If, as a result of calling
      * this method, the internal status of the unit should be
@@ -613,8 +610,6 @@ public class Repository {
      * should be aware of the fact that you may have a <B>modified</B>
      * unit after this call.</I>
      * <p>
-     * Currently only accepts the Association.CASE_ASSOCIATION
-     * association.
      */
     public void removeRelation(
             Unit unit, AssociationType assocType, Unit otherUnit
@@ -627,7 +622,7 @@ public class Repository {
             throw new InvalidParameterException("no other unit");
         }
 
-        TimedExecution.run(context.getTimingData(), "remove relation", () -> InternalRelation.remove(
+        TimedExecution.run(context.getTimingData(), "remove relation", () -> Relation.remove(
                 context, unit.getTenantId(), unit.getUnitId(), assocType, otherUnit.getTenantId(), otherUnit.getUnitId()
         ));
 
@@ -649,7 +644,7 @@ public class Repository {
      * should be aware of the fact that you may have a <B>modified</B>
      * unit after this call.</I>
      * <p>
-     * Currently only accepts the Association.CASE_ASSOCIATION
+     * Currently only accepts AssociationType.CASE_ASSOCIATION
      * association.
      */
     public void addAssociation(
@@ -663,7 +658,7 @@ public class Repository {
             throw new InvalidParameterException("no (external) reference");
         }
 
-        TimedExecution.run(context.getTimingData(), "create assoc", () -> ExternalAssociation.create(
+        TimedExecution.run(context.getTimingData(), "create assoc", () -> Association.create(
                 context, unit.getTenantId(), unit.getUnitId(), assocType, reference
         ));
 
@@ -675,7 +670,7 @@ public class Repository {
     }
 
     /**
-     * Removes an external association (reference) from a unit.
+     * Removes an association (reference) from a unit.
      * <p>
      * <I>This method has side effects: If, as a result of calling
      * this method, the internal status of the unit should be
@@ -695,7 +690,7 @@ public class Repository {
             throw new InvalidParameterException("no (external) reference");
         }
 
-        TimedExecution.run(context.getTimingData(), "remove assoc", () -> ExternalAssociation.remove(
+        TimedExecution.run(context.getTimingData(), "remove assoc", () -> Association.remove(
                 context, unit.getTenantId(), unit.getUnitId(), assocType, reference
         ));
 

@@ -18,13 +18,14 @@ package org.gautelis.ipto.repo.search.model;
 
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AssociationType;
+import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.search.query.LeafExpression;
 
 public class LeftRelationSearchItem extends RelationSearchItem<Unit.Id> {
     private final Unit.Id rightId;
 
-    protected LeftRelationSearchItem(AssociationType type, Operator operator, Unit.Id rightId) {
+    protected LeftRelationSearchItem(RelationType type, Operator operator, Unit.Id rightId) {
         super(type, operator);
         this.rightId = rightId;
     }
@@ -35,7 +36,7 @@ public class LeftRelationSearchItem extends RelationSearchItem<Unit.Id> {
      * <p>
      */
     public static LeafExpression<LeftRelationSearchItem> constrainOnLeftRelationEQ(
-            AssociationType type,
+            RelationType type,
             Unit.Id rightId
     ) throws NumberFormatException, InvalidParameterException {
         return new LeafExpression<>(new LeftRelationSearchItem(type, Operator.EQ, rightId));

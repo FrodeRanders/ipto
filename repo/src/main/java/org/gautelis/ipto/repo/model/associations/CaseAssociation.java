@@ -30,7 +30,7 @@ import static org.gautelis.ipto.repo.model.AssociationType.CASE_ASSOCIATION;
  *
  */
 /* package accessible only */
-final class CaseAssociation extends ExternalAssociation {
+final class CaseAssociation extends Association {
 
     /* package accessible only */
     CaseAssociation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {

@@ -430,7 +430,7 @@ public class GraphQLIT {
 
         String query = """
             query Unit {
-              yrkanden1: yrkanden(filter: {tenantId: %d, expr: "beslutsfattare = \\"%s\\""}) {
+              yrkanden1: yrkanden(filter: {tenantId: %d, where: "beslutsfattare = \\"%s\\""}) {
                 person {
                   ... on FysiskPerson {
                     personnummer
@@ -440,7 +440,7 @@ public class GraphQLIT {
                   }
                 }
               }
-              yrkanden2: yrkanden(filter: {tenantId: %d, expr: "beslutsfattare = \\"%s\\""}) {
+              yrkanden2: yrkanden(filter: {tenantId: %d, where: "beslutsfattare = \\"%s\\""}) {
                 person {
                   ... on FysiskPerson {
                     personnummer
@@ -510,7 +510,7 @@ public class GraphQLIT {
                                 Map.of(
                                         "filter", Map.of(
                                                 "tenantId", 1,
-                                                "expr", expr
+                                                "where", expr
                                         )
                                 )
                         )

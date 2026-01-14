@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo.model.associations;
+package org.gautelis.ipto.repo.model.relations;
 
 import org.gautelis.ipto.repo.exceptions.AssociationTypeException;
 import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
@@ -24,7 +24,7 @@ import java.sql.ResultSet;
 /**
  *
  */
-class ReplacementRelation extends InternalRelation {
+class ReplacementRelation extends Relation {
 
     ReplacementRelation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
         super(rs);

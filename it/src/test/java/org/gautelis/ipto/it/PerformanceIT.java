@@ -20,6 +20,7 @@ import com.fasterxml.uuid.Generators;
 import org.gautelis.ipto.repo.db.Column;
 import org.gautelis.ipto.repo.exceptions.BaseException;
 import org.gautelis.ipto.repo.model.AssociationType;
+import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
@@ -248,8 +249,8 @@ public class PerformanceIT {
     public void test(Repository repo) {
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 100; //
-        final int numberOfChildren = 10; //
+        final int numberOfParents = 10; //
+        final int numberOfChildren = 100; //
 
         try {
             Instant firstParentCreated = null;
@@ -270,6 +271,12 @@ public class PerformanceIT {
 
             RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration
 
+            Unit tree = null;
+            Optional<Unit> _tree = repo.getUnit(tenantId, 0);
+            if (_tree.isPresent()) {
+                tree = _tree.get();
+            }
+
             for (int j = 1; j < numberOfParents + 1; j++) {
                 Instant startTime = Instant.now();
 
@@ -281,6 +288,10 @@ public class PerformanceIT {
                 });
                 parentUnit.withAttributeValue("dcterms:description", String.class, value -> value.add("A test unit"));
                 repo.storeUnit(parentUnit);
+
+                if (null != tree) {
+                    repo.addRelation(parentUnit, RelationType.PARENT_CHILD_RELATION, tree);
+                }
 
                 averageTPI.addSample(startTime, /* endTime */ Instant.now());
 
@@ -358,18 +369,17 @@ public class PerformanceIT {
                     repo.storeUnit(childUnit);
                     averageTPI.addSample(startTime, /* endTime */ Instant.now());
 
-                    if (false) {
+                    if (true) {
                         // Works, but not part of test (at the moment)
                         // Add a relation to parent unit
-                        repo.addRelation(parentUnit, AssociationType.PARENT_CHILD_RELATION, childUnit);
+                        repo.addRelation(childUnit, RelationType.PARENT_CHILD_RELATION, parentUnit);
                     }
-
                 }
                 System.out.flush();
 
                 if (false) {
                     System.out.println("Children of " + parentUnit.getName().orElse("parent") + " (" + parentUnit.getReference() + "):");
-                    parentUnit.getRelations(AssociationType.PARENT_CHILD_RELATION).forEach(
+                    parentUnit.getRelations(RelationType.PARENT_CHILD_RELATION).forEach(
                             relatedUnit -> System.out.println("  " + relatedUnit.getName().orElse("child") + " (" + relatedUnit.getReference() + ")")
                     );
                 }

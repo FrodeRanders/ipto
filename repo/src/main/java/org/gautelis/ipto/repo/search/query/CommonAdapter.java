@@ -18,6 +18,7 @@ package org.gautelis.ipto.repo.search.query;
 
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
+import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.utils.TimedExecution;
 import org.gautelis.ipto.repo.model.utils.TimingData;
 import org.gautelis.ipto.repo.search.UnitSearch;
@@ -136,7 +137,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
             case LeafExpression<?> leaf -> {
                 if (leaf.getItem() instanceof UnitSearchItem) {
                     unitLeaves.add(leaf);
-                } else if (leaf.getItem() instanceof AttributeSearchItem<?>) {
+                } else {
                     attributeLeaves.add(leaf);
                     String label = "c" + attributeLeaves.size();
                     leaf.setLabel(label);
@@ -170,7 +171,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
         switch (expression) {
             case LeafExpression<?> leaf -> {
-                if (leaf.getItem() instanceof AttributeSearchItem<?>) {
+                if (!(leaf.getItem() instanceof UnitSearchItem<?>)) {
                     Optional<String> label = leaf.getLabel();
                     if (label.isPresent()) {
                         return Optional.of("(SELECT " + UNIT_VERSION_TENANTID.plain() + ", " + UNIT_VERSION_UNITID.plain() + " FROM " + label.get() + ")");
@@ -227,7 +228,7 @@ public abstract class CommonAdapter extends DatabaseAdapter {
 
         switch (expression) {
             case LeafExpression<?> leaf -> {
-                if (leaf.getItem() instanceof AttributeSearchItem<?>) {
+                if (!(leaf.getItem() instanceof UnitSearchItem<?>)) {
                     String label = leaf.getLabel().orElseThrow(() ->
                             new IllegalArgumentException("Leaf expression must have a label"));
 
@@ -342,8 +343,8 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         Objects.requireNonNull(preparedItems, "preparedItems");
 
         SearchItem<?> item = leaf.getItem();
-        if (item instanceof AttributeSearchItem<?> asi) {
-            preparedItems.add(asi);
+        if (!(item instanceof UnitSearchItem<?>)) {
+            preparedItems.add(item);
             constraints.add(leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId));
         }
     }
@@ -367,16 +368,14 @@ public abstract class CommonAdapter extends DatabaseAdapter {
         Collection<String> attributeConstraints = new LinkedList<>();
         for (LeafExpression<?> leaf : attributeLeaves) {
             SearchItem<?> item = leaf.getItem();
-            if (item instanceof AttributeSearchItem<?> asi) {
-                preparedAttributeItems.add(asi);
-                String cteSql = leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId);
-                attributeConstraints.add(cteSql);
+            preparedAttributeItems.add(item);
+            String cteSql = leaf.toSql(strategy, USE_PREPARED_STATEMENT, commonConstraintValues, attributeNameToId);
+            attributeConstraints.add(cteSql);
 
-                // Keep a map label -> cteSql
-                String label = leaf.getLabel().orElseThrow(() ->
-                        new IllegalArgumentException("Attribute leaf must have a label"));
-                attributeLeafSqlByLabel.put(label, cteSql);
-            }
+            // Keep a map label -> cteSql
+            String label = leaf.getLabel().orElseThrow(() ->
+                    new IllegalArgumentException("Attribute leaf must have a label"));
+            attributeLeafSqlByLabel.put(label, cteSql);
         }
 
         // Unit constraints
@@ -547,6 +546,21 @@ public abstract class CommonAdapter extends DatabaseAdapter {
                         int i = 0;
                         for (SearchItem<?> item : preparedItems) {
                             //log.trace("Prepared item: {}", item);
+                            if (item instanceof RelationSearchItem<?> rel) {
+                                Unit.Id unitId = (Unit.Id) rel.getValue();
+                                pStmt.setInt(++i, unitId.tenantId());
+                                pStmt.setLong(++i, unitId.unitId());
+                                continue;
+                            }
+                            if (item instanceof AssociationSearchItem<?> assoc) {
+                                String assocString = (String) assoc.getValue();
+                                if (null != assocString) {
+                                    pStmt.setString(++i, assocString);
+                                } else {
+                                    pStmt.setNull(++i, java.sql.Types.VARCHAR);
+                                }
+                                continue;
+                            }
                             if (item instanceof AttributeSearchItem<?>) {
                                 if (ccv.containsKey(UNIT_KERNEL_TENANTID.toString())) {
                                     int tenantId = (Integer) ccv.get(UNIT_KERNEL_TENANTID.toString()).getValue();

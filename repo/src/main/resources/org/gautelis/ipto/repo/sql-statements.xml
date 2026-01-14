@@ -173,11 +173,11 @@
     </entry>
 
     <!--
-      Count all internal left associations for specified unit.
-      Call with: (assocType, assocTenantId, assocUnitId)
+      Count all internal left relations for specified unit.
+      Call with: (relType, relTenantId, relUnitId)
     -->
-    <entry key="sql.assoc.count_left_internal_assocs">
-        SELECT COUNT(*) FROM repo_internal_assoc WHERE assoctype=? AND assoctenantid=? AND assocunitid=?
+    <entry key="sql.relation.count_left_internal_relations">
+        SELECT COUNT(*) FROM repo_internal_relation WHERE reltype=? AND reltenantid=? AND relunitid=?
     </entry>
 
     <!--
@@ -189,11 +189,11 @@
     </entry>
 
     <!--
-      Count all internal right associations for specified unit.
-      Call with: (tenantId, unitId, assocType)
+      Count all internal right relations for specified unit.
+      Call with: (tenantId, unitId, relType)
     -->
-    <entry key="sql.assoc.count_right_internal_assocs">
-        SELECT COUNT(*) FROM repo_internal_assoc WHERE tenantid=? AND unitid=? and assoctype=?
+    <entry key="sql.relation.count_right_internal_relations">
+        SELECT COUNT(*) FROM repo_internal_relation WHERE tenantid=? AND unitid=? and reltype=?
     </entry>
 
     <!--
@@ -205,11 +205,11 @@
     </entry>
 
     <!--
-      Get all left internal associations.
-      Call with: (assocType, assocTenantId, assocUnitId)
+      Get all left internal relations.
+      Call with: (relType, relTenantId, relUnitId)
     -->
-    <entry key="sql.assoc.get_all_left_internal_assocs">
-        SELECT tenantid, unitid, assoctype, assoctenantid, assocunitid FROM repo_internal_assoc WHERE assoctype=? AND assoctenantid=? AND assocunitid=?
+    <entry key="sql.relation.get_all_left_internal_relations">
+        SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo_internal_relation WHERE reltype=? AND reltenantid=? AND relunitid=?
     </entry>
 
     <!--
@@ -221,11 +221,11 @@
     </entry>
 
     <!--
-      Get all right internal associations.
-      Call with: (tenantId, unitId, assocType)
+      Get all right internal relations.
+      Call with: (tenantId, unitId, relType)
     -->
-    <entry key="sql.assoc.get_all_right_internal_assocs">
-        SELECT tenantid, unitid, assoctype, assoctenantid, assocunitid FROM repo_internal_assoc WHERE tenantid=? AND unitid=? AND assoctype=?
+    <entry key="sql.relation.get_all_right_internal_relations">
+        SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo_internal_relation WHERE tenantid=? AND unitid=? AND reltype=?
     </entry>
 
     <!--
@@ -237,11 +237,11 @@
     </entry>
 
     <!--
-      Get right internal association.
-      Call with: (tenantId, unitId, assocType)
+      Get right internal relation.
+      Call with: (tenantId, unitId, relType)
     -->
-    <entry key="sql.assoc.get_right_internal_assoc">
-        SELECT tenantid, unitid, assoctype, assoctenantid, assocunitid FROM repo_internal_assoc WHERE tenantid=? AND unitid=? AND assoctype=?
+    <entry key="sql.relation.get_right_internal_relation">
+        SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo_internal_relation WHERE tenantid=? AND unitid=? AND reltype=?
     </entry>
 
     <!--
@@ -253,11 +253,11 @@
     </entry>
 
     <!--
-      Remove all internal associations for specified unit.
-      Call with: (tenantId, unitId, assocTenantId, assocUnitId)
+      Remove all internal relations for specified unit.
+      Call with: (tenantId, unitId, relTenantId, relUnitId)
     -->
-    <entry key="sql.assoc.remove_all_internal_assocs">
-        DELETE FROM repo_internal_assoc WHERE (tenantid=? AND unitid=?) OR (assoctenantid=? AND assocunitid=?)
+    <entry key="sql.relation.remove_all_internal_relations">
+        DELETE FROM repo_internal_relation WHERE (tenantid=? AND unitid=?) OR (reltenantid=? AND relunitid=?)
     </entry>
 
     <!--
@@ -269,11 +269,11 @@
     </entry>
 
     <!--
-      Remove all right internal associations for specified unit.
-      Call with: (tenantId, unitId, assocType)
+      Remove all right internal relation for specified unit.
+      Call with: (tenantId, unitId, relType)
     -->
-    <entry key="sql.assoc.remove_all_right_internal_assocs">
-        DELETE FROM repo_internal_assoc WHERE tenantid=? AND unitid=? AND assoctype=?
+    <entry key="sql.relation.remove_all_right_internal_relations">
+        DELETE FROM repo_internal_relation WHERE tenantid=? AND unitid=? AND reltype=?
     </entry>
 
     <!--
@@ -285,11 +285,11 @@
     </entry>
 
     <!--
-      Remove specific internal association.
-      Call with: (tenantId, unitId, assocType, assocTenantId, assocUnitId)
+      Remove specific internal relation.
+      Call with: (tenantId, unitId, relType, relTenantId, relUnitId)
     -->
-    <entry key="sql.assoc.remove_specific_internal_assoc">
-        DELETE FROM repo_internal_assoc WHERE tenantid=? AND unitid=? AND assoctype=? AND assoctenantid=? AND assocunitid=?
+    <entry key="sql.relation.remove_specific_internal_relation">
+        DELETE FROM repo_internal_relation WHERE tenantid=? AND unitid=? AND reltype=? AND reltenantid=? AND relunitid=?
     </entry>
 
     <!--
@@ -301,11 +301,11 @@
     </entry>
 
     <!--
-      Store internal association.
-      Call with: (tenantId, unitId, assocType, assocTenantId, assocUnitId)
+      Store internal relation.
+      Call with: (tenantId, unitId, relType, relTenantId, relUnitId)
     -->
-    <entry key="sql.assoc.store_internal_assoc">
-        INSERT INTO repo_internal_assoc (tenantid, unitid, assoctype, assoctenantid, assocunitid) VALUES (?, ?, ?, ?, ?)
+    <entry key="sql.relation.store_internal_relation">
+        INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES (?, ?, ?, ?, ?)
     </entry>
 </properties>
 

@@ -18,15 +18,14 @@ package org.gautelis.ipto.repo.search.model;
 
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AssociationType;
-import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.search.query.LeafExpression;
 
-public class LeftAssociationSearchItem extends AssociationSearchItem<Unit.Id> {
-    private final Unit.Id id;
+public class LeftAssociationSearchItem extends AssociationSearchItem<String> {
+    private final String assocString;
 
-    protected LeftAssociationSearchItem(AssociationType type, Operator operator, Unit.Id id) {
+    protected LeftAssociationSearchItem(AssociationType type, Operator operator, String assocString) {
         super(type, operator);
-        this.id = id;
+        this.assocString = assocString;
     }
 
     /**
@@ -35,21 +34,21 @@ public class LeftAssociationSearchItem extends AssociationSearchItem<Unit.Id> {
      */
     public static LeafExpression<LeftAssociationSearchItem> constrainOnLeftAssociation(
             AssociationType type,
-            Unit.Id id
+            String assocString
     ) throws NumberFormatException, InvalidParameterException {
-        return new LeafExpression<>(new LeftAssociationSearchItem(type, Operator.EQ, id));
+        return new LeafExpression<>(new LeftAssociationSearchItem(type, Operator.EQ, assocString));
     }
 
     @Override
-    public Unit.Id getValue() {
-        return id;
+    public String getValue() {
+        return assocString;
     }
 
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder("LeftAssociationSearchItem{");
         buf.append(super.toString());
-        buf.append(", id='").append(id).append("'");
+        buf.append(", assoc='").append(assocString).append("'");
         buf.append("}");
         return buf.toString();
     }

@@ -19,7 +19,6 @@ package org.gautelis.ipto.graphql.runtime;
 import com.fasterxml.uuid.Generators;
 import com.networknt.schema.*;
 import graphql.schema.idl.RuntimeWiring;
-import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.model.CatalogAttribute;
 import org.gautelis.ipto.graphql.model.Query;
@@ -30,7 +29,6 @@ import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
-import org.gautelis.ipto.repo.search.query.SearchExpressionQueryParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
@@ -39,7 +37,6 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -576,102 +573,16 @@ public class RuntimeService {
         SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
         expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
-        if (filter.text() != null && !filter.text().isBlank()) {
+        if (filter.where() != null && !filter.where().isBlank()) {
             SearchExpression textExpr = SearchExpressionQueryParser.parse(
-                    filter.text(),
+                    filter.where(),
                     this::resolveAttribute,
                     SearchExpressionQueryParser.AttributeNameMode.NAMES_OR_ALIASES
             );
             return new AndExpression(expr, textExpr);
         }
 
-        if (filter.where() == null) {
-            throw new InvalidParameterException("Filter.where is mandatory unless Filter.text is provided.");
-        }
-
-        // attribute constraints
-        return new AndExpression(expr, assembleConstraints(filter.where()));
-    }
-
-    private SearchExpression assembleConstraints(
-            Query.Node node
-    ) {
-        Query.AttributeExpression attrExpr = node.attrExpr();
-        Query.TreeExpression treeExpr = node.treeExpr();
-
-        if (null != treeExpr && null == attrExpr) {
-            return assembleTreeConstraints(treeExpr);
-        }
-        else if (null != attrExpr && null == treeExpr) {
-            return assembleAttributeConstraints(attrExpr);
-        }
-        else {
-            throw new InvalidParameterException("Either Node.attrExpr or Node.treeExpr must be null, but not both.");
-        }
-    }
-
-    private SearchExpression assembleTreeConstraints(
-            Query.TreeExpression treeExpr
-    ) {
-        Query.Logical op = treeExpr.op();
-        Query.Node left = treeExpr.left();
-        Query.Node right = treeExpr.right();
-
-        if (Objects.requireNonNull(op) == Query.Logical.AND)
-            return QueryBuilder.assembleAnd(assembleConstraints(left), assembleConstraints(right));
-        else // Logical.OR
-            return QueryBuilder.assembleOr(assembleConstraints(left), assembleConstraints(right));
-
-    }
-
-    private LeafExpression<?> assembleAttributeConstraints(
-            Query.AttributeExpression attrExpr
-    ) {
-        String attrName = attrExpr.attr();
-        Query.FilterOperator op = attrExpr.op();
-        String value = attrExpr.value();
-
-        //---------------------------------------------------------------------
-        // OBSERVE
-        //    We are assuming that the field names used in the SDL equals the
-        //    attribute aliases used.
-        //---------------------------------------------------------------------
-        CatalogAttribute catalogAttribute = allAttributesByAlias.get(attrName);
-        if (null == catalogAttribute) {
-            throw new InvalidParameterException("Unknown attribute " + attrName);
-        }
-
-        AttributeType attrType = catalogAttribute.attrType();
-        switch (attrType) {
-            case STRING -> {
-                if (Objects.requireNonNull(op) == Query.FilterOperator.EQ) {
-                    value = value.replace('*', '%');
-                    boolean useLIKE = value.indexOf('%') >= 0 || value.indexOf('_') >= 0;  // Uses wildcard
-                    if (useLIKE) {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.LIKE, value));
-                    } else {
-                        return new LeafExpression<>(new StringAttributeSearchItem(attrName, Operator.EQ, value));
-                    }
-                }
-                return new LeafExpression<>(new StringAttributeSearchItem(attrName, op.iptoOp(), value));
-            }
-            case TIME -> {
-                return new LeafExpression<>(new TimeAttributeSearchItem(attrName, op.iptoOp(), Instant.parse(value)));
-            }
-            case INTEGER -> {
-                return new LeafExpression<>(new IntegerAttributeSearchItem(attrName, op.iptoOp(), Integer.parseInt(value)));
-            }
-            case LONG -> {
-                return new LeafExpression<>(new LongAttributeSearchItem(attrName, op.iptoOp(), Long.parseLong(value)));
-            }
-            case DOUBLE -> {
-                return new LeafExpression<>(new DoubleAttributeSearchItem(attrName, op.iptoOp(), Double.parseDouble(value)));
-            }
-            case BOOLEAN -> {
-                return new LeafExpression<>(new BooleanAttributeSearchItem(attrName, op.iptoOp(), Boolean.parseBoolean(value)));
-            }
-            default -> throw new InvalidParameterException("Attribute type " + attrType.name() + " is not searchable: " + attrName);
-        }
+        return expr;
     }
 
     private Optional<SearchExpressionQueryParser.ResolvedAttribute> resolveAttribute(String name) {

@@ -14,13 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.repo.model.associations;
+package org.gautelis.ipto.repo.model.relations;
 
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.*;
 import org.gautelis.ipto.repo.model.AssociationType;
 import org.gautelis.ipto.repo.model.Context;
+import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Unit;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -31,32 +34,35 @@ import java.sql.SQLException;
  * This is any kind of relation between a unit and another unit.
  * <p>
  * The single/multiple relation integrity is maintained
- * internally in AssociationManager.
+ * internally in RelationManager.
  */
-public class InternalRelation extends Association {
+public class Relation {
+    private static final Logger log = LoggerFactory.getLogger(Relation.class);
+
+    private final int tenantId;
+    private final long unitId;
+    private final RelationType type;
 
     private final int relationTenantId;
     private final long relationUnitId;
 
     // Used when resurrecting association
     /* package accessible only */
-    InternalRelation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
+    Relation(ResultSet rs) throws DatabaseReadException, AssociationTypeException {
         try {
-            int tenantId = rs.getInt("tenantid");
-            long unitId = rs.getLong("unitid");
-            int _relationType = rs.getInt("assoctype");
-            AssociationType relationType = AssociationType.of(_relationType);
-            relationTenantId = rs.getInt("assoctenantid");
-            relationUnitId = rs.getLong("assocunitid");
-
-            inject(tenantId, unitId, relationType);
+            tenantId = rs.getInt("tenantid");
+            unitId = rs.getLong("unitid");
+            int _relationType = rs.getInt("reltype");
+            type = RelationType.of(_relationType);
+            relationTenantId = rs.getInt("reltenantid");
+            relationUnitId = rs.getLong("relunitid");
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
         }
     }
 
     /**
-     * Creates an internal association, i.e. associations among units.
+     * Creates a relation between units.
      *
      * @throws InvalidParameterException
      */
@@ -65,21 +71,10 @@ public class InternalRelation extends Association {
             Context ctx,
             int tenantId,
             long unitId,
-            AssociationType relationType,
+            RelationType relationType,
             int relationTenantId,
             long relationUnitId
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException, ConfigurationException {
-
-        // Checking bounds against isRelationMap implicitly checks bounds
-        // against allowMultipleMap since they are equilength (or definitely
-        // should be)
-        if (AssociationType.UNKNOWN == relationType) {
-            throw new InvalidParameterException("Unknown relation type");
-        }
-
-        if (!relationType.isRelational()) {
-            throw new InvalidParameterException("Invalid relation type " + relationType + "(" + relationType.getType() + "); this type of association is external.");
-        }
 
         try (Connection conn = ctx.getDataSource().getConnection()) {
             conn.setReadOnly(false);
@@ -90,7 +85,7 @@ public class InternalRelation extends Association {
                 // associations of this type.
                 if (!relationType.allowsMultiples()) {
                     // There can be only one...
-                    try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().assocRemoveAllRightInternalAssocs())) {
+                    try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().removeAllRightInternalRelations())) {
                         int i = 0;
                         pStmt.setInt(++i, tenantId);
                         pStmt.setLong(++i, unitId);
@@ -100,7 +95,7 @@ public class InternalRelation extends Association {
                 }
 
                 // Insert association
-                try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().assocStoreInternalAssoc())) {
+                try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().storeInternalRelation())) {
                     int i = 0;
                     pStmt.setInt(++i, tenantId);
                     pStmt.setLong(++i, unitId);
@@ -111,15 +106,16 @@ public class InternalRelation extends Association {
                 }
                 conn.commit();
 
-                if (log.isTraceEnabled())
-                    log.trace("Created {} from {} to {}",
+                if (log.isTraceEnabled()) {
+                    log.trace("Created relation {} from {} to {}",
                             relationType, Unit.id2String(tenantId, unitId), Unit.id2String(relationTenantId, relationUnitId));
+                }
 
             } catch (SQLException sqle) {
                 // Were we violating the integrity constraint? (23000)
                 if (sqle.getSQLState() != null && sqle.getSQLState().startsWith("23")) {
-                    // Association already exists - ignore
-                    log.debug("{} already exists from {}", relationType, Unit.id2String(tenantId, unitId));
+                    // Relation already exists - ignore
+                    log.debug("Relation {} already exists from {}", relationType, Unit.id2String(tenantId, unitId));
 
                 } else {
                     conn.rollback();
@@ -136,7 +132,7 @@ public class InternalRelation extends Association {
 
 
     /**
-     * Removes a specific internal association.
+     * Removes a specific relation.
      * <p>
      * If multiple associations are allowed, the remaining associations
      * are left intact.
@@ -153,15 +149,7 @@ public class InternalRelation extends Association {
             long relationUnitId
     ) throws DatabaseConnectionException, DatabaseWriteException, InvalidParameterException {
 
-        if (relationType == AssociationType.UNKNOWN) {
-            throw new InvalidParameterException("Unknown relation type");
-        }
-
-        if (!relationType.isRelational()) {
-            throw new InvalidParameterException("Invalid relation type " + relationType + "(" + relationType.getType() + "); this type of association is external.");
-        }
-
-        Database.usePreparedStatement(ctx.getDataSource(), ctx.getStatements().assocRemoveSpecificInternalAssoc(), pStmt -> {
+        Database.usePreparedStatement(ctx.getDataSource(), ctx.getStatements().removeSpecificInternalRelation(), pStmt -> {
             int i = 0;
             pStmt.setInt(++i, tenantId);
             pStmt.setLong(++i, unitId);
@@ -170,8 +158,9 @@ public class InternalRelation extends Association {
             pStmt.setLong(++i, relationUnitId);
             Database.executeUpdate(pStmt);
 
-            if (log.isTraceEnabled())
-                log.trace("Removed {} from {}", relationType, Unit.id2String(tenantId, unitId));
+            if (log.isTraceEnabled()) {
+                log.trace("Removed relation {} from {}", relationType, Unit.id2String(tenantId, unitId));
+            }
         });
     }
 
@@ -183,6 +172,18 @@ public class InternalRelation extends Association {
         return relationUnitId;
     }
 
+    public RelationType getType() {
+        return type;
+    }
+
+    public int getTenantId() {
+        return tenantId;
+    }
+
+    public long getUnitId() {
+        return unitId;
+    }
+
     public String toString() {
         return getType()
                 + " (" + getType().getType() + ") "
@@ -190,7 +191,3 @@ public class InternalRelation extends Association {
                 + " to " + Unit.id2String(relationTenantId, relationUnitId);
     }
 }
-
-
-
-

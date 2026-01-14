@@ -74,56 +74,56 @@ public interface Statements {
     String logDeleteEntries();
 
     @Configurable(property = "sql.assoc.count_left_external_assocs")
-    String assocCountLeftExternalAssocs();
+    String countLeftExternalAssocs();
 
-    @Configurable(property = "sql.assoc.count_left_internal_assocs")
-    String assocCountLeftInternalAssocs();
+    @Configurable(property = "sql.relation.count_left_internal_relations")
+    String countLeftInternalRelations();
 
     @Configurable(property = "sql.assoc.count_right_external_assocs")
-    String assocCountRightExternalAssocs();
+    String countRightExternalAssocs();
 
-    @Configurable(property = "sql.assoc.count_right_internal_assocs")
-    String assocCountRightInternalAssocs();
+    @Configurable(property = "sql.relation.count_right_internal_relations")
+    String countRightInternalRelations();
 
     @Configurable(property = "sql.assoc.get_all_left_external_assocs")
-    String assocGetAllLeftExternalAssocs();
+    String getAllLeftExternalAssocs();
 
-    @Configurable(property = "sql.assoc.get_all_left_internal_assocs")
-    String assocGetAllLeftInternalAssocs();
+    @Configurable(property = "sql.relation.get_all_left_internal_relations")
+    String getAllLeftInternalRelations();
 
     @Configurable(property = "sql.assoc.get_all_right_external_assocs")
-    String assocGetAllRightExternalAssocs();
+    String getAllRightExternalAssocs();
 
-    @Configurable(property = "sql.assoc.get_all_right_internal_assocs")
-    String assocGetAllRightInternalAssocs();
+    @Configurable(property = "sql.relation.get_all_right_internal_relations")
+    String getAllRightInternalRelations();
 
     @Configurable(property = "sql.assoc.get_all_specific_external_assocs")
-    String assocGetAllSpecificExternalAssocs();
+    String getAllSpecificExternalAssocs();
 
-    @Configurable(property = "sql.assoc.get_right_internal_assoc")
-    String assocGetRightInternalAssoc();
+    @Configurable(property = "sql.relation.get_right_internal_relation")
+    String getRightInternalRelation();
 
     @Configurable(property = "sql.assoc.remove_all_external_assocs")
-    String assocRemoveAllExternalAssocs();
+    String removeAllExternalAssocs();
 
-    @Configurable(property = "sql.assoc.remove_all_internal_assocs")
-    String assocRemoveAllInternalAssocs();
+    @Configurable(property = "sql.relation.remove_all_internal_relations")
+    String removeAllInternalRelations();
 
     @Configurable(property = "sql.assoc.remove_all_right_external_assocs")
-    String assocRemoveAllRightExternalAssocs();
+    String removeAllRightExternalAssocs();
 
-    @Configurable(property = "sql.assoc.remove_all_right_internal_assocs")
-    String assocRemoveAllRightInternalAssocs();
+    @Configurable(property = "sql.relation.remove_all_right_internal_relations")
+    String removeAllRightInternalRelations();
 
     @Configurable(property = "sql.assoc.remove_specific_external_assoc")
-    String assocRemoveSpecificExternalAssoc();
+    String removeSpecificExternalAssoc();
 
-    @Configurable(property = "sql.assoc.remove_specific_internal_assoc")
-    String assocRemoveSpecificInternalAssoc();
+    @Configurable(property = "sql.relation.remove_specific_internal_relation")
+    String removeSpecificInternalRelation();
 
     @Configurable(property = "sql.assoc.store_external_assoc")
-    String assocStoreExternalAssoc();
+    String storeExternalAssoc();
 
-    @Configurable(property = "sql.assoc.store_internal_assoc")
-    String assocStoreInternalAssoc();
+    @Configurable(property = "sql.relation.store_internal_relation")
+    String storeInternalRelation();
 }
