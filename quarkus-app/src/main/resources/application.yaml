@@ -1,16 +1,23 @@
 quarkus:
+  http:
+    cors:
+      enabled: true
+      origins: "http://localhost:5173"
+      headers: "accept,authorization,content-type,x-requested-with"
+      methods: "GET,POST,OPTIONS"
   log:
     # Root level (applies unless overridden by category)
     level: INFO
 
     console:
-      enabled: false
+      enable: false
       level: TRACE
 
     file:
-      enabled: true
+      enable: true
       path: logs/app.log
       level: TRACE
+      format: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%c{2.}] (%t) %s%e%n"
 
     category:
       "org.gautelis":
