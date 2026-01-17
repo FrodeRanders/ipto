@@ -15,6 +15,9 @@ npm install
 npm run dev
 ```
 
+## Dependency note
+- `cookie` is overridden to `^0.7.0` in `package.json` to address a security advisory while `@sveltejs/kit` still declares `^0.6.0`.
+
 ## Production packaging (Quarkus static)
 This app can be built into the Quarkus static resources folder so it is served by the same HTTP server as the REST API.
 
