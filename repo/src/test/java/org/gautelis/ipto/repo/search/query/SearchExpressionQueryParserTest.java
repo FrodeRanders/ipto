@@ -17,9 +17,17 @@
 package org.gautelis.ipto.repo.search.query;
 
 import org.gautelis.ipto.repo.model.AttributeType;
+import org.gautelis.ipto.repo.model.AssociationType;
+import org.gautelis.ipto.repo.model.RelationType;
+import org.gautelis.ipto.repo.model.Unit;
+import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.search.model.AttributeSearchItem;
 import org.gautelis.ipto.repo.search.model.IntegerUnitSearchItem;
+import org.gautelis.ipto.repo.search.model.LeftAssociationSearchItem;
+import org.gautelis.ipto.repo.search.model.LeftRelationSearchItem;
 import org.gautelis.ipto.repo.search.model.Operator;
+import org.gautelis.ipto.repo.search.model.RightAssociationSearchItem;
+import org.gautelis.ipto.repo.search.model.RightRelationSearchItem;
 import org.gautelis.ipto.repo.search.model.StringAttributeSearchItem;
 import org.gautelis.ipto.repo.search.model.UnitSearchItem;
 import org.junit.jupiter.api.Test;
@@ -28,6 +36,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class SearchExpressionQueryParserTest {
 
@@ -65,5 +74,124 @@ class SearchExpressionQueryParserTest {
         UnitSearchItem<?> unitItem = assertInstanceOf(UnitSearchItem.class, leaf.getItem());
         assertEquals(Operator.LIKE, unitItem.getOperator());
         assertEquals("Case%", unitItem.getValue());
+    }
+
+    @Test
+    void parseLeftRelationConstraintWithUnitRef() {
+        SearchExpression expr = SearchExpressionQueryParser.parse(
+                "relation:left:parent-child = 1.2",
+                name -> Optional.empty()
+        );
+
+        LeafExpression<?> leaf = assertInstanceOf(LeafExpression.class, expr);
+        LeftRelationSearchItem item = assertInstanceOf(LeftRelationSearchItem.class, leaf.getItem());
+        Unit.Id ref = item.getValue();
+        assertEquals(RelationType.PARENT_CHILD_RELATION, item.getType());
+        assertEquals(1, ref.tenantId());
+        assertEquals(2L, ref.unitId());
+    }
+
+    @Test
+    void parseRightRelationConstraintWithVersionedUnitRef() {
+        SearchExpression expr = SearchExpressionQueryParser.parse(
+                "relation:right:replacement = \"7.42:3\"",
+                name -> Optional.empty()
+        );
+
+        LeafExpression<?> leaf = assertInstanceOf(LeafExpression.class, expr);
+        RightRelationSearchItem item = assertInstanceOf(RightRelationSearchItem.class, leaf.getItem());
+        Unit.Id ref = item.getValue();
+        assertEquals(RelationType.REPLACEMENT_RELATION, item.getType());
+        assertEquals(7, ref.tenantId());
+        assertEquals(42L, ref.unitId());
+    }
+
+    @Test
+    void parseLeftAssociationConstraint() {
+        SearchExpression expr = SearchExpressionQueryParser.parse(
+                "association:left:case = \"case-123\"",
+                name -> Optional.empty()
+        );
+
+        LeafExpression<?> leaf = assertInstanceOf(LeafExpression.class, expr);
+        LeftAssociationSearchItem item = assertInstanceOf(LeftAssociationSearchItem.class, leaf.getItem());
+        assertEquals(AssociationType.CASE_ASSOCIATION, item.getType());
+        assertEquals("case-123", item.getValue());
+    }
+
+    @Test
+    void parseRightAssociationConstraint() {
+        SearchExpression expr = SearchExpressionQueryParser.parse(
+                "association:right:case = \"case-999\"",
+                name -> Optional.empty()
+        );
+
+        LeafExpression<?> leaf = assertInstanceOf(LeafExpression.class, expr);
+        RightAssociationSearchItem item = assertInstanceOf(RightAssociationSearchItem.class, leaf.getItem());
+        assertEquals(AssociationType.CASE_ASSOCIATION, item.getType());
+        assertEquals("case-999", item.getValue());
+    }
+
+    @Test
+    void parseRelationConstraintRequiresEq() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "relation:left:parent-child != 1.2",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseRelationConstraintRejectsUnknownType() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "relation:left:unknown = 1.2",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseRelationConstraintRejectsInvalidUnitRef() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "relation:left:parent-child = \"bad.ref\"",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseRelationConstraintRejectsConflictingSide() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "relation-left:right:parent-child = 1.2",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseAssociationConstraintRequiresEq() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "association:left:case != \"case-1\"",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseAssociationConstraintRejectsUnknownType() {
+        assertThrows(InvalidParameterException.class, () -> SearchExpressionQueryParser.parse(
+                "association:right:unknown = \"case-2\"",
+                name -> Optional.empty()
+        ));
+    }
+
+    @Test
+    void parseRelationConstraintSupportsPrefixSideSyntax() {
+        SearchExpression expr = SearchExpressionQueryParser.parse(
+                "relation-right:parent-child = 2.10",
+                name -> Optional.empty()
+        );
+
+        LeafExpression<?> leaf = assertInstanceOf(LeafExpression.class, expr);
+        RightRelationSearchItem item = assertInstanceOf(RightRelationSearchItem.class, leaf.getItem());
+        Unit.Id ref = item.getValue();
+        assertEquals(RelationType.PARENT_CHILD_RELATION, item.getType());
+        assertEquals(2, ref.tenantId());
+        assertEquals(10L, ref.unitId());
     }
 }

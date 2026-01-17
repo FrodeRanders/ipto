@@ -23,7 +23,7 @@
 
 <header class="header">
   <div class="brand">
-    <div class="logo">IPTO</div>
+    <img class="logo" src="/ipto-lockup.svg" alt="IPTO" />
     <div class="context">
       <div class="title">Admin Console</div>
       <div class="subtitle">{context}</div>
@@ -67,10 +67,9 @@
   }
 
   .logo {
-    font-family: 'Space Grotesk', sans-serif;
-    font-weight: 700;
-    letter-spacing: 0.2rem;
-    color: var(--accent);
+    height: 40px;
+    width: auto;
+    display: block;
   }
 
   .title {

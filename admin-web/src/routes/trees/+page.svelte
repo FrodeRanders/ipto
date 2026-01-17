@@ -199,11 +199,13 @@
       <h3>{activeRoot?.name ?? 'Unit tree'}</h3>
       <span>{activeRoot?.children?.length ?? 0} top-level nodes</span>
     </div>
-    {#if activeRoot}
-      <TreeView node={activeRoot} selectedId={selected?.id} onSelect={selectNode} onToggle={loadChildren} />
-    {:else}
-      <div class="empty-tree">No roots loaded yet.</div>
-    {/if}
+    <div class="tree-scroll">
+      {#if activeRoot}
+        <TreeView node={activeRoot} selectedId={selected?.id} onSelect={selectNode} onToggle={loadChildren} />
+      {:else}
+        <div class="empty-tree">No roots loaded yet.</div>
+      {/if}
+    </div>
   </div>
   <div class="detail">
     {#if unitError}
@@ -276,6 +278,13 @@
     display: grid;
     grid-template-columns: minmax(240px, 1fr) minmax(320px, 2fr);
     gap: 1.6rem;
+  }
+
+  .tree-scroll {
+    max-height: clamp(300px, calc(100vh - 260px), 820px);
+    overflow-y: auto;
+    padding-right: 0.2rem;
+    scrollbar-gutter: stable;
   }
 
   .tree-header {

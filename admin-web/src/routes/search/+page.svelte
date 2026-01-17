@@ -139,6 +139,7 @@
     display: grid;
     grid-template-columns: minmax(260px, 1fr) minmax(320px, 1.4fr);
     gap: 1.6rem;
+    --results-max-height: clamp(300px, calc(100vh - 300px), 820px);
   }
 
   .tenant-bar {

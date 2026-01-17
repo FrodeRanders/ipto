@@ -22,7 +22,7 @@
 
     if (tenantsResult.status === 'fulfilled') {
       tenants = tenantsResult.value;
-      if ($tenantId === null || !tenants.some((tenant) => tenant.tenantId === $tenantId)) {
+      if ($tenantId === null || !tenants.some((tenant) => tenant._tenant_id === $tenantId)) {
         tenantId.set(tenants[0]?._tenant_id ?? null);
       }
     } else {
@@ -86,6 +86,7 @@
       {#each tenants as tenant}
         <div
           class="tenant-card"
+          class:selected={tenant._tenant_id === $tenantId}
           role="button"
           tabindex="0"
           on:click={() => tenantId.set(tenant._tenant_id)}
@@ -181,6 +182,13 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+  }
+
+  .tenant-card.selected {
+    border-color: rgba(255, 190, 92, 0.5);
+    background: rgba(255, 190, 92, 0.12);
+    transform: translateY(-2px);
   }
 
   .tenant-name {

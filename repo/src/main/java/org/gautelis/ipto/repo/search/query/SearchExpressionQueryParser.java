@@ -25,15 +25,19 @@ import org.antlr.v4.runtime.Token;
 import org.gautelis.ipto.repo.db.Column;
 import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AttributeType;
+import org.gautelis.ipto.repo.model.AssociationType;
+import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.search.model.*;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 public final class SearchExpressionQueryParser {
 
@@ -50,6 +54,8 @@ public final class SearchExpressionQueryParser {
     public record ResolvedAttribute(String name, AttributeType type) {}
 
     private static final Map<String, UnitField> UNIT_FIELDS = buildUnitFields();
+    private static final Set<String> RELATION_PREFIXES = Set.of("relation", "relations", "rel");
+    private static final Set<String> ASSOCIATION_PREFIXES = Set.of("association", "associations", "assoc");
 
     private SearchExpressionQueryParser() {
     }
@@ -134,6 +140,27 @@ public final class SearchExpressionQueryParser {
         public SearchExpression visitPredicate(SearchExpressionParser.PredicateContext ctx) {
             String field = ctx.field().getText();
             Operator op = toOperator(ctx.operator());
+
+            Optional<RelationSpec> relationSpec = parseRelationSpec(field);
+            if (relationSpec.isPresent()) {
+                ensureEqOperator(field, op);
+                Unit.Id unitId = parseUnitRef(ctx.value());
+                RelationSpec spec = relationSpec.get();
+                return spec.side == RelationSide.LEFT
+                        ? LeftRelationSearchItem.constrainOnLeftRelationEQ(spec.type, unitId)
+                        : RightRelationSearchItem.constrainOnRightRelationEQ(spec.type, unitId);
+            }
+
+            Optional<AssociationSpec> associationSpec = parseAssociationSpec(field);
+            if (associationSpec.isPresent()) {
+                ensureEqOperator(field, op);
+                String assocString = valueText(ctx.value());
+                AssociationSpec spec = associationSpec.get();
+                return spec.side == RelationSide.LEFT
+                        ? LeftAssociationSearchItem.constrainOnLeftAssociation(spec.type, assocString)
+                        : RightAssociationSearchItem.constrainOnRightAssociationEQ(spec.type, assocString);
+            }
+
             Value value = parseValue(ctx.value());
 
             boolean hasQualifier = field.indexOf(':') >= 0;
@@ -215,6 +242,134 @@ public final class SearchExpressionQueryParser {
         throw new InvalidParameterException("Unsupported operator: " + ctx.getText());
     }
 
+    private static void ensureEqOperator(String field, Operator op) {
+        if (op != Operator.EQ) {
+            throw new InvalidParameterException("Only '=' is supported for relation/association constraints: " + field);
+        }
+    }
+
+    private static Optional<RelationSpec> parseRelationSpec(String field) {
+        QualifiedField qf = QualifiedField.parse(field);
+        if (qf.prefix == null) {
+            return Optional.empty();
+        }
+
+        String prefixLower = qf.prefix.toLowerCase(Locale.ROOT);
+        RelationSide side = extractSideFromPrefixedField(prefixLower, RELATION_PREFIXES);
+        if (side == RelationSide.NONE && !RELATION_PREFIXES.contains(prefixLower)) {
+            return Optional.empty();
+        }
+
+        SideParse localSide = extractSideFromLocal(qf.local);
+        RelationSide resolvedSide = resolveSide(side, localSide.side);
+        String typeToken = localSide.remaining;
+        if (typeToken.isBlank()) {
+            throw new InvalidParameterException("Relation type is missing in field: " + field);
+        }
+
+        RelationType type = resolveRelationType(typeToken);
+        return Optional.of(new RelationSpec(type, resolvedSide));
+    }
+
+    private static Optional<AssociationSpec> parseAssociationSpec(String field) {
+        QualifiedField qf = QualifiedField.parse(field);
+        if (qf.prefix == null) {
+            return Optional.empty();
+        }
+
+        String prefixLower = qf.prefix.toLowerCase(Locale.ROOT);
+        RelationSide side = extractSideFromPrefixedField(prefixLower, ASSOCIATION_PREFIXES);
+        if (side == RelationSide.NONE && !ASSOCIATION_PREFIXES.contains(prefixLower)) {
+            return Optional.empty();
+        }
+
+        SideParse localSide = extractSideFromLocal(qf.local);
+        RelationSide resolvedSide = resolveSide(side, localSide.side);
+        String typeToken = localSide.remaining;
+        if (typeToken.isBlank()) {
+            throw new InvalidParameterException("Association type is missing in field: " + field);
+        }
+
+        AssociationType type = resolveAssociationType(typeToken);
+        return Optional.of(new AssociationSpec(type, resolvedSide));
+    }
+
+    private static RelationSide resolveSide(RelationSide prefixSide, RelationSide localSide) {
+        if (prefixSide != RelationSide.NONE && localSide != RelationSide.NONE && prefixSide != localSide) {
+            throw new InvalidParameterException("Conflicting relation/association side qualifiers");
+        }
+        RelationSide resolved = prefixSide != RelationSide.NONE ? prefixSide : localSide;
+        return resolved != RelationSide.NONE ? resolved : RelationSide.LEFT;
+    }
+
+    private static RelationSide extractSideFromPrefixedField(String prefixLower, Set<String> allowedPrefixes) {
+        for (String base : allowedPrefixes) {
+            RelationSide side = matchSideSuffix(prefixLower, base);
+            if (side != RelationSide.NONE) {
+                return side;
+            }
+        }
+        return RelationSide.NONE;
+    }
+
+    private static RelationSide matchSideSuffix(String prefixLower, String base) {
+        if (prefixLower.equals(base + "-left") || prefixLower.equals(base + "_left")) {
+            return RelationSide.LEFT;
+        }
+        if (prefixLower.equals(base + "-right") || prefixLower.equals(base + "_right")) {
+            return RelationSide.RIGHT;
+        }
+        return RelationSide.NONE;
+    }
+
+    private static SideParse extractSideFromLocal(String local) {
+        String lower = local.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("left:")) {
+            return new SideParse(RelationSide.LEFT, local.substring("left:".length()));
+        }
+        if (lower.startsWith("right:")) {
+            return new SideParse(RelationSide.RIGHT, local.substring("right:".length()));
+        }
+        if (lower.startsWith("left-") || lower.startsWith("left_")) {
+            return new SideParse(RelationSide.LEFT, local.substring("left-".length()));
+        }
+        if (lower.startsWith("right-") || lower.startsWith("right_")) {
+            return new SideParse(RelationSide.RIGHT, local.substring("right-".length()));
+        }
+        return new SideParse(RelationSide.NONE, local);
+    }
+
+    private static RelationType resolveRelationType(String raw) {
+        String normalized = normalizeTypeToken(raw);
+        if (!normalized.endsWith("_RELATION")) {
+            normalized += "_RELATION";
+        }
+        try {
+            return RelationType.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidParameterException("Unknown relation type: " + raw);
+        }
+    }
+
+    private static AssociationType resolveAssociationType(String raw) {
+        String normalized = normalizeTypeToken(raw);
+        if (!normalized.endsWith("_ASSOCIATION")) {
+            normalized += "_ASSOCIATION";
+        }
+        try {
+            return AssociationType.valueOf(normalized);
+        } catch (IllegalArgumentException ex) {
+            throw new InvalidParameterException("Unknown association type: " + raw);
+        }
+    }
+
+    private static String normalizeTypeToken(String raw) {
+        return raw.trim()
+                .replace('-', '_')
+                .replace(' ', '_')
+                .toUpperCase(Locale.ROOT);
+    }
+
     private static Value parseValue(SearchExpressionParser.ValueContext ctx) {
         Token token = ctx.getStart();
         switch (token.getType()) {
@@ -241,6 +396,39 @@ public final class SearchExpressionQueryParser {
         }
     }
 
+    private static Unit.Id parseUnitRef(SearchExpressionParser.ValueContext ctx) {
+        String raw = valueText(ctx);
+        String trimmed = raw.trim();
+        int colon = trimmed.indexOf(':');
+        String base = colon >= 0 ? trimmed.substring(0, colon) : trimmed;
+        if (colon >= 0) {
+            String version = trimmed.substring(colon + 1);
+            if (!version.isEmpty() && !version.chars().allMatch(Character::isDigit)) {
+                throw new InvalidParameterException("Invalid unit version in reference: " + raw);
+            }
+        }
+
+        String[] parts = base.split("\\.", -1);
+        if (parts.length != 2) {
+            throw new InvalidParameterException("Invalid unit reference: " + raw);
+        }
+        try {
+            int tenantId = Integer.parseInt(parts[0]);
+            long unitId = Long.parseLong(parts[1]);
+            return new Unit.Id(tenantId, unitId);
+        } catch (NumberFormatException ex) {
+            throw new InvalidParameterException("Invalid unit reference: " + raw);
+        }
+    }
+
+    private static String valueText(SearchExpressionParser.ValueContext ctx) {
+        Token token = ctx.getStart();
+        if (token.getType() == SearchExpressionParser.STRING) {
+            return unquote(token.getText());
+        }
+        return token.getText();
+    }
+
     private static String unquote(String raw) {
         if (raw == null || raw.length() < 2) {
             return raw;
@@ -253,6 +441,31 @@ public final class SearchExpressionQueryParser {
                     .replace("\\\\", "\\");
         }
         return raw;
+    }
+
+    private record QualifiedField(String prefix, String local) {
+        static QualifiedField parse(String field) {
+            int idx = field.indexOf(':');
+            if (idx < 0) {
+                return new QualifiedField(null, field);
+            }
+            return new QualifiedField(field.substring(0, idx), field.substring(idx + 1));
+        }
+    }
+
+    private enum RelationSide {
+        LEFT,
+        RIGHT,
+        NONE
+    }
+
+    private record RelationSpec(RelationType type, RelationSide side) {
+    }
+
+    private record AssociationSpec(AssociationType type, RelationSide side) {
+    }
+
+    private record SideParse(RelationSide side, String remaining) {
     }
 
     private static Map<String, UnitField> buildUnitFields() {

@@ -1,4 +1,6 @@
 <script>
+  import { snyggifyTime } from '$lib/api.js';
+
   export let units = [];
   export let selectedId;
   export let onSelect = () => {};
@@ -16,7 +18,7 @@
           <div class="name">{unit.name}</div>
           <div class="meta">{unit.id} · Tenant {unit.tenantId} · {unit.status}</div>
         </div>
-        <div class="date">{unit.created}</div>
+        <div class="date">{snyggifyTime(unit.created)}</div>
       </div>
     {/each}
   </div>
@@ -52,6 +54,10 @@
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
+    max-height: var(--results-max-height, 60vh);
+    overflow-y: auto;
+    padding-right: 0.2rem;
+    scrollbar-gutter: stable;
   }
 
   .row {
