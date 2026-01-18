@@ -4,6 +4,13 @@
   export let units = [];
   export let selectedId;
   export let onSelect = () => {};
+  export let page = 1;
+  export let pageSize = 30;
+  export let hasNext = false;
+  export let canPage = true;
+  export let onPrev = () => {};
+  export let onNext = () => {};
+  export let onPageSizeChange = () => {};
 </script>
 
 <div class="results">
@@ -21,6 +28,27 @@
         <div class="date">{snyggifyTime(unit.created)}</div>
       </div>
     {/each}
+  </div>
+  <div class="footer">
+    <div class="pager">
+      <button type="button" on:click={onPrev} disabled={!canPage || page <= 1}>Prev</button>
+      <span>Page {page}</span>
+      <button type="button" on:click={onNext} disabled={!canPage || !hasNext}>Next</button>
+    </div>
+    <div class="page-size">
+      <label for="page-size">Page size</label>
+      <select
+        id="page-size"
+        bind:value={pageSize}
+        on:change={(event) => onPageSizeChange(Number(event.target.value))}
+        disabled={!canPage}
+      >
+        <option value={20}>20</option>
+        <option value={30}>30</option>
+        <option value={50}>50</option>
+        <option value={100}>100</option>
+      </select>
+    </div>
   </div>
 </div>
 
@@ -88,5 +116,51 @@
   .date {
     color: var(--text-muted);
     font-size: 0.85rem;
+  }
+
+  .footer {
+    margin-top: 0.4rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+
+  .pager {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-muted);
+  }
+
+  .pager button {
+    border: none;
+    border-radius: 999px;
+    padding: 0.35rem 0.8rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .pager button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .page-size {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .page-size select {
+    background: rgba(8, 10, 18, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--text);
+    border-radius: 0.6rem;
+    padding: 0.35rem 0.5rem;
   }
 </style>

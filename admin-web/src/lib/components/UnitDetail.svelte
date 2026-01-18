@@ -28,12 +28,12 @@
       <div class="card">
         <div class="label">Key attributes</div>
         {#each coreKeys as key}
-          <div class="value">
-            {key}:
+          <div class="value key-attr">
+            <span class="attr-pill">{key}</span>
             {#if unit.attributes[key]?.value !== undefined}
-              {unit.attributes[key].value}
+              <span>{unit.attributes[key].value}</span>
             {:else}
-              {unit.attributes[key]}
+              <span>{unit.attributes[key]}</span>
             {/if}
           </div>
         {/each}
@@ -120,6 +120,22 @@
 
   .value {
     font-size: 0.95rem;
+  }
+
+  .key-attr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .attr-pill {
+    font-size: 0.75rem;
+    letter-spacing: 0.04rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
   }
 
   .attributes {

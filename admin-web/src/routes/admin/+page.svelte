@@ -21,6 +21,25 @@
   const sortByBaseName = (items, selector) =>
     [...items].sort((a, b) => baseName(selector(a)).localeCompare(baseName(selector(b)), 'en', { sensitivity: 'base' }));
 
+  const buildRecordFieldMap = (items) => {
+    const map = new Map();
+    items.forEach((record) => {
+      const name = record?._name;
+      const fields = record?._fields || [];
+      if (!name || !fields.length) return;
+      map.set(name, fields);
+      map.set(baseName(name), fields);
+    });
+    return map;
+  };
+
+  const resolveRecordFields = (recordMap, attribute) => {
+    if (!recordMap || !attribute) return null;
+    return recordMap.get(attribute._name) || recordMap.get(baseName(attribute._name));
+  };
+
+  $: recordFieldMap = buildRecordFieldMap(records);
+
   onMount(async () => {
     const [tenantsResult, attributesResult, recordsResult, templatesResult] = await Promise.allSettled([
       fetchTenants(),
@@ -83,12 +102,20 @@
   {:else}
     <AdminList
       title="Attributes"
-      items={attributes.map((item) => ({
-        name: item._alias || item._name,
-        prefix: item._namespace_alias ? item._namespace_alias : null,
-        description: `${item._type} · ${item._cardinality}`,
-        searchable: item._searchable ? 'searchable' : 'internal'
-      }))}
+      items={attributes.map((item) => {
+        const recordFields = item._type === 'RECORD' ? resolveRecordFields(recordFieldMap, item) : null;
+        const fieldCount = recordFields ? recordFields.length : 0;
+        const alias = item._alias || item._name;
+        const qualifiedName = item._qual_name || item._name;
+        return {
+          name: alias,
+          subname: alias !== qualifiedName ? qualifiedName : null,
+          prefix: item._namespace_alias ? item._namespace_alias : null,
+          description: `${item._type} · ${item._cardinality}${fieldCount ? ` · ${fieldCount} fields` : ''}`,
+          searchable: item._searchable ? 'searchable' : 'internal',
+          structure: recordFields || []
+        };
+      })}
       fields={['searchable']}
       actionLabel="Add attribute"
     />

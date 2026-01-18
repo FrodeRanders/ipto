@@ -28,9 +28,19 @@
               <span class="prefix">{item.prefix}</span>
             {/if}
             <span>{item.name}</span>
+            {#if item.subname}
+              <span class="subname">{item.subname}</span>
+            {/if}
           </div>
           {#if item.description}
             <div class="description">{item.description}</div>
+          {/if}
+          {#if item.structure && item.structure.length}
+            <div class="structure">
+              {#each item.structure as entry}
+                <div class="structure-item">{entry}</div>
+              {/each}
+            </div>
           {/if}
         </div>
         <div class="meta">
@@ -113,6 +123,29 @@
   .description {
     color: var(--text-muted);
     font-size: 0.9rem;
+  }
+
+  .subname {
+    font-size: 0.75rem;
+    letter-spacing: 0.04rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .structure {
+    display: grid;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
+    padding-left: 0.8rem;
+    border-left: 2px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .structure-item {
+    color: var(--text-muted);
+    font-size: 0.85rem;
   }
 
   .meta {

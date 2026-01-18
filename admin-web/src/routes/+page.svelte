@@ -97,9 +97,11 @@
             }
           }}
         >
-          <div class="tenant-name">{tenant._name}</div>
-          <div class="tenant-meta">ID {tenant._tenant_id}</div>
-          {#if tenant.description}
+          <div class="tenant-name">
+            <span>{tenant._name}</span>
+            <span class="tenant-id">ID {tenant._tenant_id}</span>
+          </div>
+          {#if tenant._description}
             <div class="tenant-desc">{tenant._description}</div>
           {/if}
         </div>
@@ -194,11 +196,20 @@
   .tenant-name {
     font-weight: 600;
     font-family: 'Space Grotesk', sans-serif;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
   }
 
-  .tenant-meta {
+  .tenant-id {
+    font-size: 0.75rem;
+    letter-spacing: 0.04rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.06);
     color: var(--text-muted);
-    font-size: 0.85rem;
+    font-weight: 500;
   }
 
   .tenant-desc {

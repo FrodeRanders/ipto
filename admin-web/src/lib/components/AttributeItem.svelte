@@ -14,9 +14,9 @@
 
 <div class="attr" style={`--level:${level}`}>
   <div class="attr-name">
-    <span>{name}</span>
+    <span class="attr-primary">{data?.alias || name}</span>
     {#if data?.alias && data.alias !== name}
-      <span class="attr-alias">{data.alias}</span>
+      <span class="attr-alias">{name}</span>
     {/if}
     {#if data?.type}
       <span class="attr-type">{data.type}</span>
@@ -54,11 +54,14 @@
   }
 
   .attr-name {
-    font-weight: 600;
     display: flex;
     align-items: center;
     gap: 0.5rem;
     flex-wrap: wrap;
+  }
+
+  .attr-primary {
+    font-weight: 600;
   }
 
   .attr-alias {

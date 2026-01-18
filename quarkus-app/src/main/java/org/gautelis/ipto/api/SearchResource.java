@@ -15,11 +15,16 @@ import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.search.SearchResult;
 import org.gautelis.ipto.repo.search.query.AndExpression;
+import org.gautelis.ipto.repo.search.query.BinaryExpression;
+import org.gautelis.ipto.repo.search.query.LeafExpression;
+import org.gautelis.ipto.repo.search.query.NotExpression;
 import org.gautelis.ipto.repo.search.query.SearchExpression;
 import org.gautelis.ipto.repo.search.query.SearchOrder;
 import org.gautelis.ipto.repo.search.query.QueryBuilder;
 import org.gautelis.ipto.repo.search.query.SearchExpressionQueryParser;
 import org.gautelis.ipto.repo.search.query.SearchExpressionQueryParser.AttributeNameMode;
+import org.gautelis.ipto.repo.search.model.UnitSearchItem;
+import org.gautelis.ipto.repo.db.Column;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +68,12 @@ public class SearchResource {
         int size = request.size() == null ? 20 : Math.max(1, request.size());
 
         SearchExpression expr = QueryBuilder.constrainToSpecificTenant(tenantId);
-        expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
 
         String where = request.where();
+        SearchExpression textExpr = null;
         if (where != null && !where.isBlank()) {
             try {
-                SearchExpression textExpr = SearchExpressionQueryParser.parse(
+                textExpr = SearchExpressionQueryParser.parse(
                         where,
                         repository,
                         AttributeNameMode.NAMES_OR_ALIASES
@@ -79,6 +84,9 @@ public class SearchResource {
                         .entity(Map.of("error", ex.getMessage()))
                         .build();
             }
+        }
+        if (!hasStatusConstraint(textExpr)) {
+            expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
         }
 
         SearchOrder order = SearchOrder.orderByUnitId(true);
@@ -106,5 +114,18 @@ public class SearchResource {
 
         log.debug("-> units: {}", units);
         return Response.ok(units).build();
+    }
+
+    private boolean hasStatusConstraint(SearchExpression expression) {
+        if (expression == null) {
+            return false;
+        }
+        return switch (expression) {
+            case LeafExpression<?> leaf -> leaf.getItem() instanceof UnitSearchItem<?> usi
+                    && usi.getColumn() == Column.UNIT_KERNEL_STATUS;
+            case NotExpression notExpr -> hasStatusConstraint(notExpr.inner());
+            case BinaryExpression binExpr -> hasStatusConstraint(binExpr.getLeft()) || hasStatusConstraint(binExpr.getRight());
+            default -> false;
+        };
     }
 }
