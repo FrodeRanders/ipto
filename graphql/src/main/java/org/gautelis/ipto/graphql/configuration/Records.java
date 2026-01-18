@@ -67,12 +67,6 @@ public final class Records {
                 continue;
             }
 
-            // Filter unit template definitions, that has a @unit directive
-            List<Directive> unitDirectivesOnType = type.getDirectives("unit");
-            if (!unitDirectivesOnType.isEmpty()) {
-                continue;
-            }
-
             String recordAttributeName = null;
 
             // --- (b) ---

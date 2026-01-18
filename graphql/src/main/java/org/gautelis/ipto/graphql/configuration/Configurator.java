@@ -51,7 +51,7 @@ public class Configurator {
             Map<String, GqlDatatypeShape> datatypes,
             Map<String, GqlAttributeShape> attributes,
             Map<String, GqlRecordShape> records,
-            Map<String, GqlUnitTemplateShape> units,
+            Map<String, GqlTemplateShape> templates,
             Map<String, GqlUnionShape> unions,
             Map<String, GqlOperationShape> operations
     ) {}
@@ -60,14 +60,14 @@ public class Configurator {
             Map<String, CatalogDatatype> datatypes,
             Map<String, CatalogAttribute> attributes,
             Map<String, CatalogRecord> records,
-            Map<String, CatalogUnitTemplate> units
+            Map<String, CatalogTemplate> templates
     ) {}
 
     private Configurator() {
     }
 
     /**
-     * Loads GraphQL SDL and infers attributes, records and unit templates
+     * Loads GraphQL SDL and infers attributes, records and templates
      * from the various 'type' definitions. Will populate the Ipto database
      * accordingly.
      * <p>
@@ -126,7 +126,7 @@ public class Configurator {
         //dump(ipto, progress);
 
         // Reconcile differences, i.e. create stuff if needed
-        reconcile(repo, gql, ipto, ResolutionPolicy.PREFER_GQL, progress);
+        reconcile(repo, gql, ipto, progress);
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
         runtimeService.wire(runtimeWiring, gql, ipto);
@@ -148,7 +148,7 @@ public class Configurator {
         Map<String, GqlDatatypeShape> datatypes = Datatypes.derive(registry);
         Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
         Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
-        Map<String, GqlUnitTemplateShape> templates = UnitTemplates.derive(registry, attributes);
+        Map<String, GqlTemplateShape> templates = Templates.derive(registry, attributes);
         Map<String, GqlUnionShape> unions = Unions.derive(registry);
         Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
 
@@ -159,7 +159,7 @@ public class Configurator {
         Map<String, CatalogDatatype> datatypes = Datatypes.read(repo);
         Map<String, CatalogAttribute> attributes = Attributes.read(repo);
         Map<String, CatalogRecord> records = Records.read(repo);
-        Map<String, CatalogUnitTemplate> templates = UnitTemplates.read(repo);
+        Map<String, CatalogTemplate> templates = Templates.read(repo);
 
         return new CatalogViewpoint(datatypes, attributes, records, templates);
     }
@@ -168,7 +168,6 @@ public class Configurator {
             Repository repo,
             GqlViewpoint gqlViewpoint,
             CatalogViewpoint catalogViewpoint,
-            ResolutionPolicy policy,
             PrintStream progress
     ) {
 
@@ -229,23 +228,23 @@ public class Configurator {
             }
         }
 
-        // Unit templates
-        for (String key : gqlViewpoint.units.keySet()) {
-            if (!catalogViewpoint.units().containsKey(key)) {
-                log.info("↯ Reconciling unit template '{}'...", key);
-                progress.println("Reconciling unit template '" + key + "'...");
+        // Templates
+        for (String key : gqlViewpoint.templates.keySet()) {
+            if (!catalogViewpoint.templates().containsKey(key)) {
+                log.info("↯ Reconciling template '{}'...", key);
+                progress.println("Reconciling template '" + key + "'...");
 
-                CatalogUnitTemplate template = addUnitTemplate(
+                CatalogTemplate template = addUnitTemplate(
                         repo,
-                        gqlViewpoint.units.get(key),
+                        gqlViewpoint.templates.get(key),
                         catalogViewpoint.attributes(),
                         progress
                 );
-                catalogViewpoint.units().put(key, template); // replace
+                catalogViewpoint.templates().put(key, template); // replace
                 continue;
             }
-            GqlUnitTemplateShape gqlTemplate = gqlViewpoint.units.get(key);
-            CatalogUnitTemplate iptoTemplate = catalogViewpoint.units().get(key);
+            GqlTemplateShape gqlTemplate = gqlViewpoint.templates.get(key);
+            CatalogTemplate iptoTemplate = catalogViewpoint.templates().get(key);
 
             if (!gqlTemplate.equals(iptoTemplate)) {
                 log.error("↯ GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
@@ -432,15 +431,15 @@ public class Configurator {
         return catalogRecord;
     }
 
-    private static CatalogUnitTemplate addUnitTemplate(
+    private static CatalogTemplate addUnitTemplate(
             Repository repo,
-            GqlUnitTemplateShape gqlUnitTemplate,
+            GqlTemplateShape gqlUnitTemplate,
             Map<String, CatalogAttribute> catalogAttributes,
             PrintStream progress
     ) {
 
         // NOTE: template.templateId is adjusted later, after writing to repo_unit_template
-        CatalogUnitTemplate template = new CatalogUnitTemplate(gqlUnitTemplate.typeName());
+        CatalogTemplate template = new CatalogTemplate(gqlUnitTemplate.typeName());
 
         String templateSql = """
                         INSERT INTO repo_unit_template (name)
@@ -470,7 +469,7 @@ public class Configurator {
                                 int templateId = rs.getInt(1);
                                 template.setTemplateId(templateId);
                             } else {
-                                String info = "↯ Failed to determine auto-generated unit template ID";
+                                String info = "↯ Failed to determine auto-generated template ID";
                                 log.error(info); // This is nothing we can recover from
                                 throw new ConfigurationException(info);
                             }
@@ -503,10 +502,10 @@ public class Configurator {
                     });
 
                     conn.commit();
-                    log.info("↯ Loaded unit template '{}'", template.templateName);
+                    log.info("↯ Loaded template '{}'", template.templateName);
 
                 } catch (Throwable t) {
-                    log.error("↯ Failed to store unit template '{}': {}", template.templateName, t.getMessage(), t);
+                    log.error("↯ Failed to store template '{}': {}", template.templateName, t.getMessage(), t);
                     if (t.getCause() instanceof SQLException sqle) {
                         log.error("  ^--- {}", Database.squeeze(sqle));
                         String sqlState = sqle.getSQLState();
@@ -555,8 +554,8 @@ public class Configurator {
         }
         out.println();
 
-        out.println("--- Unit templates ---");
-        for (Map.Entry<String, GqlUnitTemplateShape> entry : gql.units().entrySet()) {
+        out.println("--- Templates ---");
+        for (Map.Entry<String, GqlTemplateShape> entry : gql.templates().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
@@ -597,8 +596,8 @@ public class Configurator {
         }
         out.println();
 
-        out.println("--- Unit templates ---");
-        for (Map.Entry<String, CatalogUnitTemplate> entry : ipto.units().entrySet()) {
+        out.println("--- Templates ---");
+        for (Map.Entry<String, CatalogTemplate> entry : ipto.templates().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();

@@ -21,6 +21,7 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.graphql.model.TypeDefinition;
+import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
@@ -34,18 +35,18 @@ import java.util.List;
 import java.util.Map;
 
 
-public final class UnitTemplates {
-    private static final Logger log = LoggerFactory.getLogger(UnitTemplates.class);
+public final class Templates {
+    private static final Logger log = LoggerFactory.getLogger(Templates.class);
 
-    private UnitTemplates() {}
+    private Templates() {}
 
     /*
-     * type PurchaseOrder @unit {
+     * type PurchaseOrder @template {
      *    orderId  : String    @use(attribute: ORDER_ID)
      *    shipment : Shipment! @use(attribute: SHIPMENT)
      * }
      *
-     * type PurchaseOrder @unit(name: purchase_order) {
+     * type PurchaseOrder @template(name: Order) {
      *             ^                    ^
      *             | (a)                | (b)
      *
@@ -53,11 +54,11 @@ public final class UnitTemplates {
      *     ^           ^                         ^
      *     | (c)       | (d)                     | (e)
      */
-    static Map<String, GqlUnitTemplateShape> derive(
+    static Map<String, GqlTemplateShape> derive(
             TypeDefinitionRegistry registry,
             Map<String, GqlAttributeShape> attributes
     ) {
-        Map<String, GqlUnitTemplateShape> units = new HashMap<>();
+        Map<String, GqlTemplateShape> templates = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
             // --- (a) ---
@@ -70,79 +71,80 @@ public final class UnitTemplates {
                 continue;
             }
 
-            // Filter unit template definitions, that has a @unit directive
-            List<Directive> unitDirectivesOnType = type.getDirectives("unit");
-            if (unitDirectivesOnType.isEmpty()) {
+            // --- (b) ---
+            List<Directive> templateDirectivesOnType = type.getDirectives("template");
+            if (templateDirectivesOnType.isEmpty()) {
                 continue;
             }
 
-            // --- (b) ---
             String templateName = null; // INVALID
 
-            for (Directive directive : unitDirectivesOnType) {
+            for (Directive directive : templateDirectivesOnType) {
                 Argument arg = directive.getArgument("name");
                 if (null != arg) {
-                    StringValue _name = (StringValue) arg.getValue();
-                    templateName = _name.getValue();
+                    EnumValue alias = (EnumValue) arg.getValue();
+                    templateName = alias.getName();
                 }
             }
 
-            if (null != templateName && !templateName.isEmpty()) {
-                 List<GqlFieldShape> unitFields = new ArrayList<>();
+            if (null == templateName || templateName.isEmpty()) {
+                templateName = typeName;
+            }
 
-                // Handle field definitions on types
-                for (FieldDefinition f : type.getFieldDefinitions()) {
-                    // --- (c) ---
-                    final String fieldName = f.getName();
+            List<GqlFieldShape> templateFields = new ArrayList<>();
 
-                    // --- (d) ---
-                    final TypeDefinition fieldType = TypeDefinition.of(f.getType());
+            // Handle field definitions on types
+            for (FieldDefinition f : type.getFieldDefinitions()) {
+                // --- (c) ---
+                final String fieldName = f.getName();
 
-                    // Handle @use directive on field definitions
-                    List<Directive> useDirectives = f.getDirectives("use");
-                    if (!useDirectives.isEmpty()) {
-                        for (Directive useDirective : useDirectives) {
-                            // @use "attribute" argument
-                            Argument arg = useDirective.getArgument("attribute");
-                            EnumValue value = (EnumValue) arg.getValue();
+                // --- (d) ---
+                final TypeDefinition fieldType = TypeDefinition.of(f.getType());
 
-                            GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
-                            if (null != fieldAttributeDef) {
-                                // --- (e) ---
-                                String fieldAttributeName = fieldAttributeDef.name;
+                // Handle @use directive on field definitions
+                List<Directive> useDirectives = f.getDirectives("use");
+                if (!useDirectives.isEmpty()) {
+                    for (Directive useDirective : useDirectives) {
+                        // @use "attribute" argument
+                        Argument arg = useDirective.getArgument("attribute");
+                        EnumValue value = (EnumValue) arg.getValue();
 
-                                unitFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
-                                break; // In the unlikely case there are several @use
-                            }
-                        }
-                    } else {
-                        // No @use, so we will fall back on aliases
-                        GqlAttributeShape attributeShape = attributes.get(fieldName);
-                        if (null != attributeShape) {
-                            unitFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
+                        GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
+                        if (null != fieldAttributeDef) {
+                            // --- (e) ---
+                            String fieldAttributeName = fieldAttributeDef.name;
+
+                            templateFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
+                            break; // In the unlikely case there are several @use
                         }
                     }
+                } else {
+                    // No @use, so we will fall back on aliases
+                    GqlAttributeShape attributeShape = attributes.get(fieldName);
+                    if (null != attributeShape) {
+                        templateFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
+                    }
                 }
-                units.put(typeName, new GqlUnitTemplateShape(typeName, templateName, unitFields));
-                log.trace("↯ Defining shape for {}: {}", typeName, units.get(typeName));
             }
+            templates.put(typeName, new GqlTemplateShape(typeName, templateName, templateFields));
+            log.trace("↯ Defining shape for {}: {}", typeName, templates.get(typeName));
         }
 
-        return units;
+        return templates;
     }
 
-    static Map<String, CatalogUnitTemplate> read(
+    static Map<String, CatalogTemplate> read(
             Repository repository
     ) {
-        Map<String, CatalogUnitTemplate> templates = new HashMap<>();
+        Map<String, CatalogTemplate> templates = new HashMap<>();
 
         // repo_unit_template (
-        //    templateid INT,   -- from @unit(id: …)
+        //    templateid INT,   --
         //    name       TEXT   -- type name
         // )
         //
-        // repo_unit template_elements (
-        //    templateid INT,   -- from @unit(id: …)
+        // repo_template_elements (
+        //    templateid INT,   --
         //    attrid     INT,   -- global attribute id
         //    idx        INT,   -- order / display position
         //    alias      TEXT   -- field name inside unit (template)
@@ -162,10 +164,10 @@ public final class UnitTemplates {
         try {
             repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
                 try (ResultSet rs = pStmt.executeQuery()) {
-                    List<CatalogUnitTemplate> catalogTemplates = new ArrayList<>();
+                    List<CatalogTemplate> catalogTemplates = new ArrayList<>();
 
                     Integer currentId = null;
-                    CatalogUnitTemplate currentTemplate = null;
+                    CatalogTemplate currentTemplate = null;
 
                     while (rs.next()) {
                         // Template part
@@ -189,7 +191,7 @@ public final class UnitTemplates {
                             // boundary => flush previous
                             if (currentTemplate != null) catalogTemplates.add(currentTemplate);
                             currentId = templateId;
-                            currentTemplate = new CatalogUnitTemplate(templateId, templateName);
+                            currentTemplate = new CatalogTemplate(templateId, templateName);
                         }
 
                         CatalogAttribute attribute = new CatalogAttribute(
@@ -201,7 +203,7 @@ public final class UnitTemplates {
                     }
                     if (currentTemplate != null) catalogTemplates.add(currentTemplate); // flush last one
 
-                    for (CatalogUnitTemplate template : catalogTemplates) {
+                    for (CatalogTemplate template : catalogTemplates) {
                         templates.put(template.templateName, template);
                     }
                 }

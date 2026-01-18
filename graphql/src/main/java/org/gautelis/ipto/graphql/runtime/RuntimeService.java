@@ -16,7 +16,6 @@
  */
 package org.gautelis.ipto.graphql.runtime;
 
-import com.fasterxml.uuid.Generators;
 import com.networknt.schema.*;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.graphql.configuration.Configurator;
@@ -87,7 +86,6 @@ public class RuntimeService {
             Configurator.CatalogViewpoint catalogViewpoint
     ) {
         RuntimeOperators.wireRecords(runtimeWiring, this, gqlViewpoint);
-        RuntimeOperators.wireUnits(runtimeWiring, this, gqlViewpoint, catalogViewpoint);
         RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
         // Operations are wired separately
     }
@@ -102,10 +100,8 @@ public class RuntimeService {
                         .executionConfig(executionConfig -> executionConfig.formatAssertionsEnabled(true)));
 
         if (errors.isEmpty()) {
-            // TODO Implement
             JsonNode root = MAPPER.readTree(json);
             Unit unit = repo.storeUnit(root);
-
             return unit.asJson(/* pretty? */ false).getBytes(StandardCharsets.UTF_8);
 
         } else {

@@ -8,8 +8,8 @@
     <!-- Appenders (writing to file in various ways) -->
     <Appenders>
         <RollingFile name="INTERNAL"
-                     fileName="${log-path}/integration-test.log"
-                     filePattern="${log-path}/%d{yyyy-MM-dd}-integration-test-%i.log">
+                     fileName="${log-path}/test.log"
+                     filePattern="${log-path}/%d{yyyy-MM-dd}-test-%i.log">
             <PatternLayout>
                 <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] [%-5level] %c{1}: %m%n</pattern>
             </PatternLayout>

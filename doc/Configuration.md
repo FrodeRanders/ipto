@@ -20,7 +20,7 @@ directive @datatype(id: Int!) on ENUM_VALUE
 directive @attributeRegistry on ENUM
 directive @attribute(datatype: DataTypes!, array: Boolean = true, name: String = null, uri: String = null, description: String = null) on ENUM_VALUE
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @unit(name: String) on OBJECT # either id or name
+directive @template(name: String) on OBJECT
 directive @record(attribute: Attributes!) on OBJECT
 ```
 
@@ -105,7 +105,7 @@ type Shipment @record(attribute: shipment) {
 #
 # ...and shipments are related to purchase orders
 #
-type PurchaseOrder @unit {
+type PurchaseOrder @template {
     orderId  : String    @use(attribute: orderId)
     shipment : Shipment! @use(attribute: shipment)
 }

@@ -20,17 +20,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class CatalogUnitTemplate {
+public class CatalogTemplate {
     public int templateId;
     public final String templateName;
     private final List<CatalogAttribute> fields = new ArrayList<>();
 
-    public CatalogUnitTemplate(int templateId, String templateName) {
+    public CatalogTemplate(int templateId, String templateName) {
         this.templateId = templateId;
         this.templateName = templateName;
     }
 
-    public CatalogUnitTemplate(String templateName) {
+    public CatalogTemplate(String templateName) {
         this(-1, templateName);
     }
 
@@ -48,7 +48,7 @@ public class CatalogUnitTemplate {
 
     @Override
     public String toString() {
-        String info = "CatalogUnitTemplate{";
+        String info = "CatalogTemplate{";
         info += "template-id=" + templateId;
         info += ", template-name='" + templateName + '\'';
         info += ", fields=[";

@@ -5,7 +5,9 @@
   export let searches = [];
   export let where = '';
   export let selectedSearchId = '';
+  export let selectedTemplateId = '';
   export let searchableAttributes = [];
+  export let templateAttributes = [];
 
   const dispatch = createEventDispatcher();
   let queryInput;
@@ -21,14 +23,14 @@
   ];
 
   const dateFilters = [
+    { id: 'created-today', label: 'Created today' },
+    { id: 'modified-today', label: 'Modified today' },
     { id: 'created-after', label: 'Created after…' },
     { id: 'created-before', label: 'Created before…' }
   ];
 
   const builderFilters = [
     { id: 'effective', label: 'Effective' },
-    { id: 'created-today', label: 'Created today' },
-    { id: 'modified-today', label: 'Modified today' },
     { id: 'title-as', label: 'Title as…' },
     { id: 'unitname-contains', label: 'Unit name contains…' },
     { id: 'description-contains', label: 'Description contains…' }
@@ -39,6 +41,12 @@
     selectedSearchId = id;
     const selected = searches.find((search) => String(search.id) === String(id));
     dispatch('select', { id, search: selected || null });
+  };
+
+  const selectTemplate = (event) => {
+    const id = event.target.value;
+    selectedTemplateId = id;
+    dispatch('template-change', { id });
   };
 
   const runSearch = () => {
@@ -139,9 +147,12 @@
 <div class="filters">
   <div class="field">
     <label>Template</label>
-    <select>
+    <select bind:value={selectedTemplateId} on:change={selectTemplate}>
+      <option value="">No template</option>
       {#each templates as template}
-        <option>{template.name}</option>
+        <option value={String(template._id ?? template.id)}>
+          {template.displayName || template.name || template._name || `Template ${template._id ?? template.id}`}
+        </option>
       {/each}
     </select>
   </div>
@@ -235,7 +246,11 @@
               <button
                 type="button"
                 class="chip builder date"
-                on:click={() => openDatePicker(filter.id)}
+                on:click={() =>
+                  filter.id === 'created-before' || filter.id === 'created-after'
+                    ? openDatePicker(filter.id)
+                    : addFilter(filter.id)
+                }
               >
                 {filter.label}
               </button>
@@ -265,6 +280,25 @@
             {/each}
           </div>
         </div>
+        {#if templateAttributes.length}
+          <div class="chip-group">
+            <div class="chip-label">Template attributes</div>
+            <div class="chip-row">
+              {#each templateAttributes as attr}
+                <button
+                  type="button"
+                  class="chip saved"
+                  class:disabled={!attr.searchable}
+                  on:click={() => attr.searchable && insertField(attr.name, attr.type)}
+                  title={attr.searchable ? 'Insert into query' : 'Not searchable'}
+                  disabled={!attr.searchable}
+                >
+                  {attr.name}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
       </div>
       {#if searches.length}
         <div class="saved-searches">
@@ -445,6 +479,12 @@
     border: 1px dashed rgba(255, 255, 255, 0.25);
     background: transparent;
     color: var(--text-muted);
+  }
+
+  .chip.saved.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(255, 255, 255, 0.15);
   }
 
   .saved-searches {

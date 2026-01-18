@@ -663,7 +663,7 @@ public class Unit implements Cloneable {
         }
 
         Attribute<?> copy = new Attribute<>(attr);
-        log.debug("Adding attribute {}({}) to unit {}", copy.getId(), copy.getName(), getReference());
+        log.debug("Adding attribute {} ({}) to unit {}", copy.getId(), copy.getName(), getReference());
         attributes.put(copy.getName(), copy);
         return copy;
     }

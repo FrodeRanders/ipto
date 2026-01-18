@@ -18,6 +18,10 @@
   let savedSearches = [];
   let selectedSearchId = '';
   let searchableAttributes = [];
+  let templateAttributes = [];
+  let templateAttributeNames = [];
+  let searchableAttributeMap = new Map();
+  let selectedTemplateId = '';
   let unitError = '';
   let where = '';
   let searchBusy = false;
@@ -95,6 +99,25 @@
     offset = 0;
   };
 
+  const updateTemplateAttributes = (id) => {
+    selectedTemplateId = String(id ?? '');
+    const selectedTemplate = templates.find(
+      (template) => String(template._id ?? template.id) === String(id)
+    );
+    if (!selectedTemplate) {
+      templateAttributes = [];
+      templateAttributeNames = [];
+      return;
+    }
+    templateAttributeNames = selectedTemplate._attributes || [];
+    templateAttributes = templateAttributeNames
+      .map((attrName) => ({
+        name: attrName,
+        type: searchableAttributeMap.get(attrName),
+        searchable: searchableAttributeMap.has(attrName)
+      }));
+  };
+
   const saveCurrentSearch = () => {
     const trimmed = where.trim();
     if (!trimmed) {
@@ -170,11 +193,15 @@
     if (!value) {
       return;
     }
-    if (id === 'created-before') {
-      appendClause(`created <= "${value}T23:59:59Z"`);
-    }
-    if (id === 'created-after') {
-      appendClause(`created >= "${value}T00:00:00Z"`);
+    switch (id) {
+      case 'created-before':
+        appendClause(`created <= "${value}T23:59:59Z"`);
+        break;
+      case 'created-after':
+        appendClause(`created >= "${value}T00:00:00Z"`);
+        break;
+      default:
+        break;
     }
   };
 
@@ -331,7 +358,18 @@
     }
 
     if (templateResult.status === 'fulfilled') {
-      templates = templateResult.value;
+      templates = templateResult.value.map((template) => ({
+        ...template,
+        id: template._id ?? template.id,
+        name: template._name || template.name,
+        displayName: template._name || template.name || `Template ${template._id ?? template.id}`
+      }));
+      if (selectedTemplateId) {
+        updateTemplateAttributes(selectedTemplateId);
+      } else {
+        templateAttributes = [];
+        templateAttributeNames = [];
+      }
     } else {
       error = templateResult.reason?.message || 'Failed to load templates.';
     }
@@ -349,15 +387,35 @@
       (reason) => ({ status: 'rejected', reason })
     );
     if (attributesResult.status === 'fulfilled') {
-      searchableAttributes = attributesResult.value
+      const searchable = attributesResult.value
         .filter((attr) => attr._searchable)
         .map((attr) => ({
           name: attr._alias || attr._name,
-          type: attr._type
+          type: attr._type,
+          original: attr._name,
+          alias: attr._alias
         }))
-        .filter((attr) => attr.name)
+        .filter((attr) => attr.name);
+
+      searchableAttributes = searchable
+        .map(({ name, type }) => ({ name, type }))
         .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
         .slice(0, 24);
+
+      const searchableByAttr = new Map();
+      searchable.forEach((attr) => {
+        searchableByAttr.set(attr.original, attr.type);
+        if (attr.alias) {
+          searchableByAttr.set(attr.alias, attr.type);
+        }
+      });
+      searchableAttributeMap = searchableByAttr;
+      templateAttributes = templateAttributeNames
+        .map((attrName) => ({
+          name: attrName,
+          type: searchableByAttr.get(attrName)
+        }))
+        .filter((attr) => attr.type);
     }
   });
 
@@ -412,6 +470,8 @@
     {templates}
     {searches}
     {searchableAttributes}
+    {templateAttributes}
+    bind:selectedTemplateId
     bind:where
     bind:selectedSearchId
     on:run={(event) => runSearch(event.detail.where)}
@@ -422,6 +482,7 @@
     on:add-saved={(event) => addSavedSearchClause(event.detail)}
     on:insert-field={(event) => insertFieldToken(event.detail)}
     on:insert-operator={(event) => insertOperatorToken(event.detail)}
+    on:template-change={(event) => updateTemplateAttributes(event.detail.id)}
     on:rename={(event) => renameSavedSearch(event.detail)}
     on:delete={(event) => deleteSavedSearch(event.detail)}
     on:reset={resetSearchForm}

@@ -75,7 +75,7 @@
 </script>
 
 <section>
-  <SectionTitle title="Schema Administration" hint="Attributes, records, and unit templates are managed separately from browsing and search." />
+  <SectionTitle title="Schema administration" hint="Attributes, records, and templates are managed separately from browsing and search." />
 </section>
 
 <div class="stack">
@@ -132,11 +132,11 @@
     />
 
     <AdminList
-      title="Unit Templates"
+      title="Templates"
       items={templates.map((item) => ({
         name: item._name,
-        description: `${(item._attributes || []).length} attributes`,
-        fields: (item._attributes || []).join(' · ')
+        description: (item._attributes || []).join(' · '),
+        fields: `${(item._attributes || []).length} attributes`
       }))}
       fields={['fields']}
       actionLabel="Add template"

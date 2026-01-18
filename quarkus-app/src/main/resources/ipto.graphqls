@@ -48,7 +48,7 @@ directive @attribute(
 ) on ENUM_VALUE
 
 """
-@unit annotates identifiable units that consists of attributes
+@template annotates identifiable units that consists of attributes
 (i.e. fields defined using the @use directive) that are defined
 in the @attributeRegistry.
 
@@ -57,7 +57,7 @@ various ways to represent compounds, such as an address. Records
 are used to define units.
 """
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
-directive @unit(name: String) on OBJECT
+directive @template(name: String) on OBJECT
 directive @record(attribute: Attributes!) on OBJECT
 
 ##############  basic data types ############################
@@ -514,16 +514,11 @@ type RattenTillPeriod @record(attribute: ratten_till_period) {
 
 union ProduceratResultat = Ersattning | Krav | Intyg | BedomdArbetsformaga | RattenTillPeriod
 
-type Yrkan @record(attribute: yrkan) {
+type Yrkan @record(attribute: yrkan) @template {
     person : Person
     beskrivning : String @use(attribute: description)
     beslut : Beslut
     producerade_resultat : [ProduceratResultat]
-}
-
-type Dataleverans @unit {
-    dataleveransid : String  @use(attribute: dataleverans_id)
-    data : Bytes
 }
 
 ##############  Query related ####################################

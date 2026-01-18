@@ -115,7 +115,7 @@
   <div class="grid">
     <div class="card">
       <h3>Administration</h3>
-      <p>Define attributes, record shapes, and unit templates for search.</p>
+      <p>Define attributes, record shapes, and templates for search.</p>
       <a href="/admin">Go to schema admin →</a>
     </div>
     <div class="card">

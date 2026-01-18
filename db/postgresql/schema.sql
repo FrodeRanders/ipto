@@ -206,7 +206,8 @@ CONSTRAINT repo_attribute_current_value_pk
 
 ---------------------------------------------------------------
 -- Metadata-table: Unit-template lookup table.
--- The configuration loader inserts one row per @use field in every @unit type ….
+-- The configuration loader inserts one row per @use field in every
+-- @template type ….
 -- Records  are handled separately in 'repo_record_template'
 --
 CREATE TABLE repo_unit_template (
@@ -221,7 +222,7 @@ CONSTRAINT repo_unit_template_name_uq
 );
 
 CREATE TABLE repo_unit_template_elements (
-templateid INT  NOT NULL,   -- from @unit(id: …)
+templateid INT  NOT NULL,   --
 attrid     INT  NOT NULL,   -- global attribute id
 
 idx        INT  NOT NULL,   -- order / display position
