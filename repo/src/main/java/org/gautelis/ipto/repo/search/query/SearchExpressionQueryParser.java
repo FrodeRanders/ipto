@@ -30,6 +30,8 @@ import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.search.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -40,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 
 public final class SearchExpressionQueryParser {
+    protected static final Logger log = LoggerFactory.getLogger(SearchExpressionQueryParser.class);
 
     public interface AttributeTypeResolver {
         Optional<ResolvedAttribute> resolve(String name);
@@ -570,7 +573,7 @@ public final class SearchExpressionQueryParser {
             try {
                 return Unit.Status.valueOf(raw).getStatus();
             } catch (IllegalArgumentException ex) {
-                return Integer.parseInt(raw);
+                throw new InvalidParameterException("Unknown status: \"" + raw + "\"");
             }
         }
 

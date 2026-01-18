@@ -74,13 +74,14 @@ public class DB2Adapter extends CommonAdapter {
 
         // Paging and/or limiting search results
         int pageOffset = sd.getPageOffset();
+        int pageSize = sd.getPageSize();
         if (pageOffset > 0) {
             buf.append("OFFSET ").append(pageOffset).append(" ROWS ");
-
-            int pageSize = sd.getPageSize();
             if (pageSize > 0) {
                 buf.append("FETCH NEXT ").append(pageSize).append(" ROWS ONLY "); // ANSI:ism
             }
+        } else if (pageSize > 0) {
+            buf.append("FETCH NEXT ").append(pageSize).append(" ROWS ONLY "); // ANSI:ism
         } else {
             int selectionSize = sd.getSelectionSize();
             if (selectionSize > 0) {

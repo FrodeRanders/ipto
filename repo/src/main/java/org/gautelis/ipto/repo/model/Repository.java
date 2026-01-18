@@ -876,13 +876,13 @@ public class Repository {
             if (maxhits > 0) {
                 sd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, maxhits);
             } else {
-                sd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, reqlow, (reqhigh - reqlow));
+                int pageOffset = toPageOffset(reqlow);
+                int pageSize = toPageSize(reqlow, reqhigh);
+                sd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, pageOffset, pageSize);
             }
 
             Database.useConnection(context.getDataSource(),
             conn -> context.getDatabaseAdapter().search(conn, sd, context.getTimingData(), rs -> {
-                int pagedPosition = 1;
-
                 while (rs.next()) {
                     totalNumberOfHits[0]++;
 
@@ -890,13 +890,8 @@ public class Repository {
                     long unitId = rs.getLong("unitid");
 
                     try {
-                        // Skip entries that does not fit the specified "page".
-                        if (pagedPosition >= reqlow && pagedPosition <= reqhigh) {
-                            Optional<Unit> unit = UnitFactory.resurrectUnit(context, tenantId, unitId);
-                            unit.ifPresent(result::add);
-                        }
-                        pagedPosition++;
-
+                        Optional<Unit> unit = UnitFactory.resurrectUnit(context, tenantId, unitId);
+                        unit.ifPresent(result::add);
                     } catch (Exception e) {
                         if (log.isDebugEnabled()) {
                             String info = "Failed to resurrect unit from search result: " + e.getMessage();
@@ -909,6 +904,14 @@ public class Repository {
             log.error("Failure in search", e);
         }
         return new SearchResult(result, totalNumberOfHits[0]);
+    }
+
+    static int toPageOffset(int reqlow) {
+        return Math.max(0, reqlow - 1);
+    }
+
+    static int toPageSize(int reqlow, int reqhigh) {
+        return Math.max(0, reqhigh - reqlow + 1);
     }
 
     /**
