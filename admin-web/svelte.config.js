@@ -5,7 +5,10 @@ const config = {
     adapter: adapter({
       pages: '../quarkus-app/src/main/resources/META-INF/resources',
       assets: '../quarkus-app/src/main/resources/META-INF/resources'
-    })
+    }),
+    prerender: {
+      handleUnseenRoutes: 'ignore'
+    }
   }
 };
 

@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
   import { snyggifyTime, fetchTenants, fetchAttributeMetadata, fetchRecords, fetchTemplates } from '$lib/api.js';
   import SectionTitle from '$lib/components/SectionTitle.svelte';
   import AdminList from '$lib/components/AdminList.svelte';
@@ -36,6 +37,26 @@
   const resolveRecordFields = (recordMap, attribute) => {
     if (!recordMap || !attribute) return null;
     return recordMap.get(attribute._name) || recordMap.get(baseName(attribute._name));
+  };
+
+  const handleAdminAction = (event) => {
+    if (event?.detail?.id === 'attributes') {
+      goto('/admin/attributes/new');
+    }
+  };
+
+  const handleAttributeEdit = (event) => {
+    const attrId = event?.detail?.item?._id || event?.detail?.item?.id;
+    if (attrId) {
+      goto(`/admin/attributes/${attrId}/edit`);
+    }
+  };
+
+  const handleRecordEdit = (event) => {
+    const recordId = event?.detail?.item?._id || event?.detail?.item?.id;
+    if (recordId) {
+      goto(`/admin/records/${recordId}/edit`);
+    }
   };
 
   $: recordFieldMap = buildRecordFieldMap(records);
@@ -108,6 +129,7 @@
         const alias = item._alias || item._name;
         const qualifiedName = item._qual_name || item._name;
         return {
+          _id: item._id,
           name: alias,
           subname: alias !== qualifiedName ? qualifiedName : null,
           prefix: item._namespace_alias ? item._namespace_alias : null,
@@ -118,17 +140,23 @@
       })}
       fields={['searchable']}
       actionLabel="Add attribute"
+      actionId="attributes"
+      on:action={handleAdminAction}
+      on:edit={handleAttributeEdit}
     />
 
     <AdminList
       title="Records"
       items={records.map((item) => ({
+        _id: item._id,
         name: item._name,
         description: (item._fields || []).join(' · '),
         fields: `${(item._fields || []).length} fields`
       }))}
       fields={['fields']}
       actionLabel="Add record"
+      actionId="records"
+      on:edit={handleRecordEdit}
     />
 
     <AdminList

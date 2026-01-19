@@ -46,6 +46,7 @@ import java.util.function.Consumer;
 
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
+    private static final String DEFAULT_DESCRIPTION_LANG = "SE";
 
     public record GqlViewpoint(
             Map<String, GqlDatatypeShape> datatypes,
@@ -284,6 +285,7 @@ public class Configurator {
             if (info.isPresent()) {
                 attribute.setAttrId(info.get().id);
                 log.info("↯ Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
+                storeAttributeDescription(repo, attribute.attrId(), gqlAttribute);
             } else {
                 log.error("↯ Failed to store attribute '{}' ({}, '{}')", attribute.alias(), attribute.attrId(), gqlAttribute.name);
             }
@@ -292,6 +294,46 @@ public class Configurator {
         }
 
         return attribute;
+    }
+
+    private static void storeAttributeDescription(Repository repo, int attrId, GqlAttributeShape gqlAttribute) {
+        if (gqlAttribute == null || gqlAttribute.description == null || gqlAttribute.description.isBlank()) {
+            return;
+        }
+
+        String alias = gqlAttribute.name != null ? gqlAttribute.name : gqlAttribute.alias;
+        if (alias == null || alias.isBlank()) {
+            return;
+        }
+
+        String sql = """
+                INSERT INTO repo_attribute_description (attrid, lang, alias, description)
+                VALUES (?,?,?,?)
+                """;
+
+        try {
+            repo.withConnection(conn -> {
+                Database.usePreparedStatement(conn, sql, pStmt -> {
+                    try {
+                        int i = 0;
+                        pStmt.setInt(++i, attrId);
+                        pStmt.setString(++i, DEFAULT_DESCRIPTION_LANG);
+                        pStmt.setString(++i, alias);
+                        pStmt.setString(++i, gqlAttribute.description);
+                        Database.executeUpdate(pStmt);
+                    } catch (SQLException sqle) {
+                        String sqlState = sqle.getSQLState();
+                        if (sqlState != null && sqlState.startsWith("23")) {
+                            log.info("↯ Attribute description already exists for attrId={} lang={}", attrId, DEFAULT_DESCRIPTION_LANG);
+                            return;
+                        }
+                        throw sqle;
+                    }
+                });
+            });
+        } catch (SQLException sqle) {
+            log.warn("↯ Failed to store attribute description for attrId={}: {}", attrId, Database.squeeze(sqle));
+        }
     }
 
     private static CatalogRecord addRecord(

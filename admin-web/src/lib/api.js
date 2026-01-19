@@ -203,12 +203,126 @@ export const fetchAttributeMetadata = async () => {
 };
 
 /*
+ * /api/attributes (create)
+ */
+export const createAttribute = async ({ alias, attributeName, qualifiedName, type, isArray }) => {
+  const response = await fetch('/api/attributes', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      alias,
+      attributeName,
+      qualifiedName,
+      type,
+      isArray
+    })
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Attribute create failed (${response.status})`;
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+/*
+ * /api/attributes/{attrId}/descriptions
+ */
+export const fetchAttributeDescriptions = async (attrId) => {
+  const response = await fetch(`/api/attributes/${attrId}/descriptions`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Attribute descriptions fetch failed (${response.status})`;
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+export const updateAttributeDescriptions = async (attrId, items) => {
+  const response = await fetch(`/api/attributes/${attrId}/descriptions`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      items
+    })
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Attribute descriptions update failed (${response.status})`;
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+/*
  * /api/records
  */
 export const fetchRecords = async () => {
   const response = await fetch('/api/records');
   if (!response.ok) {
     throw new Error(`Record fetch failed (${response.status})`);
+  }
+  return response.json();
+};
+
+/*
+ * /api/records/{recordId}
+ */
+export const fetchRecordTemplate = async (recordId) => {
+  const response = await fetch(`/api/records/${recordId}`);
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Record template fetch failed (${response.status})`;
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+/*
+ * /api/records (create)
+ */
+export const createRecordTemplate = async ({ recordId, name, fields }) => {
+  const response = await fetch('/api/records', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      recordId,
+      name,
+      fields
+    })
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Record template create failed (${response.status})`;
+    throw new Error(message);
+  }
+  return response.json();
+};
+
+/*
+ * /api/records/{recordId} (update)
+ */
+export const updateRecordTemplate = async ({ recordId, name, fields }) => {
+  const response = await fetch(`/api/records/${recordId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      name,
+      fields
+    })
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    const message = payload.error || `Record template update failed (${response.status})`;
+    throw new Error(message);
   }
   return response.json();
 };

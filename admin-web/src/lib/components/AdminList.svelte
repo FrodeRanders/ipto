@@ -1,4 +1,5 @@
 <script>
+  import { createEventDispatcher } from 'svelte';
   import { role, isAdmin } from '../stores/role.js';
   import Badge from './Badge.svelte';
 
@@ -6,6 +7,17 @@
   export let items = [];
   export let fields = [];
   export let actionLabel = 'Add';
+  export let actionId = '';
+
+  const dispatch = createEventDispatcher();
+
+  const handleAction = () => {
+    dispatch('action', { id: actionId, label: actionLabel, title });
+  };
+
+  const handleEdit = (item) => {
+    dispatch('edit', { id: actionId, item });
+  };
 </script>
 
 <div class="admin-section">
@@ -15,7 +27,7 @@
       <p>Visible to all users. Editing requires administrator role.</p>
     </div>
     {#if isAdmin($role)}
-      <button class="primary" type="button">{actionLabel}</button>
+      <button class="primary" type="button" on:click={handleAction}>{actionLabel}</button>
     {/if}
   </div>
 
@@ -50,7 +62,7 @@
         </div>
         {#if isAdmin($role)}
           <div class="actions">
-            <button type="button">Edit</button>
+            <button type="button" on:click={() => handleEdit(item)}>Edit</button>
             <button type="button" class="ghost">Archive</button>
           </div>
         {/if}

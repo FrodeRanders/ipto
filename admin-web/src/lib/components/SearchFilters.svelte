@@ -234,7 +234,8 @@
   </div>
   <details class="field wide filters" bind:open={filtersOpen} on:toggle={onFiltersToggle}>
     <summary class="filters-summary">
-      <span>Attribute filters</span>
+      <span class="filters-caret" aria-hidden="true">{filtersOpen ? '▼' : '▶'}</span>
+      <span class="filters-title">Attribute filters</span>
       <span class="filters-hint" title="Query builder helpers for common filters.">?</span>
     </summary>
     <div class="filters-body">
@@ -513,11 +514,24 @@
     display: none;
   }
 
-  .filters-summary span:first-child {
+  .filters-title {
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.1rem;
     color: var(--text-muted);
+  }
+
+  .filters-caret {
+    border: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-muted);
+    border-radius: 0.4rem;
+    width: 1.4rem;
+    height: 1.4rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
   }
 
   .filters-hint {
