@@ -8,6 +8,8 @@
   export let selectedTemplateId = '';
   export let searchableAttributes = [];
   export let templateAttributes = [];
+  export let orderBy = 'unitId';
+  export let orderDirection = 'asc';
 
   const dispatch = createEventDispatcher();
   let queryInput;
@@ -47,6 +49,10 @@
     const id = event.target.value;
     selectedTemplateId = id;
     dispatch('template-change', { id });
+  };
+
+  const notifyOrderChange = () => {
+    dispatch('order-change', { orderBy, orderDirection });
   };
 
   const runSearch = () => {
@@ -163,6 +169,21 @@
       {#each searches as search}
         <option value={search.id}>{search.name}</option>
       {/each}
+    </select>
+  </div>
+  <div class="field">
+    <label>Sort by</label>
+    <select bind:value={orderBy} on:change={notifyOrderChange}>
+      <option value="unitId">Unit id</option>
+      <option value="created">Created</option>
+      <option value="modified">Modified</option>
+    </select>
+  </div>
+  <div class="field">
+    <label>Direction</label>
+    <select bind:value={orderDirection} on:change={notifyOrderChange}>
+      <option value="asc">Ascending</option>
+      <option value="desc">Descending</option>
     </select>
   </div>
   <div class="field wide">

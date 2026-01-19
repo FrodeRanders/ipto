@@ -32,6 +32,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @Path("/api/searches")
@@ -47,7 +48,7 @@ public class SearchResource {
     public Response list() {
         log.info("SearchResource::list()");
 
-        log.debug("-> list: <empty>");
+        log.trace("-> list: <empty>");
         return Response.ok(List.of()).build();
     }
 
@@ -89,7 +90,14 @@ public class SearchResource {
             expr = QueryBuilder.assembleAnd(expr, QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE));
         }
 
-        SearchOrder order = SearchOrder.orderByUnitId(true);
+        SearchOrder order;
+        try {
+            order = resolveOrder(request);
+        } catch (IllegalArgumentException ex) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", ex.getMessage()))
+                    .build();
+        }
         List<JsonNode> units = new ArrayList<>();
 
         try {
@@ -112,7 +120,7 @@ public class SearchResource {
                     .build();
         }
 
-        log.debug("-> units: {}", units);
+        log.trace("-> units: {}", units);
         return Response.ok(units).build();
     }
 
@@ -125,7 +133,44 @@ public class SearchResource {
                     && usi.getColumn() == Column.UNIT_KERNEL_STATUS;
             case NotExpression notExpr -> hasStatusConstraint(notExpr.inner());
             case BinaryExpression binExpr -> hasStatusConstraint(binExpr.getLeft()) || hasStatusConstraint(binExpr.getRight());
-            default -> false;
+        };
+    }
+
+    private SearchOrder resolveOrder(SearchRequest request) {
+        if (request == null) {
+            return SearchOrder.orderByUnitId(true);
+        }
+
+        String orderBy = request.orderBy();
+        if (orderBy == null || orderBy.isBlank()) {
+            return SearchOrder.orderByUnitId(true);
+        }
+
+        String normalized = orderBy.trim().toLowerCase(Locale.ROOT);
+        boolean ascending = resolveDirection(request.orderDirection(), normalized);
+
+        return switch (normalized) {
+            case "unitid", "unit_id", "unit" -> SearchOrder.orderByUnitId(ascending);
+            case "created" -> SearchOrder.orderByCreation(ascending);
+            case "modified", "updated" -> SearchOrder.orderByModified(ascending);
+            default -> throw new IllegalArgumentException(
+                    "orderBy must be one of: unitId, created, modified"
+            );
+        };
+    }
+
+    private boolean resolveDirection(String direction, String orderBy) {
+        if (direction == null || direction.isBlank()) {
+            return switch (orderBy) {
+                case "created", "modified", "updated" -> false;
+                default -> true;
+            };
+        }
+        String normalized = direction.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "asc", "ascending" -> true;
+            case "desc", "descending" -> false;
+            default -> throw new IllegalArgumentException("orderDirection must be asc or desc");
         };
     }
 }

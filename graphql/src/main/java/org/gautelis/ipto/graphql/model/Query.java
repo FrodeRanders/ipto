@@ -20,5 +20,12 @@ public class Query {
 
     public record UnitIdentification(int tenantId, long unitId) {}
 
-    public record Filter(int tenantId, String where, int offset, int size) {}
+    public record Filter(
+            int tenantId,
+            String where,
+            int offset,
+            int size,
+            String orderBy,
+            String orderDirection
+    ) {}
 }

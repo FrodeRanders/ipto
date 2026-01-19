@@ -4,5 +4,7 @@ public record SearchRequest(
         Integer tenantId,
         String where,
         Integer offset,
-        Integer size
+        Integer size,
+        String orderBy,
+        String orderDirection
 ) {}

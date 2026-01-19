@@ -27,6 +27,8 @@
   let searchBusy = false;
   let pageSize = 30;
   let offset = 0;
+  let orderBy = 'unitId';
+  let orderDirection = 'asc';
   let lastTenantId = null;
 
   const savedSearchKey = 'ipto.savedSearches';
@@ -83,7 +85,9 @@
         tenantId: $tenantId,
         where: query,
         offset,
-        size: pageSize
+        size: pageSize,
+        orderBy,
+        orderDirection
       });
       selected = units[0] || null;
     } catch (err) {
@@ -231,6 +235,13 @@
     offset = 0;
     pageSize = size;
     runSearch(where, 0, size);
+  };
+
+  const updateOrder = ({ orderBy: nextOrderBy, orderDirection: nextOrderDirection }) => {
+    orderBy = nextOrderBy;
+    orderDirection = nextOrderDirection;
+    offset = 0;
+    runSearch(where, 0, pageSize);
   };
 
   const insertTokenAtCursor = (input, token) => {
@@ -474,6 +485,8 @@
     bind:selectedTemplateId
     bind:where
     bind:selectedSearchId
+    bind:orderBy
+    bind:orderDirection
     on:run={(event) => runSearch(event.detail.where)}
     on:select={(event) => applySavedSearch(event.detail.search)}
     on:save={saveCurrentSearch}
@@ -483,6 +496,7 @@
     on:insert-field={(event) => insertFieldToken(event.detail)}
     on:insert-operator={(event) => insertOperatorToken(event.detail)}
     on:template-change={(event) => updateTemplateAttributes(event.detail.id)}
+    on:order-change={(event) => updateOrder(event.detail)}
     on:rename={(event) => renameSavedSearch(event.detail)}
     on:delete={(event) => deleteSavedSearch(event.detail)}
     on:reset={resetSearchForm}

@@ -87,7 +87,7 @@ public class TemplateResource {
                     .build();
         }
 
-        log.debug("-> templates: {}", templates);
+        log.trace("-> templates: {}", templates);
         return Response.ok(templates).build();
     }
 }

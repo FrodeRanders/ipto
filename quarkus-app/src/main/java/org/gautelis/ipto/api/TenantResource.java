@@ -60,7 +60,7 @@ public class TenantResource {
                     .build();
         }
 
-        log.debug("-> tenants: {}", tenants);
+        log.trace("-> tenants: {}", tenants);
         return Response.ok(tenants).build();
     }
 }

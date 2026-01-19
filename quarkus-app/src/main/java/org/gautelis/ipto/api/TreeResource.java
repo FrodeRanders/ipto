@@ -100,7 +100,7 @@ public class TreeResource {
                     .build();
         }
 
-        log.debug("-> roots: {}", roots);
+        log.trace("-> roots: {}", roots);
         return Response.ok(roots).build();
     }
 
@@ -148,7 +148,7 @@ public class TreeResource {
                     .build();
         }
 
-        log.debug("-> children: {}", units);
+        log.trace("-> children: {}", units);
         return Response.ok(units).build();
     }
 }

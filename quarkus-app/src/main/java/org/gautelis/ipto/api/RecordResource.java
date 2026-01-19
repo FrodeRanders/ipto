@@ -133,7 +133,7 @@ public class RecordResource {
                     .build();
         }
 
-        log.debug("-> records: {}", records);
+        log.trace("-> records: {}", records);
         return Response.ok(records).build();
     }
 
@@ -215,6 +215,8 @@ public class RecordResource {
         }
 
         record.put("_fields", fields);
+
+        log.trace("-> record: {}", record);
         return Response.ok(record).build();
     }
 
@@ -321,6 +323,7 @@ public class RecordResource {
         response.put("_name", name);
         response.put("_fields", fields);
 
+        log.trace("-> response: {}", response);
         return Response.ok(response).build();
     }
 
@@ -464,6 +467,7 @@ public class RecordResource {
         response.put("_name", resolvedName[0]);
         response.put("_fields", fields);
 
+        log.trace("-> response: {}", response);
         return Response.ok(response).build();
     }
 }

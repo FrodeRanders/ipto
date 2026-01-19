@@ -26,6 +26,9 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import org.gautelis.ipto.api.UnitResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.Map;
@@ -34,6 +37,8 @@ import java.util.Map;
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
 public class GraphQLResource {
+    private static final Logger log = LoggerFactory.getLogger(GraphQLResource.class);
+
     private final GraphQL graphQL;
 
     @Inject
@@ -43,6 +48,8 @@ public class GraphQLResource {
 
     @POST
     public Response execute(GraphQLRequest request) {
+        log.debug("GraphQLResource::execute({})", request);
+
         if (request == null || request.query() == null || request.query().isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", "Missing GraphQL query"))
@@ -62,6 +69,8 @@ public class GraphQLResource {
         }
 
         ExecutionResult result = graphQL.execute(input.build());
+
+        log.trace("=> result: {}", result);
         return Response.ok(result.toSpecification()).build();
     }
 }

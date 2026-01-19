@@ -68,4 +68,16 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
 
         return new SearchOrder(order, asc);
     }
+
+    /**
+     * Creates a basic search order, ordering on last modified date.
+     */
+    public static SearchOrder orderByModified(boolean ascending) {
+        Column[] order = new Column[1];
+        order[0] = Column.UNIT_VERSION_MODIFIED;
+        boolean[] asc = new boolean[1];
+        asc[0] = ascending;
+
+        return new SearchOrder(order, asc);
+    }
 }

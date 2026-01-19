@@ -352,7 +352,14 @@ export const fetchSearches = async () => {
 /*
  * /api/searches/units
  */
-export const searchUnits = async ({ tenantId, where, offset = 0, size = 20 }) => {
+export const searchUnits = async ({
+  tenantId,
+  where,
+  offset = 0,
+  size = 20,
+  orderBy = null,
+  orderDirection = null
+}) => {
   const response = await fetch('/api/searches/units', {
     method: 'POST',
     headers: {
@@ -362,7 +369,9 @@ export const searchUnits = async ({ tenantId, where, offset = 0, size = 20 }) =>
       tenantId,
       where,
       offset,
-      size
+      size,
+      orderBy,
+      orderDirection
     })
   });
   if (!response.ok) {

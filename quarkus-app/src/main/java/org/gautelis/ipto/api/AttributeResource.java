@@ -114,7 +114,7 @@ public class AttributeResource {
                     .build();
         }
 
-        log.debug("-> attributes: {}", attributes);
+        log.trace("-> attributes: {}", attributes);
         return Response.ok(attributes).build();
     }
 
@@ -180,6 +180,7 @@ public class AttributeResource {
             row.put("_searchable", searchable);
             row.put("_created", info.get().created);
 
+            log.trace("-> row: {}", row);
             return Response.ok(row).build();
 
         } catch (Exception ex) {
@@ -232,6 +233,7 @@ public class AttributeResource {
                     .build();
         }
 
+        log.trace("-> rows: {}", rows);
         return Response.ok(rows).build();
     }
 
@@ -359,6 +361,7 @@ public class AttributeResource {
                     .build();
         }
 
+        log.trace("-> stored: {}", stored);
         return Response.ok(stored).build();
     }
 
@@ -440,7 +443,7 @@ public class AttributeResource {
                     .build();
         }
 
-        log.debug("-> attributes: {}", attributes);
+        log.trace("-> attributes: {}", attributes);
         return Response.ok(attributes).build();
     }
 }

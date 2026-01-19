@@ -62,7 +62,7 @@ public class UnitResource {
 
         String json = unit.get().asJson(/* pretty? */ false);
 
-        log.debug("-> unit: {}", json);
+        log.trace("-> unit: {}", json);
         return Response.ok(json, MediaType.APPLICATION_JSON).build();
     }
 }

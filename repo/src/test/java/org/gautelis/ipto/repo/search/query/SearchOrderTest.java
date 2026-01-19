@@ -40,6 +40,14 @@ class SearchOrderTest {
     }
 
     @Test
+    void orderByModifiedRespectsAscending() {
+        SearchOrder order = SearchOrder.orderByModified(false);
+
+        assertArrayEquals(new Column[]{Column.UNIT_VERSION_MODIFIED}, order.columns());
+        assertArrayEquals(new boolean[]{false}, order.ascending());
+    }
+
+    @Test
     void constructorRejectsMismatchedVectors() {
         Column[] columns = {Column.UNIT_KERNEL_UNITID, Column.UNIT_KERNEL_CREATED};
         boolean[] ascending = {true};

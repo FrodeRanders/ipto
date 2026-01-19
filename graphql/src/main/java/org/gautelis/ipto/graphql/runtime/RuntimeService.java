@@ -457,7 +457,7 @@ public class RuntimeService {
         SearchExpression expr = assembleConstraints(filter);
 
         // Result set constraints (paging)
-        SearchOrder order = SearchOrder.orderByUnitId(true); // ascending on unit id
+        SearchOrder order = resolveOrder(filter);
         UnitSearch usd = new UnitSearch(expr, SearchStrategy.SET_OPS, order, filter.offset(), filter.size());
 
         // Build SQL statement for search
@@ -487,6 +487,39 @@ public class RuntimeService {
         }
 
         return ids;
+    }
+
+    private SearchOrder resolveOrder(Query.Filter filter) {
+        if (filter == null || filter.orderBy() == null || filter.orderBy().isBlank()) {
+            return SearchOrder.orderByUnitId(true);
+        }
+
+        String normalized = filter.orderBy().trim().toLowerCase(Locale.ROOT);
+        boolean ascending = resolveDirection(filter.orderDirection(), normalized);
+
+        return switch (normalized) {
+            case "unitid", "unit_id", "unit" -> SearchOrder.orderByUnitId(ascending);
+            case "created" -> SearchOrder.orderByCreation(ascending);
+            case "modified", "updated" -> SearchOrder.orderByModified(ascending);
+            default -> throw new IllegalArgumentException(
+                    "orderBy must be one of: unitId, created, modified"
+            );
+        };
+    }
+
+    private boolean resolveDirection(String direction, String orderBy) {
+        if (direction == null || direction.isBlank()) {
+            return switch (orderBy) {
+                case "created", "modified", "updated" -> false;
+                default -> true;
+            };
+        }
+        String normalized = direction.trim().toLowerCase(Locale.ROOT);
+        return switch (normalized) {
+            case "asc", "ascending" -> true;
+            case "desc", "descending" -> false;
+            default -> throw new IllegalArgumentException("orderDirection must be asc or desc");
+        };
     }
 
     public List<Box> search(
