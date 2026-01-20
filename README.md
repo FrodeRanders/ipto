@@ -26,3 +26,15 @@ Details on setup and configuration:
 * [Using GraphQL for retrieving data](doc/Retrieving_using_GraphQL.md)
 * [Using Java for creating and retrieving data](doc/Using_Java.md)
 
+## Administration UI
+Overview tab
+![Overview tab](doc/web/Overview.png)
+
+Attributes administration tab
+![Attributes administration tab](doc/web/Administration.png)
+
+Trees tab
+![Trees tab](doc/web/Trees.png)
+
+Search tab
+![Search tab](doc/web/Search.png)
