@@ -1,6 +1,6 @@
 # IPTO Admin (SvelteKit)
 
-Minimal SvelteKit UI for administration, tree browsing, and search. Uses mock data and in-memory state.
+Minimal SvelteKit UI for administration, tree browsing, and search.
 
 ## Structure
 - `src/routes/+page.svelte`: overview
