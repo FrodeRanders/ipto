@@ -379,6 +379,8 @@ enum Attributes @attributeRegistry {
     yrkan                @attribute(datatype: RECORD, name: "ffa:yrkan")
     person               @attribute(datatype: RECORD, name: "ffa:person")
 
+    raw_payload          @attribute(datatype: DATA,   name: "ffa:raw_payload")
+
     dataleverans_id      @attribute(datatype: STRING, name: "mimer:dataleveransid")
 }
 
@@ -528,6 +530,11 @@ input UnitIdentification {
     unitId : Long!
 }
 
+input YrkanIdentification {
+    tenantId : Int!
+    corrId : String!
+}
+
 input Filter {
     tenantId: Int!
     where: String
@@ -541,12 +548,17 @@ input Filter {
 ##############  Queries ###########################################
 type Query {
     yrkan(id : UnitIdentification!) : Yrkan
-    yrkanRaw(id : UnitIdentification!) : Bytes
+    yrkanRaw(id : YrkanIdentification!) : Bytes
     yrkanden(filter: Filter!) : [Yrkan]
     yrkandenRaw(filter: Filter!) : Bytes
+
+    unitRaw(id : UnitIdentification!) : Bytes
+    unitsRaw(filter: Filter!) : Bytes
 }
 
 ##############  Mutations ###########################################
 type Mutation {
+    lagraYrkanRaw(tenantId : Int!, data : Bytes!) : Bytes
+
     lagraUnitRaw(data : Bytes!) : Bytes
 }

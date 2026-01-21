@@ -334,6 +334,11 @@ input UnitIdentification {
     unitId : Long!
 }
 
+input YrkanIdentification {
+    tenantId : Int!
+    corrId : String!
+}
+
 input Filter {
     tenantId: Int!
     where: String
@@ -347,8 +352,10 @@ input Filter {
 ##############  Queries ###########################################
 type Query {
     yrkan(id : UnitIdentification!) : Yrkan
-    yrkanRaw(id : UnitIdentification!) : Bytes
+    unitRaw(id : UnitIdentification!) : Bytes
+    yrkanRaw(id : YrkanIdentification!) : Bytes
     yrkanden(filter: Filter!) : [Yrkan]
+    unitsRaw(filter: Filter!) : Bytes
     yrkandenRaw(filter: Filter!) : Bytes
 }
 

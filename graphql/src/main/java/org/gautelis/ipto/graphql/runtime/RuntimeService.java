@@ -25,6 +25,7 @@ import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
+import org.gautelis.ipto.repo.search.SearchResult;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
@@ -140,6 +141,35 @@ public class RuntimeService {
         return new /* outermost */ UnitBox(unit, attributes);
     }
 
+    public Box loadUnitByCorrId(int tenantId, UUID corrId) {
+        log.trace("↪ RuntimeService::loadUnitByCorrId({}, {})", tenantId, corrId);
+
+        Unit unit = findUnitByCorrId(tenantId, corrId);
+        if (unit == null) {
+            log.trace("↪ No unit with corrid {} for tenant {}", corrId, tenantId);
+            return null;
+        }
+
+        //---------------------------------------------------------------------
+        // OBSERVE
+        //    We are assuming that the field names used in the SDL equals the
+        //    attribute aliases used.
+        //---------------------------------------------------------------------
+        Map</* field name */ String, Attribute<?>> attributes = new HashMap<>();
+
+        unit.getAttributes().forEach(attr -> {
+            attributes.put(attr.getAlias(), attr); // here we assume alias == field name
+        });
+
+        if (attributes.isEmpty()) {
+            log.debug("↪ No attributes for unit identified by correlation ID {} in tenant {}", corrId, tenantId);
+        }
+
+        return new /* outermost */ UnitBox(unit, attributes);
+    }
+
+
+
     public byte[] loadRawUnit(int tenantId, long unitId) {
         log.trace("↪ RuntimeService::loadRawUnit({}, {})", tenantId, unitId);
 
@@ -151,6 +181,38 @@ public class RuntimeService {
 
         String json = unit.get().asJson(/* pretty? */ false);
         return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] loadRawPayload(int tenantId, long unitId) {
+        log.trace("↪ RuntimeService::loadRawPayload({}, {})", tenantId, unitId);
+
+        Optional<Unit> unit = repo.getUnit(tenantId, unitId);
+        if (unit.isEmpty()) {
+            log.trace("↪ No unit with id {}.{}", tenantId, unitId);
+            return null;
+        }
+
+        byte[] payload = rawPayload(unit.get());
+        if (payload == null) {
+            log.trace("↪ No raw_payload for unit {}.{}", tenantId, unitId);
+        }
+        return payload;
+    }
+
+    public byte[] loadRawPayloadByCorrId(int tenantId, UUID corrId) {
+        log.trace("↪ RuntimeService::loadRawPayloadByCorrId({}, {})", tenantId, corrId);
+
+        Unit unit = findUnitByCorrId(tenantId, corrId);
+        if (unit == null) {
+            log.trace("↪ No unit with corrid {} for tenant {}", corrId, tenantId);
+            return null;
+        }
+
+        byte[] payload = rawPayload(unit);
+        if (payload == null) {
+            log.trace("↪ No raw_payload for unit {}", unit.getReference());
+        }
+        return payload;
     }
 
     public Object getValueArray(
@@ -590,6 +652,70 @@ public class RuntimeService {
                 .collect(Collectors.joining(", "));
         json += "]";
         return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public byte[] searchRawPayload(
+            Query.Filter filter
+    ) {
+        log.trace("↪ RuntimeService::searchRawPayload");
+
+        Collection<Unit.Id> ids = search0(filter);
+
+        List<String> payloads = new ArrayList<>();
+        for (Unit.Id id : ids) {
+            try {
+                Optional<Unit> _unit = repo.getUnit(id.tenantId(), id.unitId());
+                if (_unit.isPresent()) {
+                    byte[] payload = rawPayload(_unit.get());
+                    if (payload != null) {
+                        payloads.add(new String(payload, StandardCharsets.UTF_8));
+                    } else {
+                        log.debug("↪ No raw_payload for unit {}", id);
+                    }
+                } else {
+                    log.error("↪ Unknown unit: {}", id);
+                }
+            } catch (Throwable t) {
+                log.error(t.getMessage(), t);
+            }
+        }
+
+        String json = "[";
+        json += String.join(", ", payloads);
+        json += "]";
+        return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private byte[] rawPayload(Unit unit) {
+        for (Attribute<?> attr : unit.getAttributes()) {
+            if ("raw_payload".equals(attr.getAlias())) {
+                if (!AttributeType.DATA.equals(attr.getType())) {
+                    log.warn("↪ raw_payload attribute is not DATA on unit {}", unit.getReference());
+                    return null;
+                }
+                ArrayList<?> values = attr.getValueVector();
+                if (values.isEmpty()) {
+                    return null;
+                }
+                Object value = values.getFirst();
+                if (value instanceof byte[] bytes) {
+                    return bytes;
+                }
+                log.warn("↪ raw_payload value is not byte[] on unit {}", unit.getReference());
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Unit findUnitByCorrId(int tenantId, UUID corrId) {
+        String query = "tenantid = " + tenantId + " AND corrid = \"" + corrId + "\"";
+        SearchExpression expr = SearchExpressionQueryParser.parse(query, repo);
+        SearchResult result = repo.searchUnit(1, 1, 1, expr, SearchOrder.getDefaultOrder());
+        if (result.results().size() > 1) {
+            throw new IllegalArgumentException("Multiple units found for corrid " + corrId);
+        }
+        return result.results().stream().findFirst().orElse(null);
     }
 
     /****************** Search related ******************/

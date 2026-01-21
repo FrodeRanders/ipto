@@ -294,7 +294,7 @@ public class GraphQLIT {
 
         String query = """
             query Unit($id: UnitIdentification!) {
-              yrkanRaw(id: $id)
+              unitRaw(id: $id)
             }
             """;
         log.info(query);
@@ -316,7 +316,7 @@ public class GraphQLIT {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
-            String b64 = map.get("yrkanRaw"); // OBS! name same as fieldname in query type
+            String b64 = map.get("unitRaw"); // OBS! name same as fieldname in query type
             if (null != b64) {
                 final Base64.Decoder DEC = Base64.getDecoder();
                 String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
@@ -353,7 +353,7 @@ public class GraphQLIT {
         final long _unitId = createUnit(tenantId, beslutsfattare, Instant.now());
 
         String query = """
-            query Unit($filter: Filter!) {
+            query Yrkan($filter: Filter!) {
               yrkanden(filter: $filter) {
                 person {
                   ... on FysiskPerson {
@@ -429,7 +429,7 @@ public class GraphQLIT {
         final long _unitId2 = createUnit(tenantId, beslutsfattare2, Instant.now());
 
         String query = """
-            query Unit {
+            query Yrkan {
               yrkanden1: yrkanden(filter: {tenantId: %d, where: "beslutsfattare = \\"%s\\""}) {
                 person {
                   ... on FysiskPerson {
@@ -495,7 +495,7 @@ public class GraphQLIT {
 
         String query = """
             query Unit($filter: Filter!) {
-              yrkandenRaw(filter: $filter)
+              unitsRaw(filter: $filter)
             }
             """;
         log.info(query);
@@ -519,7 +519,7 @@ public class GraphQLIT {
         List<GraphQLError> errors = result.getErrors();
         if (errors.isEmpty()) {
             Map<String, String> map = result.getData();
-            String b64 = map.get("yrkandenRaw"); // OBS! name same as fieldname in query type
+            String b64 = map.get("unitsRaw"); // OBS! name same as fieldname in query type
             if (null != b64) {
                 final Base64.Decoder DEC = Base64.getDecoder();
                 String json = new String(DEC.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
@@ -662,7 +662,7 @@ public class GraphQLIT {
         final long _unitId = createUnit(tenantId, beslutsfattare, Instant.now());
 
         String query = """
-            query Unit($filter: Filter!) {
+            query Yrkan($filter: Filter!) {
               yrkanden(filter: $filter) {
                 beslut {
                   beslutsfattare

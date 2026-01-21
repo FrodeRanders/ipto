@@ -199,4 +199,64 @@ try {
 }
 ```
 
+### Wiring GraphQL operations (the only required custom code)
 
+The SDL describes the domain model and the GraphQL schema, but **operations** (queries and mutations) must be
+wired to runtime behavior. This is done once at bootstrap time using `OperationsWireParameters`, and it is
+the only piece of Java code a user of the platform needs to supply.
+
+Two concrete examples live in the codebase:
+* `it/src/test/java/org/gautelis/ipto/it/IptoSetupExtension.java` wires the test SDL.
+* `repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java` wires the Quarkus app SDL.
+
+Both follow the same pattern:
+1. Define the GraphQL operation signature as it appears in the SDL.
+2. Convert input arguments to the generated model types (for example `Query.UnitIdentification`).
+3. Call `RuntimeService` (available via `OperationsWireParameters`) to load, search, or store units.
+4. Register a `DataFetcher` for the operation.
+
+Minimal skeleton:
+```java
+static void wireOperations(OperationsWireParameters params) {
+    String type = "Query";
+    String operationName = "yourQuery";
+    String parameterName = "id";
+
+    DataFetcher<?> fetcher = env -> {
+        Query.UnitIdentification id =
+                MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
+        return params.runtimeService().loadUnit(id.tenantId(), id.unitId());
+    };
+
+    params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, fetcher));
+}
+```
+
+If your SDL defines different operations, you must provide a matching wiring method that implements those
+operations and routes them to the runtime service.
+
+### Using built binaries (Quarkus app)
+
+If you want to use the prebuilt Quarkus distribution as-is, you need to provide three things:
+1. A database with the IPTO schema (see the database setup scripts earlier in this document).
+2. A GraphQL SDL on the classpath (configured by `ipto.graphql.sdl-resource` in `application.yaml`).
+3. A wiring method that matches the SDL's operations.
+
+The default Quarkus app is configured in `quarkus-app/src/main/resources/application.yaml` and expects the SDL at
+`/ipto.graphqls`. If you replace that SDL with your own, you must also update the wiring in
+`repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java` (or provide an equivalent bootstrap in
+your own app) so that every `Query`/`Mutation` in the SDL is connected to a `DataFetcher`.
+
+Example override:
+```yaml
+ipto:
+  graphql:
+    sdl-resource: /my-domain.graphqls
+```
+
+For custom systems, the recommended flow is:
+1. Start from the test SDL and wiring (`it/src/test/resources/org/gautelis/ipto/it/schema2.graphqls` and
+   `it/src/test/java/org/gautelis/ipto/it/IptoSetupExtension.java`).
+2. Replace the SDL with your domain schema.
+3. Implement the wiring method so each operation uses `RuntimeService` to load/search/store the right data.
+4. Package the SDL as a resource in your app and set `ipto.graphql.sdl-resource` accordingly.

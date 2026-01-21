@@ -20,6 +20,8 @@ public class Query {
 
     public record UnitIdentification(int tenantId, long unitId) {}
 
+    public record YrkanIdentification(int tenantId, String corrId) {}
+
     public record Filter(
             int tenantId,
             String where,
