@@ -26,19 +26,17 @@
 
         <!-- Development and support -->
         <vopn.version>3.0-SNAPSHOT</vopn.version>
-
-        <!-- sibling project -->
         <guid-gen.version>5.2.0</guid-gen.version>
 
         <!-- JSON related -->
-        <jackson.version>3.0.3</jackson.version>
+        <jackson.version>3.0.4</jackson.version>
         <networknt.version>3.0.0</networknt.version>
 
         <!-- GraphQL related -->
         <graphql-java.version>25.0</graphql-java.version>
 
         <!-- test related -->
-        <junit.version>6.0.1</junit.version>
+        <junit.version>6.0.2</junit.version>
 
         <!-- logging related -->
         <log4j.version>2.25.3</log4j.version>
@@ -49,7 +47,7 @@
 
         <!-- db related -->
         <hikari.version>7.0.2</hikari.version>
-        <postgresql.version>42.7.8</postgresql.version>
+        <postgresql.version>42.7.9</postgresql.version>
         <db2.version>12.1.3.0</db2.version>
     </properties>
 

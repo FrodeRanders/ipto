@@ -17,7 +17,8 @@
     <properties>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.30.5</quarkus.platform.version>
+        <quarkus.platform.version>3.30.8</quarkus.platform.version>
+        <smallrye-config.version>3.15.1</smallrye-config.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -29,6 +30,12 @@
                 <version>${quarkus.platform.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>io.smallrye.config</groupId>
+                <artifactId>smallrye-config</artifactId>
+                <version>${smallrye-config.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
