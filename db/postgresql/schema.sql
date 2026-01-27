@@ -286,10 +286,6 @@ CONSTRAINT repo_string_v_value_ex
 CREATE INDEX repo_sv_ind1
 ON repo_string_vector (LOWER(value) ASC);
 
-CREATE INDEX repo_sv_ind2
-ON repo_string_vector (valueid ASC, LOWER(value) ASC);
-
-
 -- Considering... for ILIKE '%foo%' searches
 -- CREATE EXTENSION IF NOT EXISTS pg_trgm;
 --
