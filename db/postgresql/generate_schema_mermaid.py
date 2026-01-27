@@ -165,7 +165,10 @@ def parse_columns(items: List[str]) -> Tuple[Dict[str, str], List[str], List[str
         if not type_tokens:
             continue
         col_type = " ".join(type_tokens).upper()
-        if col_type == "DOUBLE PRECISION":
+        col_type = re.sub(r"\(\s*(\d+)\s*([KMGTP])\s*\)", r"(\1\2)", col_type)
+        col_type = re.sub(r"\(\s*(\d+)\s*,\s*(\d+)\s*\)", r"(\1,\2)", col_type)
+        col_type = "_".join(col_type.split())
+        if col_type == "DOUBLE_PRECISION":
             col_type = "DOUBLE"
         columns[col_name] = col_type
         if saw_unique:
