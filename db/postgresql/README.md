@@ -1,5 +1,6 @@
 # Data model
 
+## Model
 ```mermaid
 erDiagram
 %% =========================
@@ -187,6 +188,20 @@ repo_attribute_value ||--o{ repo_data_vector    : "binary"
 repo_attribute_value ||--o{ repo_record_vector  : "records (child via ref_valueid)"
 repo_attribute_value ||--o{ repo_record_vector  : "records (parent)"
 ```
+## Mermaid ERD generator
+Generate this Mermaid diagram from schema.sql:
+
+```
+python generate_schema_mermaid.py --schema schema.sql --markdown
+```
+
+Or update this README in-place:
+
+```
+python generate_schema_mermaid.py --schema schema.sql --update-readme README.md
+```
+
+The script includes its own embedded README at the top of `generate_schema_mermaid.py`.
 
 # Instructions for retrieving, running and preparing PostgreSQL
 
@@ -258,4 +273,3 @@ postgres=# \q
 ```
 
 ## More at https://hub.docker.com/_/postgres/
-
