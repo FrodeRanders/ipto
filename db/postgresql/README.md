@@ -34,8 +34,8 @@ erDiagram
 
     repo_attribute {
         INT attrid PK
-        TEXT qualname
-        TEXT attrname
+        TEXT qualname UK
+        TEXT attrname UK
         TEXT alias
         INT attrtype
         BOOLEAN scalar
@@ -109,7 +109,7 @@ erDiagram
     repo_double_vector {
         BIGINT valueid PK, FK
         INT idx PK
-        DOUBLE PRECISION value
+        DOUBLE value
     }
 
     repo_boolean_vector {
