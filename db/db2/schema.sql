@@ -291,18 +291,18 @@ CREATE TABLE REPO_DATA_VECTOR
 )@
 
 CREATE TABLE REPO_RECORD_VECTOR (
-    valueid     BIGINT NOT NULL,           -- parent value vector
+    VALUEID     BIGINT NOT NULL,           -- parent value vector
     idx         INT    NOT NULL DEFAULT 0, -- position within parent
 
-    ref_attrid  INT    NOT NULL,
-    ref_valueid BIGINT NULL,               -- initially null when first written, later updated
+    REF_ATTRID  INT    NOT NULL,
+    REF_VALUEID BIGINT NULL,               -- initially null when first written, later updated
 
     CONSTRAINT REPO_RECORD_VECTOR_PK
-        PRIMARY KEY (valueid, idx),
+        PRIMARY KEY (VALUEID, IDX),
     CONSTRAINT REPO_RECORD_VEC_PARENT_EX
-        FOREIGN KEY (valueid) REFERENCES REPO_ATTRIBUTE_VALUE(valueid) ON DELETE CASCADE,
+        FOREIGN KEY (VALUEID) REFERENCES REPO_ATTRIBUTE_VALUE(VALUEID) ON DELETE CASCADE,
     CONSTRAINT REPO_RECORD_VEC_CHILD_EX
-        FOREIGN KEY (ref_valueid) REFERENCES REPO_ATTRIBUTE_VALUE(valueid) ON DELETE CASCADE
+        FOREIGN KEY (REF_VALUEID) REFERENCES REPO_ATTRIBUTE_VALUE(VALUEID) ON DELETE CASCADE
 )@
 
 
@@ -310,14 +310,14 @@ CREATE TABLE REPO_RECORD_VECTOR (
 -- i.e. when querying "WHERE ref_valueid = ?child?"
 -- A fill factor of 80-90% is a reasonable starting point for ensuring enough head-room for page splits during steady ingest
 CREATE INDEX REPO_RV_IND1 ON REPO_RECORD_VECTOR (
-    ref_valueid
+    REF_VALUEID
 )
 PCTFREE 20
 MINPCTUSED 80@
 
 -- Relevant when deleting a child, validating schema, adding a composite
 CREATE INDEX REPO_RV_IND2 ON REPO_RECORD_VECTOR (
-    valueid, ref_attrid
+    VALUEID, REF_ATTRID
 )@
 
 

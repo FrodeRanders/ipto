@@ -5,7 +5,7 @@
 erDiagram
     repo_tenant {
         INT tenantid PK
-        TEXT name
+        TEXT name UK
         TEXT description
         TIMESTAMP created
     }
@@ -13,7 +13,7 @@ erDiagram
     repo_unit_kernel {
         INT tenantid PK, FK
         BIGINT unitid PK
-        UUID corrid
+        UUID corrid UK
         INT status
         INT lastver
         TIMESTAMP created
@@ -53,14 +53,14 @@ erDiagram
         INT tenantid PK, FK
         BIGINT unitid PK, FK
         INT attrid PK, FK
-        BIGINT valueid PK
+        BIGINT valueid PK, UK
         INTEGER unitverfrom PK, FK
         INTEGER unitverto FK
     }
 
     repo_unit_template {
         INT templateid PK
-        TEXT name
+        TEXT name UK
     }
 
     repo_unit_template_elements {
@@ -72,7 +72,7 @@ erDiagram
 
     repo_record_template {
         INT recordid PK, FK
-        TEXT name
+        TEXT name UK
     }
 
     repo_record_template_elements {
@@ -191,7 +191,6 @@ erDiagram
     repo_unit_kernel ||--o{ repo_internal_relation : "reltenantid, relunitid"
     repo_unit_kernel ||--o{ repo_external_assoc : "tenantid, unitid"
 ```
-
 ## Mermaid ERD generator
 Generate this Mermaid diagram from schema.sql:
 
@@ -277,3 +276,4 @@ postgres=# \q
 ```
 
 ## More at https://hub.docker.com/_/postgres/
+

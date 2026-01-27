@@ -66,6 +66,7 @@ class Table:
     columns: Dict[str, str]
     pk_cols: Tuple[str, ...]
     fk_cols: Tuple[str, ...]
+    uk_cols: Tuple[str, ...]
 
 
 def strip_comments(sql: str) -> str:
@@ -116,18 +117,24 @@ def split_top_level_items(definition: str) -> List[str]:
     return items
 
 
-def parse_columns(items: List[str]) -> Tuple[Dict[str, str], List[str], List[ForeignKey]]:
+def parse_columns(items: List[str]) -> Tuple[Dict[str, str], List[str], List[str], List[ForeignKey]]:
     columns: Dict[str, str] = {}
     pk_cols: List[str] = []
+    uk_cols: List[str] = []
     fks: List[ForeignKey] = []
 
     for item in items:
         upper = item.upper()
-        if upper.startswith("CONSTRAINT") or upper.startswith("PRIMARY KEY") or upper.startswith("FOREIGN KEY"):
+        if upper.startswith("CONSTRAINT") or upper.startswith("PRIMARY KEY") or upper.startswith("FOREIGN KEY") or upper.startswith("UNIQUE"):
             pk_match = re.search(r"PRIMARY\s+KEY\s*\(([^)]+)\)", item, re.I)
             if pk_match:
                 cols = [c.strip().strip('"') for c in pk_match.group(1).split(",")]
                 pk_cols.extend(cols)
+                continue
+            uk_match = re.search(r"UNIQUE\s*\(([^)]+)\)", item, re.I)
+            if uk_match:
+                cols = [c.strip().strip('"') for c in uk_match.group(1).split(",")]
+                uk_cols.extend(cols)
                 continue
             fk_match = re.search(
                 r"FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+([^\s(]+)\s*\(([^)]+)\)",
@@ -147,15 +154,24 @@ def parse_columns(items: List[str]) -> Tuple[Dict[str, str], List[str], List[For
             continue
         col_name = tokens[0].strip('"')
         type_tokens = []
+        saw_unique = False
         for tok in tokens[1:]:
-            if tok.upper() in STOP_KEYWORDS:
+            upper_tok = tok.upper()
+            if upper_tok in STOP_KEYWORDS:
+                if upper_tok == "UNIQUE":
+                    saw_unique = True
                 break
             type_tokens.append(tok)
         if not type_tokens:
             continue
-        columns[col_name] = " ".join(type_tokens).upper()
+        col_type = " ".join(type_tokens).upper()
+        if col_type == "DOUBLE PRECISION":
+            col_type = "DOUBLE"
+        columns[col_name] = col_type
+        if saw_unique:
+            uk_cols.append(col_name)
 
-    return columns, pk_cols, fks
+    return columns, pk_cols, uk_cols, fks
 
 
 def parse_schema(sql: str) -> Tuple[List[Table], List[ForeignKey]]:
@@ -185,12 +201,13 @@ def parse_schema(sql: str) -> Tuple[List[Table], List[ForeignKey]]:
 
         definition = sql[start + 1 : i]
         items = split_top_level_items(definition)
-        columns, pk_cols, fks = parse_columns(items)
+        columns, pk_cols, uk_cols, fks = parse_columns(items)
         table = Table(
             name=table_name,
             columns=columns,
             pk_cols=tuple(pk_cols),
             fk_cols=tuple(col for fk in fks for col in fk.from_cols),
+            uk_cols=tuple(uk_cols),
         )
         tables.append(table)
         for fk in fks:
@@ -214,7 +231,9 @@ def render_mermaid(tables: List[Table], fks: List[ForeignKey], markdown: bool) -
                 flags.append("PK")
             if col_name in table.fk_cols:
                 flags.append("FK")
-            flag_str = f" {' '.join(flags)}" if flags else ""
+            if col_name in table.uk_cols:
+                flags.append("UK")
+            flag_str = f" {', '.join(flags)}" if flags else ""
             lines.append(f"        {col_type} {col_name}{flag_str}")
         lines.append("    }")
         lines.append("")
