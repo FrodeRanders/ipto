@@ -30,10 +30,13 @@ quarkus:
       # JBoss Logging facade and backend
       "org.jboss.logging":
         level: TRACE
+        min-level: TRACE
       "org.jboss.logmanager":
         level: TRACE
+        min-level: TRACE
       "org.jboss.logmanager.handlers":
         level: TRACE
+        min-level: TRACE
 
   index-dependency:
     ipto-repo-cdi:
