@@ -321,8 +321,16 @@ public abstract class Value<T> {
     public abstract T getScalar();
 
     /* Package accessible only */
-    void copy(Value<T> other) {
+    void copyFrom(Value<T> other) {
+        values.clear();
         values.addAll(other.values);
+        copyStateFrom(other);
+    }
+
+    /* Package accessible only */
+    void copyStateFrom(Value<T> other) {
+        initialHashCode = values.hashCode();
+        isNew = other.isNew;
     }
 
     /*--------------------------------------------------------

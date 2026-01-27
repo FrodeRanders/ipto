@@ -42,6 +42,9 @@
         <log4j.version>2.25.3</log4j.version>
         <slf4j.version>2.0.17</slf4j.version>
 
+        <!-- cache related -->
+        <caffeine.version>3.1.8</caffeine.version>
+
         <!-- antlr -->
         <antlr.version>4.13.2</antlr.version>
 
@@ -133,6 +136,11 @@
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
                 <version>${antlr.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

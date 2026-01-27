@@ -121,6 +121,23 @@ final class DataValue extends Value<Object> {
         }
     }
 
+    @Override
+    void copyFrom(Value<Object> other) {
+        values.clear();
+        if (other instanceof DataValue otherData) {
+            for (Object value : otherData.values) {
+                if (value instanceof byte[] bytes) {
+                    values.add(bytes.clone());
+                } else {
+                    values.add(value);
+                }
+            }
+        } else {
+            values.addAll(other.values);
+        }
+        copyStateFrom(other);
+    }
+
     public boolean verify(Object value) {
         return value instanceof byte[];
     }

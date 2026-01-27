@@ -25,22 +25,22 @@ import org.gautelis.ipto.repo.model.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.ref.SoftReference;
+import java.time.Duration;
 import java.sql.*;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.Optional;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  *
  */
 public final class UnitFactory {
     private static final Logger log = LoggerFactory.getLogger(UnitFactory.class);
-    private final static Map<String, SoftReference<UnitCacheEntry>> unitCache = new HashMap<>();
-
-    private final static Object mgrLock = new Object();
-    private static UnitCacheManager cacheMgr = null;
+    private static final Object cacheLock = new Object();
+    private static volatile Cache<String, UnitCacheEntry> unitCache = null;
+    private static volatile int cacheMaxSize = -1;
+    private static volatile int cacheIdleCheckIntervalMs = -1;
 
     public enum LoadStrategy {
         RESULTSET_BASED,
@@ -78,12 +78,12 @@ public final class UnitFactory {
     ) throws DatabaseConnectionException, DatabaseReadException {
         // First, check cache
         if (unitVersion > 0) {
-            Optional<Unit> unit = cacheLookup(tenantId, unitId, unitVersion);
+            Optional<Unit> unit = cacheLookup(ctx, tenantId, unitId, unitVersion);
             if (unit.isPresent()) {
                 return unit;
             }
         } else {
-            Optional<Unit> unit = cacheLookup(tenantId, unitId);
+            Optional<Unit> unit = cacheLookup(ctx, tenantId, unitId);
             if (unit.isPresent()) {
                 return unit;
             }
@@ -128,8 +128,8 @@ public final class UnitFactory {
             }
 
             case JSON_BASED: {
-                // This pulls attributes as well as unit, as opposed to classic load, but saves
-                // the extra step of later having to pull attributes.
+                // This pulls attributes as well as unit, as opposed to classic load, and saves
+                // the extra step of having to pull attributes later.
                 String sql = "CALL extract_unit_json(?, ?, ?, ?)";
 
                 Unit[] unit = { null };
@@ -207,7 +207,7 @@ public final class UnitFactory {
                 long unitId = rs.getLong("unitid");
                 int unitVer = rs.getInt("unitver");
 
-                Optional<Unit> unit = cacheLookup(tenantId, unitId, unitVer);
+                Optional<Unit> unit = cacheLookup(ctx, tenantId, unitId, unitVer);
                 if (unit.isPresent()) {
                     return unit;
                 }
@@ -234,7 +234,7 @@ public final class UnitFactory {
     }
 
     /**
-     * Fetch a unit from a JSON.
+     * Fetch a unit from JSON.
      */
     private static Unit resurrect(
             Context ctx, String json
@@ -242,33 +242,82 @@ public final class UnitFactory {
         return new Unit(ctx, json);
     }
 
-    public static void flush() {
-        long gcCount = 0L;
-        long flushCount = 0L;
-        synchronized (unitCache) {
-            try {
-                if (!unitCache.isEmpty()) {
-                    if (log.isTraceEnabled())
-                        log.trace("Unit cache: Flushing {} units", unitCache.size());
+    private static Cache<String, UnitCacheEntry> ensureCache(
+            Context ctx
+    ) {
+        int requestedMaxSize = ctx.getConfig().cacheMaxSize();
+        int requestedIdleCheckMs = 1000 * ctx.getConfig().cacheIdleCheckInterval();
 
-                    Iterator<SoftReference<UnitCacheEntry>> eit = unitCache.values().iterator();
-                    while (eit.hasNext()) {
-                        SoftReference<UnitCacheEntry> ref = eit.next();
-                        UnitCacheEntry entry = ref.get();
+        Cache<String, UnitCacheEntry> cache = unitCache;
+        if (cache != null && cacheMaxSize == requestedMaxSize && cacheIdleCheckIntervalMs == requestedIdleCheckMs) {
+            return cache;
+        }
 
-                        if (null == entry || entry.isCleared()) {
-                            gcCount++;
-                        } else {
-                            flushCount++;
-                        }
-                        eit.remove();
-                    }
+        synchronized (cacheLock) {
+            cache = unitCache;
+            if (cache != null && cacheMaxSize == requestedMaxSize && cacheIdleCheckIntervalMs == requestedIdleCheckMs) {
+                return cache;
+            }
+
+            if (requestedMaxSize <= 0) {
+                if (cache != null) {
+                    cache.invalidateAll();
+                    unitCache = null;
                 }
-            } catch (Throwable t) {
-                log.info("Unit cache explicit flush failure: {}", t.getMessage());
+                cacheMaxSize = requestedMaxSize;
+                cacheIdleCheckIntervalMs = requestedIdleCheckMs;
+                if (log.isDebugEnabled()) {
+                    log.debug("Unit cache disabled (max size <= 0)");
+                }
+                return null;
+            }
+
+            Caffeine<Object, Object> builder = Caffeine.newBuilder()
+                    .maximumSize(requestedMaxSize);
+            if (requestedIdleCheckMs > 0) {
+                builder.expireAfterAccess(Duration.ofMillis(requestedIdleCheckMs));
+            }
+
+            Cache<String, UnitCacheEntry> newCache = builder.build();
+            Cache<String, UnitCacheEntry> oldCache = unitCache;
+            unitCache = newCache;
+            cacheMaxSize = requestedMaxSize;
+            cacheIdleCheckIntervalMs = requestedIdleCheckMs;
+
+            long preservedEntries = 0L;
+            if (oldCache != null) {
+                preservedEntries = oldCache.estimatedSize();
+                newCache.putAll(oldCache.asMap());
+                oldCache.invalidateAll();
+            }
+
+            if (log.isInfoEnabled()) {
+                if (requestedIdleCheckMs > 0) {
+                    log.info("Created unit cache (maxSize={}, expireAfterAccessMs={}, preservedEntries={})",
+                            requestedMaxSize, requestedIdleCheckMs, preservedEntries);
+                } else {
+                    log.info("Created unit cache (maxSize={}, expireAfterAccess=disabled, preservedEntries={})",
+                            requestedMaxSize, preservedEntries);
+                }
             }
         }
-        log.info("Unit cache flushed {} live units. {} were already garbage collected.", flushCount, gcCount);
+
+        return unitCache;
+    }
+
+    public static void flush() {
+        Cache<String, UnitCacheEntry> cache = unitCache;
+        if (cache == null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Unit cache flush requested, but cache is not initialized.");
+            }
+            return;
+        }
+
+        long size = cache.estimatedSize();
+        cache.invalidateAll();
+        cache.cleanUp();
+        log.info("Unit cache flushed {} entries.", size);
     }
 
     /**
@@ -277,78 +326,71 @@ public final class UnitFactory {
      * lookup is likely to fail
      */
     private static Optional<Unit> cacheLookup(
-            int tenantId, long unitId, int unitVersion
+            Context ctx, int tenantId, long unitId, int unitVersion
     ) {
         String key = Unit.id2String(tenantId, unitId);
 
         if (log.isTraceEnabled()) {
             log.trace("Looking up unit {}", key);
         }
-        synchronized (unitCache) {
-            SoftReference<UnitCacheEntry> ref = unitCache.get(key);
-            if (null == ref) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Unit {} not in cache", key);
-                }
-                return Optional.empty();
+        Cache<String, UnitCacheEntry> cache = ensureCache(ctx);
+        if (cache == null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Unit {} not in cache (cache not initialized)", key);
             }
-
-            UnitCacheEntry entry = ref.get();
-            if (null == entry || entry.isCleared()) {
-                unitCache.remove(key); // since cached unit was garbage collected
-                if (log.isTraceEnabled()) {
-                    log.trace("Unit {} was garbage collected - removed entry from cache", key);
-                }
-                return Optional.empty();
-            }
-
-            if (entry.getVersion() != unitVersion) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Cached unit {} not of version {}", key, unitVersion);
-                }
-                return Optional.empty();
-            }
-
-            // A cache hit!
-            entry.touch();
-            return entry.getUnit();
+            return Optional.empty();
         }
+
+        UnitCacheEntry entry = cache.getIfPresent(key);
+        if (entry == null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Unit {} not in cache", key);
+            }
+            return Optional.empty();
+        }
+
+        if (entry.getVersion() != unitVersion) {
+            if (log.isTraceEnabled()) {
+                log.trace("Cached unit {} not of version {}", key, unitVersion);
+            }
+            return Optional.empty();
+        }
+
+        // A cache hit!
+        entry.touch();
+        return entry.getUnit();
     }
 
     /**
      * Looks up unit. If it exists in cache, it is returned.
      */
     private static Optional<Unit> cacheLookup(
-            int tenantId, long unitId
+            Context ctx, int tenantId, long unitId
     ) {
         String key = Unit.id2String(tenantId, unitId);
 
         if (log.isTraceEnabled()) {
             log.trace("Looking up unit {}", key);
         }
-        synchronized (unitCache) {
-            SoftReference<UnitCacheEntry> ref = unitCache.get(key);
-            if (null == ref) {
-                if (log.isTraceEnabled()) {
-                    log.trace("Unit {} not in cache", key);
-                }
-                return Optional.empty();
+        Cache<String, UnitCacheEntry> cache = ensureCache(ctx);
+        if (cache == null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Unit {} not in cache (cache not initialized)", key);
             }
-
-            UnitCacheEntry entry = ref.get();
-            if (null == entry || entry.isCleared()) {
-                unitCache.remove(key); // since cached unit was garbage collected
-                if (log.isTraceEnabled()) {
-                    log.trace("Unit {} was garbage collected - removed entry from cache", key);
-                }
-                return Optional.empty();
-            }
-
-
-            // This is a cache hit!
-            entry.touch();
-            return entry.getUnit();
+            return Optional.empty();
         }
+
+        UnitCacheEntry entry = cache.getIfPresent(key);
+        if (entry == null) {
+            if (log.isTraceEnabled()) {
+                log.trace("Unit {} not in cache", key);
+            }
+            return Optional.empty();
+        }
+
+        // This is a cache hit!
+        entry.touch();
+        return entry.getUnit();
     }
 
     /**
@@ -359,126 +401,21 @@ public final class UnitFactory {
     ) {
         String key = unit.getReference();
 
-        // Determine maximal cache size (dynamic)
-        int idleCheckInterval = 1000 * ctx.getConfig().cacheIdleCheckInterval();
-        int maxCacheSize = ctx.getConfig().cacheMaxSize();
+        Cache<String, UnitCacheEntry> cache = ensureCache(ctx);
+        if (cache == null) {
+            return;
+        }
 
-        //
         try {
-            synchronized (unitCache) {
-                if (unitCache.containsKey(key)) {
-                    UnitCacheEntry existing = null;
-
-                    // Check if we should replace entry
-                    SoftReference<UnitCacheEntry> ref = unitCache.get(key);
-                    if (null != ref) {
-                        existing = ref.get();
-                        if (null == existing || existing.isCleared()) {
-                            unitCache.remove(key);
-                        }
-                    }
-
-                    // Create new entry inheriting statistics from old entry, if it was not garbage collected already
-                    Unit clonedUnit = (Unit) unit.clone();
-                    UnitCacheEntry newEntry = new UnitCacheEntry(key, clonedUnit, existing);
-                    unitCache.put(key, new SoftReference<>(newEntry));
-
-                } else {
-                    // Not in cache already, make new entry if cache is not full.
-                    if (unitCache.size() < maxCacheSize) {
-                        Unit clonedUnit = (Unit) unit.clone();
-                        UnitCacheEntry e = new UnitCacheEntry(key, clonedUnit);
-                        unitCache.put(key, new SoftReference<>(e));
-
-                    } else /* cache is full */ {
-                        log.info("The unit cache is full ({} entries) - doing a flush based on statistics", maxCacheSize);
-
-                        // Cache is full and we will do some short-term processing right now.
-                        //==============================================
-                        // Algorithm:
-                        // Rule 1)
-                        //   Keep units that has been accessed since
-                        //   the last time we ran this algorithm.
-                        //
-                        // Rule 2)
-                        //   Discard units regardless of when they were latest accessed.
-                        //
-                        // Rule 3)
-                        //   Also, we are removing cache entries that refers
-                        //   to units that was garbage collected.
-                        //==============================================
-
-                        Iterator<SoftReference<UnitCacheEntry>> eit = unitCache.values().iterator();
-                        while (eit.hasNext()) {
-                            SoftReference<UnitCacheEntry> ref = eit.next();
-                            UnitCacheEntry entry = ref.get();
-
-                            if (null == entry || entry.isCleared()) {
-                                eit.remove(); // Rule 3)
-                                continue;
-                            }
-
-                            if (/* force transient units out of cache? */ false) {
-                                eit.remove(); // Rule 2)
-                                continue;
-                            }
-
-                            if (entry.getDeltaAccessCount() == 0) {
-                                eit.remove(); // Rule 1)
-                                continue;
-                            }
-
-                            entry.resetDeltaAccessCount();
-                        }
-                    }
-                }
-            }
+            UnitCacheEntry existing = cache.getIfPresent(key);
+            Unit clonedUnit = (Unit) unit.clone();
+            UnitCacheEntry newEntry = new UnitCacheEntry(key, clonedUnit, existing);
+            cache.put(key, newEntry);
         } catch (CloneNotSupportedException cnse) {
             String info = "Failed to clone cached unit: " + unit;
             SystemInconsistencyException sie = new SystemInconsistencyException(info);
             log.error(info, sie);
             throw sie;
-
-        } finally {
-            if (idleCheckInterval > 0) {
-                startCacheManager(ctx, idleCheckInterval);
-
-            } else {
-                if (log.isDebugEnabled()) {
-                    log.debug("Ignoring cache manager start request: The cache manager was inhibited.");
-                }
-            }
-        }
-    }
-
-    /**
-     * Start the cache manager, that controls the "leaking" of entries,
-     * possibly creating a new one.
-     */
-    private static void startCacheManager(
-            Context ctx, int idleCheckInterval
-    ) {
-
-        // We only want one such thread active at any time,
-        // so we protect its creation
-        synchronized (mgrLock) {
-            if (cacheMgr == null) {
-                // maintainer is created and started
-                log.info("Creating and starting cache manager");
-                cacheMgr = new UnitCacheManager(ctx, unitCache, idleCheckInterval);
-            } else {
-                if (!cacheMgr.isAlive()) {
-                    // maintainer is re-created and started
-                    if (log.isDebugEnabled()) {
-                        log.debug("Re-creating and starting cache manager");
-                    }
-                    cacheMgr = new UnitCacheManager(ctx, unitCache, idleCheckInterval);
-                } else {
-                    if (log.isTraceEnabled()) {
-                        log.trace("Cache manager is alive");
-                    }
-                }
-            }
         }
     }
 
@@ -486,15 +423,6 @@ public final class UnitFactory {
      * Possibly stop the cache manager
      */
     public static void shutdown() {
-        synchronized (mgrLock) {
-            if (null != cacheMgr) {
-                cacheMgr.shutdown();
-            }
-        }
+        flush();
     }
 }
-
-
-
-
-

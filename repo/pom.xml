@@ -69,6 +69,11 @@
             <artifactId>HikariCP</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
         <!-- Compile dependency on org.postgresql.util.PGobject in org.gautelis.ipto.repo.model.cache.UnitFactory -->
         <dependency>
             <groupId>org.postgresql</groupId>

@@ -106,7 +106,19 @@ public class Attribute<T> {
     @SuppressWarnings("CopyConstructorMissesField")
     public Attribute(Attribute<T> other) {
         this(other.getId(), other.getName(), other.getAlias(), other.getType());
-        value.copy(other.value);
+        value.copyFrom(other.value);
+    }
+
+    /**
+     * Deep copy of this attribute, including values and metadata.
+     */
+    public Attribute<T> deepCopy() {
+        Attribute<T> copy = new Attribute<>(id, name, alias, type);
+        copy.unitVersionFrom = unitVersionFrom;
+        copy.unitVersionTo = unitVersionTo;
+        copy.valueId = valueId;
+        copy.value.copyFrom(value);
+        return copy;
     }
 
     /**
@@ -270,6 +282,5 @@ public class Attribute<T> {
                 "=" + value.toString() + "}";
     }
 }
-
 
 

@@ -155,6 +155,23 @@ public final class RecordValue extends Value<Attribute<?>> {
         }
     }
 
+    @Override
+    void copyFrom(Value<Attribute<?>> other) {
+        values.clear();
+        claimedReferences.clear();
+
+        if (other instanceof RecordValue otherRecord) {
+            for (Attribute<?> value : otherRecord.values) {
+                values.add(value.deepCopy());
+            }
+            claimedReferences.addAll(otherRecord.claimedReferences);
+        } else {
+            values.addAll(other.values);
+        }
+
+        copyStateFrom(other);
+    }
+
     void toJson(
             ArrayNode attributes,
             ObjectNode attributeNode,

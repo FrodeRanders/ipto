@@ -1631,9 +1631,16 @@ public class Unit implements Cloneable {
     }
 
     public Object clone() throws CloneNotSupportedException {
-        // Currently, attributes are not cloned!
-        // Thus, they have to be fetched separately (from database), which will be handled
-        // automatically since 'attributes' is unassigned.
-        return super.clone();
+        // Deep-copy attributes to avoid shared mutable state in cached units.
+        Unit copy = (Unit) super.clone();
+        if (attributes != null) {
+            Map<String, Attribute<?>> clonedAttributes = new HashMap<>(attributes.size());
+            for (Map.Entry<String, Attribute<?>> entry : attributes.entrySet()) {
+                Attribute<?> attribute = entry.getValue();
+                clonedAttributes.put(entry.getKey(), attribute == null ? null : attribute.deepCopy());
+            }
+            copy.attributes = clonedAttributes;
+        }
+        return copy;
     }
 }
