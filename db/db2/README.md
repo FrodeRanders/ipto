@@ -6,7 +6,7 @@ erDiagram
     REPO_TENANT {
         INT TENANTID PK
         VARCHAR(256) NAME UK
-        CLOB(1 M) DESCRIPTION
+        CLOB(1M) DESCRIPTION
         TIMESTAMP CREATED
     }
 
@@ -46,7 +46,7 @@ erDiagram
         INT ATTRID PK, FK
         CHAR(2) LANG PK
         VARCHAR(256)NOT ALIAS
-        CLOB(1 M) DESCRIPTION
+        CLOB(1M) DESCRIPTION
     }
 
     REPO_ATTRIBUTE_VALUE {
@@ -121,7 +121,7 @@ erDiagram
     REPO_DATA_VECTOR {
         BIGINT VALUEID PK, FK
         INT IDX PK
-        BLOB(1 M) VALUE
+        BLOB(1M) VALUE
     }
 
     REPO_RECORD_VECTOR {
