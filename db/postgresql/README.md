@@ -3,9 +3,6 @@
 ## Model
 ```mermaid
 erDiagram
-%% =========================
-%% CORE / TENANCY & UNITS
-%% =========================
     repo_tenant {
         INT tenantid PK
         TEXT name
@@ -14,7 +11,7 @@ erDiagram
     }
 
     repo_unit_kernel {
-        INT tenantid FK
+        INT tenantid PK FK
         BIGINT unitid PK
         UUID corrid
         INT status
@@ -23,76 +20,42 @@ erDiagram
     }
 
     repo_unit_version {
-        INT tenantid FK
-        BIGINT unitid FK
-        INT unitver PK
-        VARCHAR unitname
+        INT tenantid PK FK
+        BIGINT unitid PK FK
+        INTEGER unitver PK
+        VARCHAR(255) unitname
         TIMESTAMP modified
     }
 
-    repo_lock {
-        INT tenantid FK
-        BIGINT unitid FK
-        BIGINT lockid PK
-        TEXT purpose
-        INT locktype
-        TIMESTAMP expire
-        TIMESTAMP locktime
-    }
-
-    repo_internal_assoc {
-        INT tenantid FK           
-        BIGINT unitid FK          
-        INT assoctype
-        INT assoctenantid FK      
-        BIGINT assocunitid FK     
-    }
-
-    repo_external_assoc {
-        INT tenantid FK
-        BIGINT unitid FK
-        INT assoctype
-        TEXT assocstring
-    }
-
-%% Relationships (core)
-    repo_tenant ||--o{ repo_unit_kernel : "has"
-    repo_unit_kernel ||--o{ repo_unit_version : "versions"
-    repo_unit_kernel ||--o{ repo_lock : "locks"
-    repo_unit_kernel ||--o{ repo_internal_assoc : "left relation"
-    repo_unit_kernel ||--o{ repo_internal_assoc : "right relation"
-    repo_unit_kernel ||--o{ repo_external_assoc : "external association"
-
-%% =========================
-%% ATTRIBUTE CATALOG
-%% =========================
     repo_namespace {
-        TEXT alias
-        TEXT namespace
+        TEXT alias PK
+        TEXT namespace PK
     }
 
     repo_attribute {
         INT attrid PK
         TEXT qualname
         TEXT attrname
+        TEXT alias
         INT attrtype
         BOOLEAN scalar
         TIMESTAMP created
     }
 
     repo_attribute_description {
-        INT attrid FK
-        CHAR lang
+        INT attrid PK FK
+        CHAR(2) lang PK
         TEXT alias
         TEXT description
     }
 
-    repo_record_template {
-        INT record_attrid FK       
-        INT idx
-        INT child_attrid          
-        TEXT alias
-        BOOLEAN required
+    repo_attribute_value {
+        INT tenantid PK FK
+        BIGINT unitid PK FK
+        INT attrid PK FK
+        BIGINT valueid PK
+        INTEGER unitverfrom PK FK
+        INTEGER unitverto FK
     }
 
     repo_unit_template {
@@ -100,94 +63,135 @@ erDiagram
         TEXT name
     }
 
-    repo_template_elements {
-        INT templateid FK
-        INT attrid                 
-        TEXT alias
+    repo_unit_template_elements {
+        INT templateid PK FK
+        INT attrid PK
         INT idx
+        TEXT alias
     }
 
-%% Relationships (attribute catalog)
-    repo_attribute ||--o{ repo_attribute_description : "descriptions"
-    repo_attribute ||--o{ repo_record_template : "record defs"
-    repo_unit_template ||--o{ repo_template_elements : "elements"
+    repo_record_template {
+        INT recordid PK FK
+        TEXT name
+    }
 
-%% =========================
-%% ATTRIBUTE VALUES & VECTORS
-%% =========================
-repo_attribute_value {
-    INT tenantid FK
-    BIGINT unitid FK
-    INT attrid FK
-    INT unitverfrom FK         
-    INT unitverto   FK         
-    BIGINT valueid 
-}
+    repo_record_template_elements {
+        INT recordid PK FK
+        INT attrid PK FK
+        INT idx
+        TEXT alias
+    }
 
-repo_string_vector {
-    BIGINT valueid FK
-    INT idx
-    TEXT value
-}
+    repo_string_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        TEXT value
+    }
 
-repo_time_vector {
-    BIGINT valueid FK
-    INT idx
-    TIMESTAMP value
-}
+    repo_time_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        TIMESTAMP value
+    }
 
-repo_integer_vector {
-    BIGINT valueid FK
-    INT idx
-    INT value
-}
+    repo_integer_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        INT value
+    }
 
-repo_long_vector {
-    BIGINT valueid FK
-    INT idx
-    BIGINT value
-}
+    repo_long_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        BIGINT value
+    }
 
-repo_double_vector {
-    BIGINT valueid FK
-    INT idx
-    DOUBLE value
-}
+    repo_double_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        DOUBLE PRECISION value
+    }
 
-repo_boolean_vector {
-    BIGINT valueid FK
-    INT idx
-    BOOLEAN value
-}
+    repo_boolean_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        BOOLEAN value
+    }
 
-repo_data_vector {
-    BIGINT valueid FK
-    INT idx
-    BYTEA value
-}
+    repo_data_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        BYTEA value
+    }
 
-repo_record_vector {
-    BIGINT valueid FK          
-    INT idx
-    INT ref_attrid             
-    BIGINT ref_valueid FK      
-}
+    repo_record_vector {
+        BIGINT valueid PK FK
+        INT idx PK
+        INT ref_attrid
+        BIGINT ref_valueid FK
+    }
 
-%% Relationships (values)
-repo_attribute ||--o{ repo_attribute_value : "has values"
-repo_unit_version ||--o{ repo_attribute_value : "from version"
-repo_unit_version ||--o{ repo_attribute_value : "to version"
+    repo_log {
+        INT tenantid
+        BIGINT unitid
+        INTEGER unitver
+        INT event
+        TEXT logentry
+        TIMESTAMP logtime
+    }
 
-repo_attribute_value ||--o{ repo_string_vector  : "strings"
-repo_attribute_value ||--o{ repo_time_vector    : "timestamps"
-repo_attribute_value ||--o{ repo_integer_vector : "integers"
-repo_attribute_value ||--o{ repo_long_vector    : "longs"
-repo_attribute_value ||--o{ repo_double_vector  : "doubles"
-repo_attribute_value ||--o{ repo_boolean_vector : "booleans"
-repo_attribute_value ||--o{ repo_data_vector    : "binary"
-repo_attribute_value ||--o{ repo_record_vector  : "records (child via ref_valueid)"
-repo_attribute_value ||--o{ repo_record_vector  : "records (parent)"
+    repo_lock {
+        INT tenantid PK FK
+        BIGINT unitid PK FK
+        BIGINT lockid PK
+        TEXT purpose
+        INT locktype
+        TIMESTAMP expire
+        TIMESTAMP locktime
+    }
+
+    repo_internal_relation {
+        INT tenantid PK FK
+        BIGINT unitid PK FK
+        INT reltype PK
+        INT reltenantid PK FK
+        BIGINT relunitid PK FK
+        TIMESTAMP created
+    }
+
+    repo_external_assoc {
+        INT tenantid PK FK
+        BIGINT unitid PK FK
+        INT assoctype PK
+        TEXT assocstring PK
+        TIMESTAMP created
+    }
+
+    repo_tenant ||--o{ repo_unit_kernel : "tenantid"
+    repo_unit_kernel ||--o{ repo_unit_version : "tenantid, unitid"
+    repo_attribute ||--o{ repo_attribute_description : "attrid"
+    repo_attribute ||--o{ repo_attribute_value : "attrid"
+    repo_unit_version ||--o{ repo_attribute_value : "tenantid, unitid, unitverfrom"
+    repo_unit_version ||--o{ repo_attribute_value : "tenantid, unitid, unitverto"
+    repo_unit_template ||--o{ repo_unit_template_elements : "templateid"
+    repo_attribute ||--o{ repo_record_template : "recordid"
+    repo_attribute ||--o{ repo_record_template_elements : "attrid"
+    repo_record_template ||--o{ repo_record_template_elements : "recordid"
+    repo_attribute_value ||--o{ repo_string_vector : "valueid"
+    repo_attribute_value ||--o{ repo_time_vector : "valueid"
+    repo_attribute_value ||--o{ repo_integer_vector : "valueid"
+    repo_attribute_value ||--o{ repo_long_vector : "valueid"
+    repo_attribute_value ||--o{ repo_double_vector : "valueid"
+    repo_attribute_value ||--o{ repo_boolean_vector : "valueid"
+    repo_attribute_value ||--o{ repo_data_vector : "valueid"
+    repo_attribute_value ||--o{ repo_record_vector : "valueid"
+    repo_attribute_value ||--o{ repo_record_vector : "ref_valueid"
+    repo_unit_kernel ||--o{ repo_lock : "tenantid, unitid"
+    repo_unit_kernel ||--o{ repo_internal_relation : "tenantid, unitid"
+    repo_unit_kernel ||--o{ repo_internal_relation : "reltenantid, relunitid"
+    repo_unit_kernel ||--o{ repo_external_assoc : "tenantid, unitid"
 ```
+
 ## Mermaid ERD generator
 Generate this Mermaid diagram from schema.sql:
 
@@ -273,3 +277,4 @@ postgres=# \q
 ```
 
 ## More at https://hub.docker.com/_/postgres/
+
