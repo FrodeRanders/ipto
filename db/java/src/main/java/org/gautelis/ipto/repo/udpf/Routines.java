@@ -499,6 +499,204 @@ public class Routines {
         }
     }
 
+    private static Boolean optionalBoolean(JsonNode obj, String field) {
+        JsonNode n = obj.get(field);
+        if (n == null || n.isNull()) {
+            return null;
+        }
+        if (n.isBoolean()) {
+            return n.asBoolean();
+        }
+        String s = n.asText(null);
+        if (s == null) {
+            return null;
+        }
+        return Boolean.parseBoolean(s);
+    }
+
+    private static Long resolveOldValueId(
+            Connection con,
+            int tenantId,
+            long unitId,
+            int attrId,
+            int oldVer,
+            Long oldParentRecordValueId,
+            int idx
+    ) throws SQLException {
+        if (oldVer < 1) {
+            return null;
+        }
+
+        if (oldParentRecordValueId != null) {
+            String sql = "SELECT ref_valueid FROM repo_record_vector WHERE valueid = ? AND idx = ? FETCH FIRST 1 ROW ONLY";
+            try (PreparedStatement pStmt = con.prepareStatement(sql)) {
+                pStmt.setLong(1, oldParentRecordValueId);
+                pStmt.setInt(2, idx);
+                try (ResultSet rs = pStmt.executeQuery()) {
+                    if (rs.next()) {
+                        long val = rs.getLong(1);
+                        if (rs.wasNull()) {
+                            return null;
+                        }
+                        return val;
+                    }
+                }
+            }
+            return null;
+        }
+
+        String sql =
+                "SELECT valueid " +
+                "FROM repo_attribute_value " +
+                "WHERE tenantid = ? AND unitid = ? AND attrid = ? " +
+                "  AND ? BETWEEN unitverfrom AND unitverto " +
+                "ORDER BY unitverfrom DESC, valueid DESC " +
+                "FETCH FIRST 1 ROW ONLY";
+
+        try (PreparedStatement pStmt = con.prepareStatement(sql)) {
+            pStmt.setInt(1, tenantId);
+            pStmt.setLong(2, unitId);
+            pStmt.setInt(3, attrId);
+            pStmt.setInt(4, oldVer);
+            try (ResultSet rs = pStmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        return null;
+    }
+
+    private static void extendValueRange(
+            Connection con,
+            int tenantId,
+            long unitId,
+            long valueId,
+            int oldVer,
+            int newVer
+    ) throws SQLException {
+        String sql =
+                "UPDATE repo_attribute_value " +
+                "SET unitverto = ? " +
+                "WHERE valueid = ? AND tenantid = ? AND unitid = ? AND unitverto = ?";
+        try (PreparedStatement pStmt = con.prepareStatement(sql)) {
+            pStmt.setInt(1, newVer);
+            pStmt.setLong(2, valueId);
+            pStmt.setInt(3, tenantId);
+            pStmt.setLong(4, unitId);
+            pStmt.setInt(5, oldVer);
+            pStmt.executeUpdate();
+        }
+    }
+
+    /**
+     * Recursive attribute ingestion with delta support, mirroring procedures_pg.sql: repo_ingest_attributes_delta().
+     *
+     * For each attribute occurrence:
+     *  - modified=false: extend previous value range and optionally re-link into new record
+     *  - modified=true: insert new attribute value + vectors + links
+     */
+    private static void ingestAttributesDelta(
+            Connection con,
+            int tenantId,
+            long unitId,
+            int unitVer,
+            JsonNode attrsNode,
+            Long newParentRecordValueId,
+            Long oldParentRecordValueId
+    ) throws SQLException {
+
+        if (attrsNode == null || attrsNode.isNull() || !attrsNode.isArray()) {
+            return;
+        }
+
+        ArrayNode attrs = (ArrayNode) attrsNode;
+        int idx = 0;
+        int oldVer = unitVer - 1;
+
+        for (int i = 0; i < attrs.size(); i++) {
+            JsonNode attr = attrs.get(i);
+            if (attr == null || attr.isNull() || !attr.isObject()) {
+                idx++;
+                continue;
+            }
+
+            int attrId = requireInt(attr, "attrid");
+            int attrType = requireInt(attr, "attrtype");
+            Boolean modified = optionalBoolean(attr, "modified");
+            boolean isModified = (modified == null) || modified.booleanValue();
+
+            Long oldValueId = resolveOldValueId(con, tenantId, unitId, attrId, oldVer, oldParentRecordValueId, idx);
+
+            if (!isModified) {
+                if (oldValueId == null) {
+                    throw new SQLException(
+                            "Attribute marked modified=false, but no previous occurrence found " +
+                            "(tenant=" + tenantId + ", unit=" + unitId + ", unitver=" + unitVer +
+                            " attrid=" + attrId + " idx=" + idx + "): " + attr
+                    );
+                }
+
+                extendValueRange(con, tenantId, unitId, oldValueId, oldVer, unitVer);
+
+                if (newParentRecordValueId != null) {
+                    insertRecordVectorLink(con, newParentRecordValueId, idx, attrId, oldValueId);
+                }
+
+                if (attrType == 99) {
+                    JsonNode children = attr.get("attributes");
+                    if (children == null || children.isNull()) {
+                        children = attr.get("value");
+                    }
+                    if (children != null && !children.isNull()) {
+                        ingestAttributesDelta(
+                                con,
+                                tenantId,
+                                unitId,
+                                unitVer,
+                                children,
+                                null,
+                                oldValueId
+                        );
+                    }
+                }
+
+            } else {
+                long newValueId = insertAttributeValue(con, tenantId, unitId, attrId, unitVer, unitVer);
+
+                if (newParentRecordValueId != null) {
+                    insertRecordVectorLink(con, newParentRecordValueId, idx, attrId, newValueId);
+                }
+
+                if (attrType == 99) {
+                    JsonNode children = attr.get("attributes");
+                    if (children == null || children.isNull()) {
+                        children = attr.get("value");
+                    }
+                    if (children != null && !children.isNull()) {
+                        ingestAttributesDelta(
+                                con,
+                                tenantId,
+                                unitId,
+                                unitVer,
+                                children,
+                                newValueId,
+                                oldValueId
+                        );
+                    }
+                } else {
+                    JsonNode valueNode = attr.get("value");
+                    if (valueNode == null || valueNode.isNull() || !valueNode.isArray()) {
+                        throw new SQLException("Primitive attribute missing 'value' array: " + attr);
+                    }
+                    insertPrimitiveVector(con, newValueId, attrType, (ArrayNode) valueNode);
+                }
+            }
+
+            idx++;
+        }
+    }
+
     /**
      * Procedure for ingesting a new unit (snapshot version 1).
      *
@@ -611,7 +809,7 @@ public class Routines {
     }
 
     /**
-     * Procedure for ingesting a new version of an existing unit (full snapshot per version).
+     * Procedure for ingesting a new version of an existing unit (delta-aware).
      *
      * DB2 wrapper: INGEST_NEW_VERSION_JSON
      *   IN  p_unit     CLOB(2M)
@@ -685,8 +883,8 @@ public class Routines {
             p_unitver[0] = newVer;
             p_modified[0] = modified;
 
-            // Full snapshot ingest: insert new attribute_value + vectors + record links for this version
-            ingestAttributes(con, tenantId, unitId, newVer, root.get("attributes"), null);
+            // Delta-aware ingest: carry forward unmodified values and extend unitverto
+            ingestAttributesDelta(con, tenantId, unitId, newVer, root.get("attributes"), null, null);
 
         } catch (Exception e) {
             //LOG.warning(e.getMessage());
