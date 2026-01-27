@@ -11,7 +11,7 @@ erDiagram
     }
 
     repo_unit_kernel {
-        INT tenantid PK FK
+        INT tenantid PK, FK
         BIGINT unitid PK
         UUID corrid
         INT status
@@ -20,8 +20,8 @@ erDiagram
     }
 
     repo_unit_version {
-        INT tenantid PK FK
-        BIGINT unitid PK FK
+        INT tenantid PK, FK
+        BIGINT unitid PK, FK
         INTEGER unitver PK
         VARCHAR(255) unitname
         TIMESTAMP modified
@@ -43,18 +43,18 @@ erDiagram
     }
 
     repo_attribute_description {
-        INT attrid PK FK
+        INT attrid PK, FK
         CHAR(2) lang PK
         TEXT alias
         TEXT description
     }
 
     repo_attribute_value {
-        INT tenantid PK FK
-        BIGINT unitid PK FK
-        INT attrid PK FK
+        INT tenantid PK, FK
+        BIGINT unitid PK, FK
+        INT attrid PK, FK
         BIGINT valueid PK
-        INTEGER unitverfrom PK FK
+        INTEGER unitverfrom PK, FK
         INTEGER unitverto FK
     }
 
@@ -64,68 +64,68 @@ erDiagram
     }
 
     repo_unit_template_elements {
-        INT templateid PK FK
+        INT templateid PK, FK
         INT attrid PK
         INT idx
         TEXT alias
     }
 
     repo_record_template {
-        INT recordid PK FK
+        INT recordid PK, FK
         TEXT name
     }
 
     repo_record_template_elements {
-        INT recordid PK FK
-        INT attrid PK FK
+        INT recordid PK, FK
+        INT attrid PK, FK
         INT idx
         TEXT alias
     }
 
     repo_string_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         TEXT value
     }
 
     repo_time_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         TIMESTAMP value
     }
 
     repo_integer_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         INT value
     }
 
     repo_long_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         BIGINT value
     }
 
     repo_double_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         DOUBLE PRECISION value
     }
 
     repo_boolean_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         BOOLEAN value
     }
 
     repo_data_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         BYTEA value
     }
 
     repo_record_vector {
-        BIGINT valueid PK FK
+        BIGINT valueid PK, FK
         INT idx PK
         INT ref_attrid
         BIGINT ref_valueid FK
@@ -141,8 +141,8 @@ erDiagram
     }
 
     repo_lock {
-        INT tenantid PK FK
-        BIGINT unitid PK FK
+        INT tenantid PK, FK
+        BIGINT unitid PK, FK
         BIGINT lockid PK
         TEXT purpose
         INT locktype
@@ -151,17 +151,17 @@ erDiagram
     }
 
     repo_internal_relation {
-        INT tenantid PK FK
-        BIGINT unitid PK FK
+        INT tenantid PK, FK
+        BIGINT unitid PK, FK
         INT reltype PK
-        INT reltenantid PK FK
-        BIGINT relunitid PK FK
+        INT reltenantid PK, FK
+        BIGINT relunitid PK, FK
         TIMESTAMP created
     }
 
     repo_external_assoc {
-        INT tenantid PK FK
-        BIGINT unitid PK FK
+        INT tenantid PK, FK
+        BIGINT unitid PK, FK
         INT assoctype PK
         TEXT assocstring PK
         TIMESTAMP created
@@ -277,4 +277,3 @@ postgres=# \q
 ```
 
 ## More at https://hub.docker.com/_/postgres/
-
