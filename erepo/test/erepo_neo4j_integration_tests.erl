@@ -11,8 +11,9 @@ neo4j_backend_roundtrip_test_() ->
     end.
 
 neo4j_backend_roundtrip() ->
-    application:set_env(erepo, backend, neo4j),
     {ok, _} = erepo:start_link(),
+    %% Ensure backend override survives application load defaults.
+    ok = application:set_env(erepo, backend, neo4j),
 
     TenantId = 9001,
     {ok, U0} = erepo:create_unit(TenantId, <<"neo4j-smoke">>),
@@ -23,6 +24,19 @@ neo4j_backend_roundtrip() ->
     {ok, _Stored2} = erepo:store_unit_json(Stored1),
     {ok, Latest} = erepo:get_unit(TenantId, maps:get(unitid, Stored1)),
     2 = maps:get(unitver, Latest),
+
+    AttrValues = [
+        #{name => <<"neo.attr.text">>, value => <<"neo value">>},
+        #{name => <<"neo.attr.int">>, value => 42},
+        #{name => <<"neo.attr.record">>, value => #{kind => <<"R">>, level => 7, ok => true}}
+    ],
+    {ok, _} = erepo:create_attribute(<<"NSTR">>, <<"neo.attr.text">>, <<"neo.attr.text">>, 2, false),
+    {ok, _} = erepo:create_attribute(<<"NINT">>, <<"neo.attr.int">>, <<"neo.attr.int">>, 4, false),
+    {ok, _} = erepo:create_attribute(<<"NREC">>, <<"neo.attr.record">>, <<"neo.attr.record">>, 9, false),
+    {ok, _Stored3} = erepo:store_unit_json(Latest#{attributes => AttrValues}),
+    {ok, LatestWithAttrs} = erepo:get_unit(TenantId, maps:get(unitid, Stored1)),
+    3 = maps:get(unitver, LatestWithAttrs),
+    ?assertEqual(AttrValues, maps:get(attributes, LatestWithAttrs)),
 
     {ok, Search} = erepo:search_units(
         #{tenantid => TenantId, name_ilike => <<"%neo4j-smoke%">>},

@@ -72,3 +72,41 @@ memory_search_units_test() ->
     1 = maps:get(total, ByNameLike),
     [Only] = maps:get(results, ByNameLike),
     <<"beta-two">> = maps:get(unitname, Only).
+
+attribute_roundtrip_mixed_types_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    ok = erepo_cache:flush(),
+
+    {ok, _} = erepo:create_attribute(<<"STR">>, <<"attr.string">>, <<"attr.string">>, 2, false),
+    {ok, _} = erepo:create_attribute(<<"INT">>, <<"attr.integer">>, <<"attr.integer">>, 4, false),
+    {ok, _} = erepo:create_attribute(<<"BOOL">>, <<"attr.bool">>, <<"attr.bool">>, 1, false),
+    {ok, _} = erepo:create_attribute(<<"REC">>, <<"attr.record">>, <<"attr.record">>, 9, false),
+
+    Attributes = [
+        #{name => <<"attr.string">>, value => <<"hello">>},
+        #{name => <<"attr.integer">>, value => 12345},
+        #{name => <<"attr.bool">>, value => true},
+        #{
+            name => <<"attr.record">>,
+            value => #{
+                <<"_type">> => <<"Address">>,
+                <<"street">> => <<"Main Street 1">>,
+                <<"zip">> => 12345,
+                <<"active">> => true
+            }
+        }
+    ],
+
+    UnitMap = #{
+        tenantid => 77,
+        corrid => erepo_unit:make_corrid(),
+        status => 30,
+        unitname => <<"typed-attrs">>,
+        attributes => Attributes
+    },
+
+    {ok, Stored} = erepo:store_unit_json(UnitMap),
+    {ok, Loaded} = erepo:get_unit(maps:get(tenantid, Stored), maps:get(unitid, Stored)),
+
+    ?assertEqual(Attributes, maps:get(attributes, Loaded)).
