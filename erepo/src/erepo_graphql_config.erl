@@ -1,0 +1,96 @@
+-module(erepo_graphql_config).
+
+-export([
+    init/0,
+    reload/0,
+    get_schema/0,
+    get_mapping/0,
+    set_schema_file/1,
+    set_schema_sdl/1,
+    clear_schema_overrides/0
+]).
+
+-define(SCHEMA_KEY, {?MODULE, schema}).
+-define(MAPPING_KEY, {?MODULE, mapping}).
+
+init() ->
+    reload().
+
+reload() ->
+    Schema = resolve_schema(),
+    Mapping = resolve_mapping(),
+    persistent_term:put(?SCHEMA_KEY, Schema),
+    persistent_term:put(?MAPPING_KEY, Mapping),
+    ok.
+
+get_schema() ->
+    persistent_term:get(?SCHEMA_KEY, resolve_schema()).
+
+get_mapping() ->
+    persistent_term:get(?MAPPING_KEY, resolve_mapping()).
+
+set_schema_file(Path) when is_binary(Path); is_list(Path) ->
+    application:set_env(erepo, graphql_schema_file, Path),
+    reload().
+
+set_schema_sdl(Sdl) when is_binary(Sdl); is_list(Sdl) ->
+    application:set_env(erepo, graphql_schema_sdl, to_binary(Sdl)),
+    reload().
+
+clear_schema_overrides() ->
+    application:unset_env(erepo, graphql_schema_file),
+    application:unset_env(erepo, graphql_schema_sdl),
+    reload().
+
+resolve_schema() ->
+    case application:get_env(erepo, graphql_schema_sdl) of
+        {ok, Sdl} when is_binary(Sdl); is_list(Sdl) ->
+            to_binary(Sdl);
+        _ ->
+            case schema_file_path() of
+                undefined -> erepo_graphql_schema:schema();
+                Path ->
+                    case file:read_file(Path) of
+                        {ok, Bin} -> Bin;
+                        _ -> erepo_graphql_schema:schema()
+                    end
+            end
+    end.
+
+schema_file_path() ->
+    case application:get_env(erepo, graphql_schema_file) of
+        {ok, Path} -> Path;
+        _ ->
+            case os:getenv("EREPO_GRAPHQL_SCHEMA_FILE") of
+                false -> undefined;
+                Path -> Path
+            end
+    end.
+
+resolve_mapping() ->
+    Base = # {
+        objects => # {
+            default => erepo_graphql_object_resource,
+            'Query' => erepo_graphql_query_resource,
+            'Mutation' => erepo_graphql_mutation_resource
+        }
+    },
+    case application:get_env(erepo, graphql_mapping) of
+        {ok, Custom} when is_map(Custom) -> deep_merge(Base, Custom);
+        _ -> Base
+    end.
+
+deep_merge(A, B) when is_map(A), is_map(B) ->
+    maps:fold(fun(K, V, Acc) ->
+        case maps:get(K, Acc, undefined) of
+            Existing when is_map(Existing), is_map(V) ->
+                Acc#{K => deep_merge(Existing, V)};
+            _ ->
+                Acc#{K => V}
+        end
+    end, A, B);
+deep_merge(_A, B) -> B.
+
+to_binary(Value) when is_binary(Value) -> Value;
+to_binary(Value) when is_list(Value) -> unicode:characters_to_binary(Value);
+to_binary(Value) -> unicode:characters_to_binary(io_lib:format("~p", [Value])).

@@ -1,0 +1,74 @@
+-module(erepo_smoke_tests).
+
+-include_lib("eunit/include/eunit.hrl").
+
+create_and_store_unit_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    {ok, Unit0} = erepo:create_unit(1),
+    {ok, Stored} = erepo:store_unit(Unit0),
+    true = maps:is_key(unitid, Stored),
+    true = maps:is_key(unitver, Stored).
+
+status_transition_rules_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    {ok, Unit0} = erepo:create_unit(2),
+    {ok, Stored0} = erepo:store_unit(Unit0),
+    UnitRef = #{tenantid => maps:get(tenantid, Stored0), unitid => maps:get(unitid, Stored0)},
+
+    ok = erepo:inactivate_unit(UnitRef),
+    {ok, AfterInactivate} = erepo:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
+    10 = maps:get(status, AfterInactivate),
+
+    ok = erepo:activate_unit(UnitRef),
+    {ok, AfterActivate} = erepo:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
+    30 = maps:get(status, AfterActivate).
+
+relation_assoc_lock_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    {ok, A0} = erepo:create_unit(3),
+    {ok, B0} = erepo:create_unit(3),
+    {ok, A} = erepo:store_unit(A0),
+    {ok, B} = erepo:store_unit(B0),
+
+    ARef = #{tenantid => maps:get(tenantid, A), unitid => maps:get(unitid, A)},
+    BRef = #{tenantid => maps:get(tenantid, B), unitid => maps:get(unitid, B)},
+
+    ok = erepo:add_relation(ARef, 1, BRef),
+    ok = erepo:remove_relation(ARef, 1, BRef),
+
+    ok = erepo:add_association(ARef, 2, <<"case:123">>),
+    ok = erepo:remove_association(ARef, 2, <<"case:123">>),
+
+    ok = erepo:lock_unit(ARef, 30, <<"test">>),
+    already_locked = erepo:lock_unit(ARef, 30, <<"test">>),
+    ok = erepo:unlock_unit(ARef).
+
+memory_search_units_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    ok = erepo_cache:flush(),
+
+    {ok, U0} = erepo:create_unit(42, <<"alpha-one">>),
+    {ok, U1} = erepo:store_unit(U0),
+    timer:sleep(1000),
+    {ok, V2} = erepo:store_unit_json(U1),
+
+    {ok, U2} = erepo:create_unit(42, <<"beta-two">>),
+    {ok, _} = erepo:store_unit(U2),
+
+    {ok, ByTenant} = erepo:search_units(#{tenantid => 42}, {created, desc}, #{limit => 10, offset => 0}),
+    2 = maps:get(total, ByTenant),
+    2 = length(maps:get(results, ByTenant)),
+
+    {ok, ByUnit} = erepo:search_units(#{tenantid => 42, unitid => maps:get(unitid, V2)}, {created, desc}, 10),
+    1 = maps:get(total, ByUnit),
+    [AlphaLatest] = maps:get(results, ByUnit),
+    2 = maps:get(unitver, AlphaLatest),
+
+    {ok, ByNameLike} = erepo:search_units("tenantid=42 and name~\"%beta%\"", {created, desc}, 10),
+    1 = maps:get(total, ByNameLike),
+    [Only] = maps:get(results, ByNameLike),
+    <<"beta-two">> = maps:get(unitname, Only).

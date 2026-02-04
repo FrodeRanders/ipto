@@ -1,0 +1,16 @@
+-module(erepo_backend).
+
+-callback get_unit_json(term(), term(), term()) -> term().
+-callback unit_exists(term(), term()) -> boolean() | term().
+-callback store_unit_json(map()) -> term().
+-callback search_units(term(), term(), term()) -> term().
+-callback add_relation(term(), term(), term()) -> ok | term().
+-callback remove_relation(term(), term(), term()) -> ok | term().
+-callback add_association(term(), term(), term()) -> ok | term().
+-callback remove_association(term(), term(), term()) -> ok | term().
+-callback lock_unit(term(), term(), term()) -> ok | already_locked | term().
+-callback unlock_unit(term()) -> ok | term().
+-callback set_status(term(), integer()) -> ok | term().
+-callback create_attribute(term(), term(), term(), term(), term()) -> term().
+-callback get_attribute_info(term()) -> term().
+-callback get_tenant_info(term()) -> term().

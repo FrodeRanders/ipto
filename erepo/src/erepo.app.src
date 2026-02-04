@@ -1,0 +1,12 @@
+{application, erepo,
+ [{description, "Erlang clone scaffold of ipto-repo"},
+  {vsn, "0.2.0"},
+  {registered, []},
+  {mod, {erepo_app, []}},
+  {applications, [kernel, stdlib, crypto]},
+  {env, [
+    {backend, memory},
+    {http_enabled, false},
+    {http_port, 8080}
+  ]}
+ ]}.
