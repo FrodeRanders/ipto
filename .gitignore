@@ -1,4 +1,5 @@
 target/
+data/
 .idea/
 *.log
 .DS_Store
@@ -13,4 +14,3 @@ buildNumber.properties
 .mvn/wrapper/maven-wrapper.jar
 *.iml
 
-data/
