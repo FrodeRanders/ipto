@@ -26,11 +26,14 @@ parse(Query) when is_binary(Query); is_list(Query) ->
 parse(_Query) ->
     {error, invalid_query}.
 
+-spec split_clauses(binary() | string()) -> [string()].
 split_clauses(Query) when is_binary(Query) ->
     split_clauses(unicode:characters_to_list(Query));
 split_clauses(Query) when is_list(Query) ->
     [C || C <- re:split(Query, "\\s+[Aa][Nn][Dd]\\s+", [{return, list}]), C =/= []].
 
+-spec parse_clauses([string()], map()) ->
+    {ok, map()} | {error, {invalid_clause, string()} | invalid_query | {unsupported_field, string()} | {invalid_integer, {atom(), string()}}}.
 parse_clauses([], Expr) ->
     {ok, Expr};
 parse_clauses([Clause | Rest], Expr) ->
@@ -41,6 +44,8 @@ parse_clauses([Clause | Rest], Expr) ->
             Error
     end.
 
+-spec parse_clause(string()) ->
+    {ok, {atom(), string()}} | {error, {invalid_clause, string()} | {unsupported_field, string()} | {invalid_integer, {atom(), string()}}}.
 parse_clause(Clause) ->
     case re:run(Clause, "^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*(=|~|>=|<)\\s*(.+?)\\s*$", [{capture, all_but_first, list}]) of
         {match, [Field0, Op, Value0]} ->
@@ -51,6 +56,8 @@ parse_clause(Clause) ->
             {error, {invalid_clause, Clause}}
     end.
 
+-spec to_filter(string(), string(), string()) ->
+    {ok, {atom(), binary() | integer()}} | {error, {unsupported_field, string()} | {invalid_integer, {atom(), string()}}}.
 to_filter("tenantid", "=", Value) ->
     int_filter(tenantid, Value);
 to_filter("unitid", "=", Value) ->
@@ -72,12 +79,14 @@ to_filter("created_before", "=", Value) ->
 to_filter(Field, _Op, _Value) ->
     {error, {unsupported_field, Field}}.
 
+-spec int_filter(atom(), string()) -> {ok, {atom(), integer()}} | {error, {invalid_integer, {atom(), string()}}}.
 int_filter(Key, Value) ->
     case string:to_integer(Value) of
         {I, []} -> {ok, {Key, I}};
         _ -> {error, {invalid_integer, {Key, Value}}}
     end.
 
+-spec normalize_value(string()) -> string().
 normalize_value(Value0) ->
     Value1 = string:trim(Value0),
     case Value1 of
@@ -94,6 +103,7 @@ normalize_value(Value0) ->
             end
     end.
 
+-spec to_binary(binary() | string()) -> binary().
 to_binary(Value) when is_binary(Value) ->
     Value;
 to_binary(Value) when is_list(Value) ->

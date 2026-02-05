@@ -215,6 +215,7 @@ get_tenant_info(NameOrId) ->
 
 %% Backend selection and config
 
+-spec backend() -> pg | neo4j | memory.
 backend() ->
     case application:get_env(ipto, backend) of
         {ok, pg} -> pg;
@@ -223,6 +224,7 @@ backend() ->
         _ -> memory
     end.
 
+-spec backend_module() -> module().
 backend_module() ->
     case backend() of
         pg -> ipto_db_pg;
@@ -230,10 +232,12 @@ backend_module() ->
         memory -> ipto_db_memory
     end.
 
+-spec call_backend(atom(), list()) -> term().
 call_backend(Fun, Args) ->
     Module = backend_module(),
     apply(Module, Fun, Args).
 
+-spec pg_conn_opts() -> map().
 pg_conn_opts() ->
     Host = env_str("IPTO_PG_HOST", "localhost"),
     User = env_str("IPTO_PG_USER", "repo"),
@@ -242,12 +246,14 @@ pg_conn_opts() ->
     Port = env_int("IPTO_PG_PORT", 5432),
     #{host => Host, user => User, pass => Pass, db => Db, port => Port}.
 
+-spec env_str(string() | binary(), string()) -> string().
 env_str(Name, Default) ->
     case os:getenv(Name) of
         false -> Default;
         Value -> Value
     end.
 
+-spec env_int(string() | binary(), integer()) -> integer().
 env_int(Name, Default) ->
     case os:getenv(Name) of
         false -> Default;
@@ -258,6 +264,7 @@ env_int(Name, Default) ->
             end
     end.
 
+-spec with_pg(fun((term()) -> term())) -> term().
 with_pg(Fun) ->
     case code:ensure_loaded(epgsql) of
         {module, epgsql} ->
@@ -282,6 +289,7 @@ with_pg(Fun) ->
 
 %% PG implementation (best-effort against current schema/procedures)
 
+-spec pg_get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 pg_get_unit_json(TenantId, UnitId, latest) ->
     pg_get_unit_json(TenantId, UnitId, -1);
 pg_get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Version /= 0 ->
@@ -296,6 +304,7 @@ pg_get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Version /=
 pg_get_unit_json(_TenantId, _UnitId, _Version) ->
     {error, invalid_version}.
 
+-spec pg_get_unit_json_proc(term(), tenantid(), unitid(), integer()) -> unit_lookup_result().
 pg_get_unit_json_proc(Conn, TenantId, UnitId, Version) ->
     Sql = "CALL repo.extract_unit_json($1::integer, $2::bigint, $3::integer, NULL::jsonb)",
     case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, Version])) of
@@ -311,6 +320,7 @@ pg_get_unit_json_proc(Conn, TenantId, UnitId, Version) ->
             {error, Error}
     end.
 
+-spec pg_get_unit_json_sql(term(), tenantid(), unitid(), integer()) -> unit_lookup_result().
 pg_get_unit_json_sql(Conn, TenantId, UnitId, Version) ->
     Sql =
         "SELECT uk.tenantid, uk.unitid, uv.unitver, uk.lastver, uk.corrid, uk.status, uk.created, uv.modified, uv.unitname"
@@ -325,6 +335,7 @@ pg_get_unit_json_sql(Conn, TenantId, UnitId, Version) ->
         Error -> {error, Error}
     end.
 
+-spec pg_unit_exists(tenantid(), unitid()) -> boolean().
 pg_unit_exists(TenantId, UnitId) ->
     with_pg(fun(Conn) ->
         Sql = "SELECT 1 FROM repo.repo_unit_kernel WHERE tenantid = $1 AND unitid = $2",
@@ -335,6 +346,7 @@ pg_unit_exists(TenantId, UnitId) ->
         end
     end).
 
+-spec pg_search_units(search_expression() | map(), search_order(), search_paging()) -> ipto_result(search_result()).
 pg_search_units(Expression, Order, PagingOrLimit) ->
     with_pg(fun(Conn) ->
         {WhereSql, Params0, NextIdx} = build_where(Expression),
@@ -368,6 +380,7 @@ pg_search_units(Expression, Order, PagingOrLimit) ->
         end
     end).
 
+-spec pg_store_unit_json(unit_map()) -> ipto_result(unit_map()).
 pg_store_unit_json(UnitMap) ->
     with_pg(fun(Conn) ->
         case pg_store_unit_json_proc(Conn, UnitMap) of
@@ -383,6 +396,7 @@ pg_store_unit_json(UnitMap) ->
         end
     end).
 
+-spec pg_store_unit_json_proc(term(), unit_map()) -> ipto_result(unit_map()).
 pg_store_unit_json_proc(Conn, UnitMap) ->
     JsonText = map_to_json(UnitMap),
     case maps:get(unitid, UnitMap, undefined) of
@@ -416,6 +430,7 @@ pg_store_unit_json_proc(Conn, UnitMap) ->
             end
     end.
 
+-spec pg_set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 pg_set_status(UnitRef, Status) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -431,6 +446,7 @@ pg_set_status(UnitRef, Status) ->
             {error, invalid_unit_ref}
     end.
 
+-spec pg_add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, ipto_reason()}.
 pg_add_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
     case {normalize_ref(UnitRef), normalize_ref(OtherUnitRef)} of
         {{TenantId, UnitId}, {RelTenantId, RelUnitId}} ->
@@ -448,6 +464,7 @@ pg_add_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
 pg_add_relation(_UnitRef, _RelType, _OtherUnitRef) ->
     {error, invalid_relation_type}.
 
+-spec pg_remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, ipto_reason()}.
 pg_remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
     case {normalize_ref(UnitRef), normalize_ref(OtherUnitRef)} of
         {{TenantId, UnitId}, {RelTenantId, RelUnitId}} ->
@@ -465,6 +482,7 @@ pg_remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
 pg_remove_relation(_UnitRef, _RelType, _OtherUnitRef) ->
     {error, invalid_relation_type}.
 
+-spec pg_get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
 pg_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -488,6 +506,7 @@ pg_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
 pg_get_right_relation(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec pg_get_right_relations(unit_ref_value(), relation_type()) -> ipto_result([relation()]).
 pg_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -507,6 +526,7 @@ pg_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
 pg_get_right_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec pg_get_left_relations(unit_ref_value(), relation_type()) -> ipto_result([relation()]).
 pg_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -526,6 +546,7 @@ pg_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
 pg_get_left_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec pg_count_right_relations(unit_ref_value(), relation_type()) -> ipto_result(non_neg_integer()).
 pg_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -547,6 +568,7 @@ pg_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
 pg_count_right_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec pg_count_left_relations(unit_ref_value(), relation_type()) -> ipto_result(non_neg_integer()).
 pg_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -568,6 +590,7 @@ pg_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
 pg_count_left_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec pg_add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, ipto_reason()}.
 pg_add_association(UnitRef, AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -586,6 +609,7 @@ pg_add_association(UnitRef, AssocType, RefString) when is_integer(AssocType), (i
 pg_add_association(_UnitRef, _AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec pg_remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, ipto_reason()}.
 pg_remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -604,6 +628,7 @@ pg_remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType),
 pg_remove_association(_UnitRef, _AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec pg_get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
 pg_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -627,6 +652,7 @@ pg_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
 pg_get_right_association(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec pg_get_right_associations(unit_ref_value(), association_type()) -> ipto_result([association()]).
 pg_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -646,6 +672,7 @@ pg_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
 pg_get_right_associations(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec pg_get_left_associations(association_type(), ref_string()) -> ipto_result([association()]).
 pg_get_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     AssocString = normalize_string(RefString),
     with_pg(fun(Conn) ->
@@ -661,6 +688,7 @@ pg_get_left_associations(AssocType, RefString) when is_integer(AssocType), (is_b
 pg_get_left_associations(_AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec pg_count_right_associations(unit_ref_value(), association_type()) -> ipto_result(non_neg_integer()).
 pg_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -682,6 +710,7 @@ pg_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
 pg_count_right_associations(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec pg_count_left_associations(association_type(), ref_string()) -> ipto_result(non_neg_integer()).
 pg_count_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     AssocString = normalize_string(RefString),
     with_pg(fun(Conn) ->
@@ -699,6 +728,7 @@ pg_count_left_associations(AssocType, RefString) when is_integer(AssocType), (is
 pg_count_left_associations(_AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec pg_lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 pg_lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -724,6 +754,7 @@ pg_lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
 pg_lock_unit(_UnitRef, _LockType, _Purpose) ->
     {error, invalid_lock_type}.
 
+-spec pg_unlock_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
 pg_unlock_unit(UnitRef) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -739,6 +770,8 @@ pg_unlock_unit(UnitRef) ->
             {error, invalid_unit_ref}
     end.
 
+-spec pg_create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    ipto_result(attribute_info()).
 pg_create_attribute(Alias, Name, QualName, Type, IsArray)
   when is_binary(Name), is_binary(QualName), is_integer(Type), is_boolean(IsArray) ->
     with_pg(fun(Conn) ->
@@ -756,6 +789,7 @@ pg_create_attribute(Alias, Name, QualName, Type, IsArray)
 pg_create_attribute(_Alias, _Name, _QualName, _Type, _IsArray) ->
     {error, invalid_attribute_definition}.
 
+-spec pg_get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, ipto_reason()}.
 pg_get_attribute_info(NameOrId) when is_binary(NameOrId) ->
     with_pg(fun(Conn) ->
         Sql = "SELECT attrid, alias, attrname, qualname, attrtype, scalar FROM repo.repo_attribute WHERE attrname = $1 OR alias = $1 OR qualname = $1",
@@ -777,6 +811,7 @@ pg_get_attribute_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
 pg_get_attribute_info(_NameOrId) ->
     {error, invalid_attribute_id_or_name}.
 
+-spec pg_get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 pg_get_tenant_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
     with_pg(fun(Conn) ->
         Sql = "SELECT tenantid, name, description, created FROM repo.repo_tenant WHERE tenantid = $1",
@@ -958,6 +993,7 @@ pg_get_tenant_info_backend(NameOrId) ->
 
 %% Memory implementation
 
+-spec memory_get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 memory_get_unit_json(TenantId, UnitId, latest) ->
     get_latest_version(TenantId, UnitId);
 memory_get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Version > 0 ->
@@ -969,6 +1005,7 @@ memory_get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Versio
 memory_get_unit_json(_TenantId, _UnitId, _Version) ->
     {error, invalid_version}.
 
+-spec memory_unit_exists(tenantid(), unitid()) -> boolean().
 memory_unit_exists(TenantId, UnitId) ->
     case get_latest_version(TenantId, UnitId) of
         {ok, _} -> true;
@@ -976,6 +1013,7 @@ memory_unit_exists(TenantId, UnitId) ->
         _ -> false
     end.
 
+-spec memory_store_unit_json(unit_map()) -> ipto_result(unit_map()).
 memory_store_unit_json(UnitMap0) ->
     TenantId = maps:get(tenantid, UnitMap0),
     UnitId = maps:get(unitid, UnitMap0, undefined),
@@ -1007,18 +1045,21 @@ memory_store_unit_json(UnitMap0) ->
     ipto_cache:put(LatestKey, NextVersion),
     {ok, UnitMap}.
 
+-spec memory_add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, ipto_reason()}.
 memory_add_relation(UnitRef, RelType, OtherUnitRef) ->
     Relations0 = get_meta_map(?REL_KEY),
     RelKey = {normalize_ref(UnitRef), RelType, normalize_ref(OtherUnitRef)},
     ipto_cache:put(?REL_KEY, Relations0#{RelKey => true}),
     ok.
 
+-spec memory_remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, ipto_reason()}.
 memory_remove_relation(UnitRef, RelType, OtherUnitRef) ->
     Relations0 = get_meta_map(?REL_KEY),
     RelKey = {normalize_ref(UnitRef), RelType, normalize_ref(OtherUnitRef)},
     ipto_cache:put(?REL_KEY, maps:remove(RelKey, Relations0)),
     ok.
 
+-spec memory_get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
 memory_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
     case memory_get_right_relations(UnitRef, RelType) of
         {ok, [Rel | _]} -> {ok, Rel};
@@ -1028,6 +1069,7 @@ memory_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
 memory_get_right_relation(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec memory_get_right_relations(unit_ref_value(), relation_type()) -> ipto_result([relation()]).
 memory_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {_, _} = Ref ->
@@ -1045,6 +1087,7 @@ memory_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
 memory_get_right_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec memory_get_left_relations(unit_ref_value(), relation_type()) -> ipto_result([relation()]).
 memory_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
     case normalize_ref(UnitRef) of
         {_, _} = Ref ->
@@ -1062,6 +1105,7 @@ memory_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
 memory_get_left_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec memory_count_right_relations(unit_ref_value(), relation_type()) -> ipto_result(non_neg_integer()).
 memory_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
     case memory_get_right_relations(UnitRef, RelType) of
         {ok, Relations} -> {ok, length(Relations)};
@@ -1070,6 +1114,7 @@ memory_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
 memory_count_right_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec memory_count_left_relations(unit_ref_value(), relation_type()) -> ipto_result(non_neg_integer()).
 memory_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
     case memory_get_left_relations(UnitRef, RelType) of
         {ok, Relations} -> {ok, length(Relations)};
@@ -1078,18 +1123,21 @@ memory_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
 memory_count_left_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
+-spec memory_add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, ipto_reason()}.
 memory_add_association(UnitRef, AssocType, RefString) ->
     Assocs0 = get_meta_map(?ASSOC_KEY),
     AssocKey = {normalize_ref(UnitRef), AssocType, RefString},
     ipto_cache:put(?ASSOC_KEY, Assocs0#{AssocKey => true}),
     ok.
 
+-spec memory_remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, ipto_reason()}.
 memory_remove_association(UnitRef, AssocType, RefString) ->
     Assocs0 = get_meta_map(?ASSOC_KEY),
     AssocKey = {normalize_ref(UnitRef), AssocType, RefString},
     ipto_cache:put(?ASSOC_KEY, maps:remove(AssocKey, Assocs0)),
     ok.
 
+-spec memory_get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
 memory_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
     case memory_get_right_associations(UnitRef, AssocType) of
         {ok, [Assoc | _]} -> {ok, Assoc};
@@ -1099,6 +1147,7 @@ memory_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
 memory_get_right_association(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec memory_get_right_associations(unit_ref_value(), association_type()) -> ipto_result([association()]).
 memory_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {_, _} = Ref ->
@@ -1116,6 +1165,7 @@ memory_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
 memory_get_right_associations(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec memory_get_left_associations(association_type(), ref_string()) -> ipto_result([association()]).
 memory_get_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     RefStringNorm = normalize_string(RefString),
     Assocs0 = get_meta_map(?ASSOC_KEY),
@@ -1129,6 +1179,7 @@ memory_get_left_associations(AssocType, RefString) when is_integer(AssocType), (
 memory_get_left_associations(_AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec memory_count_right_associations(unit_ref_value(), association_type()) -> ipto_result(non_neg_integer()).
 memory_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
     case memory_get_right_associations(UnitRef, AssocType) of
         {ok, Assocs} -> {ok, length(Assocs)};
@@ -1137,6 +1188,7 @@ memory_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) -
 memory_count_right_associations(_UnitRef, _AssocType) ->
     {error, invalid_association}.
 
+-spec memory_count_left_associations(association_type(), ref_string()) -> ipto_result(non_neg_integer()).
 memory_count_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     case memory_get_left_associations(AssocType, RefString) of
         {ok, Assocs} -> {ok, length(Assocs)};
@@ -1145,6 +1197,7 @@ memory_count_left_associations(AssocType, RefString) when is_integer(AssocType),
 memory_count_left_associations(_AssocType, _RefString) ->
     {error, invalid_association}.
 
+-spec memory_lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 memory_lock_unit(UnitRef, LockType, Purpose) ->
     Locks0 = get_meta_map(?LOCK_KEY),
     Ref = normalize_ref(UnitRef),
@@ -1156,12 +1209,14 @@ memory_lock_unit(UnitRef, LockType, Purpose) ->
             ok
     end.
 
+-spec memory_unlock_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
 memory_unlock_unit(UnitRef) ->
     Locks0 = get_meta_map(?LOCK_KEY),
     Ref = normalize_ref(UnitRef),
     ipto_cache:put(?LOCK_KEY, maps:remove(Ref, Locks0)),
     ok.
 
+-spec memory_set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 memory_set_status(UnitRef, Status) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -1179,6 +1234,8 @@ memory_set_status(UnitRef, Status) ->
             {error, invalid_unit_ref}
     end.
 
+-spec memory_create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    ipto_result(attribute_info()).
 memory_create_attribute(Alias, Name, QualName, Type, IsArray)
   when is_binary(Name), is_binary(QualName), is_integer(Type), is_boolean(IsArray) ->
     AttrByName0 = get_meta_map(?ATTR_BY_NAME_KEY),
@@ -1203,6 +1260,7 @@ memory_create_attribute(Alias, Name, QualName, Type, IsArray)
 memory_create_attribute(_Alias, _Name, _QualName, _Type, _IsArray) ->
     {error, invalid_attribute_definition}.
 
+-spec memory_get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, ipto_reason()}.
 memory_get_attribute_info(NameOrId) when is_binary(NameOrId) ->
     AttrByName = get_meta_map(?ATTR_BY_NAME_KEY),
     case maps:get(NameOrId, AttrByName, undefined) of
@@ -1218,6 +1276,7 @@ memory_get_attribute_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
 memory_get_attribute_info(_NameOrId) ->
     {error, invalid_attribute_id_or_name}.
 
+-spec memory_get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 memory_get_tenant_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
     {ok, #{id => NameOrId, name => iolist_to_binary(io_lib:format("tenant-~p", [NameOrId]))}};
 memory_get_tenant_info(NameOrId) when is_binary(NameOrId) ->
@@ -1225,6 +1284,7 @@ memory_get_tenant_info(NameOrId) when is_binary(NameOrId) ->
 memory_get_tenant_info(_NameOrId) ->
     {error, invalid_tenant_id_or_name}.
 
+-spec memory_search_units(search_expression() | map(), search_order(), search_paging()) -> ipto_result(search_result()).
 memory_search_units(Expression0, Order, PagingOrLimit) ->
     case normalize_search_expression(Expression0) of
         {ok, Expression} ->
@@ -1237,6 +1297,8 @@ memory_search_units(Expression0, Order, PagingOrLimit) ->
             Error
     end.
 
+-spec normalize_search_expression(search_expression() | map() | list() | undefined) ->
+    {ok, map()} | {error, ipto_reason()}.
 normalize_search_expression(undefined) ->
     {ok, #{}};
 normalize_search_expression(Expression) when is_map(Expression) ->
@@ -1255,6 +1317,7 @@ normalize_search_expression(Expression) when is_binary(Expression) ->
 normalize_search_expression(_) ->
     {error, invalid_query}.
 
+-spec is_proplist(term()) -> boolean().
 is_proplist([]) ->
     true;
 is_proplist([{Key, _Value} | Rest]) when is_atom(Key); is_binary(Key) ->
@@ -1262,6 +1325,7 @@ is_proplist([{Key, _Value} | Rest]) when is_atom(Key); is_binary(Key) ->
 is_proplist(_) ->
     false.
 
+-spec memory_latest_units() -> [unit_map()].
 memory_latest_units() ->
     Cache = ipto_cache:all(),
     maps:fold(
@@ -1280,6 +1344,7 @@ memory_latest_units() ->
       [],
       Cache).
 
+-spec memory_match_unit(unit_map(), map()) -> boolean().
 memory_match_unit(_Unit, Expr) when map_size(Expr) =:= 0 ->
     true;
 memory_match_unit(Unit, Expr) ->
@@ -1290,6 +1355,7 @@ memory_match_unit(Unit, Expr) ->
       true,
       Expr).
 
+-spec memory_match_field(unit_map(), atom(), term()) -> boolean().
 memory_match_field(Unit, tenantid, Value) when is_integer(Value) ->
     maps:get(tenantid, Unit, undefined) =:= Value;
 memory_match_field(Unit, unitid, Value) when is_integer(Value) ->
@@ -1307,6 +1373,7 @@ memory_match_field(Unit, created_before, Value) ->
 memory_match_field(_Unit, _Key, _Value) ->
     true.
 
+-spec like_match(binary() | string(), binary() | string()) -> boolean().
 like_match(Text0, Pattern0) ->
     Text = unicode:characters_to_list(normalize_string(Text0)),
     Pattern = unicode:characters_to_list(normalize_string(Pattern0)),
@@ -1315,9 +1382,11 @@ like_match(Text0, Pattern0) ->
         nomatch -> false
     end.
 
+-spec like_pattern_to_regex(string()) -> string().
 like_pattern_to_regex(Pattern) ->
     "^" ++ lists:flatten([like_pattern_char(C) || C <- Pattern]) ++ "$".
 
+-spec like_pattern_char(char()) -> string().
 like_pattern_char($%) ->
     ".*";
 like_pattern_char($_) ->
@@ -1327,6 +1396,7 @@ like_pattern_char(C) when C =:= $.; C =:= $^; C =:= $$; C =:= $*; C =:= $+; C =:
 like_pattern_char(C) ->
     [C].
 
+-spec compare_created(term(), term(), ge | lt) -> boolean().
 compare_created(Created, FilterValue, Op) ->
     case to_int_maybe(FilterValue) of
         {ok, N} ->
@@ -1335,6 +1405,7 @@ compare_created(Created, FilterValue, Op) ->
             compare_text(normalize_string(Created), normalize_string(FilterValue), Op)
     end.
 
+-spec to_int_maybe(term()) -> {ok, integer()} | error.
 to_int_maybe(Value) when is_integer(Value) ->
     {ok, Value};
 to_int_maybe(Value) when is_binary(Value) ->
@@ -1347,16 +1418,20 @@ to_int_maybe(Value) when is_list(Value) ->
 to_int_maybe(_) ->
     error.
 
+-spec compare_int(integer(), integer(), ge | lt) -> boolean().
 compare_int(A, B, ge) -> A >= B;
 compare_int(A, B, lt) -> A < B.
 
+-spec compare_text(term(), term(), ge | lt) -> boolean().
 compare_text(A, B, ge) -> A >= B;
 compare_text(A, B, lt) -> A < B.
 
+-spec memory_sort_units([unit_map()], search_order()) -> [unit_map()].
 memory_sort_units(Units, Order) ->
     {Field, Dir} = normalize_order(Order),
     lists:sort(fun(A, B) -> memory_unit_before(A, B, Field, Dir) end, Units).
 
+-spec normalize_order(search_order() | map() | tuple()) -> {atom(), asc | desc}.
 normalize_order(#{field := Field, dir := Dir}) ->
     normalize_order({Field, Dir});
 normalize_order({Field, Dir}) ->
@@ -1378,6 +1453,7 @@ normalize_order({Field, Dir}) ->
 normalize_order(_) ->
     {created, desc}.
 
+-spec memory_unit_before(unit_map(), unit_map(), atom(), asc | desc) -> boolean().
 memory_unit_before(A, B, Field, Dir) ->
     KA = maps:get(Field, A, undefined),
     KB = maps:get(Field, B, undefined),
@@ -1391,6 +1467,7 @@ memory_unit_before(A, B, Field, Dir) ->
             end
     end.
 
+-spec tie_break_before(unit_map(), unit_map()) -> boolean().
 tie_break_before(A, B) ->
     AUnitId = maps:get(unitid, A, 0),
     BUnitId = maps:get(unitid, B, 0),
@@ -1401,6 +1478,7 @@ tie_break_before(A, B) ->
             AUnitId < BUnitId
     end.
 
+-spec memory_apply_paging([unit_map()], search_paging() | map() | integer()) -> [unit_map()].
 memory_apply_paging(Units, #{limit := Limit, offset := Offset})
   when is_integer(Limit), Limit > 0, is_integer(Offset), Offset >= 0 ->
     take_n(drop_n(Units, Offset), Limit);
@@ -1411,6 +1489,7 @@ memory_apply_paging(Units, Limit) when is_integer(Limit), Limit > 0 ->
 memory_apply_paging(Units, _) ->
     Units.
 
+-spec drop_n([term()], integer()) -> [term()].
 drop_n(List, N) when N =< 0 ->
     List;
 drop_n([], _N) ->
@@ -1418,6 +1497,7 @@ drop_n([], _N) ->
 drop_n([_ | Rest], N) ->
     drop_n(Rest, N - 1).
 
+-spec take_n([term()], integer()) -> [term()].
 take_n(_List, N) when N =< 0 ->
     [];
 take_n([], _N) ->
@@ -1427,6 +1507,7 @@ take_n([H | T], N) ->
 
 %% Shared helpers
 
+-spec get_latest_version(tenantid(), unitid()) -> unit_lookup_result().
 get_latest_version(TenantId, UnitId) ->
     LatestKey = {latest, TenantId, UnitId},
     case ipto_cache:get(LatestKey) of
@@ -1440,18 +1521,21 @@ get_latest_version(TenantId, UnitId) ->
             end
     end.
 
+-spec validate_store_input(unit_map()) -> ok | {error, ipto_reason()}.
 validate_store_input(UnitMap) ->
     case maps:is_key(tenantid, UnitMap) of
         true -> ok;
         false -> {error, missing_tenantid}
     end.
 
+-spec get_meta_map(term()) -> map().
 get_meta_map(Key) ->
     case ipto_cache:get(Key) of
         undefined -> #{};
         Map when is_map(Map) -> Map
     end.
 
+-spec next_attr_id() -> pos_integer().
 next_attr_id() ->
     Seq0 =
         case ipto_cache:get(?ATTR_SEQ_KEY) of
@@ -1462,6 +1546,7 @@ next_attr_id() ->
     ipto_cache:put(?ATTR_SEQ_KEY, Seq),
     Seq.
 
+-spec normalize_ref(unit_ref_value() | unit_ref_tuple() | unit_ref_map() | term()) -> unit_ref_tuple() | invalid_ref.
 normalize_ref(#unit_ref{tenantid = TenantId, unitid = UnitId}) ->
     {TenantId, UnitId};
 normalize_ref(#{tenantid := TenantId, unitid := UnitId}) ->
@@ -1471,25 +1556,30 @@ normalize_ref({TenantId, UnitId}) ->
 normalize_ref(_) ->
     invalid_ref.
 
+-spec maybe_null_text(term()) -> null | string().
 maybe_null_text(undefined) -> null;
 maybe_null_text(null) -> null;
 maybe_null_text(Value) -> to_pg_text(Value).
 
+-spec normalize_purpose(term()) -> binary().
 normalize_purpose(undefined) -> <<"">>;
 normalize_purpose(null) -> <<"">>;
 normalize_purpose(Value) when is_binary(Value) -> Value;
 normalize_purpose(Value) when is_list(Value) -> unicode:characters_to_binary(Value);
 normalize_purpose(Value) -> unicode:characters_to_binary(io_lib:format("~p", [Value])).
 
+-spec normalize_string(term()) -> binary().
 normalize_string(Value) when is_binary(Value) -> Value;
 normalize_string(Value) when is_list(Value) -> unicode:characters_to_binary(Value);
 normalize_string(Value) -> unicode:characters_to_binary(io_lib:format("~p", [Value])).
 
+-spec to_pg_text(term()) -> string().
 to_pg_text(Value) when is_binary(Value) -> unicode:characters_to_list(Value);
 to_pg_text(Value) when is_list(Value) -> Value;
 to_pg_text(Value) when is_atom(Value) -> atom_to_list(Value);
 to_pg_text(Value) -> unicode:characters_to_list(io_lib:format("~p", [Value])).
 
+-spec row_to_unit_map(list() | tuple()) -> unit_map().
 row_to_unit_map(Row) ->
     [TenantId, UnitId, UnitVer, CorrId, Status, Created, Modified, UnitName] = row_values(Row),
     #{
@@ -1504,6 +1594,7 @@ row_to_unit_map(Row) ->
         isreadonly => false
     }.
 
+-spec row_to_unit_map_with_lastver(list() | tuple()) -> unit_map().
 row_to_unit_map_with_lastver(Row) ->
     [TenantId, UnitId, UnitVer, LastVer, CorrId, Status, Created, Modified, UnitName] = row_values(Row),
     #{
@@ -1518,9 +1609,11 @@ row_to_unit_map_with_lastver(Row) ->
         isreadonly => LastVer > UnitVer
     }.
 
+-spec row_values(list() | tuple()) -> list().
 row_values(Row) when is_tuple(Row) -> tuple_to_list(Row);
 row_values(Row) when is_list(Row) -> Row.
 
+-spec relation_from_row(list()) -> relation() | #{}.
 relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId]) ->
     #{
         tenantid => TenantId,
@@ -1532,6 +1625,7 @@ relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId]) ->
 relation_from_row(_) ->
     #{}.
 
+-spec association_from_row(list()) -> association() | #{}.
 association_from_row([TenantId, UnitId, AssocType, AssocString]) ->
     #{
         tenantid => TenantId,
@@ -1542,6 +1636,7 @@ association_from_row([TenantId, UnitId, AssocType, AssocString]) ->
 association_from_row(_) ->
     #{}.
 
+-spec relation_from_key(term()) -> relation() | #{}.
 relation_from_key({{TenantId, UnitId}, RelType, {RelTenantId, RelUnitId}}) ->
     #{
         tenantid => TenantId,
@@ -1553,6 +1648,7 @@ relation_from_key({{TenantId, UnitId}, RelType, {RelTenantId, RelUnitId}}) ->
 relation_from_key(_) ->
     #{}.
 
+-spec association_from_key(term()) -> association() | #{}.
 association_from_key({{TenantId, UnitId}, AssocType, AssocString}) ->
     #{
         tenantid => TenantId,
@@ -1563,6 +1659,7 @@ association_from_key({{TenantId, UnitId}, AssocType, AssocString}) ->
 association_from_key(_) ->
     #{}.
 
+-spec query_rows(term()) -> {ok, list()} | {error, term()}.
 query_rows({ok, Cols, Rows}) when is_list(Cols), is_list(Rows) ->
     {ok, Rows};
 query_rows({ok, _Count, Cols, Rows}) when is_list(Cols), is_list(Rows) ->
@@ -1572,6 +1669,7 @@ query_rows({error, _} = Error) ->
 query_rows(Other) ->
     {error, Other}.
 
+-spec pg_store_new_unit(term(), unit_map()) -> ipto_result(unit_map()).
 pg_store_new_unit(Conn, UnitMap) ->
     pg_tx(Conn, fun() ->
         TenantId = maps:get(tenantid, UnitMap),
@@ -1604,6 +1702,7 @@ pg_store_new_unit(Conn, UnitMap) ->
         end
     end).
 
+-spec pg_store_new_version(term(), unit_map()) -> ipto_result(unit_map()).
 pg_store_new_version(Conn, UnitMap) ->
     pg_tx(Conn, fun() ->
         TenantId = maps:get(tenantid, UnitMap),
@@ -1634,6 +1733,7 @@ pg_store_new_version(Conn, UnitMap) ->
         end
     end).
 
+-spec pg_tx(term(), fun(() -> {ok, term()} | {error, term()})) -> {ok, term()} | {error, term()}.
 pg_tx(Conn, Fun) ->
     case epgsql:squery(Conn, "BEGIN") of
         {ok, _, _} ->
@@ -1649,6 +1749,7 @@ pg_tx(Conn, Fun) ->
             {error, Error}
     end.
 
+-spec build_where(term()) -> {string(), list(), pos_integer()}.
 build_where(undefined) ->
     {"", [], 1};
 build_where(Expr) when is_map(Expr) ->
@@ -1660,6 +1761,7 @@ build_where(Expr) when is_list(Expr) ->
 build_where(_) ->
     {"", [], 1}.
 
+-spec build_where_from_keys([term()], map(), [string()], list(), pos_integer()) -> {string(), list(), pos_integer()}.
 build_where_from_keys([], _Expr, ClausesAcc, ParamsAcc, NextIdx) ->
     Clauses = lists:reverse(ClausesAcc),
     Params = lists:reverse(ParamsAcc),
@@ -1695,6 +1797,7 @@ build_where_from_keys([Key | Rest], Expr, ClausesAcc, ParamsAcc, NextIdx) ->
             build_where_from_keys(Rest, Expr, [MaybeClause | ClausesAcc], [MaybeParam | ParamsAcc], NextIdx + 1)
     end.
 
+-spec build_order(search_order() | map() | tuple()) -> string().
 build_order(#{field := Field, dir := Dir}) ->
     build_order({Field, Dir});
 build_order({Field, Dir}) ->
@@ -1714,6 +1817,7 @@ build_order({Field, Dir}) ->
 build_order(_) ->
     " ORDER BY uk.created DESC".
 
+-spec build_paging(search_paging() | map() | integer(), pos_integer()) -> {string(), list()}.
 build_paging(#{limit := Limit, offset := Offset}, NextIdx)
   when is_integer(Limit), Limit > 0, is_integer(Offset), Offset >= 0 ->
     Sql = " LIMIT $" ++ integer_to_list(NextIdx) ++
@@ -1728,6 +1832,7 @@ build_paging(Limit, NextIdx) when is_integer(Limit), Limit > 0 ->
 build_paging(_, _NextIdx) ->
     {"", []}.
 
+-spec attr_row_to_info(list() | tuple()) -> attribute_info().
 attr_row_to_info(Row) ->
     [Id, Alias, Name, QualName, Type, Scalar] = row_values(Row),
     #{
@@ -1739,9 +1844,11 @@ attr_row_to_info(Row) ->
         forced_scalar => Scalar
     }.
 
+-spec map_to_json(map()) -> binary().
 map_to_json(Map) ->
     unicode:characters_to_binary(json:encode(normalize_json(Map))).
 
+-spec normalize_json(term()) -> term().
 normalize_json(Value) when is_map(Value) ->
     maps:from_list([{json_key(K), normalize_json(V)} || {K, V} <- maps:to_list(Value)]);
 normalize_json(Value) when is_list(Value) ->
@@ -1749,6 +1856,7 @@ normalize_json(Value) when is_list(Value) ->
 normalize_json(Value) ->
     Value.
 
+-spec json_key(term()) -> term().
 json_key(Key) when is_atom(Key) ->
     atom_to_binary(Key, utf8);
 json_key(Key) when is_list(Key) ->
@@ -1756,6 +1864,7 @@ json_key(Key) when is_list(Key) ->
 json_key(Key) ->
     Key.
 
+-spec json_to_map(term()) -> term().
 json_to_map(JsonBin) when is_binary(JsonBin) ->
     to_atom_keys(json:decode(JsonBin));
 json_to_map(JsonText) when is_list(JsonText) ->
@@ -1763,6 +1872,7 @@ json_to_map(JsonText) when is_list(JsonText) ->
 json_to_map(Other) ->
     Other.
 
+-spec to_atom_keys(term()) -> term().
 to_atom_keys(Value) when is_map(Value) ->
     maps:from_list([{to_atom_key(K), to_atom_keys(V)} || {K, V} <- maps:to_list(Value)]);
 to_atom_keys(Value) when is_list(Value) ->
@@ -1770,6 +1880,7 @@ to_atom_keys(Value) when is_list(Value) ->
 to_atom_keys(Value) ->
     Value.
 
+-spec to_atom_key(term()) -> term().
 to_atom_key(Key) when is_binary(Key) ->
     binary_to_atom(Key, utf8);
 to_atom_key(Key) ->

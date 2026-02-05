@@ -200,14 +200,17 @@ get_tenant_info(NameOrId) ->
 sync() ->
     ipto_attr:sync().
 
+-spec normalize_name(binary() | string()) -> binary().
 normalize_name(Name) when is_binary(Name) ->
     Name;
 normalize_name(Name) when is_list(Name) ->
     unicode:characters_to_binary(Name).
 
+-spec maybe_emit_event(atom(), term()) -> ok.
 maybe_emit_event(Action, Payload) ->
     ipto_event:emit(Action, Payload).
 
+-spec transition_status(unit_ref_value() | unit_ref_tuple() | unit_ref_map(), unit_status()) -> ok | {error, ipto_reason()}.
 transition_status(#{tenantid := TenantId, unitid := UnitId}, RequestedStatus) ->
     transition_status({TenantId, UnitId}, RequestedStatus);
 transition_status({TenantId, UnitId}, RequestedStatus) ->
@@ -226,6 +229,7 @@ transition_status({TenantId, UnitId}, RequestedStatus) ->
 transition_status(_UnitRef, _RequestedStatus) ->
     {error, invalid_unit_ref}.
 
+-spec allowed_transition(unit_status(), unit_status()) -> boolean().
 allowed_transition(?STATUS_ARCHIVED, _Requested) ->
     false;
 allowed_transition(?STATUS_EFFECTIVE, ?STATUS_PENDING_DELETION) ->

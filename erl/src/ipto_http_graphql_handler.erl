@@ -68,17 +68,21 @@ parse_payload(Body) when is_binary(Body) ->
 parse_payload(_Body) ->
     {error, invalid_body}.
 
+-spec normalize_map(term()) -> map().
 normalize_map(M) when is_map(M) ->
     M;
 normalize_map(_) ->
     #{}.
 
+-spec error_response(term()) -> map().
 error_response(Reason) ->
     #{errors => [#{message => iolist_to_binary(io_lib:format("~p", [Reason]))}]}. 
 
+-spec encode_json(term()) -> binary().
 encode_json(Value) ->
     unicode:characters_to_binary(json:encode(normalize_json(Value))).
 
+-spec normalize_json(term()) -> term().
 normalize_json(V) when is_map(V) ->
     maps:from_list([{json_key(K), normalize_json(Val)} || {K, Val} <- maps:to_list(V)]);
 normalize_json(V) when is_list(V) ->
@@ -86,6 +90,7 @@ normalize_json(V) when is_list(V) ->
 normalize_json(V) ->
     V.
 
+-spec json_key(term()) -> term().
 json_key(K) when is_atom(K) -> atom_to_binary(K, utf8);
 json_key(K) when is_list(K) -> unicode:characters_to_binary(K);
 json_key(K) -> K.

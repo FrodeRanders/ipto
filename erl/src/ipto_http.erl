@@ -57,6 +57,7 @@ stop() ->
             ok
     end.
 
+-spec env_int(string() | binary(), integer()) -> integer().
 env_int(Name, Default) ->
     case os:getenv(Name) of
         false -> Default;

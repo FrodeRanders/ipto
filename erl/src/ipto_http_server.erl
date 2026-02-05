@@ -73,6 +73,7 @@ handle_continue(ensure_http, State0) ->
     {_Reply, State} = ensure_http_state(State0),
     {noreply, State}.
 
+-spec ensure_http_state(http_server_state()) -> {http_reply(), http_server_state()}.
 ensure_http_state(State0) ->
     Enabled = http_enabled(),
     TargetPort = http_port(),
@@ -105,6 +106,7 @@ ensure_http_state(State0) ->
             end
     end.
 
+-spec http_enabled() -> boolean().
 http_enabled() ->
     case os:getenv("IPTO_HTTP_ENABLED") of
         false ->
@@ -113,6 +115,7 @@ http_enabled() ->
             to_bool(Value, false)
     end.
 
+-spec http_port() -> integer().
 http_port() ->
     case os:getenv("IPTO_HTTP_PORT") of
         false ->
@@ -121,6 +124,7 @@ http_port() ->
             to_int(Value, application:get_env(ipto, http_port, 8080))
     end.
 
+-spec to_bool(binary() | string() | term(), boolean()) -> boolean().
 to_bool(V, Default) when is_binary(V) ->
     to_bool(binary_to_list(V), Default);
 to_bool(V, _Default) when is_list(V) ->
@@ -139,6 +143,7 @@ to_bool(V, _Default) when is_list(V) ->
 to_bool(_, Default) ->
     Default.
 
+-spec to_int(binary() | string() | term(), integer()) -> integer().
 to_int(V, Default) when is_binary(V) ->
     to_int(binary_to_list(V), Default);
 to_int(V, Default) when is_list(V) ->

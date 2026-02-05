@@ -66,6 +66,7 @@ clear_schema_overrides() ->
     application:unset_env(ipto, graphql_schema_sdl),
     reload().
 
+-spec resolve_schema() -> binary().
 resolve_schema() ->
     case application:get_env(ipto, graphql_schema_sdl) of
         {ok, Sdl} when is_binary(Sdl); is_list(Sdl) ->
@@ -81,6 +82,7 @@ resolve_schema() ->
             end
     end.
 
+-spec schema_file_path() -> binary() | string() | undefined.
 schema_file_path() ->
     case application:get_env(ipto, graphql_schema_file) of
         {ok, Path} -> Path;
@@ -91,6 +93,7 @@ schema_file_path() ->
             end
     end.
 
+-spec resolve_mapping() -> map().
 resolve_mapping() ->
     Base = # {
         objects => # {
@@ -104,6 +107,7 @@ resolve_mapping() ->
         _ -> Base
     end.
 
+-spec deep_merge(map(), map()) -> map().
 deep_merge(A, B) when is_map(A), is_map(B) ->
     maps:fold(fun(K, V, Acc) ->
         case maps:get(K, Acc, undefined) of
@@ -115,6 +119,7 @@ deep_merge(A, B) when is_map(A), is_map(B) ->
     end, A, B);
 deep_merge(_A, B) -> B.
 
+-spec to_binary(term()) -> binary().
 to_binary(Value) when is_binary(Value) -> Value;
 to_binary(Value) when is_list(Value) -> unicode:characters_to_binary(Value);
 to_binary(Value) -> unicode:characters_to_binary(io_lib:format("~p", [Value])).

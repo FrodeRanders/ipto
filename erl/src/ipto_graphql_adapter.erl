@@ -38,12 +38,14 @@ reload_schema() ->
     persistent_term:erase(?STATE_KEY),
     ok.
 
+-spec execute_with_graphql_erl(binary() | string(), map(), map()) -> ipto_result(map()).
 execute_with_graphql_erl(Query, Variables, Context0) ->
     case ensure_graphql_started() of
         ok -> continue_execute(Query, Variables, Context0);
         Error -> Error
     end.
 
+-spec continue_execute(binary() | string(), map(), map()) -> ipto_result(map()).
 continue_execute(Query, Variables, Context0) ->
     case ensure_schema_loaded() of
         ok ->
@@ -63,6 +65,7 @@ continue_execute(Query, Variables, Context0) ->
             Error
     end.
 
+-spec ensure_graphql_started() -> ok | {error, ipto_reason()}.
 ensure_graphql_started() ->
     case application:ensure_all_started(graphql) of
         {ok, _} -> ok;
@@ -71,6 +74,7 @@ ensure_graphql_started() ->
         Error -> {error, {graphql_start_failed, Error}}
     end.
 
+-spec ensure_schema_loaded() -> ok | {error, ipto_reason()}.
 ensure_schema_loaded() ->
     SchemaData = ipto_graphql_config:get_schema(),
     Mapping = ipto_graphql_config:get_mapping(),
@@ -83,6 +87,7 @@ ensure_schema_loaded() ->
             load_schema(SchemaData, Mapping, Digest)
     end.
 
+-spec load_schema(binary(), map(), integer()) -> ok | {error, ipto_reason()}.
 load_schema(SchemaData, Mapping, Digest) ->
     ok = graphql_schema:reset(),
     case graphql:load_schema(Mapping, SchemaData) of
@@ -96,6 +101,7 @@ load_schema(SchemaData, Mapping, Digest) ->
             {error, {graphql_schema_load_failed, Error}}
     end.
 
+-spec extract_operation_and_vars(map() | term()) -> {term(), map()}.
 extract_operation_and_vars(Variables) when is_map(Variables) ->
     OpName = maps:get(operation_name, Variables, maps:get(<<"operationName">>, Variables, undefined)),
     Params =
@@ -107,6 +113,7 @@ extract_operation_and_vars(Variables) when is_map(Variables) ->
 extract_operation_and_vars(_Variables) ->
     {undefined, #{}}.
 
+-spec to_binary(term()) -> binary().
 to_binary(Value) when is_binary(Value) ->
     Value;
 to_binary(Value) when is_list(Value) ->

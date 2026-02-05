@@ -783,6 +783,7 @@ get_tenant_info(NameOrId) when is_binary(NameOrId) ->
 get_tenant_info(_NameOrId) ->
     {error, invalid_tenant_id_or_name}.
 
+-spec store_new_unit(unit_map()) -> ipto_result(unit_map()).
 store_new_unit(UnitMap) ->
     case next_unitid() of
         {ok, UnitId} ->
@@ -831,6 +832,7 @@ store_new_unit(UnitMap) ->
             Error
     end.
 
+-spec store_new_version(unit_map()) -> ipto_result(unit_map()).
 store_new_version(UnitMap) ->
     TenantId = maps:get(tenantid, UnitMap),
     UnitId = maps:get(unitid, UnitMap),
@@ -867,6 +869,7 @@ store_new_version(UnitMap) ->
             Error
     end.
 
+-spec next_unitid() -> {ok, pos_integer()} | {error, ipto_reason()}.
 next_unitid() ->
     Cypher =
         "MERGE (c:Counter {name: 'unitid'}) "
@@ -882,12 +885,15 @@ next_unitid() ->
             Error
     end.
 
+-spec next_attrid() -> {ok, pos_integer()} | {error, ipto_reason()}.
 next_attrid() ->
     next_counter("attrid").
 
+-spec next_tenantid() -> {ok, pos_integer()} | {error, ipto_reason()}.
 next_tenantid() ->
     next_counter("tenantid").
 
+-spec next_counter(binary() | string()) -> {ok, pos_integer()} | {error, ipto_reason()}.
 next_counter(CounterName) ->
     Cypher =
         "MERGE (c:Counter {name: $name}) "
@@ -903,6 +909,7 @@ next_counter(CounterName) ->
             Error
     end.
 
+-spec row_to_unit_map(list()) -> {ok, unit_map()} | {error, ipto_reason()}.
 row_to_unit_map([TenantId, UnitId, UnitVer, LastVer, CorrId, Status, Created, Modified, UnitName, Payload]) ->
     case json_to_map(Payload) of
         Map when is_map(Map) ->
@@ -933,6 +940,7 @@ row_to_unit_map([TenantId, UnitId, UnitVer, LastVer, CorrId, Status, Created, Mo
 row_to_unit_map(_) ->
     {error, invalid_row}.
 
+-spec relation_row_to_map(term()) -> relation() | #{}.
 relation_row_to_map(Row) when is_tuple(Row) ->
     relation_row_to_map(tuple_to_list(Row));
 relation_row_to_map([Map]) when is_map(Map) ->
@@ -971,6 +979,7 @@ relation_row_to_map(Row) when is_list(Row), length(Row) >= 5 ->
 relation_row_to_map(_) ->
     #{}.
 
+-spec association_row_to_map(term()) -> association() | #{}.
 association_row_to_map(Row) when is_tuple(Row) ->
     association_row_to_map(tuple_to_list(Row));
 association_row_to_map([Map]) when is_map(Map) ->
@@ -1008,6 +1017,7 @@ association_row_to_map(Row) when is_list(Row), length(Row) >= 4 ->
 association_row_to_map(_) ->
     #{}.
 
+-spec get_map_value(map(), [term()]) -> term() | undefined.
 get_map_value(_Map, []) ->
     undefined;
 get_map_value(Map, [Key | Rest]) when is_map(Map) ->
@@ -1016,9 +1026,11 @@ get_map_value(Map, [Key | Rest]) when is_map(Map) ->
         Value -> Value
     end.
 
+-spec map_lookup(map(), [term()]) -> term() | undefined.
 map_lookup(Map, Keys) when is_map(Map), is_list(Keys) ->
     get_map_value(Map, Keys).
 
+-spec normalize_relation_map(map()) -> relation() | #{}.
 normalize_relation_map(Map) when is_map(Map) ->
     TenantId = map_lookup(Map, [tenantid, <<"tenantid">>, <<"tenantId">>]),
     case TenantId of
@@ -1034,6 +1046,7 @@ normalize_relation_map(Map) when is_map(Map) ->
             }
     end.
 
+-spec normalize_association_map(map()) -> association() | #{}.
 normalize_association_map(Map) when is_map(Map) ->
     TenantId = map_lookup(Map, [tenantid, <<"tenantid">>, <<"tenantId">>]),
     case TenantId of
@@ -1048,6 +1061,7 @@ normalize_association_map(Map) when is_map(Map) ->
             }
     end.
 
+-spec direct_relation_map(map()) -> relation() | #{}.
 direct_relation_map(Map) when is_map(Map) ->
     TenantId = maps:get(<<"tenantid">>, Map, maps:get(tenantid, Map, undefined)),
     case TenantId of
@@ -1063,6 +1077,7 @@ direct_relation_map(Map) when is_map(Map) ->
             }
     end.
 
+-spec direct_association_map(map()) -> association() | #{}.
 direct_association_map(Map) when is_map(Map) ->
     TenantId = maps:get(<<"tenantid">>, Map, maps:get(tenantid, Map, undefined)),
     case TenantId of
@@ -1077,6 +1092,7 @@ direct_association_map(Map) when is_map(Map) ->
             }
     end.
 
+-spec relation_row_fallback(term()) -> relation() | #{}.
 relation_row_fallback([Map]) when is_map(Map) ->
     relation_row_fallback(Map);
 relation_row_fallback([Inner]) when is_tuple(Inner); is_list(Inner) ->
@@ -1093,6 +1109,7 @@ relation_row_fallback(Row) when is_tuple(Row) ->
 relation_row_fallback(_) ->
     #{}.
 
+-spec association_row_fallback(term()) -> association() | #{}.
 association_row_fallback([Map]) when is_map(Map) ->
     association_row_fallback(Map);
 association_row_fallback([Inner]) when is_tuple(Inner); is_list(Inner) ->
@@ -1109,6 +1126,7 @@ association_row_fallback(Row) when is_tuple(Row) ->
 association_row_fallback(_) ->
     #{}.
 
+-spec relation_row_binary(term()) -> relation() | #{}.
 relation_row_binary([Map]) when is_map(Map) ->
     relation_row_binary(Map);
 relation_row_binary([Inner]) when is_tuple(Inner); is_list(Inner) ->
@@ -1158,6 +1176,7 @@ relation_row_binary(Row) when is_map(Row) ->
 relation_row_binary(_) ->
     #{}.
 
+-spec association_row_binary(term()) -> association() | #{}.
 association_row_binary([Map]) when is_map(Map) ->
     association_row_binary(Map);
 association_row_binary([Inner]) when is_tuple(Inner); is_list(Inner) ->
@@ -1202,6 +1221,7 @@ association_row_binary(Row) when is_map(Row) ->
 association_row_binary(_) ->
     #{}.
 
+-spec neo4j_query(string() | binary(), map()) -> {ok, list()} | {error, ipto_reason()}.
 neo4j_query(Cypher, Params) ->
     with_http(fun() ->
         case ensure_bootstrap() of
@@ -1212,11 +1232,14 @@ neo4j_query(Cypher, Params) ->
         end
     end).
 
+-spec neo4j_query_with_retry(string() | binary(), map()) -> {ok, list()} | {error, ipto_reason()}.
 neo4j_query_with_retry(Cypher, Params) ->
     MaxAttempts = retry_attempts(),
     BaseMs = retry_base_ms(),
     neo4j_query_with_retry(Cypher, Params, 1, MaxAttempts, BaseMs).
 
+-spec neo4j_query_with_retry(string() | binary(), map(), pos_integer(), pos_integer(), pos_integer()) ->
+    {ok, list()} | {error, ipto_reason()}.
 neo4j_query_with_retry(Cypher, Params, Attempt, MaxAttempts, BaseMs) ->
     case neo4j_query_once(Cypher, Params) of
         {ok, _} = Ok ->
@@ -1232,6 +1255,7 @@ neo4j_query_with_retry(Cypher, Params, Attempt, MaxAttempts, BaseMs) ->
             end
     end.
 
+-spec neo4j_query_once(string() | binary(), map()) -> {ok, list()} | {error, ipto_reason()}.
 neo4j_query_once(Cypher, Params) ->
     Url = neo4j_url(),
     Headers = [
@@ -1250,6 +1274,7 @@ neo4j_query_once(Cypher, Params) ->
             {error, {neo4j_request_failed, Error}}
     end.
 
+-spec ensure_bootstrap() -> ok | {error, ipto_reason()}.
 ensure_bootstrap() ->
     case bootstrap_enabled() of
         false ->
@@ -1263,6 +1288,7 @@ ensure_bootstrap() ->
             end
     end.
 
+-spec bootstrap_schema() -> ok | {error, ipto_reason()}.
 bootstrap_schema() ->
     Statements = bootstrap_statements(),
     case run_bootstrap_statements(Statements) of
@@ -1273,6 +1299,7 @@ bootstrap_schema() ->
             Error
     end.
 
+-spec run_bootstrap_statements([string()]) -> ok | {error, ipto_reason()}.
 run_bootstrap_statements([]) ->
     ok;
 run_bootstrap_statements([Stmt | Rest]) ->
@@ -1283,6 +1310,7 @@ run_bootstrap_statements([Stmt | Rest]) ->
             {error, {neo4j_bootstrap_failed, Stmt, Error}}
     end.
 
+-spec bootstrap_statements() -> [string()].
 bootstrap_statements() ->
     [
         "CREATE CONSTRAINT unit_kernel_key IF NOT EXISTS FOR (k:UnitKernel) REQUIRE (k.tenantid, k.unitid) IS UNIQUE",
@@ -1298,6 +1326,7 @@ bootstrap_statements() ->
         "CREATE INDEX unit_version_name_idx IF NOT EXISTS FOR (v:UnitVersion) ON (v.unitname)"
     ].
 
+-spec is_retriable(term()) -> boolean().
 is_retriable({error, {neo4j_request_failed, _}}) ->
     true;
 is_retriable({error, {neo4j_http_error, Code, _Reason, _Body}}) when Code =:= 429; Code >= 500 ->
@@ -1307,6 +1336,7 @@ is_retriable({error, {neo4j_query_error, Errors}}) ->
 is_retriable(_) ->
     false.
 
+-spec has_transient_neo4j_error(term()) -> boolean().
 has_transient_neo4j_error([]) ->
     false;
 has_transient_neo4j_error([Error | Rest]) when is_map(Error) ->
@@ -1322,6 +1352,7 @@ has_transient_neo4j_error([Error | Rest]) when is_map(Error) ->
 has_transient_neo4j_error([_ | Rest]) ->
     has_transient_neo4j_error(Rest).
 
+-spec parse_neo4j_response(binary()) -> {ok, list()} | {error, ipto_reason()}.
 parse_neo4j_response(Body) ->
     try
         Decoded = json:decode(Body),
@@ -1344,6 +1375,7 @@ parse_neo4j_response(Body) ->
         _:Reason -> {error, {neo4j_invalid_response, Reason}}
     end.
 
+-spec with_http(fun(() -> term())) -> term().
 with_http(Fun) ->
     case application:ensure_all_started(inets) of
         {ok, _} -> Fun();
@@ -1352,23 +1384,27 @@ with_http(Fun) ->
         Error -> {error, {inets_start_failed, Error}}
     end.
 
+-spec neo4j_url() -> string().
 neo4j_url() ->
     Base = env_str("IPTO_NEO4J_URL", "http://localhost:7474"),
     Db = env_str("IPTO_NEO4J_DATABASE", ?DEFAULT_DB),
     Base ++ "/db/" ++ Db ++ "/tx/commit".
 
+-spec authorization_header() -> string().
 authorization_header() ->
     User = env_str("IPTO_NEO4J_USER", "neo4j"),
     Pass = env_str("IPTO_NEO4J_PASSWORD", "neo4j"),
     Enc = base64:encode_to_string(User ++ ":" ++ Pass),
     "Basic " ++ Enc.
 
+-spec env_str(string() | binary(), string()) -> string().
 env_str(Name, Default) ->
     case os:getenv(Name) of
         false -> Default;
         Value -> Value
     end.
 
+-spec env_int(string() | binary(), integer()) -> integer().
 env_int(Name, Default) ->
     case os:getenv(Name) of
         false ->
@@ -1380,6 +1416,7 @@ env_int(Name, Default) ->
             end
     end.
 
+-spec env_bool(string() | binary(), boolean()) -> boolean().
 env_bool(Name, Default) ->
     case os:getenv(Name) of
         false ->
@@ -1399,12 +1436,15 @@ env_bool(Name, Default) ->
             end
     end.
 
+-spec timeout_ms() -> integer().
 timeout_ms() ->
     env_int("IPTO_NEO4J_TIMEOUT_MS", ?DEFAULT_TIMEOUT_MS).
 
+-spec connect_timeout_ms() -> integer().
 connect_timeout_ms() ->
     env_int("IPTO_NEO4J_CONNECT_TIMEOUT_MS", ?DEFAULT_CONNECT_TIMEOUT_MS).
 
+-spec retry_attempts() -> pos_integer().
 retry_attempts() ->
     Retries = env_int("IPTO_NEO4J_RETRIES", ?DEFAULT_RETRIES),
     case Retries < 0 of
@@ -1412,6 +1452,7 @@ retry_attempts() ->
         false -> Retries + 1
     end.
 
+-spec retry_base_ms() -> pos_integer().
 retry_base_ms() ->
     Base = env_int("IPTO_NEO4J_RETRY_BASE_MS", ?DEFAULT_RETRY_BASE_MS),
     case Base < 1 of
@@ -1419,9 +1460,11 @@ retry_base_ms() ->
         false -> Base
     end.
 
+-spec bootstrap_enabled() -> boolean().
 bootstrap_enabled() ->
     env_bool("IPTO_NEO4J_BOOTSTRAP", true).
 
+-spec ssl_options() -> list().
 ssl_options() ->
     case env_bool("IPTO_NEO4J_SSL_VERIFY", false) of
         true ->
@@ -1430,9 +1473,11 @@ ssl_options() ->
             [{verify, verify_none}]
     end.
 
+-spec map_to_json(map()) -> binary().
 map_to_json(Map) ->
     unicode:characters_to_binary(json:encode(normalize_json(Map))).
 
+-spec normalize_json(term()) -> term().
 normalize_json(Value) when is_map(Value) ->
     maps:from_list([{json_key(K), normalize_json(V)} || {K, V} <- maps:to_list(Value)]);
 normalize_json(Value) when is_list(Value) ->
@@ -1443,6 +1488,7 @@ normalize_json(Value) when is_list(Value) ->
 normalize_json(Value) ->
     Value.
 
+-spec is_string_list(term()) -> boolean().
 is_string_list(Value) when is_list(Value) ->
     try
         _ = unicode:characters_to_binary(Value),
@@ -1451,6 +1497,7 @@ is_string_list(Value) when is_list(Value) ->
         _:_ -> false
     end.
 
+-spec json_key(term()) -> term().
 json_key(Key) when is_atom(Key) ->
     atom_to_binary(Key, utf8);
 json_key(Key) when is_list(Key) ->
@@ -1458,6 +1505,7 @@ json_key(Key) when is_list(Key) ->
 json_key(Key) ->
     Key.
 
+-spec json_to_map(term()) -> term() | undefined.
 json_to_map(JsonBin) when is_binary(JsonBin) ->
     to_atom_keys(json:decode(JsonBin));
 json_to_map(JsonText) when is_list(JsonText) ->
@@ -1465,6 +1513,7 @@ json_to_map(JsonText) when is_list(JsonText) ->
 json_to_map(_) ->
     undefined.
 
+-spec to_atom_keys(term()) -> term().
 to_atom_keys(Value) when is_map(Value) ->
     maps:from_list([{to_atom_key(K), to_atom_keys(V)} || {K, V} <- maps:to_list(Value)]);
 to_atom_keys(Value) when is_list(Value) ->
@@ -1472,11 +1521,13 @@ to_atom_keys(Value) when is_list(Value) ->
 to_atom_keys(Value) ->
     Value.
 
+-spec to_atom_key(term()) -> term().
 to_atom_key(Key) when is_binary(Key) ->
     binary_to_atom(Key, utf8);
 to_atom_key(Key) ->
     Key.
 
+-spec normalize_string(term()) -> binary().
 normalize_string(Value) when is_binary(Value) ->
     Value;
 normalize_string(Value) when is_list(Value) ->
@@ -1484,6 +1535,7 @@ normalize_string(Value) when is_list(Value) ->
 normalize_string(Value) ->
     unicode:characters_to_binary(io_lib:format("~p", [Value])).
 
+-spec normalize_nullable_string(term()) -> null | binary().
 normalize_nullable_string(undefined) ->
     null;
 normalize_nullable_string(null) ->
@@ -1491,6 +1543,7 @@ normalize_nullable_string(null) ->
 normalize_nullable_string(Value) ->
     normalize_string(Value).
 
+-spec to_binary(term()) -> binary().
 to_binary(V) when is_binary(V) ->
     V;
 to_binary(V) when is_list(V) ->
@@ -1498,6 +1551,8 @@ to_binary(V) when is_list(V) ->
 to_binary(V) ->
     unicode:characters_to_binary(io_lib:format("~p", [V])).
 
+-spec normalize_search_expression(search_expression() | map() | list() | undefined) ->
+    {ok, map()} | {error, ipto_reason()}.
 normalize_search_expression(undefined) ->
     {ok, #{}};
 normalize_search_expression(Expression) when is_map(Expression) ->
@@ -1512,6 +1567,7 @@ normalize_search_expression(Expression) when is_list(Expression) ->
 normalize_search_expression(_) ->
     {error, invalid_query}.
 
+-spec is_proplist(term()) -> boolean().
 is_proplist([]) ->
     true;
 is_proplist([{_Key, _Value} | Rest]) ->
@@ -1519,9 +1575,11 @@ is_proplist([{_Key, _Value} | Rest]) ->
 is_proplist(_) ->
     false.
 
+-spec normalize_expr_keys(map()) -> map().
 normalize_expr_keys(Expr) ->
     maps:from_list([{normalize_expr_key(K), V} || {K, V} <- maps:to_list(Expr)]).
 
+-spec normalize_expr_key(term()) -> term().
 normalize_expr_key(<<"tenantid">>) -> tenantid;
 normalize_expr_key(<<"unitid">>) -> unitid;
 normalize_expr_key(<<"status">>) -> status;
@@ -1531,10 +1589,13 @@ normalize_expr_key(<<"created_after">>) -> created_after;
 normalize_expr_key(<<"created_before">>) -> created_before;
 normalize_expr_key(K) -> K.
 
+-spec build_where(map()) -> {ok, string(), map()} | {error, ipto_reason()}.
 build_where(Expression) ->
     Entries = maps:to_list(Expression),
     build_where_entries(Entries, [], #{}).
 
+-spec build_where_entries([{term(), term()}], [string()], map()) ->
+    {ok, string(), map()} | {error, ipto_reason()}.
 build_where_entries([], ClausesAcc, ParamsAcc) ->
     Sql =
         case lists:reverse(ClausesAcc) of
@@ -1552,6 +1613,7 @@ build_where_entries([{Key, Value} | Rest], ClausesAcc, ParamsAcc) ->
             Error
     end.
 
+-spec where_clause(term(), term()) -> skip | {string(), atom(), term()} | {error, ipto_reason()}.
 where_clause(tenantid, Value) when is_integer(Value) ->
     {"k.tenantid = $tenantid", tenantid, Value};
 where_clause(unitid, Value) when is_integer(Value) ->
@@ -1575,6 +1637,7 @@ where_clause(created_before, Value) ->
 where_clause(_, _) ->
     skip.
 
+-spec build_order(search_order() | map() | tuple()) -> {string(), map()}.
 build_order({Field, Dir}) ->
     FieldSql =
         case Field of
@@ -1596,6 +1659,7 @@ build_order(#{field := Field, dir := Dir}) ->
 build_order(_) ->
     {" ORDER BY k.created DESC", #{}}.
 
+-spec build_paging(search_paging() | map() | integer()) -> {string(), map()}.
 build_paging(#{limit := Limit, offset := Offset})
   when is_integer(Limit), Limit > 0, is_integer(Offset), Offset >= 0 ->
     {" SKIP $offset LIMIT $limit", #{offset => Offset, limit => Limit}};
@@ -1606,12 +1670,14 @@ build_paging(Limit) when is_integer(Limit), Limit > 0 ->
 build_paging(_) ->
     {"", #{}}.
 
+-spec unit_map_from_row(term()) -> unit_map().
 unit_map_from_row(Row) ->
     case row_to_unit_map(Row) of
         {ok, Unit} -> Unit;
         _ -> #{}
     end.
 
+-spec to_int_maybe(term()) -> {ok, integer()} | error.
 to_int_maybe(Value) when is_integer(Value) ->
     {ok, Value};
 to_int_maybe(Value) when is_binary(Value) ->
@@ -1624,10 +1690,12 @@ to_int_maybe(Value) when is_list(Value) ->
 to_int_maybe(_) ->
     error.
 
+-spec like_to_regex(term()) -> string().
 like_to_regex(Value) ->
     Raw = unicode:characters_to_list(normalize_string(Value)),
     "(?i)^" ++ lists:flatten([regex_char(C) || C <- Raw]) ++ "$".
 
+-spec regex_char(char()) -> string().
 regex_char($%) -> ".*";
 regex_char($_) -> ".";
 regex_char(C) when C =:= $.; C =:= $^; C =:= $$; C =:= $*; C =:= $+; C =:= $?; C =:= $(; C =:= $); C =:= $[; C =:= $]; C =:= ${; C =:= $}; C =:= $|; C =:= $\\ ->
@@ -1635,9 +1703,11 @@ regex_char(C) when C =:= $.; C =:= $^; C =:= $$; C =:= $*; C =:= $+; C =:= $?; C
 regex_char(C) ->
     [C].
 
+-spec tenant_name(tenantid()) -> binary().
 tenant_name(TenantId) ->
     iolist_to_binary(io_lib:format("tenant-~p", [TenantId])).
 
+-spec normalize_ref(unit_ref_value() | unit_ref_tuple() | unit_ref_map() | term()) -> unit_ref_tuple() | invalid_ref.
 normalize_ref(#unit_ref{tenantid = TenantId, unitid = UnitId}) ->
     {TenantId, UnitId};
 normalize_ref(#{tenantid := TenantId, unitid := UnitId}) ->
@@ -1650,6 +1720,7 @@ normalize_ref(_) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
+-spec relation_row_parsing_test() -> ok.
 relation_row_parsing_test() ->
     Row = [#{
         <<"tenantid">> => 9001,
@@ -1677,6 +1748,7 @@ relation_row_parsing_test() ->
     ?assertEqual(Expected, relation_row_to_map(WrappedRowAtom)),
     ?assertEqual(Expected, relation_row_fallback(WrappedRowAtom)).
 
+-spec association_row_parsing_test() -> ok.
 association_row_parsing_test() ->
     Row = [#{
         <<"tenantid">> => 9001,
