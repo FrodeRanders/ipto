@@ -1,11 +1,30 @@
+%%% Copyright (C) 2026 Frode Randers
+%%% All rights reserved
+%%%
+%%% This file is part of IPTO.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%    http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
 -module(erepo_http).
 
 -export([start/0, start/1, stop/0]).
 
+-spec start() -> {ok, map()} | {error, term()}.
 start() ->
     Port = env_int("EREPO_HTTP_PORT", 8080),
     start(#{port => Port}).
 
+-spec start(map()) -> {ok, map() | already_started} | {error, term()}.
 start(Opts) when is_map(Opts) ->
     case code:ensure_loaded(cowboy) of
         {module, cowboy} ->
@@ -29,6 +48,7 @@ start(Opts) when is_map(Opts) ->
 start(_Opts) ->
     {error, invalid_options}.
 
+-spec stop() -> ok | {error, term()}.
 stop() ->
     case code:ensure_loaded(cowboy) of
         {module, cowboy} ->

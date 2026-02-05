@@ -42,10 +42,3 @@ Example:
 ```erlang
 application:set_env(erepo, backend, neo4j).
 ```
-
-## Neo4j next steps
-
-1. Decide if status updates should also version payload nodes (currently kernel-only, aligned with PG path).
-2. Validate and tune bootstrap-created constraints/indexes for your production workload.
-3. Add dedicated Neo4j integration tests for paging/order edge cases, retries, and concurrency.
-4. Preserve return shapes used by upper layers (`erepo_repo`, GraphQL resources) when hardening further.

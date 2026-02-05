@@ -1,3 +1,20 @@
+%%% Copyright (C) 2026 Frode Randers
+%%% All rights reserved
+%%%
+%%% This file is part of IPTO.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%    http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
 -module(erepo_db).
 
 -include("erepo.hrl").
@@ -60,12 +77,15 @@
 
 %% Public API
 
+-spec get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 get_unit_json(TenantId, UnitId, Version) ->
     call_backend(get_unit_json, [TenantId, UnitId, Version]).
 
+-spec unit_exists(tenantid(), unitid()) -> boolean().
 unit_exists(TenantId, UnitId) ->
     call_backend(unit_exists, [TenantId, UnitId]).
 
+-spec store_unit_json(unit_map()) -> erepo_result(unit_map()).
 store_unit_json(UnitMap) when is_map(UnitMap) ->
     case validate_store_input(UnitMap) of
         ok ->
@@ -76,38 +96,50 @@ store_unit_json(UnitMap) when is_map(UnitMap) ->
 store_unit_json(_UnitMap) ->
     {error, invalid_unit_map}.
 
+-spec search_units(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
 search_units(Expression, Order, PagingOrLimit) ->
     call_backend(search_units, [Expression, Order, PagingOrLimit]).
 
+-spec add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 add_relation(UnitRef, RelType, OtherUnitRef) ->
     call_backend(add_relation, [UnitRef, RelType, OtherUnitRef]).
 
+-spec remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 remove_relation(UnitRef, RelType, OtherUnitRef) ->
     call_backend(remove_relation, [UnitRef, RelType, OtherUnitRef]).
 
+-spec add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 add_association(UnitRef, AssocType, RefString) ->
     call_backend(add_association, [UnitRef, AssocType, RefString]).
 
+-spec remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 remove_association(UnitRef, AssocType, RefString) ->
     call_backend(remove_association, [UnitRef, AssocType, RefString]).
 
+-spec lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 lock_unit(UnitRef, LockType, Purpose) ->
     call_backend(lock_unit, [UnitRef, LockType, Purpose]).
 
+-spec unlock_unit(unit_ref_value()) -> ok | {error, erepo_reason()}.
 unlock_unit(UnitRef) ->
     call_backend(unlock_unit, [UnitRef]).
 
+-spec set_status(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
 set_status(UnitRef, Status) when is_integer(Status) ->
     call_backend(set_status, [UnitRef, Status]);
 set_status(_UnitRef, _Status) ->
     {error, invalid_status}.
 
+-spec create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    erepo_result(attribute_info()).
 create_attribute(Alias, Name, QualName, Type, IsArray) ->
     call_backend(create_attribute, [Alias, Name, QualName, Type, IsArray]).
 
+-spec get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, erepo_reason()}.
 get_attribute_info(NameOrId) ->
     call_backend(get_attribute_info, [NameOrId]).
 
+-spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, erepo_reason()}.
 get_tenant_info(NameOrId) ->
     call_backend(get_tenant_info, [NameOrId]).
 
@@ -507,6 +539,36 @@ pg_get_tenant_info(_NameOrId) ->
     {error, invalid_tenant_id_or_name}.
 
 %% Backend adapter exports (temporary bridge during backend module split)
+-spec memory_get_unit_json_backend(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
+-spec memory_unit_exists_backend(tenantid(), unitid()) -> boolean().
+-spec memory_store_unit_json_backend(unit_map()) -> erepo_result(unit_map()).
+-spec memory_search_units_backend(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
+-spec memory_add_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec memory_remove_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec memory_add_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec memory_remove_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec memory_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
+-spec memory_unlock_unit_backend(unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec memory_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
+-spec memory_create_attribute_backend(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    erepo_result(attribute_info()).
+-spec memory_get_attribute_info_backend(name_or_id()) -> {ok, attribute_info()} | not_found | {error, erepo_reason()}.
+-spec memory_get_tenant_info_backend(name_or_id()) -> {ok, tenant_info()} | not_found | {error, erepo_reason()}.
+-spec pg_get_unit_json_backend(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
+-spec pg_unit_exists_backend(tenantid(), unitid()) -> boolean().
+-spec pg_store_unit_json_backend(unit_map()) -> erepo_result(unit_map()).
+-spec pg_search_units_backend(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
+-spec pg_add_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec pg_remove_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec pg_add_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec pg_remove_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec pg_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
+-spec pg_unlock_unit_backend(unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec pg_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
+-spec pg_create_attribute_backend(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    erepo_result(attribute_info()).
+-spec pg_get_attribute_info_backend(name_or_id()) -> {ok, attribute_info()} | not_found | {error, erepo_reason()}.
+-spec pg_get_tenant_info_backend(name_or_id()) -> {ok, tenant_info()} | not_found | {error, erepo_reason()}.
 
 memory_get_unit_json_backend(TenantId, UnitId, Version) ->
     memory_get_unit_json(TenantId, UnitId, Version).

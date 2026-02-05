@@ -1,16 +1,36 @@
+%%% Copyright (C) 2026 Frode Randers
+%%% All rights reserved
+%%%
+%%% This file is part of IPTO.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%    http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
 -module(erepo_backend).
 
--callback get_unit_json(term(), term(), term()) -> term().
--callback unit_exists(term(), term()) -> boolean() | term().
--callback store_unit_json(map()) -> term().
--callback search_units(term(), term(), term()) -> term().
--callback add_relation(term(), term(), term()) -> ok | term().
--callback remove_relation(term(), term(), term()) -> ok | term().
--callback add_association(term(), term(), term()) -> ok | term().
--callback remove_association(term(), term(), term()) -> ok | term().
--callback lock_unit(term(), term(), term()) -> ok | already_locked | term().
--callback unlock_unit(term()) -> ok | term().
--callback set_status(term(), integer()) -> ok | term().
--callback create_attribute(term(), term(), term(), term(), term()) -> term().
--callback get_attribute_info(term()) -> term().
--callback get_tenant_info(term()) -> term().
+-include("erepo.hrl").
+
+-callback get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
+-callback unit_exists(tenantid(), unitid()) -> boolean().
+-callback store_unit_json(unit_map()) -> erepo_result(unit_map()).
+-callback search_units(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
+-callback add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-callback remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-callback add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-callback remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-callback lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
+-callback unlock_unit(unit_ref_value()) -> ok | {error, erepo_reason()}.
+-callback set_status(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
+-callback create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    erepo_result(attribute_info()).
+-callback get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, erepo_reason()}.
+-callback get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, erepo_reason()}.

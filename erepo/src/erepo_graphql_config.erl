@@ -1,3 +1,20 @@
+%%% Copyright (C) 2026 Frode Randers
+%%% All rights reserved
+%%%
+%%% This file is part of IPTO.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%    http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
 -module(erepo_graphql_config).
 
 -export([
@@ -13,9 +30,11 @@
 -define(SCHEMA_KEY, {?MODULE, schema}).
 -define(MAPPING_KEY, {?MODULE, mapping}).
 
+-spec init() -> ok.
 init() ->
     reload().
 
+-spec reload() -> ok.
 reload() ->
     Schema = resolve_schema(),
     Mapping = resolve_mapping(),
@@ -23,20 +42,25 @@ reload() ->
     persistent_term:put(?MAPPING_KEY, Mapping),
     ok.
 
+-spec get_schema() -> binary().
 get_schema() ->
     persistent_term:get(?SCHEMA_KEY, resolve_schema()).
 
+-spec get_mapping() -> map().
 get_mapping() ->
     persistent_term:get(?MAPPING_KEY, resolve_mapping()).
 
+-spec set_schema_file(binary() | string()) -> ok.
 set_schema_file(Path) when is_binary(Path); is_list(Path) ->
     application:set_env(erepo, graphql_schema_file, Path),
     reload().
 
+-spec set_schema_sdl(binary() | string()) -> ok.
 set_schema_sdl(Sdl) when is_binary(Sdl); is_list(Sdl) ->
     application:set_env(erepo, graphql_schema_sdl, to_binary(Sdl)),
     reload().
 
+-spec clear_schema_overrides() -> ok.
 clear_schema_overrides() ->
     application:unset_env(erepo, graphql_schema_file),
     application:unset_env(erepo, graphql_schema_sdl),

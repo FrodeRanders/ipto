@@ -1,3 +1,20 @@
+%%% Copyright (C) 2026 Frode Randers
+%%% All rights reserved
+%%%
+%%% This file is part of IPTO.
+%%%
+%%% Licensed under the Apache License, Version 2.0 (the "License");
+%%% you may not use this file except in compliance with the License.
+%%% You may obtain a copy of the License at
+%%%
+%%%    http://www.apache.org/licenses/LICENSE-2.0
+%%%
+%%% Unless required by applicable law or agreed to in writing, software
+%%% distributed under the License is distributed on an "AS IS" BASIS,
+%%% WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+%%% See the License for the specific language governing permissions and
+%%% limitations under the License.
+%%%
 -module(erepo_db_neo4j).
 -behaviour(erepo_backend).
 
@@ -27,6 +44,10 @@
 -define(DEFAULT_RETRIES, 2).
 -define(DEFAULT_RETRY_BASE_MS, 100).
 
+%% --------------------------------------------------------------------
+%% Backend API
+%% --------------------------------------------------------------------
+-spec get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 get_unit_json(TenantId, UnitId, latest) ->
     get_unit_json(TenantId, UnitId, -1);
 get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Version =/= 0 ->
@@ -47,6 +68,7 @@ get_unit_json(TenantId, UnitId, Version) when is_integer(Version), Version =/= 0
 get_unit_json(_TenantId, _UnitId, _Version) ->
     {error, invalid_version}.
 
+-spec unit_exists(tenantid(), unitid()) -> boolean().
 unit_exists(TenantId, UnitId) ->
     Cypher =
         "MATCH (k:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
@@ -60,6 +82,7 @@ unit_exists(TenantId, UnitId) ->
             false
     end.
 
+-spec store_unit_json(unit_map()) -> erepo_result(unit_map()).
 store_unit_json(UnitMap) when is_map(UnitMap) ->
     case maps:get(unitid, UnitMap, undefined) of
         undefined ->
@@ -68,6 +91,7 @@ store_unit_json(UnitMap) when is_map(UnitMap) ->
             store_new_version(UnitMap)
     end.
 
+-spec search_units(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
 search_units(Expression0, Order, PagingOrLimit) ->
     case normalize_search_expression(Expression0) of
         {ok, Expression} ->
@@ -111,6 +135,7 @@ search_units(Expression0, Order, PagingOrLimit) ->
             Error
     end.
 
+-spec add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 add_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
     case {normalize_ref(UnitRef), normalize_ref(OtherUnitRef)} of
         {{TenantId, UnitId}, {RelTenantId, RelUnitId}} ->
@@ -137,6 +162,7 @@ add_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
 add_relation(_UnitRef, _RelType, _OtherUnitRef) ->
     {error, invalid_relation_type}.
 
+-spec remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
     case {normalize_ref(UnitRef), normalize_ref(OtherUnitRef)} of
         {{TenantId, UnitId}, {RelTenantId, RelUnitId}} ->
@@ -161,6 +187,7 @@ remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
 remove_relation(_UnitRef, _RelType, _OtherUnitRef) ->
     {error, invalid_relation_type}.
 
+-spec add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 add_association(UnitRef, AssocType, RefString) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -186,6 +213,7 @@ add_association(UnitRef, AssocType, RefString) when is_integer(AssocType) ->
 add_association(_UnitRef, _AssocType, _RefString) ->
     {error, invalid_association_type}.
 
+-spec remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -209,6 +237,7 @@ remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType) ->
 remove_association(_UnitRef, _AssocType, _RefString) ->
     {error, invalid_association_type}.
 
+-spec lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -249,6 +278,7 @@ lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
 lock_unit(_UnitRef, _LockType, _Purpose) ->
     {error, invalid_lock_type}.
 
+-spec unlock_unit(unit_ref_value()) -> ok | {error, erepo_reason()}.
 unlock_unit(UnitRef) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -266,6 +296,7 @@ unlock_unit(UnitRef) ->
             {error, invalid_unit_ref}
     end.
 
+-spec set_status(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
 set_status(UnitRef, Status) when is_integer(Status) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -288,6 +319,8 @@ set_status(UnitRef, Status) when is_integer(Status) ->
 set_status(_UnitRef, _Status) ->
     {error, invalid_status}.
 
+-spec create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
+    erepo_result(attribute_info()).
 create_attribute(Alias, Name, QualName, Type, IsArray)
   when is_binary(Name), is_binary(QualName), is_integer(Type), is_boolean(IsArray) ->
     case get_attribute_info(Name) of
@@ -330,6 +363,7 @@ create_attribute(Alias, Name, QualName, Type, IsArray)
 create_attribute(_Alias, _Name, _QualName, _Type, _IsArray) ->
     {error, invalid_attribute_definition}.
 
+-spec get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, erepo_reason()}.
 get_attribute_info(NameOrId) when is_binary(NameOrId) ->
     Cypher =
         "MATCH (a:Attribute {name: $name}) "
@@ -373,6 +407,7 @@ get_attribute_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
 get_attribute_info(_NameOrId) ->
     {error, invalid_attribute_id_or_name}.
 
+-spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, erepo_reason()}.
 get_tenant_info(NameOrId) when is_integer(NameOrId), NameOrId > 0 ->
     Now = erlang:system_time(second),
     Cypher =
