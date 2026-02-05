@@ -30,8 +30,18 @@
     search_units/3,
     add_relation/3,
     remove_relation/3,
+    get_right_relation/2,
+    get_right_relations/2,
+    get_left_relations/2,
+    count_right_relations/2,
+    count_left_relations/2,
     add_association/3,
     remove_association/3,
+    get_right_association/2,
+    get_right_associations/2,
+    get_left_associations/2,
+    count_right_associations/2,
+    count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
     activate_unit/1,
@@ -109,6 +119,26 @@ add_relation(UnitRef, RelType, OtherUnitRef) ->
 remove_relation(UnitRef, RelType, OtherUnitRef) ->
     erepo_rel:remove(UnitRef, RelType, OtherUnitRef).
 
+-spec get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
+get_right_relation(UnitRef, RelType) ->
+    erepo_rel:get_right_one(UnitRef, RelType).
+
+-spec get_right_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_right_relations(UnitRef, RelType) ->
+    erepo_rel:get_right(UnitRef, RelType).
+
+-spec get_left_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_left_relations(UnitRef, RelType) ->
+    erepo_rel:get_left(UnitRef, RelType).
+
+-spec count_right_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_right_relations(UnitRef, RelType) ->
+    erepo_rel:count_right(UnitRef, RelType).
+
+-spec count_left_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_left_relations(UnitRef, RelType) ->
+    erepo_rel:count_left(UnitRef, RelType).
+
 -spec add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 add_association(UnitRef, AssocType, RefString) ->
     erepo_assoc:add(UnitRef, AssocType, RefString).
@@ -116,6 +146,26 @@ add_association(UnitRef, AssocType, RefString) ->
 -spec remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 remove_association(UnitRef, AssocType, RefString) ->
     erepo_assoc:remove(UnitRef, AssocType, RefString).
+
+-spec get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
+get_right_association(UnitRef, AssocType) ->
+    erepo_assoc:get_right_one(UnitRef, AssocType).
+
+-spec get_right_associations(unit_ref_value(), association_type()) -> erepo_result([association()]).
+get_right_associations(UnitRef, AssocType) ->
+    erepo_assoc:get_right(UnitRef, AssocType).
+
+-spec get_left_associations(association_type(), ref_string()) -> erepo_result([association()]).
+get_left_associations(AssocType, RefString) ->
+    erepo_assoc:get_left(AssocType, RefString).
+
+-spec count_right_associations(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+count_right_associations(UnitRef, AssocType) ->
+    erepo_assoc:count_right(UnitRef, AssocType).
+
+-spec count_left_associations(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
+count_left_associations(AssocType, RefString) ->
+    erepo_assoc:count_left(AssocType, RefString).
 
 -spec lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 lock_unit(UnitRef, LockType, Purpose) ->

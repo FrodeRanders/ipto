@@ -25,8 +25,18 @@
 -callback search_units(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
 -callback add_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 -callback remove_relation(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-callback get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
+-callback get_right_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-callback get_left_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-callback count_right_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+-callback count_left_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
 -callback add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 -callback remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-callback get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
+-callback get_right_associations(unit_ref_value(), association_type()) -> erepo_result([association()]).
+-callback get_left_associations(association_type(), ref_string()) -> erepo_result([association()]).
+-callback count_right_associations(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+-callback count_left_associations(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
 -callback lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 -callback unlock_unit(unit_ref_value()) -> ok | {error, erepo_reason()}.
 -callback set_status(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.

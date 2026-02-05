@@ -47,6 +47,21 @@
 -type association_type() :: integer().
 -type lock_type() :: integer().
 -type ref_string() :: binary() | string().
+-type relation() :: #{
+    tenantid := tenantid(),
+    unitid := unitid(),
+    reltype := relation_type(),
+    reltenantid := tenantid(),
+    relunitid := unitid()
+}.
+-type association() :: #{
+    tenantid := tenantid(),
+    unitid := unitid(),
+    assoctype := association_type(),
+    assocstring := binary()
+}.
+-type relation_lookup_result() :: {ok, relation()} | not_found | {error, erepo_reason()}.
+-type association_lookup_result() :: {ok, association()} | not_found | {error, erepo_reason()}.
 -type search_expression() :: map() | binary() | string().
 -type search_order() :: {atom(), asc | desc} | map().
 -type search_paging() :: pos_integer() | #{limit => non_neg_integer(), offset => non_neg_integer()}.

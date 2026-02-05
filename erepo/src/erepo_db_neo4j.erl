@@ -27,8 +27,18 @@
     search_units/3,
     add_relation/3,
     remove_relation/3,
+    get_right_relation/2,
+    get_right_relations/2,
+    get_left_relations/2,
+    count_right_relations/2,
+    count_left_relations/2,
     add_association/3,
     remove_association/3,
+    get_right_association/2,
+    get_right_associations/2,
+    get_left_associations/2,
+    count_right_associations/2,
+    count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
     set_status/2,
@@ -142,7 +152,7 @@ add_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
             Cypher =
                 "MATCH (a:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
                 "MATCH (b:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) "
-                "MERGE (a)-[:INTERNAL_REL {reltype: $reltype, reltenantid: $reltenantid, relunitid: $relunitid}]->(b) "
+                "MERGE (a)-[:RELATED_TO {reltype: $reltype, reltenantid: $reltenantid, relunitid: $relunitid}]->(b) "
                 "RETURN 1",
             Params = #{
                 tenantid => TenantId,
@@ -167,7 +177,7 @@ remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
     case {normalize_ref(UnitRef), normalize_ref(OtherUnitRef)} of
         {{TenantId, UnitId}, {RelTenantId, RelUnitId}} ->
             Cypher =
-                "MATCH (:UnitKernel {tenantid: $tenantid, unitid: $unitid})-[r:INTERNAL_REL {reltype: $reltype, reltenantid: $reltenantid, relunitid: $relunitid}]->(:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) "
+                "MATCH (:UnitKernel {tenantid: $tenantid, unitid: $unitid})-[r:RELATED_TO {reltype: $reltype, reltenantid: $reltenantid, relunitid: $relunitid}]->(:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) "
                 "DELETE r "
                 "RETURN count(r)",
             Params = #{
@@ -185,6 +195,170 @@ remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
             {error, invalid_unit_ref}
     end;
 remove_relation(_UnitRef, _RelType, _OtherUnitRef) ->
+    {error, invalid_relation_type}.
+
+-spec get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
+get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (a:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:RELATED_TO {reltype: $reltype}]->(b:UnitKernel) "
+                "RETURN {tenantid: a.tenantid, unitid: a.unitid, reltype: r.reltype, "
+                "reltenantid: r.reltenantid, relunitid: r.relunitid} AS rel "
+                "LIMIT 1",
+            Params = #{tenantid => TenantId, unitid => UnitId, reltype => RelType},
+            case neo4j_query(Cypher, Params) of
+                {ok, []} ->
+                    not_found;
+                {ok, [Row | _]} ->
+                    case relation_row_binary(Row) of
+                        Rel0 when is_map(Rel0), map_size(Rel0) =:= 0 ->
+                            case relation_row_to_map(Row) of
+                                Rel1 when is_map(Rel1), map_size(Rel1) =:= 0 ->
+                                    case relation_row_fallback(Row) of
+                                        Rel2 when is_map(Rel2), map_size(Rel2) =:= 0 ->
+                                            {error, {invalid_relation_row, Row}};
+                                        Rel2 ->
+                                            {ok, Rel2}
+                                    end;
+                                Rel1 ->
+                                    {ok, Rel1}
+                            end;
+                        Rel0 ->
+                            {ok, Rel0}
+                    end;
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+get_right_relation(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+-spec get_right_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (a:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:RELATED_TO {reltype: $reltype}]->(b:UnitKernel) "
+                "RETURN {tenantid: a.tenantid, unitid: a.unitid, reltype: r.reltype, "
+                "reltenantid: r.reltenantid, relunitid: r.relunitid} AS rel",
+            Params = #{tenantid => TenantId, unitid => UnitId, reltype => RelType},
+            case neo4j_query(Cypher, Params) of
+                {ok, Rows} ->
+                    Relations0 = [relation_row_binary(Row) || Row <- Rows],
+                    Relations = [
+                        case Rel of
+                            Rel1 when is_map(Rel1), map_size(Rel1) =:= 0 ->
+                                case relation_row_to_map(Row) of
+                                    Rel2 when is_map(Rel2), map_size(Rel2) =:= 0 -> relation_row_fallback(Row);
+                                    OtherRel -> OtherRel
+                                end;
+                            _ -> Rel
+                        end
+                        || {Rel, Row} <- lists:zip(Relations0, Rows)
+                    ],
+                    case [R || R <- Relations, not (is_map(R) andalso map_size(R) =:= 0)] of
+                        [] when Rows =/= [] ->
+                            {error, {invalid_relation_rows, Rows}};
+                        Clean ->
+                            {ok, Clean}
+                    end;
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+get_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+-spec get_left_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (a:UnitKernel)-[r:RELATED_TO {reltype: $reltype}]->"
+                "(b:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) "
+                "RETURN {tenantid: a.tenantid, unitid: a.unitid, reltype: r.reltype, "
+                "reltenantid: r.reltenantid, relunitid: r.relunitid} AS rel",
+            Params = #{reltenantid => TenantId, relunitid => UnitId, reltype => RelType},
+            case neo4j_query(Cypher, Params) of
+                {ok, Rows} ->
+                    Relations0 = [relation_row_binary(Row) || Row <- Rows],
+                    Relations = [
+                        case Rel of
+                            Rel1 when is_map(Rel1), map_size(Rel1) =:= 0 ->
+                                case relation_row_to_map(Row) of
+                                    Rel2 when is_map(Rel2), map_size(Rel2) =:= 0 -> relation_row_fallback(Row);
+                                    OtherRel -> OtherRel
+                                end;
+                            _ -> Rel
+                        end
+                        || {Rel, Row} <- lists:zip(Relations0, Rows)
+                    ],
+                    case [R || R <- Relations, not (is_map(R) andalso map_size(R) =:= 0)] of
+                        [] when Rows =/= [] ->
+                            {error, {invalid_relation_rows, Rows}};
+                        Clean ->
+                            {ok, Clean}
+                    end;
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+get_left_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+-spec count_right_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:RELATED_TO {reltype: $reltype}]->(:UnitKernel) "
+                "RETURN count(r)",
+            Params = #{tenantid => TenantId, unitid => UnitId, reltype => RelType},
+            case neo4j_query(Cypher, Params) of
+                {ok, []} ->
+                    {ok, 0};
+                {ok, [[Count] | _]} ->
+                    {ok, trunc(Count)};
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+count_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+-spec count_left_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (:UnitKernel)-[r:RELATED_TO {reltype: $reltype}]->"
+                "(:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) "
+                "RETURN count(r)",
+            Params = #{reltenantid => TenantId, relunitid => UnitId, reltype => RelType},
+            case neo4j_query(Cypher, Params) of
+                {ok, []} ->
+                    {ok, 0};
+                {ok, [[Count] | _]} ->
+                    {ok, trunc(Count)};
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+count_left_relations(_UnitRef, _RelType) ->
     {error, invalid_relation_type}.
 
 -spec add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
@@ -237,6 +411,161 @@ remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType) ->
 remove_association(_UnitRef, _AssocType, _RefString) ->
     {error, invalid_association_type}.
 
+-spec get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
+get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (k:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:ASSOCIATED_WITH {assoctype: $assoctype}]->(a:AssociationRef) "
+                "RETURN {tenantid: k.tenantid, unitid: k.unitid, assoctype: r.assoctype, "
+                "assocstring: r.refstring} AS assoc "
+                "LIMIT 1",
+            Params = #{tenantid => TenantId, unitid => UnitId, assoctype => AssocType},
+            case neo4j_query(Cypher, Params) of
+                {ok, []} ->
+                    not_found;
+                {ok, [Row | _]} ->
+                    case association_row_binary(Row) of
+                        Assoc0 when is_map(Assoc0), map_size(Assoc0) =:= 0 ->
+                            case association_row_to_map(Row) of
+                                Assoc1 when is_map(Assoc1), map_size(Assoc1) =:= 0 ->
+                                    case association_row_fallback(Row) of
+                                        Assoc2 when is_map(Assoc2), map_size(Assoc2) =:= 0 ->
+                                            {error, {invalid_association_row, Row}};
+                                        Assoc2 ->
+                                            {ok, Assoc2}
+                                    end;
+                                Assoc1 ->
+                                    {ok, Assoc1}
+                            end;
+                        Assoc0 ->
+                            {ok, Assoc0}
+                    end;
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+get_right_association(_UnitRef, _AssocType) ->
+    {error, invalid_association_type}.
+
+-spec get_right_associations(unit_ref_value(), association_type()) -> erepo_result([association()]).
+get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (k:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:ASSOCIATED_WITH {assoctype: $assoctype}]->(a:AssociationRef) "
+                "RETURN {tenantid: k.tenantid, unitid: k.unitid, assoctype: r.assoctype, "
+                "assocstring: r.refstring} AS assoc",
+            Params = #{tenantid => TenantId, unitid => UnitId, assoctype => AssocType},
+            case neo4j_query(Cypher, Params) of
+                {ok, Rows} ->
+                    Assocs0 = [association_row_binary(Row) || Row <- Rows],
+                    Assocs = [
+                        case Assoc of
+                            Assoc1 when is_map(Assoc1), map_size(Assoc1) =:= 0 ->
+                                case association_row_to_map(Row) of
+                                    Assoc2 when is_map(Assoc2), map_size(Assoc2) =:= 0 -> association_row_fallback(Row);
+                                    OtherAssoc -> OtherAssoc
+                                end;
+                            _ -> Assoc
+                        end
+                        || {Assoc, Row} <- lists:zip(Assocs0, Rows)
+                    ],
+                    case [A || A <- Assocs, not (is_map(A) andalso map_size(A) =:= 0)] of
+                        [] when Rows =/= [] ->
+                            {error, {invalid_association_rows, Rows}};
+                        Clean ->
+                            {ok, Clean}
+                    end;
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+get_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association_type}.
+
+-spec get_left_associations(association_type(), ref_string()) -> erepo_result([association()]).
+get_left_associations(AssocType, RefString) when is_integer(AssocType) ->
+    RefStringNorm = normalize_string(RefString),
+    Cypher =
+        "MATCH (k:UnitKernel)-[r:ASSOCIATED_WITH {assoctype: $assoctype, refstring: $refstring}]->"
+        "(:AssociationRef {assoctype: $assoctype, refstring: $refstring}) "
+        "RETURN {tenantid: k.tenantid, unitid: k.unitid, assoctype: r.assoctype, "
+        "assocstring: r.refstring} AS assoc",
+    Params = #{assoctype => AssocType, refstring => RefStringNorm},
+    case neo4j_query(Cypher, Params) of
+        {ok, Rows} ->
+            Assocs0 = [association_row_binary(Row) || Row <- Rows],
+            Assocs = [
+                case Assoc of
+                    Assoc1 when is_map(Assoc1), map_size(Assoc1) =:= 0 ->
+                        case association_row_to_map(Row) of
+                            Assoc2 when is_map(Assoc2), map_size(Assoc2) =:= 0 -> association_row_fallback(Row);
+                            OtherAssoc -> OtherAssoc
+                        end;
+                    _ -> Assoc
+                end
+                || {Assoc, Row} <- lists:zip(Assocs0, Rows)
+            ],
+            case [A || A <- Assocs, not (is_map(A) andalso map_size(A) =:= 0)] of
+                [] when Rows =/= [] ->
+                    {error, {invalid_association_rows, Rows}};
+                Clean ->
+                    {ok, Clean}
+            end;
+        Error ->
+            Error
+    end;
+get_left_associations(_AssocType, _RefString) ->
+    {error, invalid_association_type}.
+
+-spec count_right_associations(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "-[r:ASSOCIATED_WITH {assoctype: $assoctype}]->(:AssociationRef) "
+                "RETURN count(r)",
+            Params = #{tenantid => TenantId, unitid => UnitId, assoctype => AssocType},
+            case neo4j_query(Cypher, Params) of
+                {ok, []} ->
+                    {ok, 0};
+                {ok, [[Count] | _]} ->
+                    {ok, trunc(Count)};
+                Error ->
+                    Error
+            end;
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+count_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association_type}.
+
+-spec count_left_associations(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
+count_left_associations(AssocType, RefString) when is_integer(AssocType) ->
+    RefStringNorm = normalize_string(RefString),
+    Cypher =
+        "MATCH (:UnitKernel)-[r:ASSOCIATED_WITH {assoctype: $assoctype, refstring: $refstring}]->"
+        "(:AssociationRef {assoctype: $assoctype, refstring: $refstring}) "
+        "RETURN count(r)",
+    Params = #{assoctype => AssocType, refstring => RefStringNorm},
+    case neo4j_query(Cypher, Params) of
+        {ok, []} ->
+            {ok, 0};
+        {ok, [[Count] | _]} ->
+            {ok, trunc(Count)};
+        Error ->
+            Error
+    end;
+count_left_associations(_AssocType, _RefString) ->
+    {error, invalid_association_type}.
 -spec lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
     case normalize_ref(UnitRef) of
@@ -603,6 +932,275 @@ row_to_unit_map([TenantId, UnitId, UnitVer, LastVer, CorrId, Status, Created, Mo
     end;
 row_to_unit_map(_) ->
     {error, invalid_row}.
+
+relation_row_to_map(Row) when is_tuple(Row) ->
+    relation_row_to_map(tuple_to_list(Row));
+relation_row_to_map([Map]) when is_map(Map) ->
+    relation_row_to_map(Map);
+relation_row_to_map([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    relation_row_to_map(Inner);
+relation_row_to_map([Inner]) when is_map(Inner) ->
+    case normalize_relation_map(Inner) of
+        Rel when is_map(Rel), map_size(Rel) =:= 0 -> direct_relation_map(Inner);
+        Rel -> Rel
+    end;
+relation_row_to_map(Row) when is_map(Row) ->
+    case maps:is_key(<<"tenantid">>, Row) orelse maps:is_key(tenantid, Row) of
+        true ->
+            direct_relation_map(Row);
+        false ->
+            case map_lookup(Row, [rel, <<"rel">>, <<"REL">>]) of
+                RelMap when is_map(RelMap) ->
+                    relation_row_to_map(RelMap);
+                _ ->
+                    case normalize_relation_map(Row) of
+                        Rel when is_map(Rel), map_size(Rel) =:= 0 -> direct_relation_map(Row);
+                        Rel -> Rel
+                    end
+            end
+    end;
+relation_row_to_map(Row) when is_list(Row), length(Row) >= 5 ->
+    [TenantId, UnitId, RelType, RelTenantId, RelUnitId | _] = Row,
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        reltype => RelType,
+        reltenantid => RelTenantId,
+        relunitid => RelUnitId
+    };
+relation_row_to_map(_) ->
+    #{}.
+
+association_row_to_map(Row) when is_tuple(Row) ->
+    association_row_to_map(tuple_to_list(Row));
+association_row_to_map([Map]) when is_map(Map) ->
+    association_row_to_map(Map);
+association_row_to_map([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    association_row_to_map(Inner);
+association_row_to_map([Inner]) when is_map(Inner) ->
+    case normalize_association_map(Inner) of
+        Assoc when is_map(Assoc), map_size(Assoc) =:= 0 -> direct_association_map(Inner);
+        Assoc -> Assoc
+    end;
+association_row_to_map(Row) when is_map(Row) ->
+    case maps:is_key(<<"tenantid">>, Row) orelse maps:is_key(tenantid, Row) of
+        true ->
+            direct_association_map(Row);
+        false ->
+            case map_lookup(Row, [assoc, <<"assoc">>, <<"ASSOC">>]) of
+                AssocMap when is_map(AssocMap) ->
+                    association_row_to_map(AssocMap);
+                _ ->
+                    case normalize_association_map(Row) of
+                        Assoc when is_map(Assoc), map_size(Assoc) =:= 0 -> direct_association_map(Row);
+                        Assoc -> Assoc
+                    end
+            end
+    end;
+association_row_to_map(Row) when is_list(Row), length(Row) >= 4 ->
+    [TenantId, UnitId, AssocType, AssocString | _] = Row,
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        assoctype => AssocType,
+        assocstring => normalize_string(AssocString)
+    };
+association_row_to_map(_) ->
+    #{}.
+
+get_map_value(_Map, []) ->
+    undefined;
+get_map_value(Map, [Key | Rest]) when is_map(Map) ->
+    case maps:get(Key, Map, undefined) of
+        undefined -> get_map_value(Map, Rest);
+        Value -> Value
+    end.
+
+map_lookup(Map, Keys) when is_map(Map), is_list(Keys) ->
+    get_map_value(Map, Keys).
+
+normalize_relation_map(Map) when is_map(Map) ->
+    TenantId = map_lookup(Map, [tenantid, <<"tenantid">>, <<"tenantId">>]),
+    case TenantId of
+        undefined ->
+            #{};
+        _ ->
+            #{
+                tenantid => TenantId,
+                unitid => map_lookup(Map, [unitid, <<"unitid">>, <<"unitId">>]),
+                reltype => map_lookup(Map, [reltype, <<"reltype">>, <<"relType">>]),
+                reltenantid => map_lookup(Map, [reltenantid, <<"reltenantid">>, <<"relTenantId">>]),
+                relunitid => map_lookup(Map, [relunitid, <<"relunitid">>, <<"relUnitId">>])
+            }
+    end.
+
+normalize_association_map(Map) when is_map(Map) ->
+    TenantId = map_lookup(Map, [tenantid, <<"tenantid">>, <<"tenantId">>]),
+    case TenantId of
+        undefined ->
+            #{};
+        _ ->
+            #{
+                tenantid => TenantId,
+                unitid => map_lookup(Map, [unitid, <<"unitid">>, <<"unitId">>]),
+                assoctype => map_lookup(Map, [assoctype, <<"assoctype">>, <<"assocType">>]),
+                assocstring => normalize_string(map_lookup(Map, [assocstring, <<"assocstring">>, <<"assocString">>]))
+            }
+    end.
+
+direct_relation_map(Map) when is_map(Map) ->
+    TenantId = maps:get(<<"tenantid">>, Map, maps:get(tenantid, Map, undefined)),
+    case TenantId of
+        undefined ->
+            #{};
+        _ ->
+            #{
+                tenantid => TenantId,
+                unitid => maps:get(<<"unitid">>, Map, maps:get(unitid, Map, undefined)),
+                reltype => maps:get(<<"reltype">>, Map, maps:get(reltype, Map, undefined)),
+                reltenantid => maps:get(<<"reltenantid">>, Map, maps:get(reltenantid, Map, undefined)),
+                relunitid => maps:get(<<"relunitid">>, Map, maps:get(relunitid, Map, undefined))
+            }
+    end.
+
+direct_association_map(Map) when is_map(Map) ->
+    TenantId = maps:get(<<"tenantid">>, Map, maps:get(tenantid, Map, undefined)),
+    case TenantId of
+        undefined ->
+            #{};
+        _ ->
+            #{
+                tenantid => TenantId,
+                unitid => maps:get(<<"unitid">>, Map, maps:get(unitid, Map, undefined)),
+                assoctype => maps:get(<<"assoctype">>, Map, maps:get(assoctype, Map, undefined)),
+                assocstring => normalize_string(maps:get(<<"assocstring">>, Map, maps:get(assocstring, Map, undefined)))
+            }
+    end.
+
+relation_row_fallback([Map]) when is_map(Map) ->
+    relation_row_fallback(Map);
+relation_row_fallback([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    relation_row_fallback(Inner);
+relation_row_fallback(Row) when is_map(Row) ->
+    case map_lookup(Row, [rel, <<"rel">>, <<"REL">>]) of
+        RelMap when is_map(RelMap) ->
+            relation_row_fallback(RelMap);
+        _ ->
+            direct_relation_map(Row)
+    end;
+relation_row_fallback(Row) when is_tuple(Row) ->
+    relation_row_fallback(tuple_to_list(Row));
+relation_row_fallback(_) ->
+    #{}.
+
+association_row_fallback([Map]) when is_map(Map) ->
+    association_row_fallback(Map);
+association_row_fallback([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    association_row_fallback(Inner);
+association_row_fallback(Row) when is_map(Row) ->
+    case map_lookup(Row, [assoc, <<"assoc">>, <<"ASSOC">>]) of
+        AssocMap when is_map(AssocMap) ->
+            association_row_fallback(AssocMap);
+        _ ->
+            direct_association_map(Row)
+    end;
+association_row_fallback(Row) when is_tuple(Row) ->
+    association_row_fallback(tuple_to_list(Row));
+association_row_fallback(_) ->
+    #{}.
+
+relation_row_binary([Map]) when is_map(Map) ->
+    relation_row_binary(Map);
+relation_row_binary([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    relation_row_binary(Inner);
+relation_row_binary(Row) when is_tuple(Row) ->
+    relation_row_binary(tuple_to_list(Row));
+relation_row_binary(Row) when is_map(Row) ->
+    case maps:is_key(<<"tenantid">>, Row) andalso
+         maps:is_key(<<"unitid">>, Row) andalso
+         maps:is_key(<<"reltype">>, Row) andalso
+         maps:is_key(<<"reltenantid">>, Row) andalso
+         maps:is_key(<<"relunitid">>, Row) of
+        true ->
+            #{
+                tenantid => maps:get(<<"tenantid">>, Row),
+                unitid => maps:get(<<"unitid">>, Row),
+                reltype => maps:get(<<"reltype">>, Row),
+                reltenantid => maps:get(<<"reltenantid">>, Row),
+                relunitid => maps:get(<<"relunitid">>, Row)
+            };
+        false ->
+            case map_lookup(Row, [rel, <<"rel">>, <<"REL">>]) of
+                RelMap when is_map(RelMap) ->
+                    relation_row_binary(RelMap);
+                _ ->
+                    case {map_lookup(Row, [tenantid, <<"tenantid">>, <<"tenantId">>]),
+                          map_lookup(Row, [unitid, <<"unitid">>, <<"unitId">>]),
+                          map_lookup(Row, [reltype, <<"reltype">>, <<"relType">>]),
+                          map_lookup(Row, [reltenantid, <<"reltenantid">>, <<"relTenantId">>]),
+                          map_lookup(Row, [relunitid, <<"relunitid">>, <<"relUnitId">>])} of
+                        {undefined, _, _, _, _} -> #{};
+                        {_, undefined, _, _, _} -> #{};
+                        {_, _, undefined, _, _} -> #{};
+                        {_, _, _, undefined, _} -> #{};
+                        {_, _, _, _, undefined} -> #{};
+                        {TenantId, UnitId, RelType, RelTenantId, RelUnitId} ->
+                            #{
+                                tenantid => TenantId,
+                                unitid => UnitId,
+                                reltype => RelType,
+                                reltenantid => RelTenantId,
+                                relunitid => RelUnitId
+                            }
+                    end
+            end
+    end;
+relation_row_binary(_) ->
+    #{}.
+
+association_row_binary([Map]) when is_map(Map) ->
+    association_row_binary(Map);
+association_row_binary([Inner]) when is_tuple(Inner); is_list(Inner) ->
+    association_row_binary(Inner);
+association_row_binary(Row) when is_tuple(Row) ->
+    association_row_binary(tuple_to_list(Row));
+association_row_binary(Row) when is_map(Row) ->
+    case maps:is_key(<<"tenantid">>, Row) andalso
+         maps:is_key(<<"unitid">>, Row) andalso
+         maps:is_key(<<"assoctype">>, Row) andalso
+         maps:is_key(<<"assocstring">>, Row) of
+        true ->
+            #{
+                tenantid => maps:get(<<"tenantid">>, Row),
+                unitid => maps:get(<<"unitid">>, Row),
+                assoctype => maps:get(<<"assoctype">>, Row),
+                assocstring => normalize_string(maps:get(<<"assocstring">>, Row))
+            };
+        false ->
+            case map_lookup(Row, [assoc, <<"assoc">>, <<"ASSOC">>]) of
+                AssocMap when is_map(AssocMap) ->
+                    association_row_binary(AssocMap);
+                _ ->
+                    case {map_lookup(Row, [tenantid, <<"tenantid">>, <<"tenantId">>]),
+                          map_lookup(Row, [unitid, <<"unitid">>, <<"unitId">>]),
+                          map_lookup(Row, [assoctype, <<"assoctype">>, <<"assocType">>]),
+                          map_lookup(Row, [assocstring, <<"assocstring">>, <<"assocString">>])} of
+                        {undefined, _, _, _} -> #{};
+                        {_, undefined, _, _} -> #{};
+                        {_, _, undefined, _} -> #{};
+                        {_, _, _, undefined} -> #{};
+                        {TenantId, UnitId, AssocType, AssocString} ->
+                            #{
+                                tenantid => TenantId,
+                                unitid => UnitId,
+                                assoctype => AssocType,
+                                assocstring => normalize_string(AssocString)
+                            }
+                    end
+            end
+    end;
+association_row_binary(_) ->
+    #{}.
 
 neo4j_query(Cypher, Params) ->
     with_http(fun() ->
@@ -1048,3 +1646,60 @@ normalize_ref({TenantId, UnitId}) ->
     {TenantId, UnitId};
 normalize_ref(_) ->
     invalid_ref.
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+relation_row_parsing_test() ->
+    Row = [#{
+        <<"tenantid">> => 9001,
+        <<"unitid">> => 61,
+        <<"reltype">> => 1,
+        <<"reltenantid">> => 9001,
+        <<"relunitid">> => 62
+    }],
+    WrappedRow = [#{<<"rel">> => hd(Row)}],
+    WrappedRowAtom = [#{rel => hd(Row)}],
+    Expected = #{
+        tenantid => 9001,
+        unitid => 61,
+        reltype => 1,
+        reltenantid => 9001,
+        relunitid => 62
+    },
+    ?assertEqual(Expected, relation_row_binary(Row)),
+    ?assertEqual(Expected, relation_row_to_map(Row)),
+    ?assertEqual(Expected, relation_row_fallback(Row)),
+    ?assertEqual(Expected, relation_row_binary(WrappedRow)),
+    ?assertEqual(Expected, relation_row_to_map(WrappedRow)),
+    ?assertEqual(Expected, relation_row_fallback(WrappedRow)),
+    ?assertEqual(Expected, relation_row_binary(WrappedRowAtom)),
+    ?assertEqual(Expected, relation_row_to_map(WrappedRowAtom)),
+    ?assertEqual(Expected, relation_row_fallback(WrappedRowAtom)).
+
+association_row_parsing_test() ->
+    Row = [#{
+        <<"tenantid">> => 9001,
+        <<"unitid">> => 61,
+        <<"assoctype">> => 2,
+        <<"assocstring">> => <<"neo4j:assoc">>
+    }],
+    WrappedRow = [#{<<"assoc">> => hd(Row)}],
+    WrappedRowAtom = [#{assoc => hd(Row)}],
+    Expected = #{
+        tenantid => 9001,
+        unitid => 61,
+        assoctype => 2,
+        assocstring => <<"neo4j:assoc">>
+    },
+    ?assertEqual(Expected, association_row_binary(Row)),
+    ?assertEqual(Expected, association_row_to_map(Row)),
+    ?assertEqual(Expected, association_row_fallback(Row)),
+    ?assertEqual(Expected, association_row_binary(WrappedRow)),
+    ?assertEqual(Expected, association_row_to_map(WrappedRow)),
+    ?assertEqual(Expected, association_row_fallback(WrappedRow)),
+    ?assertEqual(Expected, association_row_binary(WrappedRowAtom)),
+    ?assertEqual(Expected, association_row_to_map(WrappedRowAtom)),
+    ?assertEqual(Expected, association_row_fallback(WrappedRowAtom)).
+
+-endif.

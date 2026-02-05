@@ -19,7 +19,7 @@
 
 -include("erepo.hrl").
 
--export([add/3, remove/3]).
+-export([add/3, remove/3, get_right/2, get_left/2, get_right_one/2, count_right/2, count_left/2]).
 
 -spec add(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 add(UnitRef, RelType, OtherUnitRef) ->
@@ -28,3 +28,23 @@ add(UnitRef, RelType, OtherUnitRef) ->
 -spec remove(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 remove(UnitRef, RelType, OtherUnitRef) ->
     erepo_db:remove_relation(UnitRef, RelType, OtherUnitRef).
+
+-spec get_right(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_right(UnitRef, RelType) ->
+    erepo_db:get_right_relations(UnitRef, RelType).
+
+-spec get_left(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_left(UnitRef, RelType) ->
+    erepo_db:get_left_relations(UnitRef, RelType).
+
+-spec get_right_one(unit_ref_value(), relation_type()) -> relation_lookup_result().
+get_right_one(UnitRef, RelType) ->
+    erepo_db:get_right_relation(UnitRef, RelType).
+
+-spec count_right(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_right(UnitRef, RelType) ->
+    erepo_db:count_right_relations(UnitRef, RelType).
+
+-spec count_left(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_left(UnitRef, RelType) ->
+    erepo_db:count_left_relations(UnitRef, RelType).

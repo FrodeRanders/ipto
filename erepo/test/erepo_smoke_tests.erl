@@ -63,6 +63,44 @@ relation_assoc_lock_test() ->
     already_locked = erepo:lock_unit(ARef, 30, <<"test">>),
     ok = erepo:unlock_unit(ARef).
 
+relation_assoc_query_test() ->
+    application:set_env(erepo, backend, memory),
+    {ok, _} = erepo:start_link(),
+    ok = erepo_cache:flush(),
+
+    {ok, A0} = erepo:create_unit(4),
+    {ok, B0} = erepo:create_unit(4),
+    {ok, A} = erepo:store_unit(A0),
+    {ok, B} = erepo:store_unit(B0),
+
+    ARef = #{tenantid => maps:get(tenantid, A), unitid => maps:get(unitid, A)},
+    BRef = #{tenantid => maps:get(tenantid, B), unitid => maps:get(unitid, B)},
+
+    ok = erepo:add_relation(ARef, 1, BRef),
+    ok = erepo:add_association(ARef, 2, <<"case:123">>),
+    ok = erepo:add_association(BRef, 2, <<"case:123">>),
+
+    {ok, [RightRel]} = erepo:get_right_relations(ARef, 1),
+    {ok, RightRelOne} = erepo:get_right_relation(ARef, 1),
+    {ok, LeftRels} = erepo:get_left_relations(BRef, 1),
+    {ok, 1} = erepo:count_right_relations(ARef, 1),
+    {ok, 1} = erepo:count_left_relations(BRef, 1),
+
+    ?assertEqual(maps:get(reltenantid, RightRel), maps:get(tenantid, B)),
+    ?assertEqual(maps:get(relunitid, RightRel), maps:get(unitid, B)),
+    ?assertEqual(RightRel, RightRelOne),
+    1 = length(LeftRels),
+
+    {ok, [RightAssoc]} = erepo:get_right_associations(ARef, 2),
+    {ok, RightAssocOne} = erepo:get_right_association(ARef, 2),
+    {ok, LeftAssocs} = erepo:get_left_associations(2, <<"case:123">>),
+    {ok, 1} = erepo:count_right_associations(ARef, 2),
+    {ok, 2} = erepo:count_left_associations(2, <<"case:123">>),
+
+    ?assertEqual(<<"case:123">>, maps:get(assocstring, RightAssoc)),
+    ?assertEqual(RightAssoc, RightAssocOne),
+    2 = length(LeftAssocs).
+
 memory_search_units_test() ->
     application:set_env(erepo, backend, memory),
     {ok, _} = erepo:start_link(),

@@ -26,8 +26,18 @@
     search_units/3,
     add_relation/3,
     remove_relation/3,
+    get_right_relation/2,
+    get_right_relations/2,
+    get_left_relations/2,
+    count_right_relations/2,
+    count_left_relations/2,
     add_association/3,
     remove_association/3,
+    get_right_association/2,
+    get_right_associations/2,
+    get_left_associations/2,
+    count_right_associations/2,
+    count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
     set_status/2,
@@ -44,8 +54,18 @@
     memory_search_units_backend/3,
     memory_add_relation_backend/3,
     memory_remove_relation_backend/3,
+    memory_get_right_relation_backend/2,
+    memory_get_right_relations_backend/2,
+    memory_get_left_relations_backend/2,
+    memory_count_right_relations_backend/2,
+    memory_count_left_relations_backend/2,
     memory_add_association_backend/3,
     memory_remove_association_backend/3,
+    memory_get_right_association_backend/2,
+    memory_get_right_associations_backend/2,
+    memory_get_left_associations_backend/2,
+    memory_count_right_associations_backend/2,
+    memory_count_left_associations_backend/2,
     memory_lock_unit_backend/3,
     memory_unlock_unit_backend/1,
     memory_set_status_backend/2,
@@ -58,8 +78,18 @@
     pg_search_units_backend/3,
     pg_add_relation_backend/3,
     pg_remove_relation_backend/3,
+    pg_get_right_relation_backend/2,
+    pg_get_right_relations_backend/2,
+    pg_get_left_relations_backend/2,
+    pg_count_right_relations_backend/2,
+    pg_count_left_relations_backend/2,
     pg_add_association_backend/3,
     pg_remove_association_backend/3,
+    pg_get_right_association_backend/2,
+    pg_get_right_associations_backend/2,
+    pg_get_left_associations_backend/2,
+    pg_count_right_associations_backend/2,
+    pg_count_left_associations_backend/2,
     pg_lock_unit_backend/3,
     pg_unlock_unit_backend/1,
     pg_set_status_backend/2,
@@ -108,6 +138,26 @@ add_relation(UnitRef, RelType, OtherUnitRef) ->
 remove_relation(UnitRef, RelType, OtherUnitRef) ->
     call_backend(remove_relation, [UnitRef, RelType, OtherUnitRef]).
 
+-spec get_right_relation(unit_ref_value(), relation_type()) -> relation_lookup_result().
+get_right_relation(UnitRef, RelType) ->
+    call_backend(get_right_relation, [UnitRef, RelType]).
+
+-spec get_right_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_right_relations(UnitRef, RelType) ->
+    call_backend(get_right_relations, [UnitRef, RelType]).
+
+-spec get_left_relations(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+get_left_relations(UnitRef, RelType) ->
+    call_backend(get_left_relations, [UnitRef, RelType]).
+
+-spec count_right_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_right_relations(UnitRef, RelType) ->
+    call_backend(count_right_relations, [UnitRef, RelType]).
+
+-spec count_left_relations(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+count_left_relations(UnitRef, RelType) ->
+    call_backend(count_left_relations, [UnitRef, RelType]).
+
 -spec add_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 add_association(UnitRef, AssocType, RefString) ->
     call_backend(add_association, [UnitRef, AssocType, RefString]).
@@ -115,6 +165,26 @@ add_association(UnitRef, AssocType, RefString) ->
 -spec remove_association(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 remove_association(UnitRef, AssocType, RefString) ->
     call_backend(remove_association, [UnitRef, AssocType, RefString]).
+
+-spec get_right_association(unit_ref_value(), association_type()) -> association_lookup_result().
+get_right_association(UnitRef, AssocType) ->
+    call_backend(get_right_association, [UnitRef, AssocType]).
+
+-spec get_right_associations(unit_ref_value(), association_type()) -> erepo_result([association()]).
+get_right_associations(UnitRef, AssocType) ->
+    call_backend(get_right_associations, [UnitRef, AssocType]).
+
+-spec get_left_associations(association_type(), ref_string()) -> erepo_result([association()]).
+get_left_associations(AssocType, RefString) ->
+    call_backend(get_left_associations, [AssocType, RefString]).
+
+-spec count_right_associations(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+count_right_associations(UnitRef, AssocType) ->
+    call_backend(count_right_associations, [UnitRef, AssocType]).
+
+-spec count_left_associations(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
+count_left_associations(AssocType, RefString) ->
+    call_backend(count_left_associations, [AssocType, RefString]).
 
 -spec lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 lock_unit(UnitRef, LockType, Purpose) ->
@@ -395,6 +465,109 @@ pg_remove_relation(UnitRef, RelType, OtherUnitRef) when is_integer(RelType) ->
 pg_remove_relation(_UnitRef, _RelType, _OtherUnitRef) ->
     {error, invalid_relation_type}.
 
+pg_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo.repo_internal_relation WHERE tenantid = $1 AND unitid = $2 AND reltype = $3 LIMIT 1",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, RelType])) of
+                    {ok, []} ->
+                        not_found;
+                    {ok, [Row | _]} ->
+                        case relation_from_row(row_values(Row)) of
+                            #{} -> {error, invalid_relation_row};
+                            Rel -> {ok, Rel}
+                        end;
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_get_right_relation(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+pg_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo.repo_internal_relation WHERE tenantid = $1 AND unitid = $2 AND reltype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, RelType])) of
+                    {ok, Rows} ->
+                        Relations = [relation_from_row(row_values(Row)) || Row <- Rows],
+                        {ok, [R || R <- Relations, R =/= #{}]};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_get_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+pg_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT tenantid, unitid, reltype, reltenantid, relunitid FROM repo.repo_internal_relation WHERE reltenantid = $1 AND relunitid = $2 AND reltype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, RelType])) of
+                    {ok, Rows} ->
+                        Relations = [relation_from_row(row_values(Row)) || Row <- Rows],
+                        {ok, [R || R <- Relations, R =/= #{}]};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_get_left_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+pg_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT COUNT(*) FROM repo.repo_internal_relation WHERE tenantid = $1 AND unitid = $2 AND reltype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, RelType])) of
+                    {ok, []} ->
+                        {ok, 0};
+                    {ok, [Row | _]} ->
+                        [Count] = row_values(Row),
+                        {ok, Count};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_count_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+pg_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT COUNT(*) FROM repo.repo_internal_relation WHERE reltenantid = $1 AND relunitid = $2 AND reltype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, RelType])) of
+                    {ok, []} ->
+                        {ok, 0};
+                    {ok, [Row | _]} ->
+                        [Count] = row_values(Row),
+                        {ok, Count};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_count_left_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
 pg_add_association(UnitRef, AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
     case normalize_ref(UnitRef) of
         {TenantId, UnitId} ->
@@ -429,6 +602,101 @@ pg_remove_association(UnitRef, AssocType, RefString) when is_integer(AssocType),
             {error, invalid_association_ref}
     end;
 pg_remove_association(_UnitRef, _AssocType, _RefString) ->
+    {error, invalid_association}.
+
+pg_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT tenantid, unitid, assoctype, assocstring FROM repo.repo_external_assoc WHERE tenantid = $1 AND unitid = $2 AND assoctype = $3 LIMIT 1",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, AssocType])) of
+                    {ok, []} ->
+                        not_found;
+                    {ok, [Row | _]} ->
+                        case association_from_row(row_values(Row)) of
+                            #{} -> {error, invalid_association_row};
+                            Assoc -> {ok, Assoc}
+                        end;
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_get_right_association(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+pg_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT tenantid, unitid, assoctype, assocstring FROM repo.repo_external_assoc WHERE tenantid = $1 AND unitid = $2 AND assoctype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, AssocType])) of
+                    {ok, Rows} ->
+                        Assocs = [association_from_row(row_values(Row)) || Row <- Rows],
+                        {ok, [A || A <- Assocs, A =/= #{}]};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_get_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+pg_get_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
+    AssocString = normalize_string(RefString),
+    with_pg(fun(Conn) ->
+        Sql = "SELECT tenantid, unitid, assoctype, assocstring FROM repo.repo_external_assoc WHERE assoctype = $1 AND assocstring = $2",
+        case query_rows(epgsql:equery(Conn, Sql, [AssocType, AssocString])) of
+            {ok, Rows} ->
+                Assocs = [association_from_row(row_values(Row)) || Row <- Rows],
+                {ok, [A || A <- Assocs, A =/= #{}]};
+            Error ->
+                {error, Error}
+        end
+    end);
+pg_get_left_associations(_AssocType, _RefString) ->
+    {error, invalid_association}.
+
+pg_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            with_pg(fun(Conn) ->
+                Sql = "SELECT COUNT(*) FROM repo.repo_external_assoc WHERE tenantid = $1 AND unitid = $2 AND assoctype = $3",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId, AssocType])) of
+                    {ok, []} ->
+                        {ok, 0};
+                    {ok, [Row | _]} ->
+                        [Count] = row_values(Row),
+                        {ok, Count};
+                    Error ->
+                        {error, Error}
+                end
+            end);
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+pg_count_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+pg_count_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
+    AssocString = normalize_string(RefString),
+    with_pg(fun(Conn) ->
+        Sql = "SELECT COUNT(*) FROM repo.repo_external_assoc WHERE assoctype = $1 AND assocstring = $2",
+        case query_rows(epgsql:equery(Conn, Sql, [AssocType, AssocString])) of
+            {ok, []} ->
+                {ok, 0};
+            {ok, [Row | _]} ->
+                [Count] = row_values(Row),
+                {ok, Count};
+            Error ->
+                {error, Error}
+        end
+    end);
+pg_count_left_associations(_AssocType, _RefString) ->
     {error, invalid_association}.
 
 pg_lock_unit(UnitRef, LockType, Purpose) when is_integer(LockType) ->
@@ -545,8 +813,18 @@ pg_get_tenant_info(_NameOrId) ->
 -spec memory_search_units_backend(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
 -spec memory_add_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 -spec memory_remove_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec memory_get_right_relation_backend(unit_ref_value(), relation_type()) -> relation_lookup_result().
+-spec memory_get_right_relations_backend(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-spec memory_get_left_relations_backend(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-spec memory_count_right_relations_backend(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+-spec memory_count_left_relations_backend(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
 -spec memory_add_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 -spec memory_remove_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec memory_get_right_association_backend(unit_ref_value(), association_type()) -> association_lookup_result().
+-spec memory_get_right_associations_backend(unit_ref_value(), association_type()) -> erepo_result([association()]).
+-spec memory_get_left_associations_backend(association_type(), ref_string()) -> erepo_result([association()]).
+-spec memory_count_right_associations_backend(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+-spec memory_count_left_associations_backend(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
 -spec memory_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 -spec memory_unlock_unit_backend(unit_ref_value()) -> ok | {error, erepo_reason()}.
 -spec memory_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
@@ -560,8 +838,18 @@ pg_get_tenant_info(_NameOrId) ->
 -spec pg_search_units_backend(search_expression() | map(), search_order(), search_paging()) -> erepo_result(search_result()).
 -spec pg_add_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
 -spec pg_remove_relation_backend(unit_ref_value(), relation_type(), unit_ref_value()) -> ok | {error, erepo_reason()}.
+-spec pg_get_right_relation_backend(unit_ref_value(), relation_type()) -> relation_lookup_result().
+-spec pg_get_right_relations_backend(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-spec pg_get_left_relations_backend(unit_ref_value(), relation_type()) -> erepo_result([relation()]).
+-spec pg_count_right_relations_backend(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
+-spec pg_count_left_relations_backend(unit_ref_value(), relation_type()) -> erepo_result(non_neg_integer()).
 -spec pg_add_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
 -spec pg_remove_association_backend(unit_ref_value(), association_type(), ref_string()) -> ok | {error, erepo_reason()}.
+-spec pg_get_right_association_backend(unit_ref_value(), association_type()) -> association_lookup_result().
+-spec pg_get_right_associations_backend(unit_ref_value(), association_type()) -> erepo_result([association()]).
+-spec pg_get_left_associations_backend(association_type(), ref_string()) -> erepo_result([association()]).
+-spec pg_count_right_associations_backend(unit_ref_value(), association_type()) -> erepo_result(non_neg_integer()).
+-spec pg_count_left_associations_backend(association_type(), ref_string()) -> erepo_result(non_neg_integer()).
 -spec pg_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, erepo_reason()}.
 -spec pg_unlock_unit_backend(unit_ref_value()) -> ok | {error, erepo_reason()}.
 -spec pg_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, erepo_reason()}.
@@ -582,10 +870,30 @@ memory_add_relation_backend(UnitRef, RelType, OtherUnitRef) ->
     memory_add_relation(UnitRef, RelType, OtherUnitRef).
 memory_remove_relation_backend(UnitRef, RelType, OtherUnitRef) ->
     memory_remove_relation(UnitRef, RelType, OtherUnitRef).
+memory_get_right_relation_backend(UnitRef, RelType) ->
+    memory_get_right_relation(UnitRef, RelType).
+memory_get_right_relations_backend(UnitRef, RelType) ->
+    memory_get_right_relations(UnitRef, RelType).
+memory_get_left_relations_backend(UnitRef, RelType) ->
+    memory_get_left_relations(UnitRef, RelType).
+memory_count_right_relations_backend(UnitRef, RelType) ->
+    memory_count_right_relations(UnitRef, RelType).
+memory_count_left_relations_backend(UnitRef, RelType) ->
+    memory_count_left_relations(UnitRef, RelType).
 memory_add_association_backend(UnitRef, AssocType, RefString) ->
     memory_add_association(UnitRef, AssocType, RefString).
 memory_remove_association_backend(UnitRef, AssocType, RefString) ->
     memory_remove_association(UnitRef, AssocType, RefString).
+memory_get_right_association_backend(UnitRef, AssocType) ->
+    memory_get_right_association(UnitRef, AssocType).
+memory_get_right_associations_backend(UnitRef, AssocType) ->
+    memory_get_right_associations(UnitRef, AssocType).
+memory_get_left_associations_backend(AssocType, RefString) ->
+    memory_get_left_associations(AssocType, RefString).
+memory_count_right_associations_backend(UnitRef, AssocType) ->
+    memory_count_right_associations(UnitRef, AssocType).
+memory_count_left_associations_backend(AssocType, RefString) ->
+    memory_count_left_associations(AssocType, RefString).
 memory_lock_unit_backend(UnitRef, LockType, Purpose) ->
     memory_lock_unit(UnitRef, LockType, Purpose).
 memory_unlock_unit_backend(UnitRef) ->
@@ -611,10 +919,30 @@ pg_add_relation_backend(UnitRef, RelType, OtherUnitRef) ->
     pg_add_relation(UnitRef, RelType, OtherUnitRef).
 pg_remove_relation_backend(UnitRef, RelType, OtherUnitRef) ->
     pg_remove_relation(UnitRef, RelType, OtherUnitRef).
+pg_get_right_relation_backend(UnitRef, RelType) ->
+    pg_get_right_relation(UnitRef, RelType).
+pg_get_right_relations_backend(UnitRef, RelType) ->
+    pg_get_right_relations(UnitRef, RelType).
+pg_get_left_relations_backend(UnitRef, RelType) ->
+    pg_get_left_relations(UnitRef, RelType).
+pg_count_right_relations_backend(UnitRef, RelType) ->
+    pg_count_right_relations(UnitRef, RelType).
+pg_count_left_relations_backend(UnitRef, RelType) ->
+    pg_count_left_relations(UnitRef, RelType).
 pg_add_association_backend(UnitRef, AssocType, RefString) ->
     pg_add_association(UnitRef, AssocType, RefString).
 pg_remove_association_backend(UnitRef, AssocType, RefString) ->
     pg_remove_association(UnitRef, AssocType, RefString).
+pg_get_right_association_backend(UnitRef, AssocType) ->
+    pg_get_right_association(UnitRef, AssocType).
+pg_get_right_associations_backend(UnitRef, AssocType) ->
+    pg_get_right_associations(UnitRef, AssocType).
+pg_get_left_associations_backend(AssocType, RefString) ->
+    pg_get_left_associations(AssocType, RefString).
+pg_count_right_associations_backend(UnitRef, AssocType) ->
+    pg_count_right_associations(UnitRef, AssocType).
+pg_count_left_associations_backend(AssocType, RefString) ->
+    pg_count_left_associations(AssocType, RefString).
 pg_lock_unit_backend(UnitRef, LockType, Purpose) ->
     pg_lock_unit(UnitRef, LockType, Purpose).
 pg_unlock_unit_backend(UnitRef) ->
@@ -691,6 +1019,65 @@ memory_remove_relation(UnitRef, RelType, OtherUnitRef) ->
     erepo_cache:put(?REL_KEY, maps:remove(RelKey, Relations0)),
     ok.
 
+memory_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
+    case memory_get_right_relations(UnitRef, RelType) of
+        {ok, [Rel | _]} -> {ok, Rel};
+        {ok, []} -> not_found;
+        Error -> Error
+    end;
+memory_get_right_relation(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+memory_get_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {_, _} = Ref ->
+            Relations0 = get_meta_map(?REL_KEY),
+            Matches = [
+                relation_from_key(RelKey)
+                || {RelKey = {Ref0, RelType0, _OtherRef}, true} <- maps:to_list(Relations0),
+                   Ref0 =:= Ref,
+                   RelType0 =:= RelType
+            ],
+            {ok, [R || R <- Matches, R =/= #{}]};
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+memory_get_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+memory_get_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case normalize_ref(UnitRef) of
+        {_, _} = Ref ->
+            Relations0 = get_meta_map(?REL_KEY),
+            Matches = [
+                relation_from_key(RelKey)
+                || {RelKey = {_Ref0, RelType0, OtherRef}, true} <- maps:to_list(Relations0),
+                   OtherRef =:= Ref,
+                   RelType0 =:= RelType
+            ],
+            {ok, [R || R <- Matches, R =/= #{}]};
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+memory_get_left_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+memory_count_right_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case memory_get_right_relations(UnitRef, RelType) of
+        {ok, Relations} -> {ok, length(Relations)};
+        Error -> Error
+    end;
+memory_count_right_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
+memory_count_left_relations(UnitRef, RelType) when is_integer(RelType) ->
+    case memory_get_left_relations(UnitRef, RelType) of
+        {ok, Relations} -> {ok, length(Relations)};
+        Error -> Error
+    end;
+memory_count_left_relations(_UnitRef, _RelType) ->
+    {error, invalid_relation_type}.
+
 memory_add_association(UnitRef, AssocType, RefString) ->
     Assocs0 = get_meta_map(?ASSOC_KEY),
     AssocKey = {normalize_ref(UnitRef), AssocType, RefString},
@@ -702,6 +1089,61 @@ memory_remove_association(UnitRef, AssocType, RefString) ->
     AssocKey = {normalize_ref(UnitRef), AssocType, RefString},
     erepo_cache:put(?ASSOC_KEY, maps:remove(AssocKey, Assocs0)),
     ok.
+
+memory_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
+    case memory_get_right_associations(UnitRef, AssocType) of
+        {ok, [Assoc | _]} -> {ok, Assoc};
+        {ok, []} -> not_found;
+        Error -> Error
+    end;
+memory_get_right_association(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+memory_get_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case normalize_ref(UnitRef) of
+        {_, _} = Ref ->
+            Assocs0 = get_meta_map(?ASSOC_KEY),
+            Matches = [
+                association_from_key(AssocKey)
+                || {AssocKey = {Ref0, AssocType0, _RefString}, true} <- maps:to_list(Assocs0),
+                   Ref0 =:= Ref,
+                   AssocType0 =:= AssocType
+            ],
+            {ok, [A || A <- Matches, A =/= #{}]};
+        _ ->
+            {error, invalid_unit_ref}
+    end;
+memory_get_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+memory_get_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
+    RefStringNorm = normalize_string(RefString),
+    Assocs0 = get_meta_map(?ASSOC_KEY),
+    Matches = [
+        association_from_key(AssocKey)
+        || {AssocKey = {_Ref0, AssocType0, AssocString0}, true} <- maps:to_list(Assocs0),
+           AssocType0 =:= AssocType,
+           normalize_string(AssocString0) =:= RefStringNorm
+    ],
+    {ok, [A || A <- Matches, A =/= #{}]};
+memory_get_left_associations(_AssocType, _RefString) ->
+    {error, invalid_association}.
+
+memory_count_right_associations(UnitRef, AssocType) when is_integer(AssocType) ->
+    case memory_get_right_associations(UnitRef, AssocType) of
+        {ok, Assocs} -> {ok, length(Assocs)};
+        Error -> Error
+    end;
+memory_count_right_associations(_UnitRef, _AssocType) ->
+    {error, invalid_association}.
+
+memory_count_left_associations(AssocType, RefString) when is_integer(AssocType), (is_binary(RefString) orelse is_list(RefString)) ->
+    case memory_get_left_associations(AssocType, RefString) of
+        {ok, Assocs} -> {ok, length(Assocs)};
+        Error -> Error
+    end;
+memory_count_left_associations(_AssocType, _RefString) ->
+    {error, invalid_association}.
 
 memory_lock_unit(UnitRef, LockType, Purpose) ->
     Locks0 = get_meta_map(?LOCK_KEY),
@@ -1078,6 +1520,48 @@ row_to_unit_map_with_lastver(Row) ->
 
 row_values(Row) when is_tuple(Row) -> tuple_to_list(Row);
 row_values(Row) when is_list(Row) -> Row.
+
+relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId]) ->
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        reltype => RelType,
+        reltenantid => RelTenantId,
+        relunitid => RelUnitId
+    };
+relation_from_row(_) ->
+    #{}.
+
+association_from_row([TenantId, UnitId, AssocType, AssocString]) ->
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        assoctype => AssocType,
+        assocstring => normalize_string(AssocString)
+    };
+association_from_row(_) ->
+    #{}.
+
+relation_from_key({{TenantId, UnitId}, RelType, {RelTenantId, RelUnitId}}) ->
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        reltype => RelType,
+        reltenantid => RelTenantId,
+        relunitid => RelUnitId
+    };
+relation_from_key(_) ->
+    #{}.
+
+association_from_key({{TenantId, UnitId}, AssocType, AssocString}) ->
+    #{
+        tenantid => TenantId,
+        unitid => UnitId,
+        assoctype => AssocType,
+        assocstring => normalize_string(AssocString)
+    };
+association_from_key(_) ->
+    #{}.
 
 query_rows({ok, Cols, Rows}) when is_list(Cols), is_list(Rows) ->
     {ok, Rows};
