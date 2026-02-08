@@ -18,14 +18,11 @@ package org.gautelis.ipto.it;
 
 import com.fasterxml.uuid.Generators;
 import org.gautelis.ipto.repo.db.Column;
-import org.gautelis.ipto.repo.exceptions.BaseException;
-import org.gautelis.ipto.repo.model.AssociationType;
 import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
-import org.gautelis.ipto.repo.model.locks.LockType;
 import org.gautelis.ipto.repo.model.utils.RunningStatistics;
 import org.gautelis.ipto.repo.search.UnitSearch;
 import org.gautelis.ipto.repo.search.model.*;
@@ -42,11 +39,17 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Vector;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.gautelis.ipto.it.Statistics.dumpStatistics;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,6 +64,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 @IptoIT
 public class PerformanceIT {
     private static final Logger log = LoggerFactory.getLogger(PerformanceIT.class);
+    private volatile boolean runningMassive = false;
 
     @Test
     @Order(1)
@@ -247,143 +251,162 @@ public class PerformanceIT {
     @Test
     @Order(2)
     public void test(Repository repo) {
+        if (!runningMassive) {
+            Assumptions.assumeFalse(
+                    massiveModeEnabled(),
+                    "Skipping standard performance test when massive mode is enabled"
+            );
+        }
+
         final int tenantId = 1; // For the sake of exercising, this is the tenant of units we will create
 
-        final int numberOfParents = 10; //
-        final int numberOfChildren = 100; //
+        final int numberOfParents = getIntProperty("ipto.performance.parents", 10);
+        final int numberOfChildren = getIntProperty("ipto.performance.children", 100);
+        final int numThreads = getIntProperty(
+                "ipto.performance.threads",
+                Math.max(Runtime.getRuntime().availableProcessors() / 2, 1)
+        );
+        final int progressEvery = getIntProperty("ipto.performance.progressEvery", 1000);
+        final int timeoutMinutes = getIntProperty("ipto.performance.timeoutMinutes", 240);
 
         try {
-            Instant firstParentCreated = null;
-            Instant someInstant = null;
+            AtomicReference<Instant> firstParentCreatedRef = new AtomicReference<>();
+            AtomicReference<Instant> someInstantRef = new AtomicReference<>();
             String someSpecificString = Generators.timeBasedEpochGenerator().generate().toString();
-            int numberOfUnitsToHaveSpecificString = 1;
 
             // With resultset paging, we want to skip the first 'pageOffset' results and
             // acquire the 'pageSize' next results. 'pageOffset' and 'pageSize' has precedence over
             // 'selectionSize' (which counts from the first result).
-            int pageOffset = 5;  // skip 'pageOffset' first results
-            int pageSize = 5;    // pick next 'pageSize' results
+            int pageOffset = getIntProperty("ipto.performance.pageOffset", 5);  // skip 'pageOffset' first results
+            int pageSize = getIntProperty("ipto.performance.pageSize", 5);      // pick next 'pageSize' results
+            int targetParentIndex = getIntProperty("ipto.performance.targetParent", 1);
+            int targetChildIndex = getIntProperty("ipto.performance.targetChild", pageOffset + pageSize);
+            long totalChildren = (long) numberOfParents * numberOfChildren;
 
             System.out.println("---------------------------------------------------------------------------------------");
-            System.out.println(" Generating " + (numberOfParents * numberOfChildren) + " units...");
+            System.out.println(" Generating " + totalChildren + " units using " + numThreads + " worker threads...");
             System.out.println("---------------------------------------------------------------------------------------");
             System.out.flush();
 
             RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration
+            AtomicLong processedChildren = new AtomicLong(0L);
 
             Unit tree = null;
             Optional<Unit> _tree = repo.getUnit(tenantId, 0);
             if (_tree.isPresent()) {
                 tree = _tree.get();
             }
+            final Unit treeRef = tree;
 
-            for (int j = 1; j < numberOfParents + 1; j++) {
-                Instant startTime = Instant.now();
+            ExecutorService executor = Executors.newFixedThreadPool(numThreads);
+            List<Future<?>> tasks = new ArrayList<>(numberOfParents);
+            try {
+                for (int j = 1; j < numberOfParents + 1; j++) {
+                    final int parentIndex = j;
+                    tasks.add(executor.submit(() -> {
+                        Instant startTime = Instant.now();
 
-                Unit parentUnit = repo.createUnit(tenantId, "parent-" + j);
-                parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
-                    value.add("First value");
-                    value.add("Second value");
-                    value.add("Third value");
-                });
-                parentUnit.withAttributeValue("dcterms:description", String.class, value -> value.add("A test unit"));
-                repo.storeUnit(parentUnit);
+                        Unit parentUnit = repo.createUnit(tenantId, "parent-" + parentIndex);
+                        parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
+                            value.add("First value");
+                            value.add("Second value");
+                            value.add("Third value");
+                        });
+                        parentUnit.withAttributeValue("dcterms:description", String.class, value -> value.add("A test unit"));
+                        repo.storeUnit(parentUnit);
 
-                if (null != tree) {
-                    repo.addRelation(parentUnit, RelationType.PARENT_CHILD_RELATION, tree);
-                }
-
-                averageTPI.addSample(startTime, /* endTime */ Instant.now());
-
-                if (null == firstParentCreated) {
-                    firstParentCreated = parentUnit.getCreationTime().get();
-                }
-
-                if (true) {
-                    parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
-                        value.clear();
-                        value.add("Replaced value");
-                    });
-                    repo.storeUnit(parentUnit);
-                }
-
-                if (false) {
-                    // Works, but not part of test (at the moment)
-                    repo.lockUnit(parentUnit, LockType.EXISTENCE, "test");
-                }
-
-                for (int i = 1; i < numberOfChildren + 1; i++) {
-                    long count = (j-1)*numberOfChildren + i;
-                    if (count % 1000 == 0) { // depends on parameters (numberOfParents and numberOfChildren) > 1000
-                        long iterationsLeft = (numberOfParents * numberOfChildren) - count;
-                        double timeLeft = iterationsLeft * averageTPI.getMean();
-
-                        String approxTimeLeft = TimeDelta.asHumanApproximate(BigInteger.valueOf(Math.round(timeLeft)));
-                        System.out.print(
-                                "\r  " + count
-                                + "   [ETL: "
-                                + approxTimeLeft + "]                         \r"); // trailing needed
-                        System.out.flush();
-                    }
-
-                    startTime = Instant.now();
-                    Unit childUnit = repo.createUnit(tenantId, "child-" + j + "-" + i);
-
-                    //
-                    parentUnit.withAttribute("dcterms:title", String.class, attr -> {
-                        try {
-                            childUnit.addAttribute(attr);
-                        } catch (BaseException be) {
-                            System.err.println("Failed to add attribute: " + be.getMessage());
+                        if (null != treeRef) {
+                            repo.addRelation(parentUnit, RelationType.PARENT_CHILD_RELATION, treeRef);
                         }
-                    });
 
-                    final Instant now = Instant.now();
-
-                    childUnit.withAttributeValue("dcterms:date", Instant.class, value -> value.add(now));
-
-                    childUnit.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
-                        Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
-                        if (rattenTill.isPresent()) {
-                            RecordAttribute rattenTillRecord = RecordAttribute.from(childUnit, rattenTill.get());
-
-                            rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> ersattningstyp.add("HUNDBIDRAG"));
-
-                            rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> omfattning.add("HEL"));
-
-                            Attribute<?> attribute = rattenTill.get();
-                            resultat.add(attribute);
+                        synchronized (averageTPI) {
+                            averageTPI.addSample(startTime, /* endTime */ Instant.now());
                         }
-                    });
 
-                    // Some unique unit will get unique attribute
-                    if (/* i within page, that we will search for later down under */
-                            i > pageOffset && i == pageOffset + pageSize && numberOfUnitsToHaveSpecificString-- > 0
-                    ) {
-                        childUnit.withAttributeValue("dcterms:title", String.class, value -> value.add(someSpecificString));
+                        parentUnit.getCreationTime().ifPresent(created ->
+                                firstParentCreatedRef.accumulateAndGet(created,
+                                        (prev, current) -> prev == null || current.isBefore(prev) ? current : prev)
+                        );
 
-                        someInstant = now.minus(Duration.ofHours(2)); // For testing purposes
-                    }
+                        parentUnit.withAttributeValue("dcterms:title", String.class, value -> {
+                            value.clear();
+                            value.add("Replaced value");
+                        });
+                        repo.storeUnit(parentUnit);
 
-                    //
-                    repo.storeUnit(childUnit);
-                    averageTPI.addSample(startTime, /* endTime */ Instant.now());
+                        for (int i = 1; i < numberOfChildren + 1; i++) {
+                            long count = processedChildren.incrementAndGet();
+                            if (count % progressEvery == 0) {
+                                double mean;
+                                synchronized (averageTPI) {
+                                    mean = averageTPI.getMean();
+                                }
+                                long iterationsLeft = totalChildren - count;
+                                double timeLeft = iterationsLeft * mean;
+                                String approxTimeLeft = TimeDelta.asHumanApproximate(BigInteger.valueOf(Math.round(timeLeft)));
+                                synchronized (System.out) {
+                                    System.out.print(
+                                            "\r  " + count
+                                                    + "   [ETL: "
+                                                    + approxTimeLeft + "]                         \r");
+                                    System.out.flush();
+                                }
+                            }
 
-                    if (true) {
-                        // Works, but not part of test (at the moment)
-                        // Add a relation to parent unit
-                        repo.addRelation(childUnit, RelationType.PARENT_CHILD_RELATION, parentUnit);
-                    }
+                            startTime = Instant.now();
+                            Unit childUnit = repo.createUnit(tenantId, "child-" + parentIndex + "-" + i);
+
+                            childUnit.withAttributeValue("dcterms:title", String.class, value -> value.add("Replaced value"));
+
+                            final Instant now = Instant.now();
+                            childUnit.withAttributeValue("dcterms:date", Instant.class, value -> value.add(now));
+
+                            childUnit.withAttributeValue("ffa:producerade_resultat", Attribute.class, resultat -> {
+                                Optional<Attribute<?>> rattenTill = repo.instantiateAttribute("ffa:ratten_till_period");
+                                if (rattenTill.isPresent()) {
+                                    RecordAttribute rattenTillRecord = RecordAttribute.from(childUnit, rattenTill.get());
+
+                                    rattenTillRecord.withNestedAttributeValue("ffa:ersattningstyp", String.class, ersattningstyp -> ersattningstyp.add("HUNDBIDRAG"));
+                                    rattenTillRecord.withNestedAttributeValue("ffa:omfattning", String.class, omfattning -> omfattning.add("HEL"));
+
+                                    Attribute<?> attribute = rattenTill.get();
+                                    resultat.add(attribute);
+                                }
+                            });
+
+                            // A deterministic unique unit gets a unique attribute that we search for later.
+                            if (parentIndex == targetParentIndex && i == targetChildIndex) {
+                                childUnit.withAttributeValue("dcterms:title", String.class, value -> value.add(someSpecificString));
+                                someInstantRef.compareAndSet(null, now.minus(Duration.ofHours(2)));
+                            }
+
+                            repo.storeUnit(childUnit);
+                            synchronized (averageTPI) {
+                                averageTPI.addSample(startTime, /* endTime */ Instant.now());
+                            }
+
+                            // Add a relation to parent unit.
+                            repo.addRelation(childUnit, RelationType.PARENT_CHILD_RELATION, parentUnit);
+                        }
+                    }));
                 }
-                System.out.flush();
 
-                if (false) {
-                    System.out.println("Children of " + parentUnit.getName().orElse("parent") + " (" + parentUnit.getReference() + "):");
-                    parentUnit.getRelations(RelationType.PARENT_CHILD_RELATION).forEach(
-                            relatedUnit -> System.out.println("  " + relatedUnit.getName().orElse("child") + " (" + relatedUnit.getReference() + ")")
-                    );
+                executor.shutdown();
+                for (Future<?> task : tasks) {
+                    task.get();
                 }
+
+                boolean finished = executor.awaitTermination(timeoutMinutes, TimeUnit.MINUTES);
+                assertTrue(finished, "All tasks did not finish in time");
+            } finally {
+                executor.shutdownNow();
             }
+
+            Instant firstParentCreated = firstParentCreatedRef.get();
+            Instant someInstant = someInstantRef.get();
+            assertTrue(firstParentCreated != null, "Failed to identify earliest parent creation time");
+            assertTrue(someInstant != null, "Failed to identify test instant for unique child");
+            System.out.flush();
 
             // In order to search here in test, we will need some "internal" objects,
             // such as Context, DataSource, etc.
@@ -476,11 +499,73 @@ public class PerformanceIT {
         }
     }
 
+    @Test
+    @Order(3)
+    @Tag("massive-performance")
+    public void massive(Repository repo) {
+        Assumptions.assumeTrue(
+                massiveModeEnabled(),
+                "Massive performance disabled (set -Dipto.massive.enabled=true or IPTO_MASSIVE_PERFORMANCE=1)"
+        );
+
+        Map<String, String> defaults = Map.of(
+                "ipto.performance.parents", "1000",
+                "ipto.performance.children", "1000",
+                "ipto.performance.threads", Integer.toString(Math.max(Runtime.getRuntime().availableProcessors() / 2, 1)),
+                "ipto.performance.progressEvery", "10000",
+                "ipto.performance.timeoutMinutes", "720"
+        );
+        runningMassive = true;
+        try {
+            withTemporarySystemPropertyDefaults(defaults, () -> test(repo));
+        } finally {
+            runningMassive = false;
+        }
+    }
+
     private int getAttributeId(String attributeName, Repository repo) {
         Optional<Integer> attributeId = repo.attributeNameToId(attributeName);
         if (attributeId.isEmpty()) {
             throw new RuntimeException("Unknown attribute: " + attributeName);
         }
         return attributeId.get();
+    }
+
+    private int getIntProperty(String key, int defaultValue) {
+        String value = System.getProperty(key);
+        if (null == value || value.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException nfe) {
+            log.warn("Invalid integer system property {}=\"{}\"; using default {}", key, value, defaultValue);
+            return defaultValue;
+        }
+    }
+
+    private boolean massiveModeEnabled() {
+        return Boolean.getBoolean("ipto.massive.enabled") || "1".equals(System.getenv("IPTO_MASSIVE_PERFORMANCE"));
+    }
+
+    private void withTemporarySystemPropertyDefaults(Map<String, String> defaults, Runnable action) {
+        Map<String, String> previous = new HashMap<>();
+        defaults.forEach((key, value) -> {
+            previous.put(key, System.getProperty(key));
+            if (null == System.getProperty(key)) {
+                System.setProperty(key, value);
+            }
+        });
+        try {
+            action.run();
+        } finally {
+            previous.forEach((key, value) -> {
+                if (null == value) {
+                    System.clearProperty(key);
+                } else {
+                    System.setProperty(key, value);
+                }
+            });
+        }
     }
 }

@@ -108,5 +108,34 @@
             </plugin>
         </plugins>
     </build>
-</project>
 
+    <profiles>
+        <profile>
+            <id>massive-performance</id>
+            <properties>
+                <ipto.massive.enabled>true</ipto.massive.enabled>
+                <ipto.performance.parents>1000</ipto.performance.parents>
+                <ipto.performance.children>1000</ipto.performance.children>
+                <ipto.performance.progressEvery>10000</ipto.performance.progressEvery>
+                <ipto.performance.timeoutMinutes>720</ipto.performance.timeoutMinutes>
+            </properties>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-failsafe-plugin</artifactId>
+                        <configuration>
+                            <systemPropertyVariables>
+                                <ipto.massive.enabled>${ipto.massive.enabled}</ipto.massive.enabled>
+                                <ipto.performance.parents>${ipto.performance.parents}</ipto.performance.parents>
+                                <ipto.performance.children>${ipto.performance.children}</ipto.performance.children>
+                                <ipto.performance.progressEvery>${ipto.performance.progressEvery}</ipto.performance.progressEvery>
+                                <ipto.performance.timeoutMinutes>${ipto.performance.timeoutMinutes}</ipto.performance.timeoutMinutes>
+                            </systemPropertyVariables>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>
