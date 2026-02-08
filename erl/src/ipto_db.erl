@@ -235,7 +235,24 @@ backend_module() ->
 -spec call_backend(atom(), list()) -> term().
 call_backend(Fun, Args) ->
     Module = backend_module(),
-    apply(Module, Fun, Args).
+    try
+        Result = apply(Module, Fun, Args),
+        case Result of
+            {error, ErrorReason} ->
+                ipto_log:warning(ipto_db, "backend call failed backend=~p fun=~p reason=~p", [Module, Fun, ErrorReason]);
+            _ ->
+                ok
+        end,
+        Result
+    catch
+        Class:Reason:Stacktrace ->
+            ipto_log:error(
+                ipto_db,
+                "backend call crashed backend=~p fun=~p class=~p reason=~p stacktrace=~p",
+                [Module, Fun, Class, Reason, Stacktrace]
+            ),
+            erlang:raise(Class, Reason, Stacktrace)
+    end.
 
 -spec pg_conn_opts() -> map().
 pg_conn_opts() ->
@@ -266,6 +283,15 @@ env_int(Name, Default) ->
 
 -spec with_pg(fun((term()) -> term())) -> term().
 with_pg(Fun) ->
+    case ipto_pg_pool:with_connection(Fun) of
+        {error, pool_unavailable} ->
+            with_pg_direct(Fun);
+        Result ->
+            Result
+    end.
+
+-spec with_pg_direct(fun((term()) -> term())) -> term().
+with_pg_direct(Fun) ->
     case code:ensure_loaded(epgsql) of
         {module, epgsql} ->
             Opts = pg_conn_opts(),
@@ -277,13 +303,27 @@ with_pg(Fun) ->
                 {ok, Conn} ->
                     try
                         Fun(Conn)
+                    catch
+                        Class:Reason:Stacktrace ->
+                            ipto_log:error(
+                                ipto_db,
+                                "pg operation crashed class=~p reason=~p stacktrace=~p",
+                                [Class, Reason, Stacktrace]
+                            ),
+                            erlang:raise(Class, Reason, Stacktrace)
                     after
                         epgsql:close(Conn)
                     end;
                 Error ->
+                    ipto_log:warning(
+                        ipto_db,
+                        "failed to connect to postgres host=~s db=~s port=~p error=~p",
+                        [Host, maps:get(db, Opts), maps:get(port, Opts), Error]
+                    ),
                     Error
             end;
         _ ->
+            ipto_log:error(ipto_db, "missing dependency epgsql; compile/run using profile 'pg'", []),
             {error, {missing_dependency, epgsql}}
     end.
 

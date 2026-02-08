@@ -84,6 +84,7 @@ ensure_http_state(State0) ->
             {ok, State0#{running => false, port => undefined}};
         {false, true, _} ->
             _ = ipto_http:stop(),
+            ipto_log:notice(ipto_http_server, "http listener stopped", []),
             {ok, State0#{running => false, port => undefined}};
         {true, true, true} ->
             {ok, State0};
@@ -91,17 +92,19 @@ ensure_http_state(State0) ->
             _ = ipto_http:stop(),
             case ipto_http:start(#{port => TargetPort}) of
                 {ok, _} ->
+                    ipto_log:notice(ipto_http_server, "http listener restarted port=~p", [TargetPort]),
                     {ok, State0#{running => true, port => TargetPort}};
                 Error ->
-                    logger:warning("ipto http restart failed: ~p", [Error]),
+                    ipto_log:warning(ipto_http_server, "http restart failed error=~p", [Error]),
                     {Error, State0#{running => false, port => undefined}}
             end;
         {true, false, _} ->
             case ipto_http:start(#{port => TargetPort}) of
                 {ok, _} ->
+                    ipto_log:notice(ipto_http_server, "http listener started port=~p", [TargetPort]),
                     {ok, State0#{running => true, port => TargetPort}};
                 Error ->
-                    logger:warning("ipto http start failed: ~p", [Error]),
+                    ipto_log:warning(ipto_http_server, "http start failed error=~p", [Error]),
                     {Error, State0#{running => false, port => undefined}}
             end
     end.

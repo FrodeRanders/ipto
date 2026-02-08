@@ -7,6 +7,9 @@
   {env, [
     {backend, memory},
     {http_enabled, false},
-    {http_port, 8080}
+    {http_port, 8080},
+    {log_level, info},
+    {log_file, undefined},
+    {log_file_level, info}
   ]}
  ]}.

@@ -27,6 +27,22 @@ start_link() ->
 
 -spec init(list()) -> {ok, {supervisor:sup_flags(), [supervisor:child_spec()]}}.
 init([]) ->
+    TimingDataChild = #{
+        id => ipto_timing_data,
+        start => {ipto_timing_data, start_link, []},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [ipto_timing_data]
+    },
+    PgPoolChild = #{
+        id => ipto_pg_pool,
+        start => {ipto_pg_pool, start_link, []},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [ipto_pg_pool]
+    },
     CacheChild = #{
         id => ipto_cache,
         start => {ipto_cache, start_link, []},
@@ -51,4 +67,4 @@ init([]) ->
         type => worker,
         modules => [ipto_http_server]
     },
-    {ok, {{one_for_one, 5, 10}, [CacheChild, EventChild, HttpChild]}}.
+    {ok, {{one_for_one, 5, 10}, [TimingDataChild, PgPoolChild, CacheChild, EventChild, HttpChild]}}.

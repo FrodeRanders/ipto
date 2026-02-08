@@ -82,6 +82,13 @@ Set app env and provide PostgreSQL connection env vars:
 
 - `backend = pg` in app env (`application:set_env(ipto, backend, pg)`).
 - `IPTO_PG_HOST`, `IPTO_PG_PORT`, `IPTO_PG_USER`, `IPTO_PG_PASSWORD`, `IPTO_PG_DATABASE`.
+- `IPTO_PG_POOL_SIZE` (optional; defaults to number of online schedulers, minimum 2)
+
+Pool telemetry is available at runtime:
+
+```erlang
+ipto_pg_pool:get_stats().
+```
 
 Also ensure `epgsql` is present in the Erlang code path at runtime.
 
@@ -124,11 +131,17 @@ ok = ipto_graphql:reload_schema().
 
 - `http_enabled` (default `false`)
 - `http_port` (default `8080`)
+- `log_level` (default `info`)
+- `log_file` (default `undefined`, disabled)
+- `log_file_level` (default `info`)
 
 You can override with env vars:
 
 - `IPTO_HTTP_ENABLED=true|false|1|0|yes|no`
 - `IPTO_HTTP_PORT=8080`
+- `IPTO_LOG_LEVEL=debug|info|notice|warning|error`
+- `IPTO_LOG_FILE=/path/to/ipto.log`
+- `IPTO_LOG_FILE_LEVEL=debug|info|notice|warning|error`
 
 When `http_enabled` is true, `ipto_app` starts Cowboy and exposes:
 
@@ -141,6 +154,8 @@ You can force listener reconciliation with current env/app config:
 ```erlang
 ok = ipto_http_server:refresh().
 ```
+
+Logging uses OTP `logger` via `ipto_log`. Problems are logged as warnings/errors and major lifecycle events are logged at notice level.
 
 ## Hot upgrade / release handling
 

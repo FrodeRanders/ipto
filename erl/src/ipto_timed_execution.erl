@@ -15,20 +15,17 @@
 %%% See the License for the specific language governing permissions and
 %%% limitations under the License.
 %%%
--module(ipto_app).
--behaviour(application).
+-module(ipto_timed_execution).
 
--export([start/2, stop/1]).
+-export([run/2]).
 
--spec start(term(), term()) -> {ok, pid()} | {error, term()}.
-start(_StartType, _StartArgs) ->
-    ok = ipto_log:configure(),
-    {ok, Backend} = application:get_env(ipto, backend),
-    ipto_log:notice(ipto_app, "starting ipto backend=~p", [Backend]),
-    ok = ipto_graphql_config:init(),
-    ipto_sup:start_link().
-
--spec stop(term()) -> ok.
-stop(_State) ->
-    ipto_log:notice(ipto_app, "stopping ipto", []),
-    ok.
+-spec run(atom() | binary() | string(), fun(() -> T)) -> T.
+run(Name, Fun) when is_function(Fun, 0) ->
+    T0 = erlang:monotonic_time(nanosecond),
+    try
+        Fun()
+    after
+        ElapsedNanos = erlang:monotonic_time(nanosecond) - T0,
+        ElapsedMillis = ElapsedNanos / 1000000.0,
+        ok = ipto_timing_data:add_sample(Name, ElapsedMillis)
+    end.
