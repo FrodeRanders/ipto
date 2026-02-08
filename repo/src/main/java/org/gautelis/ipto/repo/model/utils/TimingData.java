@@ -19,10 +19,10 @@ package org.gautelis.ipto.repo.model.utils;
 import org.gautelis.vopn.lang.TimeDelta;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
-public class TimingData extends HashMap<String, RunningStatistics> {
+public class TimingData extends ConcurrentHashMap<String, RunningStatistics> {
 
     public void addSample(String name, double sample) {
         computeIfAbsent(name, k -> new RunningStatistics()).addSample(sample);

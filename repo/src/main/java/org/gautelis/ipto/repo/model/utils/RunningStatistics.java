@@ -30,7 +30,7 @@ public final class RunningStatistics {
     private double max    = Double.NaN;
     private long   total  = 0L; // integral total (where meaningful)
 
-    public void reset() {
+    public synchronized void reset() {
         count = 0L;
         mean = 0.0;
         m2 = 0.0;
@@ -39,7 +39,7 @@ public final class RunningStatistics {
         total = 0L;
     }
 
-    public void addSample(double x) {
+    public synchronized void addSample(double x) {
         if (count == 0) {
             min = max = x;
         } else {
@@ -56,34 +56,34 @@ public final class RunningStatistics {
         m2 += delta * delta2;
     }
 
-    public void addSample(Instant start, Instant end) {
+    public synchronized void addSample(Instant start, Instant end) {
         addSample(end.toEpochMilli() - start.toEpochMilli());
     }
 
-    public long getCount() {
+    public synchronized long getCount() {
         return count;
     }
 
-    public double getMin() {
+    public synchronized double getMin() {
         return min;
     }
 
-    public double getMax() {
+    public synchronized double getMax() {
         return max;
     }
 
-    public double getMean() {
+    public synchronized double getMean() {
         return mean;
     }
 
-    public long getTotal() {
+    public synchronized long getTotal() {
         return total;
     }
 
     /**
      * Sample variance (n-1 in denominator). Defined for n >= 2.
      */
-    public double getVariance() {
+    public synchronized double getVariance() {
         return count > 1 ? m2 / (count - 1) : Double.NaN;
     }
 
@@ -101,7 +101,7 @@ public final class RunningStatistics {
      *      it directly: "latency is ~ 80 ms +/- 7 ms".
      * </li>
      */
-    public double getStdDev() {
+    public synchronized double getStdDev() {
         return Math.sqrt(getVariance());
     }
 
@@ -120,7 +120,7 @@ public final class RunningStatistics {
      * 	     (e.g. response times measured in both seconds and minutes).
      * </li>
      */
-    public double getCV() {
+    public synchronized double getCV() {
         return (count > 1 && mean != 0.0) ? 100.0 * getStdDev() / mean : Double.NaN;
     }
 }
