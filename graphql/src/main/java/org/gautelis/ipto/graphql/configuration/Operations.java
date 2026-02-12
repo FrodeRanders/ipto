@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public final class Operations {
     private static final Logger log = LoggerFactory.getLogger(Operations.class);
@@ -81,7 +82,8 @@ public final class Operations {
                 );
             }
 
-            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, params.toArray(T), resultType.typeName()));
+            String runtimeOperation = deriveRuntimeOperation(f).orElse(null);
+            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, params.toArray(T), resultType.typeName(), runtimeOperation));
         }
     }
 
@@ -100,8 +102,30 @@ public final class Operations {
                 );
             }
 
-            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, params.toArray(T), resultType.typeName()));
+            String runtimeOperation = deriveRuntimeOperation(f).orElse(null);
+            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, params.toArray(T), resultType.typeName(), runtimeOperation));
 
         }
+    }
+
+    private static Optional<String> deriveRuntimeOperation(FieldDefinition field) {
+        for (Directive directive : field.getDirectives()) {
+            if (!"ipto".equals(directive.getName())) {
+                continue;
+            }
+            for (Argument argument : directive.getArguments()) {
+                if (!"operation".equals(argument.getName())) {
+                    continue;
+                }
+                Value<?> value = argument.getValue();
+                if (value instanceof StringValue sv) {
+                    return Optional.of(sv.getValue());
+                }
+                if (value instanceof EnumValue ev) {
+                    return Optional.of(ev.getName());
+                }
+            }
+        }
+        return Optional.empty();
     }
 }

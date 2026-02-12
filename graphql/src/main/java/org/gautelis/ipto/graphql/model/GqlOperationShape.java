@@ -21,7 +21,8 @@ public record GqlOperationShape(
         String operationName,
         SchemaOperation category,    // QUERY | MUTATION | SUBSCRIPTION
         ParameterDefinition[] parameters, // Parameters to operation (e.g. UnitIdentification, Filter, ...)
-        String outputTypeName     // Type of output from operation (e.g. Bytes, <domain specific type>, ...)
+        String outputTypeName,     // Type of output from operation (e.g. Bytes, <domain specific type>, ...)
+        String runtimeOperation    // Optional runtime binding hint from SDL @ipto(operation: "...")
 ) {
     @Override
     public String toString() {
@@ -34,8 +35,8 @@ public record GqlOperationShape(
             info += "'" + def.parameterName() + " " + def.parameterType() + "', ";
         }
         info += "], type-of-output='" + outputTypeName + '\'';
+        info += ", runtime-operation='" + runtimeOperation + '\'';
         info += "]}";
         return info;
     }
 }
-

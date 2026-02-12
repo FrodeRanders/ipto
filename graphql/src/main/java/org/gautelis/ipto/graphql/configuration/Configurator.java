@@ -120,6 +120,7 @@ public class Configurator {
 
         // Setup GraphQL SDL view of things
         GqlViewpoint gql = loadFromFile(registry, operationTypes);
+        validateOperationBindings(gql, progress);
         //dump(gql, progress);
 
         // Setup Ipto view of things
@@ -131,8 +132,9 @@ public class Configurator {
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
         runtimeService.wire(runtimeWiring, gql, ipto);
+        runtimeService.wireOperations(runtimeWiring, gql);
 
-        // Wire operations
+        // Wire custom operations and/or overrides
         if (null != operationsWireBlock) {
             operationsWireBlock.accept(new OperationsWireParameters(runtimeWiring, runtimeService, repo));
         }
@@ -154,6 +156,62 @@ public class Configurator {
         Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
 
         return new GqlViewpoint(datatypes, attributes, records, templates, unions, operations);
+    }
+
+    private static void validateOperationBindings(
+            GqlViewpoint gql,
+            PrintStream progress
+    ) {
+        for (GqlOperationShape operation : gql.operations().values()) {
+            if (operation.runtimeOperation() != null && !operation.runtimeOperation().isBlank()) {
+                continue;
+            }
+
+            String opRef = operation.typeName() + "::" + operation.operationName();
+            String message;
+
+            if (isAmbiguousWithoutBinding(operation)) {
+                message = "Operation '" + opRef + "' has ambiguous shape without @ipto(operation: ...); "
+                        + "add explicit runtime binding to avoid inference surprises.";
+                log.warn("↯ {}", message);
+                if (progress != null) {
+                    progress.println(message);
+                }
+                throw new ConfigurationException(message);
+            } else {
+                message = "Operation '" + opRef + "' has no @ipto(operation: ...); "
+                        + "runtime inference will be used.";
+                log.info("↯ {}", message);
+                if (progress != null) {
+                    progress.println(message);
+                }
+            }
+        }
+    }
+
+    private static boolean isAmbiguousWithoutBinding(GqlOperationShape operation) {
+        if (operation.parameters().length != 1) {
+            return false;
+        }
+
+        ParameterDefinition parameter = operation.parameters()[0];
+        String parameterName = parameter.parameterName();
+        String outputType = operation.outputTypeName();
+        String parameterType = parameter.parameterType().typeName();
+
+        if ("id".equals(parameterName)) {
+            // Could refer to tenant+unitId or tenant+corrId style identifiers.
+            return true;
+        }
+
+        if ("filter".equals(parameterName) && "Bytes".equals(outputType)) {
+            // Could be SEARCH_RAW or SEARCH_RAW_PAYLOAD.
+            return true;
+        }
+
+        // Most other common signatures are unambiguous.
+        return !("filter".equals(parameterName)
+                || ("data".equals(parameterName) && "Bytes".equals(parameterType)));
     }
 
     private static CatalogViewpoint loadFromCatalog(Repository repo) {

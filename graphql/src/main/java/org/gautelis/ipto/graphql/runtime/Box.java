@@ -17,14 +17,10 @@
 package org.gautelis.ipto.graphql.runtime;
 
 import org.gautelis.ipto.repo.model.Unit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public abstract class Box {
-    private static final Logger log = LoggerFactory.getLogger(Box.class);
-
+public sealed abstract class Box permits AttributeBox {
     protected final Unit unit;
 
     protected Box(Unit unit) {

@@ -70,6 +70,8 @@ public class RuntimeOperators {
 
                     GqlAttributeShape attributeShape = attributes.get(attributeNameForField);
                     boolean isRecord = AttributeType.RECORD.name().equalsIgnoreCase(attributeShape.typeName);
+                    final String resolvedAttributeAlias = attributeNameForField;
+                    final GqlAttributeShape resolvedAttributeShape = attributeShape;
 
                     //log.debug("↯ Wiring field '{}' for record '{}'", fieldName, typeName);
 
@@ -108,10 +110,29 @@ public class RuntimeOperators {
                         // This closure captures its environment, so at runtime
                         // the wiring preamble will be available.
                         //***********************************************************
-                        Box box = env.getSource();
-                        if (null == box) {
-                            log.warn("No box");
+                        Object source = env.getSource();
+                        if (source == null) {
+                            log.warn("No source");
                             return null;
+                        }
+                        if (!(source instanceof Box box)) {
+                            throw new IllegalStateException(
+                                    "Expected Box as GraphQL source for '" + typeName + "." + fieldName
+                                            + "' but got " + source.getClass().getCanonicalName()
+                            );
+                        }
+                        if (!(box instanceof AttributeBox attributeBox)) {
+                            throw new IllegalStateException(
+                                    "Unexpected Box implementation '" + box.getClass().getCanonicalName()
+                                            + "' for '" + typeName + "." + fieldName + "'"
+                            );
+                        }
+
+                        if (resolvedAttributeShape == null) {
+                            throw new IllegalStateException(
+                                    "No attribute shape found for field '" + typeName + "." + fieldName
+                                            + "' using attribute alias '" + resolvedAttributeAlias + "'"
+                            );
                         }
 
                         log.trace("↩ Fetching {}attribute '{}' from record '{}': {}",
@@ -119,40 +140,17 @@ public class RuntimeOperators {
                                 isArray ? fieldName + "[]" : fieldName,
                                 typeName, box.getUnit().getReference());
 
-                        if (isRecord) {
-                            if (box instanceof RecordBox recordBox) {
-                                if (isArray) {
-                                    return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
-                                } else {
-                                    return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
-                                }
-                            } else if (box instanceof AttributeBox attributeBox) { // as is UnitBox
-                                if (isArray) {
-                                    return runtimeService.getAttributeArray(fieldNames, attributeBox);
-                                } else {
-                                    return runtimeService.getAttributeScalar(fieldNames, attributeBox);
-                                }
+                        if (attributeBox instanceof RecordBox recordBox) {
+                            if (isArray) {
+                                return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
                             } else {
-                                log.warn("↩ Unknown box: {}", box.getClass().getCanonicalName());
-                                return null;
+                                return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
                             }
-                        }
-                        else {
-                            if (box instanceof RecordBox recordBox) {
-                                if (isArray) {
-                                    return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
-                                } else {
-                                    return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
-                                }
-                            } else if (box instanceof AttributeBox attributeBox) { // as is UnitBox
-                                if (isArray) {
-                                    return runtimeService.getAttributeArray(fieldNames, attributeBox);
-                                } else {
-                                    return runtimeService.getAttributeScalar(fieldNames, attributeBox);
-                                }
+                        } else {
+                            if (isArray) {
+                                return runtimeService.getAttributeArray(fieldNames, attributeBox);
                             } else {
-                                log.warn("↩ Unknown box: {}", box.getClass().getCanonicalName());
-                                return null;
+                                return runtimeService.getAttributeScalar(fieldNames, attributeBox);
                             }
                         }
                     };
@@ -219,6 +217,38 @@ public class RuntimeOperators {
             } catch (StrictModeWiringException smwe) {
                 log.warn("↯ Could not wire unions for type {}", unionName, smwe);
             }
+        }
+    }
+
+    /* package accessible only */
+    static void wireOperations(
+            RuntimeWiring.Builder runtimeWiring,
+            RuntimeService runtimeService,
+            Configurator.GqlViewpoint gqlViewpoint
+    ) {
+        for (GqlOperationShape operation : gqlViewpoint.operations().values()) {
+            String typeName = operation.typeName();
+            String operationName = operation.operationName();
+            String outputType = operation.outputTypeName();
+            String runtimeOperation = operation.runtimeOperation();
+
+            if (runtimeOperation != null) {
+                String normalized = runtimeOperation.trim().toUpperCase(Locale.ROOT);
+                if ("CUSTOM".equals(normalized) || "MANUAL".equals(normalized)) {
+                    log.info("↯ Skipping auto-wiring for {}::{} (runtime operation: {})", typeName, operationName, runtimeOperation);
+                    continue;
+                }
+            }
+
+            DataFetcher<?> fetcher = env -> {
+                if (log.isTraceEnabled()) {
+                    log.trace("↩ {}::{}({}) : {}", typeName, operationName, env.getArguments(), outputType);
+                }
+                return runtimeService.invokeOperation(operation, env.getArguments());
+            };
+
+            runtimeWiring.type(typeName, t -> t.dataFetcher(operationName, fetcher));
+            log.info("↯ Wiring operation: {}::{}(...) : {}", typeName, operationName, outputType);
         }
     }
 }

@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class RecordBox extends AttributeBox {
+public final class RecordBox extends AttributeBox {
     private static final Logger log = LoggerFactory.getLogger(RecordBox.class);
 
     private final Attribute<Attribute<?>> recordAttribute;

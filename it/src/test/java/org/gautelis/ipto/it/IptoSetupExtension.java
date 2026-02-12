@@ -17,9 +17,6 @@
 package org.gautelis.ipto.it;
 
 import graphql.GraphQL;
-import graphql.schema.DataFetcher;
-import org.gautelis.ipto.graphql.configuration.OperationsWireParameters;
-import org.gautelis.ipto.graphql.model.Query;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.graphql.configuration.Configurator;
@@ -28,13 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStreamReader;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
-
-import static org.gautelis.ipto.graphql.runtime.RuntimeService.headHex;
-import static org.gautelis.ipto.graphql.runtime.RuntimeOperators.MAPPER;
 
 public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver {
     private static final Logger log = LoggerFactory.getLogger(IptoSetupExtension.class);
@@ -95,7 +87,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                                 CONFIG + " not found on classpath next to IptoSetupExtension"
                         )
                 )) {
-                    Optional<GraphQL> g = Configurator.load(repo, reader, IptoEnvironment::wireOperations, System.out);
+                    Optional<GraphQL> g = Configurator.load(repo, reader, null, System.out);
                     if (g.isEmpty()) {
                         throw new IllegalStateException("Failed to load GraphQL configuration");
                     }
@@ -111,184 +103,6 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
 
         @Override
         public void close() {
-        }
-
-        private static void wireOperations(OperationsWireParameters params) {
-            // Query::unitRaw(id : UnitIdentification!) : Bytes
-            {
-                String type = "Query";
-                String operationName = "unitRaw";
-                String parameterName = "id";
-                String outputType = "Bytes";
-
-                DataFetcher<?> rawUnitById = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
-                    return params.runtimeService().loadRawUnit(id.tenantId(), id.unitId());
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitById));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Query::unitsRaw(filter: Filter!) : Bytes
-            {
-                String type = "Query";
-                String operationName = "unitsRaw";
-                String parameterName = "filter";
-                String outputType = "Bytes";
-
-                DataFetcher<?> rawUnitsByFilter = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
-
-                    return params.runtimeService().searchRaw(filter);
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawUnitsByFilter));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Mutations::lagraUnitRaw(data : Bytes!) : Bytes
-            {
-                String type = "Mutation";
-                String operationName = "lagraUnitRaw";
-                String parameterName = "data";
-                String outputType = "Bytes";
-
-                DataFetcher<?> storeJson = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-
-                    Map<String, Object> args = env.getArguments();
-                    byte[] bytes = (byte[]) args.get(parameterName); // Connection to schema
-
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
-                    }
-
-                    return params.runtimeService().storeRawUnit(bytes);
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeJson));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Query::yrkan(id : UnitIdentification!) : Yrkan
-            {
-                String type = "Query";
-                String operationName = "yrkan";
-                String parameterName = "id";
-                String outputType = "Yrkan";
-
-                DataFetcher<?> unitById = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.UnitIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.UnitIdentification.class);
-                    return params.runtimeService().loadUnit(id.tenantId(), id.unitId());
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitById));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Query::yrkanden(filter: Filter!) : [Yrkan]
-            {
-                String type = "Query";
-                String operationName = "yrkanden";
-                String parameterName = "filter";
-                String outputType = "[Yrkan]";
-
-                DataFetcher<?> unitsByFilter = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
-
-                    return params.runtimeService().search(filter);
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, unitsByFilter));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Query::yrkanRaw(id : YrkanIdentification!) : Bytes
-            {
-                String type = "Query";
-                String operationName = "yrkanRaw";
-                String parameterName = "id";
-                String outputType = "Bytes";
-
-                DataFetcher<?> rawPayloadById = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.YrkanIdentification id = MAPPER.convertValue(env.getArgument(parameterName), Query.YrkanIdentification.class);
-                    return params.runtimeService().loadRawPayloadByCorrId(id.tenantId(), UUID.fromString(id.corrId()));
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawPayloadById));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
-
-            // Query::yrkandenRaw(filter: Filter!) : Bytes
-            {
-                String type = "Query";
-                String operationName = "yrkandenRaw";
-                String parameterName = "filter";
-                String outputType = "Bytes";
-
-                DataFetcher<?> rawPayloadsByFilter = env -> {
-                    //**** Executed at runtime **********************************
-                    // This closure captures its environment, so at runtime
-                    // the wiring preamble will be available.
-                    //***********************************************************
-
-                    if (log.isTraceEnabled()) {
-                        log.trace("↩ {}::{}({}) : {}", type, operationName, env.getArguments(), outputType);
-                    }
-
-                    Query.Filter filter = MAPPER.convertValue(env.getArgument(parameterName), Query.Filter.class);
-
-                    return params.runtimeService().searchRawPayload(filter);
-                };
-
-                params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, rawPayloadsByFilter));
-                log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-            }
         }
     }
 }

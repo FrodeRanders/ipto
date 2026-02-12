@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class AttributeBox extends Box {
+public sealed class AttributeBox extends Box permits RecordBox {
     private static final Logger log = LoggerFactory.getLogger(AttributeBox.class);
 
     //---------------------------------------------------------------------

@@ -20,7 +20,11 @@ import com.networknt.schema.*;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.model.CatalogAttribute;
+import org.gautelis.ipto.graphql.model.GqlOperationShape;
+import org.gautelis.ipto.graphql.model.ParameterDefinition;
 import org.gautelis.ipto.graphql.model.Query;
+import org.gautelis.ipto.graphql.model.SchemaOperation;
+import org.gautelis.ipto.graphql.model.TypeDefinition;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
@@ -91,6 +95,351 @@ public class RuntimeService {
         // Operations are wired separately
     }
 
+    public void wireOperations(
+            RuntimeWiring.Builder runtimeWiring,
+            Configurator.GqlViewpoint gqlViewpoint
+    ) {
+        RuntimeOperators.wireOperations(runtimeWiring, this, gqlViewpoint);
+    }
+
+    public Object invokeOperation(
+            GqlOperationShape operation,
+            Map<String, Object> arguments
+    ) {
+        Map<String, Object> typedArguments = coerceArguments(operation, arguments);
+        String runtimeOperation = normalizeRuntimeOperation(operation.runtimeOperation());
+        if (runtimeOperation != null) {
+            return invokeExplicitRuntimeOperation(operation, typedArguments, runtimeOperation);
+        }
+        String outputType = operation.outputTypeName();
+
+        if (operation.category() == SchemaOperation.QUERY) {
+            if (hasSingleParameterNamed(operation, "id")) {
+                Object idValue = typedArguments.get("id");
+                Optional<Query.UnitIdentification> unitIdentification = tryUnitIdentification(idValue);
+                if (unitIdentification.isPresent()) {
+                    Query.UnitIdentification id = unitIdentification.get();
+                    if ("Bytes".equals(outputType)) {
+                        return loadRawUnit(id.tenantId(), id.unitId());
+                    }
+                    return loadUnit(id.tenantId(), id.unitId());
+                }
+
+                Optional<TenantCorrId> corrIdentification = tryTenantCorrId(idValue);
+                if (corrIdentification.isPresent()) {
+                    TenantCorrId id = corrIdentification.get();
+                    if ("Bytes".equals(outputType)) {
+                        return loadRawPayloadByCorrId(id.tenantId(), id.corrId());
+                    }
+                    return loadUnitByCorrId(id.tenantId(), id.corrId());
+                }
+            }
+
+            if (hasSingleParameterNamed(operation, "filter")) {
+                Optional<Query.Filter> filterValue = tryFilter(typedArguments.get("filter"));
+                if (filterValue.isEmpty()) {
+                    throw new IllegalArgumentException("Operation '" + operation.operationName() + "' requires parameter 'filter' with at least tenantId");
+                }
+                Query.Filter filter = filterValue.get();
+                if ("Bytes".equals(outputType)) {
+                    return searchRaw(filter);
+                }
+                return search(filter);
+            }
+        }
+
+        if (operation.category() == SchemaOperation.MUTATION) {
+            if (hasSingleParameterOfType(operation, "Bytes", "data")) {
+                byte[] data = (byte[]) typedArguments.get("data");
+                return storeRawUnit(data);
+            }
+        }
+
+        throw new IllegalArgumentException("No automatic runtime mapping for operation '" + operation.operationName() + "'");
+    }
+
+    private Object invokeExplicitRuntimeOperation(
+            GqlOperationShape operation,
+            Map<String, Object> typedArguments,
+            String runtimeOperation
+    ) {
+        return switch (runtimeOperation) {
+            case "LOAD_UNIT" -> {
+                Query.UnitIdentification id = requiredUnitIdentification(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield loadUnit(id.tenantId(), id.unitId());
+            }
+            case "LOAD_UNIT_RAW" -> {
+                Query.UnitIdentification id = requiredUnitIdentification(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield loadRawUnit(id.tenantId(), id.unitId());
+            }
+            case "LOAD_BY_CORRID" -> {
+                TenantCorrId id = requiredTenantCorrId(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield loadUnitByCorrId(id.tenantId(), id.corrId());
+            }
+            case "LOAD_RAW_PAYLOAD_BY_CORRID" -> {
+                TenantCorrId id = requiredTenantCorrId(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield loadRawPayloadByCorrId(id.tenantId(), id.corrId());
+            }
+            case "SEARCH" -> {
+                Query.Filter filter = requiredFilter(typedArguments, "filter", operation.operationName(), runtimeOperation);
+                yield search(filter);
+            }
+            case "SEARCH_RAW" -> {
+                Query.Filter filter = requiredFilter(typedArguments, "filter", operation.operationName(), runtimeOperation);
+                yield searchRaw(filter);
+            }
+            case "SEARCH_RAW_PAYLOAD" -> {
+                Query.Filter filter = requiredFilter(typedArguments, "filter", operation.operationName(), runtimeOperation);
+                yield searchRawPayload(filter);
+            }
+            case "STORE_RAW_UNIT" -> {
+                byte[] data = requiredBytes(typedArguments, "data", operation.operationName(), runtimeOperation);
+                yield storeRawUnit(data);
+            }
+            default -> throw new IllegalArgumentException("Unknown runtime operation '" + runtimeOperation + "' for operation '" + operation.operationName() + "'");
+        };
+    }
+
+    private String normalizeRuntimeOperation(String runtimeOperation) {
+        if (runtimeOperation == null) {
+            return null;
+        }
+        String normalized = runtimeOperation.trim();
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return normalized.toUpperCase(Locale.ROOT);
+    }
+
+    private Map<String, Object> coerceArguments(
+            GqlOperationShape operation,
+            Map<String, Object> arguments
+    ) {
+        Map<String, Object> coerced = new HashMap<>();
+        for (ParameterDefinition parameter : operation.parameters()) {
+            String name = parameter.parameterName();
+            Object raw = arguments.get(name);
+            if (raw == null) {
+                continue;
+            }
+            TypeDefinition type = parameter.parameterType();
+            coerced.put(name, coerceArgumentValue(type.typeName(), raw));
+        }
+        return coerced;
+    }
+
+    private Object coerceArgumentValue(String typeName, Object raw) {
+        return switch (typeName) {
+            case "UnitIdentification" -> MAPPER.convertValue(raw, Query.UnitIdentification.class);
+            case "Filter" -> MAPPER.convertValue(raw, Query.Filter.class);
+            case "Bytes" -> (raw instanceof byte[] bytes) ? bytes : MAPPER.convertValue(raw, byte[].class);
+            case "Int" -> MAPPER.convertValue(raw, Integer.class);
+            case "Long" -> MAPPER.convertValue(raw, Long.class);
+            case "String" -> MAPPER.convertValue(raw, String.class);
+            case "Boolean" -> MAPPER.convertValue(raw, Boolean.class);
+            case "Float", "Double" -> MAPPER.convertValue(raw, Double.class);
+            default -> raw;
+        };
+    }
+
+    private Query.Filter requiredFilter(
+            Map<String, Object> typedArguments,
+            String parameterName,
+            String operationName,
+            String runtimeOperation
+    ) {
+        Object value = typedArguments.get(parameterName);
+        Optional<Query.Filter> filter = tryFilter(value);
+        if (filter.isPresent()) {
+            return filter.get();
+        }
+        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' of type Filter");
+    }
+
+    private byte[] requiredBytes(
+            Map<String, Object> typedArguments,
+            String parameterName,
+            String operationName,
+            String runtimeOperation
+    ) {
+        Object value = typedArguments.get(parameterName);
+        if (value instanceof byte[] bytes) {
+            return bytes;
+        }
+        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' of type Bytes");
+    }
+
+    private Query.UnitIdentification requiredUnitIdentification(
+            Map<String, Object> typedArguments,
+            String parameterName,
+            String operationName,
+            String runtimeOperation
+    ) {
+        Object value = typedArguments.get(parameterName);
+        Optional<Query.UnitIdentification> id = tryUnitIdentification(value);
+        if (id.isPresent()) {
+            return id.get();
+        }
+        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' with tenantId and unitId");
+    }
+
+    private TenantCorrId requiredTenantCorrId(
+            Map<String, Object> typedArguments,
+            String parameterName,
+            String operationName,
+            String runtimeOperation
+    ) {
+        Object value = typedArguments.get(parameterName);
+        Optional<TenantCorrId> id = tryTenantCorrId(value);
+        if (id.isPresent()) {
+            return id.get();
+        }
+        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' with tenantId and corrId");
+    }
+
+    private Optional<Query.UnitIdentification> tryUnitIdentification(Object value) {
+        if (value instanceof Query.UnitIdentification identification) {
+            return Optional.of(identification);
+        }
+        if (value instanceof Map<?, ?> map) {
+            Integer tenantId = parseInteger(map.get("tenantId"));
+            Long unitId = parseLong(map.get("unitId"));
+            if (tenantId != null && unitId != null) {
+                return Optional.of(new Query.UnitIdentification(tenantId, unitId));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<Query.Filter> tryFilter(Object value) {
+        if (value instanceof Query.Filter filter) {
+            return Optional.of(filter);
+        }
+        if (value instanceof Map<?, ?> map) {
+            Integer tenantId = parseInteger(map.get("tenantId"));
+            if (tenantId == null) {
+                return Optional.empty();
+            }
+            String where = parseString(map.get("where"));
+            Integer offset = parseInteger(map.get("offset"));
+            Integer size = parseInteger(map.get("size"));
+            String orderBy = parseString(map.get("orderBy"));
+            String orderDirection = parseString(map.get("orderDirection"));
+            return Optional.of(
+                    new Query.Filter(
+                            tenantId,
+                            where,
+                            offset != null ? offset : 0,
+                            size != null ? size : 20,
+                            orderBy,
+                            orderDirection
+                    )
+            );
+        }
+        return Optional.empty();
+    }
+
+    private Optional<TenantCorrId> tryTenantCorrId(Object value) {
+        if (value instanceof Query.YrkanIdentification identification) {
+            return tryParseUuid(identification.corrId()).map(corrId -> new TenantCorrId(identification.tenantId(), corrId));
+        }
+        if (value instanceof Map<?, ?> map) {
+            Integer tenantId = parseInteger(map.get("tenantId"));
+            String corrId = parseString(map.get("corrId"));
+            if (tenantId != null && corrId != null) {
+                return tryParseUuid(corrId).map(uuid -> new TenantCorrId(tenantId, uuid));
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<UUID> tryParseUuid(String value) {
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(UUID.fromString(value.trim()));
+        } catch (IllegalArgumentException iae) {
+            return Optional.empty();
+        }
+    }
+
+    private Integer parseInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Integer i) {
+            return i;
+        }
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value instanceof String s && !s.isBlank()) {
+            try {
+                return Integer.parseInt(s.trim());
+            } catch (NumberFormatException nfe) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Long l) {
+            return l;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        if (value instanceof String s && !s.isBlank()) {
+            try {
+                return Long.parseLong(s.trim());
+            } catch (NumberFormatException nfe) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    private String parseString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof String s) {
+            return s;
+        }
+        return value.toString();
+    }
+
+    private record TenantCorrId(int tenantId, UUID corrId) {}
+
+    private boolean hasSingleParameterNamed(
+            GqlOperationShape operation,
+            String parameterName
+    ) {
+        if (operation.parameters().length != 1) {
+            return false;
+        }
+        ParameterDefinition parameter = operation.parameters()[0];
+        return parameterName.equals(parameter.parameterName());
+    }
+
+    private boolean hasSingleParameterOfType(
+            GqlOperationShape operation,
+            String typeName,
+            String parameterName
+    ) {
+        if (operation.parameters().length != 1) {
+            return false;
+        }
+        ParameterDefinition parameter = operation.parameters()[0];
+        return parameterName.equals(parameter.parameterName())
+                && typeName.equals(parameter.parameterType().typeName());
+    }
+
     public Object storeRawUnit(byte[] bytes) {
         log.trace("↪ RuntimeService::storeRawUnit({}...)", headHex(bytes, 16));
 
@@ -138,7 +487,7 @@ public class RuntimeService {
             log.debug("↪ No attributes for unit with id {}.{}", tenantId, unitId);
         }
 
-        return new /* outermost */ UnitBox(unit, attributes);
+        return new /* outermost */ AttributeBox(unit, attributes);
     }
 
     public Box loadUnitByCorrId(int tenantId, UUID corrId) {
@@ -165,7 +514,7 @@ public class RuntimeService {
             log.debug("↪ No attributes for unit identified by correlation ID {} in tenant {}", corrId, tenantId);
         }
 
-        return new /* outermost */ UnitBox(unit, attributes);
+        return new /* outermost */ AttributeBox(unit, attributes);
     }
 
 
@@ -273,8 +622,8 @@ public class RuntimeService {
 
         children.forEach(child -> {
             if (!AttributeType.RECORD.equals(child.getType())) {
-                // Primitive attribute
-                boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
+                // Non-record entries are still represented as attribute maps so field resolution stays uniform.
+                boxes.add(new /* inner */ AttributeBox(/* outer */ box, Map.of(child.getAlias(), child)));
             } else {
                 @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
                 Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;
@@ -351,8 +700,8 @@ public class RuntimeService {
 
         children.forEach(child -> {
             if (!AttributeType.RECORD.equals(child.getType())) {
-                // Primitive attribute
-                boxes.add(new /* inner */ PrimitiveBox(/* outer */ box, child, child.getValueVector()));
+                // Non-record entries are still represented as attribute maps so field resolution stays uniform.
+                boxes.add(new /* inner */ AttributeBox(/* outer */ box, Map.of(child.getAlias(), child)));
             } else {
                 @SuppressWarnings("unchecked") // since child _is_ RECORD, i.e. Attribute<Attribute<?>>
                 Attribute<Attribute<?>> childAsRecord =  (Attribute<Attribute<?>>) child;

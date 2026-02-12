@@ -59,6 +59,7 @@ are used to define units.
 directive @use(attribute: Attributes!) on FIELD_DEFINITION
 directive @template(name: String) on OBJECT
 directive @record(attribute: Attributes!) on OBJECT
+directive @ipto(operation: String!) on FIELD_DEFINITION
 
 ##############  basic data types ############################
 enum DataTypes @datatypeRegistry {
@@ -547,18 +548,18 @@ input Filter {
 
 ##############  Queries ###########################################
 type Query {
-    yrkan(id : UnitIdentification!) : Yrkan
-    yrkanRaw(id : YrkanIdentification!) : Bytes
-    yrkanden(filter: Filter!) : [Yrkan]
-    yrkandenRaw(filter: Filter!) : Bytes
+    yrkan(id : UnitIdentification!) : Yrkan @ipto(operation: "LOAD_UNIT")
+    yrkanRaw(id : YrkanIdentification!) : Bytes @ipto(operation: "LOAD_RAW_PAYLOAD_BY_CORRID")
+    yrkanden(filter: Filter!) : [Yrkan] @ipto(operation: "SEARCH")
+    yrkandenRaw(filter: Filter!) : Bytes @ipto(operation: "SEARCH_RAW_PAYLOAD")
 
-    unitRaw(id : UnitIdentification!) : Bytes
-    unitsRaw(filter: Filter!) : Bytes
+    unitRaw(id : UnitIdentification!) : Bytes @ipto(operation: "LOAD_UNIT_RAW")
+    unitsRaw(filter: Filter!) : Bytes @ipto(operation: "SEARCH_RAW")
 }
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraYrkanRaw(tenantId : Int!, data : Bytes!) : Bytes
+    lagraYrkanRaw(tenantId : Int!, data : Bytes!) : Bytes @ipto(operation: "CUSTOM")
 
-    lagraUnitRaw(data : Bytes!) : Bytes
+    lagraUnitRaw(data : Bytes!) : Bytes @ipto(operation: "STORE_RAW_UNIT")
 }
