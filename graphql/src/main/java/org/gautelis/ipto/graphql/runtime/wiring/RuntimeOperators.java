@@ -287,7 +287,7 @@ public class RuntimeOperators {
             }
 
             runtimeWiring.type(typeName, t -> t.dataFetcher(operationName, fetcher));
-            
+
             if (operation.category() == SchemaOperation.SUBSCRIPTION) {
                 log.warn(
                         "↯ Wiring subscription scaffold: {}::{}(...) : {} (policy={})",

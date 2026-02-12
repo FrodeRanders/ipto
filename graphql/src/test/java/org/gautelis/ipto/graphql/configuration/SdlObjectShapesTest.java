@@ -16,6 +16,7 @@
  */
 package org.gautelis.ipto.graphql.configuration;
 
+import graphql.language.ObjectTypeDefinition;
 import graphql.schema.idl.SchemaParser;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.graphql.model.SchemaOperation;
@@ -37,19 +38,19 @@ class SdlObjectShapesTest {
                   mutation: RootMutation
                   subscription: RootSubscription
                 }
-                                
+                
                 type RootQuery {
                   ping: String
                 }
-                                
+               
                 type RootMutation {
                   mutate: String
                 }
-                                
+                
                 type RootSubscription {
                   events: String
                 }
-                                
+                
                 type DomainType {
                   id: String
                 }
@@ -74,11 +75,11 @@ class SdlObjectShapesTest {
                 schema {
                   query: RootQuery
                 }
-                                
+                
                 type RootQuery {
                   ping: String
                 }
-                                
+                
                 type Order {
                   id: String
                 }
@@ -87,7 +88,7 @@ class SdlObjectShapesTest {
         TypeDefinitionRegistry registry = new SchemaParser().parse(sdl);
         List<String> typeNames = SdlObjectShapes.domainObjectTypes(registry)
                 .stream()
-                .map(type -> type.getName())
+                .map(ObjectTypeDefinition::getName)
                 .toList();
 
         assertFalse(typeNames.contains("RootQuery"));
