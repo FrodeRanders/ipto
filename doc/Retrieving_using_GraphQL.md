@@ -1,5 +1,16 @@
 ### Retrieving data using GraphQL
 
+#### Subscription wiring policy
+
+When SDL defines `Subscription` operations, runtime subscription execution is currently not implemented.
+
+- Default behavior is `scaffold`, which wires subscription fields but raises `UnsupportedOperationException` when executed.
+- Set `ipto.graphql.subscription.policy=fail_fast` (or `IPTO_GRAPHQL_SUBSCRIPTION_POLICY=fail_fast`) to fail startup if any subscription field is present.
+
+Accepted policy values:
+- `scaffold` (`lenient`, `runtime_error`)
+- `fail_fast` (`fail-fast`, `strict`)
+
 #### Retrieve two units
 ```graphql
 query Unit {

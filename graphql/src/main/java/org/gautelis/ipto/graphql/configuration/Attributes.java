@@ -171,13 +171,13 @@ public final class Attributes {
                         boolean isArray = !rs.getBoolean("scalar"); // Note negation
 
                         CatalogAttribute attribute = new CatalogAttribute(
+                                attributeId,
                                 alias,
                                 attributeName,
                                 qualifiedName,
                                 AttributeType.of(attributeTypeId),
                                 isArray
                         );
-                        attribute.setAttrId(attributeId);
                         attributes.put(alias, attribute);
                     }
                 }

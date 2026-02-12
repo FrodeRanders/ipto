@@ -29,36 +29,16 @@ package org.gautelis.ipto.graphql.model;
  *   ^                          ^              ^                   ^                    ^                       ^
  *   | (a)                      | (c)          | (d)               | (e)                | (f)                   | (g)
  */
-public class GqlAttributeShape {
-    public final String alias;       // (a)
-    public final String typeName;    // (c)
-    public final boolean isArray;    // (d)
-    public final String name;        // (e)
-    public final String qualName;    // (f)
-    public final String description; // (g)
-
-    public GqlAttributeShape(
-            String alias,
-            String typeName,
-            boolean isArray,
-            String name,
-            String qualName,
-            String description
-    ) {
-        this.alias = alias;
-        this.typeName = typeName;
-        this.isArray = isArray;
-        this.name = name;
-        this.qualName = qualName;
-        this.description = description;
-    }
-
-    public boolean equals(CatalogAttribute other) {
-        return alias.equals(other.alias())
-            && name.equals(other.attrName())
-            && qualName.equals(other.qualifiedName())
-            && typeName.equals(other.attrType().name())
-            && isArray == other.isArray();
+public record GqlAttributeShape(
+        String alias,       // (a)
+        String typeName,    // (c)
+        boolean isArray,    // (d)
+        String name,        // (e)
+        String qualName,    // (f)
+        String description  // (g)
+) {
+    public AttributeKey key() {
+        return new AttributeKey(alias, name, qualName);
     }
 
     @Override

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.graphql.runtime;
+package org.gautelis.ipto.graphql.runtime.wiring;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.TypeResolver;
@@ -22,6 +22,10 @@ import graphql.schema.idl.RuntimeWiring;
 import graphql.schema.idl.errors.StrictModeWiringException;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.model.*;
+import org.gautelis.ipto.graphql.runtime.box.AttributeBox;
+import org.gautelis.ipto.graphql.runtime.box.Box;
+import org.gautelis.ipto.graphql.runtime.box.RecordBox;
+import org.gautelis.ipto.graphql.runtime.service.RuntimeService;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,14 +39,21 @@ public class RuntimeOperators {
     public static final ObjectMapper MAPPER = new ObjectMapper();
 
     /* package accessible only */
-    static void wireRecords(
+    public static void wireRecords(
             RuntimeWiring.Builder runtimeWiring,
             RuntimeService runtimeService,
             Configurator.GqlViewpoint gqlViewpoint
     ) {
-        Map<String, GqlAttributeShape> attributes = gqlViewpoint.attributes();
+        // Pre-index by alias/type name to keep runtime fetchers simple and fast.
+        Map<String, GqlAttributeShape> attributes = new HashMap<>();
+        for (GqlAttributeShape shape : gqlViewpoint.attributes().values()) {
+            attributes.put(shape.alias(), shape);
+        }
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
-        Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
+        Map<String, GqlRecordShape> gqlRecords = new HashMap<>();
+        for (GqlRecordShape shape : gqlViewpoint.records().values()) {
+            gqlRecords.put(shape.typeName(), shape);
+        }
 
         for (String key : gqlRecords.keySet()) {
             GqlRecordShape gqlRecord = gqlRecords.get(key);
@@ -63,13 +74,14 @@ public class RuntimeOperators {
 
                     String attributeNameForField = null;
                     for (GqlAttributeShape shape : attributes.values()) {
-                        if (shape.name.equals(backingAttributeName)) {
-                            attributeNameForField = shape.alias; // may be same as fieldName
+                        if (shape.name().equals(backingAttributeName)) {
+                            // GraphQL field names and repo attribute aliases may differ.
+                            attributeNameForField = shape.alias(); // may be same as fieldName
                         }
                     }
 
                     GqlAttributeShape attributeShape = attributes.get(attributeNameForField);
-                    boolean isRecord = AttributeType.RECORD.name().equalsIgnoreCase(attributeShape.typeName);
+                    boolean isRecord = AttributeType.RECORD.name().equalsIgnoreCase(attributeShape.typeName());
                     final String resolvedAttributeAlias = attributeNameForField;
                     final GqlAttributeShape resolvedAttributeShape = attributeShape;
 
@@ -87,6 +99,8 @@ public class RuntimeOperators {
                     if (null != union) {
                         // This field refers to a union type, so the
                         // actual instances will be of a union member type.
+                        // We add all member record aliases so lookups can resolve
+                        // attribute storage keyed by concrete member attribute names.
                         List<String> unionMemberTypes = union.members().stream().map(UnionMember::memberType).toList();
                         log.debug("↯ Record '{}' contains a union field '{} : {}' with members {}",
                                 typeName, fieldName, union.unionName(), unionMemberTypes
@@ -141,12 +155,14 @@ public class RuntimeOperators {
                                 typeName, box.getUnit().getReference());
 
                         if (attributeBox instanceof RecordBox recordBox) {
+                            // RecordBox means field names target attributes inside a nested record value.
                             if (isArray) {
                                 return runtimeService.getValueArray(fieldNames, recordBox, isMandatory);
                             } else {
                                 return runtimeService.getValueScalar(fieldNames, recordBox, isMandatory);
                             }
                         } else {
+                            // AttributeBox means field names target top-level unit attributes.
                             if (isArray) {
                                 return runtimeService.getAttributeArray(fieldNames, attributeBox);
                             } else {
@@ -164,12 +180,15 @@ public class RuntimeOperators {
     }
 
     /* package accessible only */
-    static void wireUnions(
+    public static void wireUnions(
             RuntimeWiring.Builder runtimeWiring,
             Configurator.GqlViewpoint gqlViewpoint
     ) {
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
-        Map<String, GqlRecordShape> gqlRecords = gqlViewpoint.records();
+        Map<String, GqlRecordShape> gqlRecords = new HashMap<>();
+        for (GqlRecordShape shape : gqlViewpoint.records().values()) {
+            gqlRecords.put(shape.typeName(), shape);
+        }
 
         for (String key : gqlUnions.keySet()) {
             GqlUnionShape  gqlUnion = gqlUnions.get(key);
@@ -221,34 +240,65 @@ public class RuntimeOperators {
     }
 
     /* package accessible only */
-    static void wireOperations(
+    public static void wireOperations(
             RuntimeWiring.Builder runtimeWiring,
             RuntimeService runtimeService,
-            Configurator.GqlViewpoint gqlViewpoint
+            Configurator.GqlViewpoint gqlViewpoint,
+            SubscriptionWiringPolicy subscriptionWiringPolicy
     ) {
         for (GqlOperationShape operation : gqlViewpoint.operations().values()) {
             String typeName = operation.typeName();
             String operationName = operation.operationName();
             String outputType = operation.outputTypeName();
-            String runtimeOperation = operation.runtimeOperation();
+            RuntimeOperation runtimeOperation = operation.runtimeOperation();
 
-            if (runtimeOperation != null) {
-                String normalized = runtimeOperation.trim().toUpperCase(Locale.ROOT);
-                if ("CUSTOM".equals(normalized) || "MANUAL".equals(normalized)) {
-                    log.info("↯ Skipping auto-wiring for {}::{} (runtime operation: {})", typeName, operationName, runtimeOperation);
-                    continue;
-                }
+            if (runtimeOperation == RuntimeOperation.CUSTOM || runtimeOperation == RuntimeOperation.MANUAL) {
+                log.info("↯ Skipping auto-wiring for {}::{} (runtime operation: {})", typeName, operationName, runtimeOperation);
+                continue;
             }
 
-            DataFetcher<?> fetcher = env -> {
-                if (log.isTraceEnabled()) {
-                    log.trace("↩ {}::{}({}) : {}", typeName, operationName, env.getArguments(), outputType);
+            DataFetcher<?> fetcher;
+            if (operation.category() == SchemaOperation.SUBSCRIPTION) {
+                // Subscription shapes are accepted in SDL, but runtime delivery is not implemented yet.
+                if (subscriptionWiringPolicy == SubscriptionWiringPolicy.FAIL_FAST) {
+                    throw new IllegalStateException(
+                            "Subscription operation '" + typeName + "::" + operationName + "' is defined in SDL, "
+                                    + "but runtime subscription support is not implemented. "
+                                    + "Set " + SubscriptionWiringPolicy.PROPERTY + "=scaffold "
+                                    + "or " + SubscriptionWiringPolicy.ENV + "=scaffold to keep scaffolded runtime errors."
+                    );
                 }
-                return runtimeService.invokeOperation(operation, env.getArguments());
-            };
+                fetcher = unsupportedSubscriptionFetcher(typeName, operationName);
+            } else {
+                fetcher = env -> {
+                    if (log.isTraceEnabled()) {
+                        log.trace("↩ {}::{}({}) : {}", typeName, operationName, env.getArguments(), outputType);
+                    }
+                    return runtimeService.invokeOperation(operation, env.getArguments());
+                };
+            }
 
             runtimeWiring.type(typeName, t -> t.dataFetcher(operationName, fetcher));
-            log.info("↯ Wiring operation: {}::{}(...) : {}", typeName, operationName, outputType);
+            if (operation.category() == SchemaOperation.SUBSCRIPTION) {
+                log.warn(
+                        "↯ Wiring subscription scaffold: {}::{}(...) : {} (policy={})",
+                        typeName, operationName, outputType, subscriptionWiringPolicy
+                );
+            } else {
+                log.info("↯ Wiring operation: {}::{}(...) : {}", typeName, operationName, outputType);
+            }
         }
+    }
+
+    private static DataFetcher<?> unsupportedSubscriptionFetcher(
+            String typeName,
+            String operationName
+    ) {
+        return env -> {
+            throw new UnsupportedOperationException(
+                    "Subscription operation '" + typeName + "::" + operationName
+                            + "' is defined but runtime subscription support is not implemented"
+            );
+        };
     }
 }

@@ -17,7 +17,7 @@
 package org.gautelis.ipto.graphql.configuration;
 
 import graphql.language.*;
-import org.gautelis.ipto.graphql.runtime.*;
+import org.gautelis.ipto.graphql.runtime.service.RuntimeService;
 import org.gautelis.ipto.repo.exceptions.BaseException;
 import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import graphql.GraphQL;
@@ -29,6 +29,7 @@ import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.graphql.runtime.scalars.BytesScalar;
 import org.gautelis.ipto.graphql.runtime.scalars.DateTimeScalar;
 import org.gautelis.ipto.graphql.runtime.scalars.LongScalar;
+import org.gautelis.ipto.graphql.runtime.wiring.SubscriptionWiringPolicy;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.KnownAttributes;
@@ -38,9 +39,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
 import java.io.Reader;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -50,18 +48,18 @@ public class Configurator {
 
     public record GqlViewpoint(
             Map<String, GqlDatatypeShape> datatypes,
-            Map<String, GqlAttributeShape> attributes,
-            Map<String, GqlRecordShape> records,
-            Map<String, GqlTemplateShape> templates,
+            Map<AttributeKey, GqlAttributeShape> attributes,
+            Map<RecordKey, GqlRecordShape> records,
+            Map<TemplateKey, GqlTemplateShape> templates,
             Map<String, GqlUnionShape> unions,
-            Map<String, GqlOperationShape> operations
+            Map<OperationKey, GqlOperationShape> operations
     ) {}
 
     public record CatalogViewpoint(
             Map<String, CatalogDatatype> datatypes,
-            Map<String, CatalogAttribute> attributes,
-            Map<String, CatalogRecord> records,
-            Map<String, CatalogTemplate> templates
+            Map<AttributeKey, CatalogAttribute> attributes,
+            Map<RecordKey, CatalogRecord> records,
+            Map<TemplateKey, CatalogTemplate> templates
     ) {}
 
     private Configurator() {
@@ -95,44 +93,22 @@ public class Configurator {
                 .scalar(DateTimeScalar.INSTANCE)
                 .scalar(BytesScalar.INSTANCE);
 
-        // Determine queries, mutations and subscriptions
-        Map<String, SchemaOperation> operationTypes = new HashMap<>();
-
-        Optional<SchemaDefinition> _schemaDefinition = registry.schemaDefinition();
-        if (_schemaDefinition.isPresent()) {
-            SchemaDefinition schemaDefinition = _schemaDefinition.get();
-
-            List<OperationTypeDefinition> otds = schemaDefinition.getOperationTypeDefinitions();
-            for (OperationTypeDefinition otd : otds) {
-                SchemaOperation operationType = switch (otd.getName()) {
-                    case "query" -> SchemaOperation.QUERY;
-                    case "mutation" -> SchemaOperation.MUTATION;
-                    case "subscription" -> SchemaOperation.SUBSCRIPTION;
-                    default -> null;
-                };
-                if (null == operationType) {
-                    log.warn("↯ Undefined operation type '{}' -- ignoring", otd.getName());
-                    continue;
-                }
-                operationTypes.put(otd.getTypeName().getName(), operationType);
-            }
-        }
+        // Determine operation roots (defaults + schema overrides)
+        Map<String, SchemaOperation> operationTypes = SdlObjectShapes.operationTypeMap(registry);
 
         // Setup GraphQL SDL view of things
         GqlViewpoint gql = loadFromFile(registry, operationTypes);
         validateOperationBindings(gql, progress);
-        //dump(gql, progress);
 
         // Setup Ipto view of things
         CatalogViewpoint ipto = loadFromCatalog(repo);
-        //dump(ipto, progress);
 
         // Reconcile differences, i.e. create stuff if needed
         reconcile(repo, gql, ipto, progress);
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
         runtimeService.wire(runtimeWiring, gql, ipto);
-        runtimeService.wireOperations(runtimeWiring, gql);
+        runtimeService.wireOperations(runtimeWiring, gql, SubscriptionWiringPolicy.resolve());
 
         // Wire custom operations and/or overrides
         if (null != operationsWireBlock) {
@@ -148,79 +124,18 @@ public class Configurator {
     }
 
     private static GqlViewpoint loadFromFile(TypeDefinitionRegistry registry, Map<String, SchemaOperation> operationTypes) {
-        Map<String, GqlDatatypeShape> datatypes = Datatypes.derive(registry);
-        Map<String, GqlAttributeShape> attributes = Attributes.derive(registry, datatypes);
-        Map<String, GqlRecordShape> records = Records.derive(registry, attributes);
-        Map<String, GqlTemplateShape> templates = Templates.derive(registry, attributes);
-        Map<String, GqlUnionShape> unions = Unions.derive(registry);
-        Map<String, GqlOperationShape> operations  = Operations.derive(registry, operationTypes);
-
-        return new GqlViewpoint(datatypes, attributes, records, templates, unions, operations);
+        return ViewpointLoader.loadFromFile(registry, operationTypes);
     }
 
     private static void validateOperationBindings(
             GqlViewpoint gql,
             PrintStream progress
     ) {
-        for (GqlOperationShape operation : gql.operations().values()) {
-            if (operation.runtimeOperation() != null && !operation.runtimeOperation().isBlank()) {
-                continue;
-            }
-
-            String opRef = operation.typeName() + "::" + operation.operationName();
-            String message;
-
-            if (isAmbiguousWithoutBinding(operation)) {
-                message = "Operation '" + opRef + "' has ambiguous shape without @ipto(operation: ...); "
-                        + "add explicit runtime binding to avoid inference surprises.";
-                log.warn("↯ {}", message);
-                if (progress != null) {
-                    progress.println(message);
-                }
-                throw new ConfigurationException(message);
-            } else {
-                message = "Operation '" + opRef + "' has no @ipto(operation: ...); "
-                        + "runtime inference will be used.";
-                log.info("↯ {}", message);
-                if (progress != null) {
-                    progress.println(message);
-                }
-            }
-        }
-    }
-
-    private static boolean isAmbiguousWithoutBinding(GqlOperationShape operation) {
-        if (operation.parameters().length != 1) {
-            return false;
-        }
-
-        ParameterDefinition parameter = operation.parameters()[0];
-        String parameterName = parameter.parameterName();
-        String outputType = operation.outputTypeName();
-        String parameterType = parameter.parameterType().typeName();
-
-        if ("id".equals(parameterName)) {
-            // Could refer to tenant+unitId or tenant+corrId style identifiers.
-            return true;
-        }
-
-        if ("filter".equals(parameterName) && "Bytes".equals(outputType)) {
-            // Could be SEARCH_RAW or SEARCH_RAW_PAYLOAD.
-            return true;
-        }
-
-        // Most other common signatures are unambiguous.
-        return !("filter".equals(parameterName)
-                || ("data".equals(parameterName) && "Bytes".equals(parameterType)));
+        ViewpointLoader.validateOperationBindings(gql, progress);
     }
 
     private static CatalogViewpoint loadFromCatalog(Repository repo) {
-        Map<String, CatalogDatatype> datatypes = Datatypes.read(repo);
-        Map<String, CatalogAttribute> attributes = Attributes.read(repo);
-        Map<String, CatalogRecord> records = Records.read(repo);
-        Map<String, CatalogTemplate> templates = Templates.read(repo);
-
-        return new CatalogViewpoint(datatypes, attributes, records, templates);
+        return ViewpointLoader.loadFromCatalog(repo);
     }
 
     private static void reconcile(
@@ -229,406 +144,11 @@ public class Configurator {
             CatalogViewpoint catalogViewpoint,
             PrintStream progress
     ) {
-
-        // --- Datatypes ---
-        for (String key : gqlViewpoint.datatypes().keySet()) {
-            if (!catalogViewpoint.datatypes().containsKey(key)) {
-                log.error("↯ Datatype '{}' not found in catalog", key);
-                progress.println("Datatype '" + key + "' not found in catalog");
-                continue;
-            }
-            GqlDatatypeShape gqlDatatype = gqlViewpoint.datatypes().get(key);
-            CatalogDatatype iptoDatatype = catalogViewpoint.datatypes().get(key);
-            if (!gqlDatatype.equals(iptoDatatype)) {
-                log.error("↯ GraphQL SDL and catalog datatype do not match: {} != {}", gqlDatatype, iptoDatatype);
-                progress.println("GraphQL SDL and catalog datatype do not match: " + gqlDatatype +  " != " + iptoDatatype);
-            }
-        }
-
-        // Attributes
-        for (String key : gqlViewpoint.attributes().keySet()) {
-            if (!catalogViewpoint.attributes().containsKey(key)) {
-                log.info("↯ Reconciling attribute '{}'...", key);
-                progress.println("Reconciling attribute '" + key + "'...");
-
-                CatalogAttribute attribute = addAttribute(repo, gqlViewpoint.attributes().get(key), progress);
-                catalogViewpoint.attributes().put(key, attribute); // replace
-                continue;
-            }
-            GqlAttributeShape gqlAttribute = gqlViewpoint.attributes().get(key);
-            CatalogAttribute iptoAttribute = catalogViewpoint.attributes().get(key);
-            if (!gqlAttribute.equals(iptoAttribute)) {
-                log.error("↯ GraphQL SDL and catalog attribute do not match: {} != {}", gqlAttribute, iptoAttribute);
-                progress.println("GraphQL SDL and catalog attribute do not match: " + gqlAttribute +  " != " + iptoAttribute);
-            }
-        }
-
-        // Records
-        for (String key : gqlViewpoint.records().keySet()) {
-            if (!catalogViewpoint.records().containsKey(key)) {
-                log.info("↯ Reconciling record '{}'...", key);
-                progress.println("Reconciling record '" + key + "'...");
-
-                CatalogRecord record = addRecord(
-                        repo,
-                        gqlViewpoint.records().get(key),
-                        gqlViewpoint.attributes(),
-                        catalogViewpoint.attributes(),
-                        progress
-                );
-                catalogViewpoint.records().put(key, record); // replace
-                continue;
-            }
-            GqlRecordShape gqlRecord = gqlViewpoint.records().get(key);
-            CatalogRecord iptoRecord = catalogViewpoint.records().get(key);
-            if (!gqlRecord.equals(iptoRecord)) {
-                log.error("↯ GraphQL SDL and catalog record do not match: {} != {}", gqlRecord, iptoRecord);
-                progress.println("GraphQL SDL and catalog record do not match: " + gqlRecord +  " != " + iptoRecord);
-            }
-        }
-
-        // Templates
-        for (String key : gqlViewpoint.templates.keySet()) {
-            if (!catalogViewpoint.templates().containsKey(key)) {
-                log.info("↯ Reconciling template '{}'...", key);
-                progress.println("Reconciling template '" + key + "'...");
-
-                CatalogTemplate template = addUnitTemplate(
-                        repo,
-                        gqlViewpoint.templates.get(key),
-                        catalogViewpoint.attributes(),
-                        progress
-                );
-                catalogViewpoint.templates().put(key, template); // replace
-                continue;
-            }
-            GqlTemplateShape gqlTemplate = gqlViewpoint.templates.get(key);
-            CatalogTemplate iptoTemplate = catalogViewpoint.templates().get(key);
-
-            if (!gqlTemplate.equals(iptoTemplate)) {
-                log.error("↯ GraphQL SDL and catalog template do not match: {} != {}", gqlTemplate, iptoTemplate);
-                progress.println("GraphQL SDL and catalog template do not match: " + gqlTemplate +  " != " + iptoTemplate);
-            }
-        }
-
+        CatalogReconciler.reconcile(repo, gqlViewpoint, catalogViewpoint, progress);
         if (log.isTraceEnabled()) {
             dump(gqlViewpoint, progress);
             dump(catalogViewpoint, progress);
         }
-    }
-
-    private static CatalogAttribute addAttribute(
-            Repository repo,
-            GqlAttributeShape gqlAttribute,
-            PrintStream progress
-    ) {
-        // NOTE: attribute.attrId is adjusted later, after writing to repo_attribute
-        CatalogAttribute attribute = new CatalogAttribute(
-                gqlAttribute.alias,
-                gqlAttribute.name,
-                gqlAttribute.qualName,
-                AttributeType.of(gqlAttribute.typeName),
-                gqlAttribute.isArray
-        );
-
-        try {
-            Optional<KnownAttributes.AttributeInfo> info = repo.createAttribute(
-                    attribute.alias(),
-                    attribute.attrName(),
-                    attribute.qualifiedName(),
-                    attribute.attrType(),
-                    attribute.isArray()
-            );
-
-            if (info.isPresent()) {
-                attribute.setAttrId(info.get().id);
-                log.info("↯ Loaded attribute '{}' (attrid={}, name='{}', qual-name='{}')", attribute.alias(), attribute.attrId(), attribute.attrName(), attribute.qualifiedName());
-                storeAttributeDescription(repo, attribute.attrId(), gqlAttribute);
-            } else {
-                log.error("↯ Failed to store attribute '{}' ({}, '{}')", attribute.alias(), attribute.attrId(), gqlAttribute.name);
-            }
-        } catch (BaseException ex) {
-            log.error("↯ Failed to store attribute '{}' ({}, '{}'): {}", attribute.alias(), attribute.attrId(), gqlAttribute.name, ex.getMessage(), ex);
-        }
-
-        return attribute;
-    }
-
-    private static void storeAttributeDescription(Repository repo, int attrId, GqlAttributeShape gqlAttribute) {
-        if (gqlAttribute == null || gqlAttribute.description == null || gqlAttribute.description.isBlank()) {
-            return;
-        }
-
-        String alias = gqlAttribute.name != null ? gqlAttribute.name : gqlAttribute.alias;
-        if (alias == null || alias.isBlank()) {
-            return;
-        }
-
-        String sql = """
-                INSERT INTO repo_attribute_description (attrid, lang, alias, description)
-                VALUES (?,?,?,?)
-                """;
-
-        try {
-            repo.withConnection(conn -> {
-                Database.usePreparedStatement(conn, sql, pStmt -> {
-                    try {
-                        int i = 0;
-                        pStmt.setInt(++i, attrId);
-                        pStmt.setString(++i, DEFAULT_DESCRIPTION_LANG);
-                        pStmt.setString(++i, alias);
-                        pStmt.setString(++i, gqlAttribute.description);
-                        Database.executeUpdate(pStmt);
-                    } catch (SQLException sqle) {
-                        String sqlState = sqle.getSQLState();
-                        if (sqlState != null && sqlState.startsWith("23")) {
-                            log.info("↯ Attribute description already exists for attrId={} lang={}", attrId, DEFAULT_DESCRIPTION_LANG);
-                            return;
-                        }
-                        throw sqle;
-                    }
-                });
-            });
-        } catch (SQLException sqle) {
-            log.warn("↯ Failed to store attribute description for attrId={}: {}", attrId, Database.squeeze(sqle));
-        }
-    }
-
-    private static CatalogRecord addRecord(
-            Repository repo,
-            GqlRecordShape gqlRecord,
-            Map<String, GqlAttributeShape> gqlAttributes,
-            Map<String, CatalogAttribute> catalogAttributes,
-            PrintStream progress
-    ) {
-
-        String recordName = gqlRecord.typeName();
-        String recordAttributeName = gqlRecord.attributeEnumName();
-        List<GqlFieldShape> fields = gqlRecord.fields();
-
-        // Determine attrId of record attribute
-        CatalogAttribute recordAttribute = catalogAttributes.get(recordAttributeName);
-        if (null == recordAttribute) {
-            log.warn("↯ No matching record attribute in catalog: {}", recordAttributeName);
-            throw new RuntimeException("No matching record attribute: " + recordAttributeName);
-        }
-
-        final int recordAttributeId = recordAttribute.attrId();
-
-        CatalogRecord catalogRecord = new CatalogRecord(recordName);
-        catalogRecord.setRecordId(recordAttributeId);
-
-        // repo_record_template (
-        //    recordid  INT,
-        //    name      TEXT,
-        // )
-        //
-        // repo_record_template_elements (
-        //    recordid   INT,     -- attribute id of record attribute
-        //    idx        INT,
-        //    attrid     INT,     -- sub-attribute
-        //    alias      TEXT,
-        //    mandatory  BOOLEAN
-        // )
-        String recordSql = """
-                        INSERT INTO repo_record_template (recordid, name)
-                        VALUES (?,?)
-                        """;
-
-        String elementsSql = """
-                        INSERT INTO repo_record_template_elements (recordid, attrid, idx, alias)
-                        VALUES (?,?,?,?)
-                        """;
-
-        try {
-
-            //
-            repo.withConnection(conn -> {
-                try {
-                    conn.setAutoCommit(false);
-
-                    // Table: repo_record_template
-                    Database.usePreparedStatement(conn, recordSql, pStmt -> {
-                        try {
-                            int i = 0;
-                            pStmt.setInt(++i, recordAttributeId);
-                            pStmt.setString(++i, catalogRecord.recordName);
-
-                            Database.execute(pStmt);
-
-                        } catch (SQLException sqle) {
-                            String sqlState = sqle.getSQLState();
-                            conn.rollback();
-
-                            if (sqlState.startsWith("23")) {
-                                // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                                log.info("↯ Record '{}' seems to already have been loaded", recordName);
-                            } else {
-                                throw sqle;
-                            }
-                        }
-                    });
-
-                    // Table: repo_record_template_elements
-                    Database.usePreparedStatement(conn, elementsSql, pStmt -> {
-                        int idx = 0; // index into record
-                        for (GqlFieldShape field : fields) {
-                            // Determine attrId of field in record
-                            GqlAttributeShape fieldAttribute = gqlAttributes.get(field.fieldName());
-
-                            if (null == fieldAttribute) {
-                                log.warn("↯ No matching field attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
-                                continue;
-                            }
-
-                            CatalogAttribute attribute = catalogAttributes.get(field.fieldName());
-                            if (null == attribute) {
-                                log.warn("↯ No matching catalog attribute: '{}' (name='{}')", field.fieldName(), field.usedAttributeName());
-                                continue;
-                            }
-
-                            //
-                            pStmt.clearParameters();
-
-                            int i = 0;
-                            pStmt.setInt(++i, catalogRecord.recordAttrId);
-                            pStmt.setInt(++i, attribute.attrId());
-                            pStmt.setInt(++i, ++idx);
-                            pStmt.setString(++i, field.fieldName());
-
-                            Database.execute(pStmt);
-                            catalogRecord.addField(attribute);
-                        }
-                    });
-
-                    conn.commit();
-                    log.info("↯ Loaded record '{}'", recordName);
-
-                } catch (Throwable t) {
-                    log.error("↯ Failed to store record '{}': {}", recordName, t.getMessage(), t);
-                    if (t.getCause() instanceof SQLException sqle) {
-                        log.error("  ^--- {}", Database.squeeze(sqle));
-                        String sqlState = sqle.getSQLState();
-
-                        try {
-                            conn.rollback();
-
-                        } catch (SQLException rbe) {
-                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
-                        }
-
-                        if (sqlState.startsWith("23")) {
-                            // 23505 : duplicate key value violates unique constraint "repo_record_template_pk"
-                            log.info("↯ Record '{}' seems to already have been loaded", recordName);
-                        }
-                    }
-                }
-            });
-        } catch (SQLException sqle) {
-            log.error("↯ Failed to store record: {}", Database.squeeze(sqle));
-        }
-
-        return catalogRecord;
-    }
-
-    private static CatalogTemplate addUnitTemplate(
-            Repository repo,
-            GqlTemplateShape gqlUnitTemplate,
-            Map<String, CatalogAttribute> catalogAttributes,
-            PrintStream progress
-    ) {
-
-        // NOTE: template.templateId is adjusted later, after writing to repo_unit_template
-        CatalogTemplate template = new CatalogTemplate(gqlUnitTemplate.typeName());
-
-        String templateSql = """
-                        INSERT INTO repo_unit_template (name)
-                        VALUES (?)
-                        """;
-
-        String elementsSql = """
-                        INSERT INTO repo_unit_template_elements (templateid, attrid, idx, alias)
-                        VALUES (?,?,?,?)
-                        """;
-
-        try {
-            repo.withConnection(conn -> {
-                try {
-                    conn.setAutoCommit(false);
-
-                    // Table: repo_unit_template
-                    String[] generatedColumns = { "templateid" };
-                    try (PreparedStatement pStmt = conn.prepareStatement(templateSql, generatedColumns)) {
-                        int i = 0;
-                        pStmt.setString(++i, template.templateName);
-
-                        Database.executeUpdate(pStmt);
-
-                        try (ResultSet rs = pStmt.getGeneratedKeys()) {
-                            if (rs.next()) {
-                                int templateId = rs.getInt(1);
-                                template.setTemplateId(templateId);
-                            } else {
-                                String info = "↯ Failed to determine auto-generated template ID";
-                                log.error(info); // This is nothing we can recover from
-                                throw new ConfigurationException(info);
-                            }
-                        }
-                    }
-
-                    // Table: repo_unit_template_elements
-                    Database.usePreparedStatement(conn, elementsSql, pStmt -> {
-                        int idx = 0; // index into record
-                        for (GqlFieldShape field : gqlUnitTemplate.fields()) {
-                            // Determine attrId of field in record
-                            CatalogAttribute attribute  = catalogAttributes.get(field.fieldName());
-                            if (null == attribute) {
-                                log.warn("↯ No matching catalog attribute: '{}' ('{}')", field.fieldName(), field.usedAttributeName());
-                                continue;
-                            }
-
-                            //
-                            pStmt.clearParameters();
-
-                            int i = 0;
-                            pStmt.setInt(++i, template.templateId);
-                            pStmt.setInt(++i, attribute.attrId());
-                            pStmt.setInt(++i, ++idx);
-                            pStmt.setString(++i, attribute.attrName());
-
-                            Database.execute(pStmt);
-                            template.addField(attribute);
-                        }
-                    });
-
-                    conn.commit();
-                    log.info("↯ Loaded template '{}'", template.templateName);
-
-                } catch (Throwable t) {
-                    log.error("↯ Failed to store template '{}': {}", template.templateName, t.getMessage(), t);
-                    if (t.getCause() instanceof SQLException sqle) {
-                        log.error("  ^--- {}", Database.squeeze(sqle));
-                        String sqlState = sqle.getSQLState();
-
-                        try {
-                            conn.rollback();
-
-                        } catch (SQLException rbe) {
-                            log.error("↯ Failed to rollback transaction: {}", Database.squeeze(rbe), rbe);
-                        }
-
-                        if (sqlState.startsWith("23")) {
-                            // 23505 : duplicate key value violates unique constraint
-                            log.info("↯ Unit template '{}' seems to already have been loaded", template.templateName);
-                        }
-                    }
-                }
-            });
-        } catch (SQLException sqle) {
-            log.error("↯ Failed to store template: {}", Database.squeeze(sqle));
-        }
-
-        return template;
     }
 
     private static void dump(GqlViewpoint gql, PrintStream out) {
@@ -643,19 +163,19 @@ public class Configurator {
         out.println();
 
         out.println("--- Attributes ---");
-        for (Map.Entry<String, GqlAttributeShape> entry : gql.attributes().entrySet()) {
+        for (Map.Entry<AttributeKey, GqlAttributeShape> entry : gql.attributes().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
 
         out.println("--- Records ---");
-        for (Map.Entry<String, GqlRecordShape> entry : gql.records().entrySet()) {
+        for (Map.Entry<RecordKey, GqlRecordShape> entry : gql.records().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
 
         out.println("--- Templates ---");
-        for (Map.Entry<String, GqlTemplateShape> entry : gql.templates().entrySet()) {
+        for (Map.Entry<TemplateKey, GqlTemplateShape> entry : gql.templates().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
@@ -667,7 +187,7 @@ public class Configurator {
         out.println();
 
         out.println("--- Operations ---");
-        for (Map.Entry<String, GqlOperationShape> entry : gql.operations().entrySet()) {
+        for (Map.Entry<OperationKey, GqlOperationShape> entry : gql.operations().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
@@ -685,19 +205,19 @@ public class Configurator {
         out.println();
 
         out.println("--- Attributes ---");
-        for (Map.Entry<String, CatalogAttribute> entry : ipto.attributes().entrySet()) {
+        for (Map.Entry<AttributeKey, CatalogAttribute> entry : ipto.attributes().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
 
         out.println("--- Records ---");
-        for (Map.Entry<String, CatalogRecord> entry : ipto.records().entrySet()) {
+        for (Map.Entry<RecordKey, CatalogRecord> entry : ipto.records().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();
 
         out.println("--- Templates ---");
-        for (Map.Entry<String, CatalogTemplate> entry : ipto.templates().entrySet()) {
+        for (Map.Entry<TemplateKey, CatalogTemplate> entry : ipto.templates().entrySet()) {
             out.println("  " + entry.getKey() + " -> " + entry.getValue());
         }
         out.println();

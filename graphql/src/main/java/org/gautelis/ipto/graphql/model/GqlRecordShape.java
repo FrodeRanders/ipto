@@ -34,8 +34,8 @@ public record GqlRecordShape(
         String attributeName,
         List<GqlFieldShape> fields
 ) {
-    public boolean equals(CatalogRecord other) {
-        return typeName.equals(other.recordName);
+    public RecordKey key() {
+        return new RecordKey(typeName);
     }
 
     @Override

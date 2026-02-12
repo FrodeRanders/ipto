@@ -559,7 +559,7 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraYrkanRaw(tenantId : Int!, data : Bytes!) : Bytes
+    lagraYrkanRaw(tenantId : Int!, data : Bytes!) : Bytes @ipto(operation: "CUSTOM")
 
     lagraUnitRaw(data : Bytes!) : Bytes @ipto(operation: "STORE_RAW_UNIT")
 }

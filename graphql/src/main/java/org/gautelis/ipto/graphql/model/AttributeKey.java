@@ -14,14 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.graphql.configuration;
+package org.gautelis.ipto.graphql.model;
 
-import graphql.schema.idl.RuntimeWiring;
-import org.gautelis.ipto.graphql.runtime.service.RuntimeService;
-import org.gautelis.ipto.repo.model.Repository;
-
-public record OperationsWireParameters(
-        RuntimeWiring.Builder runtimeWiring,
-        RuntimeService runtimeService,
-        Repository repository
+/**
+ * Canonical identity for an attribute across GraphQL SDL and repository catalog.
+ *
+ * @param alias GraphQL-safe alias (no ':')
+ * @param name backend attribute name, e.g. dcterms:abstract
+ * @param qualifiedName backend fully qualified name, e.g. http://purl.org/dc/terms/abstract
+ */
+public record AttributeKey(
+        String alias,
+        String name,
+        String qualifiedName
 ) {}
+

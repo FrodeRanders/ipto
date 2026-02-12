@@ -16,7 +16,12 @@
  */
 package org.gautelis.ipto.graphql.model;
 
-public enum Source {
-    GQL,
-    CATALOG
-}
+/**
+ * Canonical identity for template declarations.
+ *
+ * @param typeName GraphQL object type name for the template
+ */
+public record TemplateKey(
+        String typeName
+) {}
+

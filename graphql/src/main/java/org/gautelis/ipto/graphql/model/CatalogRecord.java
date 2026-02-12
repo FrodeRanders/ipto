@@ -16,34 +16,27 @@
  */
 package org.gautelis.ipto.graphql.model;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-public class CatalogRecord {
-    public int recordAttrId;
-    public final String recordName;
-    private final List<CatalogAttribute> fields = new ArrayList<>();
-
-    public CatalogRecord(int recordAttrid, String recordName) {
-        this.recordAttrId = recordAttrid;
-        this.recordName = recordName;
+public record CatalogRecord(
+        int recordAttrId,
+        String recordName,
+        List<CatalogAttribute> fields
+) {
+    public CatalogRecord {
+        fields = List.copyOf(fields);
     }
 
     public CatalogRecord(String recordName) {
-        this(-1, recordName);
+        this(-1, recordName, List.of());
     }
 
-    public void setRecordId(int recordId) {
-        this.recordAttrId = recordId;
+    public CatalogRecord withRecordId(int id) {
+        return new CatalogRecord(id, recordName, fields);
     }
 
-    public void addField(CatalogAttribute field) {
-        fields.add(field);
-    }
-
-    public List<CatalogAttribute> fields() {
-        return Collections.unmodifiableList(fields);
+    public RecordKey key() {
+        return new RecordKey(recordName);
     }
 
     @Override
@@ -60,4 +53,3 @@ public class CatalogRecord {
         return info;
     }
 }
-

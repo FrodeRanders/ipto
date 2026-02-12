@@ -19,7 +19,9 @@ package org.gautelis.ipto.graphql.configuration;
 import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.graphql.model.GqlOperationShape;
+import org.gautelis.ipto.graphql.model.OperationKey;
 import org.gautelis.ipto.graphql.model.ParameterDefinition;
+import org.gautelis.ipto.graphql.model.RuntimeOperation;
 import org.gautelis.ipto.graphql.model.SchemaOperation;
 import org.gautelis.ipto.graphql.model.TypeDefinition;
 import org.slf4j.Logger;
@@ -34,81 +36,86 @@ import java.util.Optional;
 public final class Operations {
     private static final Logger log = LoggerFactory.getLogger(Operations.class);
 
-    private static final ParameterDefinition[] T = {};
-
     private Operations() {}
 
-    static Map<String, GqlOperationShape> derive(TypeDefinitionRegistry registry, Map<String, SchemaOperation> operationTypes) {
-        Map<String, GqlOperationShape> operations = new HashMap<>();
+    static Map<OperationKey, GqlOperationShape> derive(TypeDefinitionRegistry registry, Map<String, SchemaOperation> operationTypes) {
+        Map<OperationKey, GqlOperationShape> operations = new HashMap<>();
 
         for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
-            List<Directive> directives = type.getDirectives();
-            boolean isOperation = true;
-            for (Directive directive : directives) {
-                String name = directive.getName();
-
-                // Kind of negative logic here, treat as operation if neither 'unit' nor 'record'
-                isOperation &= !"unit".equals(name);
-                isOperation &= !"record".equals(name);
+            SchemaOperation operation = operationTypes.get(type.getName());
+            if (operation == null) {
+                continue;
             }
 
-            if (isOperation) {
-                // Handle Query and Mutation
-                SchemaOperation operation = operationTypes.get(type.getName());
-                if (operation != null) {
-                    switch (operation) {
-                        case QUERY -> deriveQueryOperations(type, operations);
-                        case MUTATION -> deriveMutationOperations(type, operations);
-                    }
-                }
+            switch (operation) {
+                case QUERY, MUTATION -> deriveOperations(type, operation, operations);
+                case SUBSCRIPTION -> deriveSubscriptionOperations(type, operations);
             }
         }
 
         return operations;
     }
 
-    private static void deriveQueryOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
+    private static void deriveOperations(
+            ObjectTypeDefinition type,
+            SchemaOperation category,
+            Map<OperationKey, GqlOperationShape> operations
+    ) {
         String typeName = type.getName();
-
         for (FieldDefinition f : type.getFieldDefinitions()) {
-            final String operationName = f.getName(); // field name
-            final TypeDefinition resultType = TypeDefinition.of(f.getType());
-            List<InputValueDefinition> inputs = f.getInputValueDefinitions();
-
-            List<ParameterDefinition> params = new ArrayList<>();
-            for (InputValueDefinition ivd : inputs) {
-                params.add(
-                        new ParameterDefinition(ivd.getName(), TypeDefinition.of(ivd.getType()))
-                );
-            }
-
-            String runtimeOperation = deriveRuntimeOperation(f).orElse(null);
-            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.QUERY, params.toArray(T), resultType.typeName(), runtimeOperation));
+            GqlOperationShape shape = deriveOperationShape(typeName, category, f);
+            operations.put(shape.key(), shape);
         }
     }
 
-    private static void deriveMutationOperations(ObjectTypeDefinition type, Map<String, GqlOperationShape> operations) {
+    private static void deriveSubscriptionOperations(ObjectTypeDefinition type, Map<OperationKey, GqlOperationShape> operations) {
+        if (type.getFieldDefinitions().isEmpty()) {
+            log.info("↯ Subscription root '{}' has no fields", type.getName());
+            return;
+        }
+
         String typeName = type.getName();
-
         for (FieldDefinition f : type.getFieldDefinitions()) {
-            final String operationName = f.getName(); // field name
-            final TypeDefinition resultType = TypeDefinition.of(f.getType());
-            List<InputValueDefinition> inputs = f.getInputValueDefinitions();
+            GqlOperationShape shape = deriveOperationShape(typeName, SchemaOperation.SUBSCRIPTION, f);
+            operations.put(shape.key(), shape);
 
-            List<ParameterDefinition> params = new ArrayList<>();
-            for (InputValueDefinition ivd : inputs) {
-                params.add(
-                        new ParameterDefinition(ivd.getName(), TypeDefinition.of(ivd.getType()))
-                );
-            }
-
-            String runtimeOperation = deriveRuntimeOperation(f).orElse(null);
-            operations.put(operationName, new GqlOperationShape(typeName, operationName, SchemaOperation.MUTATION, params.toArray(T), resultType.typeName(), runtimeOperation));
-
+            log.warn(
+                    "↯ Derived subscription operation '{}::{}'; runtime subscription support is not implemented yet",
+                    typeName,
+                    shape.operationName()
+            );
         }
     }
 
-    private static Optional<String> deriveRuntimeOperation(FieldDefinition field) {
+    private static GqlOperationShape deriveOperationShape(
+            String typeName,
+            SchemaOperation category,
+            FieldDefinition field
+    ) {
+        String operationName = field.getName();
+        TypeDefinition resultType = TypeDefinition.of(field.getType());
+        List<ParameterDefinition> params = deriveParameters(field.getInputValueDefinitions());
+        RuntimeOperation runtimeOperation = deriveRuntimeOperation(field).orElse(null);
+
+        return new GqlOperationShape(
+                typeName,
+                operationName,
+                category,
+                params,
+                resultType.typeName(),
+                runtimeOperation
+        );
+    }
+
+    private static List<ParameterDefinition> deriveParameters(List<InputValueDefinition> inputs) {
+        List<ParameterDefinition> params = new ArrayList<>();
+        for (InputValueDefinition ivd : inputs) {
+            params.add(new ParameterDefinition(ivd.getName(), TypeDefinition.of(ivd.getType())));
+        }
+        return params;
+    }
+
+    private static Optional<RuntimeOperation> deriveRuntimeOperation(FieldDefinition field) {
         for (Directive directive : field.getDirectives()) {
             if (!"ipto".equals(directive.getName())) {
                 continue;
@@ -119,10 +126,10 @@ public final class Operations {
                 }
                 Value<?> value = argument.getValue();
                 if (value instanceof StringValue sv) {
-                    return Optional.of(sv.getValue());
+                    return RuntimeOperation.parse(sv.getValue());
                 }
                 if (value instanceof EnumValue ev) {
-                    return Optional.of(ev.getName());
+                    return RuntimeOperation.parse(ev.getName());
                 }
             }
         }

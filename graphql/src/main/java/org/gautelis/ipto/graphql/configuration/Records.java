@@ -21,7 +21,6 @@ import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.graphql.model.*;
-import org.gautelis.ipto.graphql.model.TypeDefinition;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
@@ -56,16 +55,9 @@ public final class Records {
     static Map<String, GqlRecordShape> derive(TypeDefinitionRegistry registry, Map<String, GqlAttributeShape> attributes) {
         Map<String, GqlRecordShape> records = new HashMap<>();
 
-        for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
+        for (ObjectTypeDefinition type : SdlObjectShapes.domainObjectTypes(registry)) {
             // --- (a) ---
             String typeName = type.getName();
-
-            // Filter operations // TODO hard coded for the time being
-            if ("query".equalsIgnoreCase(typeName)
-             || "mutation".equalsIgnoreCase(typeName)
-             || "subscription".equalsIgnoreCase(typeName)) {
-                continue;
-            }
 
             String recordAttributeName = null;
 
@@ -75,8 +67,7 @@ public final class Records {
                 for (Directive directive : recordDirectivesOnType) {
                     Argument arg = directive.getArgument("attribute");
                     if (null != arg) {
-                        EnumValue alias = (EnumValue) arg.getValue();
-                        recordAttributeName = alias.getName();
+                        recordAttributeName = SdlObjectShapes.extractName(arg.getValue());
                     }
                 }
             } else {
@@ -84,12 +75,11 @@ public final class Records {
                 GqlAttributeShape attribute = attributes.get(typeName);
                 if (null != attribute) {
                     // We have a match, so stick with it...
-                    recordAttributeName = attribute.name; // or even typeName
+                    recordAttributeName = attribute.name(); // or even typeName
 
                 } else {
                     String info = "↯ Not a valid record definition: " + typeName;
                     log.error(info);
-                    System.out.println(info);
                     throw new ConfigurationException(info, new Exception("Synthetic exception"));
                 }
             }
@@ -97,45 +87,8 @@ public final class Records {
             if (null != recordAttributeName && !recordAttributeName.isEmpty()) {
                 GqlAttributeShape recordAttributeDef = attributes.get(recordAttributeName);
                 if (null != recordAttributeDef) {
-                    final String catalogAttributeName = recordAttributeDef.name;
-
-                    List<GqlFieldShape> recordFields = new ArrayList<>();
-                    for (FieldDefinition f : type.getFieldDefinitions()) {
-                        // --- (c) ---
-                        final String fieldName = f.getName();
-
-                        // --- (d) ---
-                        final TypeDefinition fieldType = TypeDefinition.of(f.getType());
-
-                        // Handle @use directive on field definitions
-                        List<Directive> useDirectives = f.getDirectives("use");
-                        if (!useDirectives.isEmpty()) {
-                            for (Directive useDirective : useDirectives) {
-                                // @use "attribute" argument
-                                Argument arg = useDirective.getArgument("attribute");
-                                EnumValue value = (EnumValue) arg.getValue();
-
-                                GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
-                                if (null != fieldAttributeDef) {
-                                    // --- (e) ---
-                                    String fieldAttributeName = fieldAttributeDef.name;
-
-                                    recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
-                                    break; // In the unlikely case there are several @use
-                                } else {
-                                    log.debug("↯ Not a valid record field definition (with @use): {}", fieldName);
-                                }
-                            }
-                        } else {
-                            // No @use, but we will fall back on aliases
-                            GqlAttributeShape attributeShape = attributes.get(fieldName);
-                            if (null != attributeShape) {
-                                recordFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
-                            } else {
-                                log.debug("↯ Not a valid record field definition: {}", fieldName);
-                            }
-                        }
-                    }
+                    final String catalogAttributeName = recordAttributeDef.name();
+                    List<GqlFieldShape> recordFields = SdlObjectShapes.deriveFields(type, attributes, log, true);
 
                     records.put(typeName, new GqlRecordShape(typeName, recordAttributeName, catalogAttributeName, recordFields));
                     log.trace("↯ Defining shape for {}: {}", typeName, records.get(typeName));
@@ -143,7 +96,6 @@ public final class Records {
             } else {
                 String info = "↯ Not a valid record definition: " + typeName;
                 log.error(info);
-                System.out.println(info);
                 throw new ConfigurationException(info, new Exception("Synthetic exception"));
             }
         }
@@ -194,7 +146,8 @@ public final class Records {
                     List<CatalogRecord> catalogRecords = new ArrayList<>();
 
                     Integer currentId = null;
-                    CatalogRecord currentRecord = null;
+                    String currentRecordName = null;
+                    List<CatalogAttribute> currentFields = new ArrayList<>();
 
                     while (rs.next()) {
                         // Record part
@@ -212,23 +165,28 @@ public final class Records {
 
                         if (currentId == null || recordId != currentId) {
                             // boundary => flush previous
-                            if (currentRecord != null) catalogRecords.add(currentRecord);
+                            if (currentId != null) {
+                                catalogRecords.add(new CatalogRecord(currentId, currentRecordName, currentFields));
+                            }
                             currentId = recordId;
-                            currentRecord = new CatalogRecord(recordId, recordName);
+                            currentRecordName = recordName;
+                            currentFields = new ArrayList<>();
                         }
 
                         CatalogAttribute attribute = new CatalogAttribute(
+                                recordFieldAttrId,
                                 alias, recordFieldAttrName,
                                 recordFieldQualname, AttributeType.of(recordFieldAttrType),
                                 isArray
                         );
-                        attribute.setAttrId(recordFieldAttrId);
-                        currentRecord.addField(attribute);
+                        currentFields.add(attribute);
                     }
-                    if (currentRecord != null) catalogRecords.add(currentRecord); // flush last one
+                    if (currentId != null) {
+                        catalogRecords.add(new CatalogRecord(currentId, currentRecordName, currentFields));
+                    }
 
                     for (CatalogRecord iptoRecord : catalogRecords) {
-                        records.put(iptoRecord.recordName, iptoRecord);
+                        records.put(iptoRecord.recordName(), iptoRecord);
                     }
                 }
             }));

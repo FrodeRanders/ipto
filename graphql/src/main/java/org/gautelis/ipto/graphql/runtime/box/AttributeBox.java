@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.graphql.runtime;
+package org.gautelis.ipto.graphql.runtime.box;
 
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
@@ -39,21 +39,18 @@ public sealed class AttributeBox extends Box permits RecordBox {
     //---------------------------------------------------------------------
     private final Map</* field name */ String, Attribute<?>> attributesByFieldName;
 
-    /* package accessible only */
-    AttributeBox(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
+    public AttributeBox(Unit unit, Map</* field name */ String, Attribute<?>> attributes) {
         super(unit);
 
         Objects.requireNonNull(attributes, "attributes");
         this.attributesByFieldName = attributes;
     }
 
-    /* package accessible only */
-    AttributeBox(Box parent, Map</* field name */ String, Attribute<?>> attributes) {
+    public AttributeBox(Box parent, Map</* field name */ String, Attribute<?>> attributes) {
         this(Objects.requireNonNull(parent).getUnit(), attributes);
     }
 
-    /* package accessible only */
-    Attribute<?> getAttribute(String fieldName) {
+    public Attribute<?> getAttribute(String fieldName) {
         return attributesByFieldName.get(fieldName);
     }
 

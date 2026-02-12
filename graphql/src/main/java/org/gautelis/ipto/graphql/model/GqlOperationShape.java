@@ -16,14 +16,24 @@
  */
 package org.gautelis.ipto.graphql.model;
 
+import java.util.List;
+
 public record GqlOperationShape(
         String typeName,
         String operationName,
         SchemaOperation category,    // QUERY | MUTATION | SUBSCRIPTION
-        ParameterDefinition[] parameters, // Parameters to operation (e.g. UnitIdentification, Filter, ...)
+        List<ParameterDefinition> parameters, // Parameters to operation (e.g. UnitIdentification, Filter, ...)
         String outputTypeName,     // Type of output from operation (e.g. Bytes, <domain specific type>, ...)
-        String runtimeOperation    // Optional runtime binding hint from SDL @ipto(operation: "...")
+        RuntimeOperation runtimeOperation    // Optional runtime binding hint from SDL @ipto(operation: "...")
 ) {
+    public GqlOperationShape {
+        parameters = List.copyOf(parameters);
+    }
+
+    public OperationKey key() {
+        return new OperationKey(typeName, operationName);
+    }
+
     @Override
     public String toString() {
         String info = "GqlOperationShape{";

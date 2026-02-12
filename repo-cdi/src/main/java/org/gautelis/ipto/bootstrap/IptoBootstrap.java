@@ -47,8 +47,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gautelis.ipto.graphql.runtime.RuntimeOperators.MAPPER;
-import static org.gautelis.ipto.graphql.runtime.RuntimeService.headHex;
+import static org.gautelis.ipto.graphql.runtime.service.RuntimeService.headHex;
+import static org.gautelis.ipto.graphql.runtime.wiring.RuntimeOperators.MAPPER;
 
 @Startup
 @ApplicationScoped

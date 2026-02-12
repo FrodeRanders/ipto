@@ -20,8 +20,6 @@ import graphql.language.*;
 import graphql.schema.idl.TypeDefinitionRegistry;
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.graphql.model.*;
-import org.gautelis.ipto.graphql.model.TypeDefinition;
-import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.slf4j.Logger;
@@ -60,16 +58,9 @@ public final class Templates {
     ) {
         Map<String, GqlTemplateShape> templates = new HashMap<>();
 
-        for (ObjectTypeDefinition type : registry.getTypes(ObjectTypeDefinition.class)) {
+        for (ObjectTypeDefinition type : SdlObjectShapes.domainObjectTypes(registry)) {
             // --- (a) ---
             final String typeName = type.getName();
-
-            // Filter operations // TODO hard coded for the time being
-            if ("query".equalsIgnoreCase(typeName)
-                    || "mutation".equalsIgnoreCase(typeName)
-                    || "subscription".equalsIgnoreCase(typeName)) {
-                continue;
-            }
 
             // --- (b) ---
             List<Directive> templateDirectivesOnType = type.getDirectives("template");
@@ -82,8 +73,11 @@ public final class Templates {
             for (Directive directive : templateDirectivesOnType) {
                 Argument arg = directive.getArgument("name");
                 if (null != arg) {
-                    EnumValue alias = (EnumValue) arg.getValue();
-                    templateName = alias.getName();
+                    Value<?> value = arg.getValue();
+                    templateName = SdlObjectShapes.extractName(value);
+                    if (templateName == null || templateName.isBlank()) {
+                        log.warn("↯ Unsupported @template(name: ...) value type '{}'", value.getClass().getSimpleName());
+                    }
                 }
             }
 
@@ -91,41 +85,7 @@ public final class Templates {
                 templateName = typeName;
             }
 
-            List<GqlFieldShape> templateFields = new ArrayList<>();
-
-            // Handle field definitions on types
-            for (FieldDefinition f : type.getFieldDefinitions()) {
-                // --- (c) ---
-                final String fieldName = f.getName();
-
-                // --- (d) ---
-                final TypeDefinition fieldType = TypeDefinition.of(f.getType());
-
-                // Handle @use directive on field definitions
-                List<Directive> useDirectives = f.getDirectives("use");
-                if (!useDirectives.isEmpty()) {
-                    for (Directive useDirective : useDirectives) {
-                        // @use "attribute" argument
-                        Argument arg = useDirective.getArgument("attribute");
-                        EnumValue value = (EnumValue) arg.getValue();
-
-                        GqlAttributeShape fieldAttributeDef = attributes.get(value.getName());
-                        if (null != fieldAttributeDef) {
-                            // --- (e) ---
-                            String fieldAttributeName = fieldAttributeDef.name;
-
-                            templateFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), fieldAttributeName));
-                            break; // In the unlikely case there are several @use
-                        }
-                    }
-                } else {
-                    // No @use, so we will fall back on aliases
-                    GqlAttributeShape attributeShape = attributes.get(fieldName);
-                    if (null != attributeShape) {
-                        templateFields.add(new GqlFieldShape(typeName, fieldName, fieldType.typeName(), fieldType.isArray(), fieldType.isMandatory(), attributeShape.name));
-                    }
-                }
-            }
+            List<GqlFieldShape> templateFields = SdlObjectShapes.deriveFields(type, attributes, log, false);
             templates.put(typeName, new GqlTemplateShape(typeName, templateName, templateFields));
             log.trace("↯ Defining shape for {}: {}", typeName, templates.get(typeName));
         }
@@ -167,7 +127,8 @@ public final class Templates {
                     List<CatalogTemplate> catalogTemplates = new ArrayList<>();
 
                     Integer currentId = null;
-                    CatalogTemplate currentTemplate = null;
+                    String currentTemplateName = null;
+                    List<CatalogAttribute> currentFields = new ArrayList<>();
 
                     while (rs.next()) {
                         // Template part
@@ -189,22 +150,27 @@ public final class Templates {
 
                         if (currentId == null || templateId != currentId) {
                             // boundary => flush previous
-                            if (currentTemplate != null) catalogTemplates.add(currentTemplate);
+                            if (currentId != null) {
+                                catalogTemplates.add(new CatalogTemplate(currentId, currentTemplateName, currentFields));
+                            }
                             currentId = templateId;
-                            currentTemplate = new CatalogTemplate(templateId, templateName);
+                            currentTemplateName = templateName;
+                            currentFields = new ArrayList<>();
                         }
 
                         CatalogAttribute attribute = new CatalogAttribute(
+                                fieldAttrId,
                                 fieldAlias, fieldAttrName, fieldQualname,
                                 AttributeType.of(fieldAttrType), isArray
                         );
-                        attribute.setAttrId(fieldAttrId);
-                        currentTemplate.addField(attribute);
+                        currentFields.add(attribute);
                     }
-                    if (currentTemplate != null) catalogTemplates.add(currentTemplate); // flush last one
+                    if (currentId != null) {
+                        catalogTemplates.add(new CatalogTemplate(currentId, currentTemplateName, currentFields));
+                    }
 
                     for (CatalogTemplate template : catalogTemplates) {
-                        templates.put(template.templateName, template);
+                        templates.put(template.templateName(), template);
                     }
                 }
             }));

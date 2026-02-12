@@ -35,8 +35,8 @@ public record GqlTemplateShape(
         String templateName,       // (c)
         List<GqlFieldShape> fields
 ) {
-    public boolean equals(CatalogTemplate other) {
-        return typeName.equals(other.templateName);
+    public TemplateKey key() {
+        return new TemplateKey(typeName);
     }
 
     @Override

@@ -14,14 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.graphql.configuration;
+package org.gautelis.ipto.graphql.model;
 
-import graphql.schema.idl.RuntimeWiring;
-import org.gautelis.ipto.graphql.runtime.service.RuntimeService;
-import org.gautelis.ipto.repo.model.Repository;
+/**
+ * Canonical identity for root operations.
+ *
+ * @param rootTypeName root type name, e.g. Query or Mutation
+ * @param fieldName field name on root type
+ */
+public record OperationKey(
+        String rootTypeName,
+        String fieldName
+) {
+    @Override
+    public String toString() {
+        return rootTypeName + "::" + fieldName;
+    }
+}
 
-public record OperationsWireParameters(
-        RuntimeWiring.Builder runtimeWiring,
-        RuntimeService runtimeService,
-        Repository repository
-) {}
