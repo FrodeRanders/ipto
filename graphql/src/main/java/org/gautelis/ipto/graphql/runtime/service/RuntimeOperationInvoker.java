@@ -44,6 +44,7 @@ final class RuntimeOperationInvoker {
     ) {
         Map<String, Object> typedArguments = coerceArguments(operation, arguments);
         RuntimeOperation runtimeOperation = operation.runtimeOperation();
+
         if (runtimeOperation != null) {
             // Explicit @ipto(operation: ...) always wins over shape-based inference.
             return invokeExplicitRuntimeOperation(operation, typedArguments, runtimeOperation);
@@ -56,6 +57,7 @@ final class RuntimeOperationInvoker {
                 Optional<Query.UnitIdentification> unitIdentification = tryUnitIdentification(idValue);
                 if (unitIdentification.isPresent()) {
                     Query.UnitIdentification id = unitIdentification.get();
+
                     if ("Bytes".equals(outputType)) {
                         return service.loadRawUnit(id.tenantId(), id.unitId());
                     }
@@ -63,8 +65,10 @@ final class RuntimeOperationInvoker {
                 }
 
                 Optional<TenantCorrId> corrIdentification = tryTenantCorrId(idValue);
+
                 if (corrIdentification.isPresent()) {
                     TenantCorrId id = corrIdentification.get();
+
                     if ("Bytes".equals(outputType)) {
                         return service.loadRawPayloadByCorrId(id.tenantId(), id.corrId());
                     }
@@ -74,10 +78,12 @@ final class RuntimeOperationInvoker {
 
             if (hasSingleParameterNamed(operation, "filter")) {
                 Optional<Query.Filter> filterValue = tryFilter(typedArguments.get("filter"));
+
                 if (filterValue.isEmpty()) {
                     throw new IllegalArgumentException("Operation '" + operation.operationName() + "' requires parameter 'filter' with at least tenantId");
                 }
                 Query.Filter filter = filterValue.get();
+
                 if ("Bytes".equals(outputType)) {
                     return service.searchRaw(filter);
                 }
@@ -148,9 +154,11 @@ final class RuntimeOperationInvoker {
         for (ParameterDefinition parameter : operation.parameters()) {
             String name = parameter.parameterName();
             Object raw = arguments.get(name);
+
             if (raw == null) {
                 continue;
             }
+
             TypeDefinition type = parameter.parameterType();
             coerced.put(name, coerceArgumentValue(type.typeName(), raw));
         }
@@ -179,6 +187,7 @@ final class RuntimeOperationInvoker {
     ) {
         Object value = typedArguments.get(parameterName);
         Optional<Query.Filter> filter = tryFilter(value);
+
         if (filter.isPresent()) {
             return filter.get();
         }
@@ -192,6 +201,7 @@ final class RuntimeOperationInvoker {
             RuntimeOperation runtimeOperation
     ) {
         Object value = typedArguments.get(parameterName);
+
         if (value instanceof byte[] bytes) {
             return bytes;
         }
@@ -206,6 +216,7 @@ final class RuntimeOperationInvoker {
     ) {
         Object value = typedArguments.get(parameterName);
         Optional<Query.UnitIdentification> id = tryUnitIdentification(value);
+
         if (id.isPresent()) {
             return id.get();
         }
@@ -220,6 +231,7 @@ final class RuntimeOperationInvoker {
     ) {
         Object value = typedArguments.get(parameterName);
         Optional<TenantCorrId> id = tryTenantCorrId(value);
+
         if (id.isPresent()) {
             return id.get();
         }
@@ -230,6 +242,7 @@ final class RuntimeOperationInvoker {
         if (value instanceof Query.UnitIdentification identification) {
             return Optional.of(identification);
         }
+
         if (value instanceof Map<?, ?> map) {
             Integer tenantId = parseInteger(map.get("tenantId"));
             Long unitId = parseLong(map.get("unitId"));
@@ -244,17 +257,20 @@ final class RuntimeOperationInvoker {
         if (value instanceof Query.Filter filter) {
             return Optional.of(filter);
         }
+
         if (value instanceof Map<?, ?> map) {
             Integer tenantId = parseInteger(map.get("tenantId"));
             if (tenantId == null) {
                 return Optional.empty();
             }
+
             // Keep defaults aligned with Query.Filter semantics.
             String where = parseString(map.get("where"));
             Integer offset = parseInteger(map.get("offset"));
             Integer size = parseInteger(map.get("size"));
             String orderBy = parseString(map.get("orderBy"));
             String orderDirection = parseString(map.get("orderDirection"));
+
             return Optional.of(
                     new Query.Filter(
                             tenantId,
@@ -273,6 +289,7 @@ final class RuntimeOperationInvoker {
         if (value instanceof Query.YrkanIdentification identification) {
             return tryParseUuid(identification.corrId()).map(corrId -> new TenantCorrId(identification.tenantId(), corrId));
         }
+
         if (value instanceof Map<?, ?> map) {
             Integer tenantId = parseInteger(map.get("tenantId"));
             String corrId = parseString(map.get("corrId"));
@@ -287,6 +304,7 @@ final class RuntimeOperationInvoker {
         if (value == null || value.isBlank()) {
             return Optional.empty();
         }
+
         try {
             return Optional.of(UUID.fromString(value.trim()));
         } catch (IllegalArgumentException iae) {
@@ -295,40 +313,49 @@ final class RuntimeOperationInvoker {
     }
 
     private Integer parseInteger(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Integer i) {
-            return i;
-        }
-        if (value instanceof Number number) {
-            return number.intValue();
-        }
-        if (value instanceof String s && !s.isBlank()) {
-            try {
-                return Integer.parseInt(s.trim());
-            } catch (NumberFormatException nfe) {
+        switch (value) {
+            case null -> {
                 return null;
             }
+            case Integer i -> {
+                return i;
+            }
+            case Number number -> {
+                return number.intValue();
+            }
+            case String s when !s.isBlank() -> {
+                try {
+                    return Integer.parseInt(s.trim());
+                } catch (NumberFormatException nfe) {
+                    return null;
+                }
+            }
+            default -> {
+            }
         }
+
         return null;
     }
 
     private Long parseLong(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Long l) {
-            return l;
-        }
-        if (value instanceof Number number) {
-            return number.longValue();
-        }
-        if (value instanceof String s && !s.isBlank()) {
-            try {
-                return Long.parseLong(s.trim());
-            } catch (NumberFormatException nfe) {
+        switch (value) {
+            case null -> {
                 return null;
+            }
+            case Long l -> {
+                return l;
+            }
+            case Number number -> {
+                return number.longValue();
+            }
+            case String s when !s.isBlank() -> {
+                try {
+                    return Long.parseLong(s.trim());
+                } catch (NumberFormatException nfe) {
+                    return null;
+                }
+            }
+            default -> {
             }
         }
         return null;

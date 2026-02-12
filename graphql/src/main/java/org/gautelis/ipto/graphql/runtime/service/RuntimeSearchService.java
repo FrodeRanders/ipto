@@ -61,7 +61,7 @@ final class RuntimeSearchService {
     }
 
     List<Box> search(Query.Filter filter) {
-        log.trace("↪ RuntimeService::search");
+        log.trace("↪ RuntimeSearchService::search");
 
         Collection<Unit.Id> ids = searchIds(filter);
         if (ids.isEmpty()) {
@@ -85,7 +85,7 @@ final class RuntimeSearchService {
     }
 
     byte[] searchRaw(Query.Filter filter) {
-        log.trace("↪ RuntimeService::searchRaw");
+        log.trace("↪ RuntimeSearchService::searchRaw");
 
         Collection<Unit.Id> ids = searchIds(filter);
         List<Unit> units = new ArrayList<>();
@@ -115,7 +115,7 @@ final class RuntimeSearchService {
             Query.Filter filter,
             Function<Unit, byte[]> rawPayloadExtractor
     ) {
-        log.trace("↪ RuntimeService::searchRawPayload");
+        log.trace("↪ RuntimeSearchService::searchRawPayload");
 
         Collection<Unit.Id> ids = searchIds(filter);
         List<String> payloads = new ArrayList<>();
@@ -214,7 +214,7 @@ final class RuntimeSearchService {
             case "unitid", "unit_id", "unit" -> SearchOrder.orderByUnitId(ascending);
             case "created" -> SearchOrder.orderByCreation(ascending);
             case "modified", "updated" -> SearchOrder.orderByModified(ascending);
-            default -> throw new IllegalArgumentException("orderBy must be one of: unitId, created, modified");
+            default -> throw new IllegalArgumentException("orderBy must be one of: unitid, created, modified");
         };
     }
 
@@ -232,5 +232,4 @@ final class RuntimeSearchService {
             default -> throw new IllegalArgumentException("orderDirection must be asc or desc");
         };
     }
-
 }

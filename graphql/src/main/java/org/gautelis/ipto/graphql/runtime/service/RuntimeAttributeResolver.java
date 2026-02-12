@@ -41,9 +41,10 @@ final class RuntimeAttributeResolver {
             RecordBox box,
             boolean isMandatory
     ) {
-        log.trace("↪ RuntimeService::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("↪ RuntimeAttributeResolver::getValueArray({}, {}, {})", fieldNames, box, isMandatory);
 
         ResolvedAttribute resolved = resolveFromRecord(fieldNames, box, isMandatory);
+
         if (resolved == null) {
             return null;
         }
@@ -55,9 +56,10 @@ final class RuntimeAttributeResolver {
             AttributeBox box,
             boolean isMandatory
     ) {
-        log.trace("↪ RuntimeService::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("↪ RuntimeAttributeResolver::getAttributeArray({}, {}, {})", fieldNames, box, isMandatory);
 
         ResolvedAttribute resolved = resolveFromAttributeBox(fieldNames, box, isMandatory);
+
         if (resolved == null) {
             return null;
         }
@@ -69,9 +71,10 @@ final class RuntimeAttributeResolver {
             RecordBox box,
             boolean isMandatory
     ) {
-        log.trace("↪ RuntimeService::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("↪ RuntimeAttributeResolver::getValueScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         ResolvedAttribute resolved = resolveFromRecord(fieldNames, box, isMandatory);
+
         if (resolved == null) {
             return null;
         }
@@ -83,9 +86,10 @@ final class RuntimeAttributeResolver {
             AttributeBox box,
             boolean isMandatory
     ) {
-        log.trace("↪ RuntimeService::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
+        log.trace("↪ RuntimeAttributeResolver::getAttributeScalar({}, {}, {})", fieldNames, box, isMandatory);
 
         ResolvedAttribute resolved = resolveFromAttributeBox(fieldNames, box, isMandatory);
+
         if (resolved == null) {
             return null;
         }
@@ -99,6 +103,7 @@ final class RuntimeAttributeResolver {
     ) {
         Attribute<?> found = null;
         String resolvedName = null;
+
         for (String fieldName : fieldNames) {
             resolvedName = fieldName;
             found = lookupRecordAttribute(box, fieldName);
@@ -106,6 +111,7 @@ final class RuntimeAttributeResolver {
                 break;
             }
         }
+
         if (found == null) {
             log.trace("↪ Attribute(s) not present: {}", fieldNames);
             if (isMandatory) {
@@ -125,21 +131,26 @@ final class RuntimeAttributeResolver {
         Attribute<?> attribute = null;
 
         Iterator<String> fnit = fieldNames.iterator();
+
         if (fnit.hasNext()) {
             fieldName = fnit.next();
             attribute = box.getAttribute(fieldName);
+
             if (attribute == null) {
                 log.trace("↪ No attribute '{}'.", fieldName);
             }
+
             while (attribute == null && fnit.hasNext()) {
                 fieldName = fnit.next();
                 log.debug("↪  ... trying '{}'.", fieldName);
                 attribute = box.getAttribute(fieldName);
+
                 if (attribute == null) {
                     log.trace("↪ No attribute '{}'.", fieldName);
                 }
             }
         }
+
         if (attribute == null) {
             if (isMandatory) {
                 log.info("↪ Mandatory field(s) not present: {}", fieldNames);
@@ -152,6 +163,7 @@ final class RuntimeAttributeResolver {
     private Attribute<?> lookupRecordAttribute(RecordBox box, String fieldName) {
         Attribute<Attribute<?>> recordAttribute = box.getRecordAttribute();
         ArrayList<Attribute<?>> values = recordAttribute.getValueVector();
+
         for (Attribute<?> attr : values) {
             if (attr.getAlias().equals(fieldName)) {
                 return attr;
@@ -167,8 +179,10 @@ final class RuntimeAttributeResolver {
             boolean isMandatory
     ) {
         ArrayList<?> values = attribute.getValueVector();
+
         if (values.isEmpty()) {
             log.trace("↪ No values for attribute '{}'.", fieldName);
+
             if (isMandatory) {
                 log.info("↪ Mandatory value(s) for field '{}' not present", fieldName);
             }
@@ -188,8 +202,10 @@ final class RuntimeAttributeResolver {
             boolean isMandatory
     ) {
         ArrayList<?> values = attribute.getValueVector();
+
         if (values.isEmpty()) {
             log.trace("↪ No values for attribute '{}'.", fieldName);
+
             if (isMandatory) {
                 log.info("↪ Mandatory value(s) for field '{}' not present", fieldName);
             }

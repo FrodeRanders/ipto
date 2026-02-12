@@ -46,11 +46,14 @@ public class RuntimeOperators {
     ) {
         // Pre-index by alias/type name to keep runtime fetchers simple and fast.
         Map<String, GqlAttributeShape> attributes = new HashMap<>();
+
         for (GqlAttributeShape shape : gqlViewpoint.attributes().values()) {
             attributes.put(shape.alias(), shape);
         }
+
         Map<String, GqlUnionShape> gqlUnions  = gqlViewpoint.unions();
         Map<String, GqlRecordShape> gqlRecords = new HashMap<>();
+
         for (GqlRecordShape shape : gqlViewpoint.records().values()) {
             gqlRecords.put(shape.typeName(), shape);
         }
@@ -73,6 +76,7 @@ public class RuntimeOperators {
                     final boolean isMandatory = field.isMandatory();
 
                     String attributeNameForField = null;
+
                     for (GqlAttributeShape shape : attributes.values()) {
                         if (shape.name().equals(backingAttributeName)) {
                             // GraphQL field names and repo attribute aliases may differ.
@@ -109,6 +113,7 @@ public class RuntimeOperators {
                         for (String memberType : unionMemberTypes) {
                             for (GqlRecordShape recrd : gqlRecords.values()) {
                                 String unionMember = recrd.typeName();
+
                                 if (unionMember.equals(memberType)) {
                                     String attributeEnumName = recrd.attributeEnumName();
                                     log.debug("↯ Adding alternative {} for union {}", memberType, union.unionName());
@@ -125,16 +130,19 @@ public class RuntimeOperators {
                         // the wiring preamble will be available.
                         //***********************************************************
                         Object source = env.getSource();
+
                         if (source == null) {
                             log.warn("No source");
                             return null;
                         }
+
                         if (!(source instanceof Box box)) {
                             throw new IllegalStateException(
                                     "Expected Box as GraphQL source for '" + typeName + "." + fieldName
                                             + "' but got " + source.getClass().getCanonicalName()
                             );
                         }
+
                         if (!(box instanceof AttributeBox attributeBox)) {
                             throw new IllegalStateException(
                                     "Unexpected Box implementation '" + box.getClass().getCanonicalName()
@@ -279,6 +287,7 @@ public class RuntimeOperators {
             }
 
             runtimeWiring.type(typeName, t -> t.dataFetcher(operationName, fetcher));
+            
             if (operation.category() == SchemaOperation.SUBSCRIPTION) {
                 log.warn(
                         "↯ Wiring subscription scaffold: {}::{}(...) : {} (policy={})",

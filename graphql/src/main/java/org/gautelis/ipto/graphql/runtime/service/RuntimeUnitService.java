@@ -43,7 +43,7 @@ final class RuntimeUnitService {
     }
 
     Box loadUnit(int tenantId, long unitId) {
-        log.trace("↪ RuntimeService::loadUnit({}, {})", tenantId, unitId);
+        log.trace("↪ RuntimeUnitService::loadUnit({}, {})", tenantId, unitId);
 
         Optional<Unit> unit = repo.getUnit(tenantId, unitId);
         if (unit.isEmpty()) {
@@ -57,7 +57,7 @@ final class RuntimeUnitService {
     }
 
     Box loadUnitByCorrId(int tenantId, UUID corrId) {
-        log.trace("↪ RuntimeService::loadUnitByCorrId({}, {})", tenantId, corrId);
+        log.trace("↪ RuntimeUnitService::loadUnitByCorrId({}, {})", tenantId, corrId);
 
         Unit unit = findUnitByCorrId(tenantId, corrId);
         if (unit == null) {
@@ -71,7 +71,7 @@ final class RuntimeUnitService {
     }
 
     byte[] loadRawUnit(int tenantId, long unitId) {
-        log.trace("↪ RuntimeService::loadRawUnit({}, {})", tenantId, unitId);
+        log.trace("↪ RuntimeUnitService::loadRawUnit({}, {})", tenantId, unitId);
 
         Optional<Unit> unit = repo.getUnit(tenantId, unitId);
         if (unit.isEmpty()) {
@@ -82,7 +82,7 @@ final class RuntimeUnitService {
     }
 
     byte[] loadRawPayload(int tenantId, long unitId) {
-        log.trace("↪ RuntimeService::loadRawPayload({}, {})", tenantId, unitId);
+        log.trace("↪ RuntimeUnitService::loadRawPayload({}, {})", tenantId, unitId);
 
         Optional<Unit> unit = repo.getUnit(tenantId, unitId);
         if (unit.isEmpty()) {
@@ -101,7 +101,7 @@ final class RuntimeUnitService {
     }
 
     byte[] loadRawPayloadByCorrId(int tenantId, UUID corrId) {
-        log.trace("↪ RuntimeService::loadRawPayloadByCorrId({}, {})", tenantId, corrId);
+        log.trace("↪ RuntimeUnitService::loadRawPayloadByCorrId({}, {})", tenantId, corrId);
 
         Unit unit = findUnitByCorrId(tenantId, corrId);
         if (unit == null) {

@@ -55,7 +55,7 @@ public sealed class AttributeBox extends Box permits RecordBox {
     }
 
     public <A> A scalar(String alias, Class<A> expectedClass) {
-        log.trace("↓ Box::scalar({}, {})", alias, expectedClass.getName());
+        log.trace("↓ AttributeBox::scalar({}, {})", alias, expectedClass.getName());
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {
@@ -73,7 +73,7 @@ public sealed class AttributeBox extends Box permits RecordBox {
     }
 
     public <A> List<A> array(String alias, Class<A> expectedClass) {
-        log.trace("↓ Box::array({}, {})", alias, expectedClass.getName());
+        log.trace("↓ AttributeBox::array({}, {})", alias, expectedClass.getName());
 
         Attribute<?> attribute = attributesByFieldName.get(alias);
         if (null == attribute) {

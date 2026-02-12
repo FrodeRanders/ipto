@@ -107,8 +107,7 @@ public class Configurator {
         reconcile(repo, gql, ipto, progress);
 
         RuntimeService runtimeService = new RuntimeService(repo, ipto);
-        runtimeService.wire(runtimeWiring, gql, ipto);
-        runtimeService.wireOperations(runtimeWiring, gql, SubscriptionWiringPolicy.resolve());
+        runtimeService.wire(runtimeWiring, gql, SubscriptionWiringPolicy.resolve());
 
         // Wire custom operations and/or overrides
         if (null != operationsWireBlock) {

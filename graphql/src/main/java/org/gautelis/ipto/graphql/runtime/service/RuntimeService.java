@@ -94,18 +94,10 @@ public class RuntimeService {
     public void wire(
             RuntimeWiring.Builder runtimeWiring,
             Configurator.GqlViewpoint gqlViewpoint,
-            Configurator.CatalogViewpoint catalogViewpoint
+            SubscriptionWiringPolicy subscriptionWiringPolicy
     ) {
         RuntimeOperators.wireRecords(runtimeWiring, this, gqlViewpoint);
         RuntimeOperators.wireUnions(runtimeWiring, gqlViewpoint);
-        // Operations are wired separately
-    }
-
-    public void wireOperations(
-            RuntimeWiring.Builder runtimeWiring,
-            Configurator.GqlViewpoint gqlViewpoint,
-            SubscriptionWiringPolicy subscriptionWiringPolicy
-    ) {
         RuntimeOperators.wireOperations(runtimeWiring, this, gqlViewpoint, subscriptionWiringPolicy);
     }
 
