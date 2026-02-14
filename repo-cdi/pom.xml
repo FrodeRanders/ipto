@@ -17,8 +17,8 @@
     <properties>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.30.8</quarkus.platform.version>
-        <smallrye-config.version>3.15.1</smallrye-config.version>
+        <quarkus.platform.version>3.31.3</quarkus.platform.version>
+        <smallrye-config.version>3.16.0</smallrye-config.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
