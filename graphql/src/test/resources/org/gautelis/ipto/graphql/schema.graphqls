@@ -362,5 +362,5 @@ type Query {
 
 ##############  Mutations ###########################################
 type Mutation {
-    lagraDataleveransRaw(data : Bytes!) : Dataleverans @ipto(operation: "STORE_RAW_UNIT")
+    lagraDataleveransRaw(data : Bytes!) : Bytes @ipto(operation: "STORE_RAW_UNIT")
 }

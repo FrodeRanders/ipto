@@ -220,17 +220,11 @@ public class RecordsIT {
                 RecordAttribute beslutsRecord = RecordAttribute.from(yrkan, beslut.get());
 
                 beslutsRecord.withNestedAttributeValue("dcterms:date", Instant.class, datum -> datum.add(Instant.now()));
-
                 beslutsRecord.withNestedAttributeValue("ffa:beslutsfattare", String.class, beslutsfattare -> beslutsfattare.add("Beslut Person"));
-
                 beslutsRecord.withNestedAttributeValue("ffa:beslutstyp", String.class, beslutstyp -> beslutstyp.add("SLUTLIGT"));
-
                 beslutsRecord.withNestedAttributeValue("ffa:beslutsutfall", String.class, beslutsutfall -> beslutsutfall.add("BEVILJAT"));
-
                 beslutsRecord.withNestedAttributeValue("ffa:organisation", String.class, organisation -> organisation.add("Myndigheten"));
-
                 beslutsRecord.withNestedAttributeValue("ffa:lagrum", String.class, lagrum -> lagrum.add("FL_P38"));
-
                 beslutsRecord.withNestedAttributeValue("ffa:avslagsanledning", String.class, avslagsanledning -> {
                     // Ingen
                 });

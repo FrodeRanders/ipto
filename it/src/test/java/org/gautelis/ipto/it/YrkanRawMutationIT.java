@@ -14,17 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto;
+package org.gautelis.ipto.it;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.GraphQLError;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.quarkus.test.junit.QuarkusTest;
-import jakarta.inject.Inject;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -33,41 +33,21 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import static io.restassured.RestAssured.given;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@QuarkusTest
-class GraphQLResourceTest {
+@Tag("GraphQL")
+@IptoIT
+class YrkanRawMutationIT {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    @Inject
-    GraphQL graphQL;
-
     @Test
-    void graphQLBeanIsAvailable() {
-        assertNotNull(graphQL);
-    }
-
-    @Test
-    void rejectsMissingQuery() {
-        given()
-                .contentType("application/json")
-                .body("{}")
-                .when().post("/graphql")
-                .then()
-                .statusCode(400);
-    }
-
-    @Test
-    void storesYrkanFromExampleJson() {
+    void storesFfaExampleThroughCustomMutation(GraphQL graphQL) throws Exception {
         byte[] payload;
-        try (InputStream in = GraphQLResourceTest.class.getResourceAsStream("ffa-example.json")) {
+        try (InputStream in = YrkanRawMutationIT.class.getResourceAsStream("ffa-example.json")) {
             assertNotNull(in, "Missing test resource: ffa-example.json");
             payload = in.readAllBytes();
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to read ffa-example.json", e);
         }
         UUID corrId = UUID.randomUUID();
         payload = withCorrId(payload, corrId);
@@ -78,13 +58,12 @@ class GraphQLResourceTest {
                 }
                 """;
 
-        String b64Data = Base64.getEncoder().encodeToString(payload);
         ExecutionResult result = graphQL.execute(
                 ExecutionInput.newExecutionInput()
                         .query(mutation)
                         .variables(Map.of(
                                 "tenantId", 1,
-                                "data", b64Data
+                                "data", Base64.getEncoder().encodeToString(payload)
                         ))
                         .build()
         );
@@ -93,16 +72,24 @@ class GraphQLResourceTest {
         assertTrue(errors.isEmpty(), "Unexpected GraphQL errors: " + errors);
 
         Map<String, String> data = result.getData();
-        assertNotNull(data, "No GraphQL response payload");
+        assertNotNull(data);
         String b64Stored = data.get("lagraYrkanRaw");
-        assertNotNull(b64Stored, "Missing mutation field: lagraYrkanRaw");
+        assertNotNull(b64Stored, "Missing response value for lagraYrkanRaw");
 
-        String storedJson = new String(Base64.getDecoder().decode(b64Stored), StandardCharsets.UTF_8);
-        assertFalse(storedJson.isBlank(), "Stored unit payload is blank");
-        assertTrue(storedJson.contains("\"@type\":\"ipto:unit\""), "Stored payload is not an IPTO unit");
-        assertTrue(storedJson.contains("\"tenantid\":1"), "Stored payload does not target tenant 1");
-        assertTrue(storedJson.contains("\"corrid\":\"" + corrId + "\""), "Stored payload does not include expected corrid");
-        assertTrue(storedJson.contains("\"attrname\":\"ffa:raw_payload\""), "Stored payload does not include raw_payload");
+        byte[] storedBytes = Base64.getDecoder().decode(b64Stored.getBytes(StandardCharsets.UTF_8));
+        JsonNode stored = MAPPER.readTree(storedBytes);
+        assertEquals("ipto:unit", stored.path("@type").asText());
+        assertEquals(1, stored.path("tenantid").asInt());
+        assertEquals(corrId.toString(), stored.path("corrid").asText());
+
+        boolean hasRawPayload = false;
+        for (JsonNode attribute : stored.path("attributes")) {
+            if ("ffa:raw_payload".equals(attribute.path("attrname").asText())) {
+                hasRawPayload = true;
+                break;
+            }
+        }
+        assertTrue(hasRawPayload, "Stored unit must include ffa:raw_payload");
     }
 
     private static byte[] withCorrId(byte[] payload, UUID corrId) {

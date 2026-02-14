@@ -14,137 +14,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.gautelis.ipto.bootstrap;
+package org.gautelis.ipto.it;
 
-import graphql.GraphQL;
-import graphql.schema.DataFetcher;
-import jakarta.annotation.PostConstruct;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.enterprise.inject.Instance;
-import jakarta.inject.Inject;
-import org.gautelis.ipto.repo.db.Database;
-import org.gautelis.ipto.config.IptoConfig;
-import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.configuration.OperationsWireParameters;
-import org.gautelis.ipto.graphql.model.Query;
+import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import io.quarkus.runtime.Startup;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.io.InputStreamReader;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.gautelis.ipto.graphql.runtime.service.RuntimeService.headHex;
 import static org.gautelis.ipto.graphql.runtime.wiring.RuntimeOperators.MAPPER;
 
-@Startup
-@ApplicationScoped
-public class IptoBootstrap {
-    private static final Logger log = LoggerFactory.getLogger(IptoBootstrap.class);
-
-    private final Repository repository;
-    private final IptoConfig config;
-    private final Instance<IptoOperationsWiring> wiring;
-
-    private volatile GraphQL graphQL;
-
-    @Inject
-    public IptoBootstrap(
-            Repository repository,
-            IptoConfig config,
-            Instance<IptoOperationsWiring> wiring
-    ) {
-        this.repository = repository;
-        this.config = config;
-        this.wiring = wiring;
+final class YrkanJsonLdSupport {
+    private YrkanJsonLdSupport() {
     }
 
-    @PostConstruct
-    void init() {
-        String sdlResource = config.graphql().sdlResource();
-        if (sdlResource == null || sdlResource.isBlank()) {
-            log.info("No GraphQL SDL configured; skipping GraphQL bootstrap");
-            return;
-        }
-
-        log.info("*** Bootstrapping IPTO from {} ***", sdlResource);
-
-        try (InputStreamReader reader = new InputStreamReader(
-                Objects.requireNonNull(
-                        IptoBootstrap.class.getResourceAsStream(sdlResource),
-                        sdlResource + " not found on classpath"
-                )
-        )) {
-            Optional<GraphQL> gql = Configurator.load(repository, reader, this::wireOperations, System.out);
-            if (gql.isEmpty()) {
-                throw new IllegalStateException("Failed to load GraphQL configuration");
-            }
-            this.graphQL = gql.get();
-
-            repository.sync(); // see note in Configurator::load
-
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to bootstrap IPTO", e);
-        }
-    }
-
-    public GraphQL graphQL() {
-        return graphQL;
-    }
-
-    private void wireOperations(OperationsWireParameters params) {
-        // Keep only domain-specific wiring that cannot be inferred from SDL + generic runtime dispatch.
-        // Other query/mutation operations are now auto-wired by graphql runtime based on SDL shape.
-        {
-            String type = "Mutation";
-            String operationName = "lagraYrkanRaw";
-            String outputType = "Bytes";
-
-            DataFetcher<?> storeYrkanJson = env -> {
-                //**** Executed at runtime **********************************
-                // This closure captures its environment, so at runtime
-                // the wiring preamble will be available.
-                //***********************************************************
-
-                Map<String, Object> args = env.getArguments();
-                int tenantId = (int) args.get("tenantId");
-                byte[] bytes = (byte[]) args.get("data"); // Connection to schema
-
-                if (log.isTraceEnabled()) {
-                    log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
-                }
-
-                byte[] translated = translateYrkanJsonLd(params, bytes, tenantId);
-                return params.runtimeService().storeRawUnit(translated);
-            };
-
-            params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeYrkanJson));
-            log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
-        }
-
-        // Allow external CDI customizers to add/override operation wiring.
-        wiring.forEach(custom -> custom.wire(params));
-    }
-
-    /**
-     * This approach is based on the idea of mapping branded JSON-LD to IPTO native JSON.
-     * This may not be the best (or even right) way to go about this, but it'll suffice for now.
-     * @param params
-     * @param bytes
-     * @param tenantId
-     * @return
-     */
-    private static byte[] translateYrkanJsonLd(OperationsWireParameters params, byte[] bytes, int tenantId) {
+    static byte[] translateYrkanJsonLd(OperationsWireParameters params, byte[] bytes, int tenantId) {
         try {
             JsonNode root = MAPPER.readTree(bytes);
             if (!(root instanceof ObjectNode payload)) {
@@ -157,26 +48,24 @@ public class IptoBootstrap {
             Long unitId = null;
             String unitName = null;
 
-            Optional<Unit> _existingUnit = findUnitByCorrId(params.repository(), tenantId, corrId);
-            if (_existingUnit.isPresent()) {
-                int existingVersion = _existingUnit.get().getVersion();
+            Optional<Unit> existingUnit = findUnitByCorrId(params.repository(), tenantId, corrId);
+            if (existingUnit.isPresent()) {
+                int existingVersion = existingUnit.get().getVersion();
                 int expectedVersion = existingVersion + 1;
-
                 if (providedVersion != expectedVersion) {
                     throw new IllegalArgumentException(
                             "Version mismatch for corrid " + corrId + ": expected " + expectedVersion + " but got " + providedVersion
                     );
                 }
-
-                unitId = _existingUnit.get().getUnitId();
-                unitName = _existingUnit.get().getName().orElse(null);
+                unitId = existingUnit.get().getUnitId();
+                unitName = existingUnit.get().getName().orElse(null);
             }
 
             ObjectNode unit = MAPPER.createObjectNode();
             unit.put("@type", "ipto:unit");
             unit.put("@version", 2);
             unit.put("tenantid", tenantId);
-            if (/* unit does not exist already */ null == unitId) {
+            if (unitId == null) {
                 unit.putNull("unitid");
             } else {
                 unit.put("unitid", unitId);
@@ -185,7 +74,7 @@ public class IptoBootstrap {
             unit.put("corrid", corrId.toString());
             unit.put("status", Unit.Status.EFFECTIVE.getStatus());
 
-            if (null == unitName || unitName.isEmpty()) {
+            if (unitName == null || unitName.isEmpty()) {
                 unitName = "yrkan-" + corrId;
             }
             unit.put("unitname", unitName);
@@ -205,7 +94,6 @@ public class IptoBootstrap {
             addIfPresent(attributes, buildProduceradeResultat(payload.path("producerade_resultat")));
 
             unit.set("attributes", attributes);
-
             return MAPPER.writeValueAsBytes(unit);
         } catch (Exception e) {
             throw new IllegalArgumentException("Failed to translate yrkan JSON-LD payload", e);
@@ -274,7 +162,6 @@ public class IptoBootstrap {
 
         ArrayNode nested = MAPPER.createArrayNode();
         addIfPresent(nested, buildStringScalar("personnummer", "ffa:personnummer", personnummer));
-
         return buildRecordScalar("fysisk_person", "ffa:fysisk_person", nested);
     }
 
@@ -291,7 +178,6 @@ public class IptoBootstrap {
         addIfPresent(nested, buildStringScalar("organisation", "ffa:organisation", textValue(beslutNode, "organisation")));
         addIfPresent(nested, buildStringScalar("lagrum", "ffa:lagrum", textValue(beslutNode, "lagrum")));
         addIfPresent(nested, buildStringScalar("avslagsanledning", "ffa:avslagsanledning", textValue(beslutNode, "avslagsanledning")));
-
         return buildRecordScalar("beslut", "ffa:beslut", nested);
     }
 
@@ -305,7 +191,6 @@ public class IptoBootstrap {
             ObjectNode entry = buildProduceratResultatEntry(item);
             addIfPresent(nested, entry);
         }
-
         return buildRecordScalar("producerade_resultat", "ffa:producerade_resultat", nested);
     }
 
@@ -351,7 +236,6 @@ public class IptoBootstrap {
         addIfPresent(nested, buildStringScalar("valuta", "ffa:valuta", textValue(beloppNode, "valuta")));
         addIfPresent(nested, buildStringScalar("skattestatus", "ffa:skattestatus", textValue(beloppNode, "skattestatus")));
         addIfPresent(nested, buildStringScalar("beloppsperiod", "ffa:beloppsperiod", textValue(beloppNode, "beloppsperiod")));
-
         return buildRecordScalar("belopp", "ffa:belopp", nested);
     }
 
@@ -363,7 +247,6 @@ public class IptoBootstrap {
         ArrayNode nested = MAPPER.createArrayNode();
         addIfPresent(nested, buildTimeScalar("from", "ffa:from", textValue(periodNode, "from")));
         addIfPresent(nested, buildTimeScalar("tom", "ffa:tom", textValue(periodNode, "tom")));
-
         return buildRecordScalar("period", "ffa:period", nested);
     }
 

@@ -17,16 +17,21 @@
 package org.gautelis.ipto.it;
 
 import graphql.GraphQL;
+import graphql.schema.DataFetcher;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.RepositoryFactory;
 import org.gautelis.ipto.graphql.configuration.Configurator;
+import org.gautelis.ipto.graphql.configuration.OperationsWireParameters;
 import org.junit.jupiter.api.extension.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.InputStreamReader;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+
+import static org.gautelis.ipto.graphql.runtime.service.RuntimeService.headHex;
 
 public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver {
     private static final Logger log = LoggerFactory.getLogger(IptoSetupExtension.class);
@@ -87,7 +92,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                                 CONFIG + " not found on classpath next to IptoSetupExtension"
                         )
                 )) {
-                    Optional<GraphQL> g = Configurator.load(repo, reader, null, System.out);
+                    Optional<GraphQL> g = Configurator.load(repo, reader, IptoSetupExtension::wireOperations, System.out);
                     if (g.isEmpty()) {
                         throw new IllegalStateException("Failed to load GraphQL configuration");
                     }
@@ -104,5 +109,27 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
         @Override
         public void close() {
         }
+    }
+
+    private static void wireOperations(OperationsWireParameters params) {
+        String type = "Mutation";
+        String operationName = "lagraYrkanRaw";
+        String outputType = "Bytes";
+
+        DataFetcher<?> storeYrkanJson = env -> {
+            Map<String, Object> args = env.getArguments();
+            int tenantId = (int) args.get("tenantId");
+            byte[] bytes = (byte[]) args.get("data");
+
+            if (log.isTraceEnabled()) {
+                log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
+            }
+
+            byte[] translated = YrkanJsonLdSupport.translateYrkanJsonLd(params, bytes, tenantId);
+            return params.runtimeService().storeRawUnit(translated);
+        };
+
+        params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeYrkanJson));
+        log.info("↯ Wiring: {}::{}(...) : {}", type, operationName, outputType);
     }
 }
