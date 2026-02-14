@@ -298,6 +298,44 @@ public class Repository {
         return unit;
     }
 
+    /**
+     * Fetch an existing unit of latest version identified by correlation ID.
+     */
+    public Optional<Unit> getUnit(
+            int tenantId,
+            UUID corrId
+    ) throws DatabaseConnectionException, DatabaseReadException {
+        final Long[] unitId = { null };
+
+        TimedExecution.run(context.getTimingData(), "lookup unit by corrid", () ->
+                Database.useReadonlyConnection(
+                        context.getDataSource(),
+                        conn -> Database.useReadonlyPreparedStatement(
+                                conn,
+                                context.getStatements().unitGetByCorrId(),
+                                pStmt -> {
+                                    int i = 0;
+                                    pStmt.setInt(++i, tenantId);
+                                    pStmt.setObject(++i, corrId);
+                                },
+                                rs -> {
+                                    if (rs.next()) {
+                                        unitId[0] = rs.getLong("unitid");
+                                        if (rs.next()) {
+                                            throw new IllegalStateException("Multiple units found for corrid " + corrId);
+                                        }
+                                    }
+                                }
+                        )
+                )
+        );
+
+        if (unitId[0] == null) {
+            return Optional.empty();
+        }
+        return getUnit(tenantId, unitId[0]);
+    }
+
 
     /**
      * Fetches an existing unit from resultset.

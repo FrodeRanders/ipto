@@ -22,10 +22,6 @@ import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.model.attributes.Attribute;
-import org.gautelis.ipto.repo.search.SearchResult;
-import org.gautelis.ipto.repo.search.query.SearchExpression;
-import org.gautelis.ipto.repo.search.query.SearchExpressionQueryParser;
-import org.gautelis.ipto.repo.search.query.SearchOrder;
 import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
@@ -116,13 +112,7 @@ final class RuntimeUnitService {
     }
 
     private Unit findUnitByCorrId(int tenantId, UUID corrId) {
-        String query = "tenantid = " + tenantId + " AND corrid = \"" + corrId + "\"";
-        SearchExpression expr = SearchExpressionQueryParser.parse(query, repo);
-        SearchResult result = repo.searchUnit(1, 1, 1, expr, SearchOrder.getDefaultOrder());
-        if (result.results().size() > 1) {
-            throw new IllegalArgumentException("Multiple units found for corrid " + corrId);
-        }
-        return result.results().stream().findFirst().orElse(null);
+        return repo.getUnit(tenantId, corrId).orElse(null);
     }
 
     private byte[] rawPayload(Unit unit) {

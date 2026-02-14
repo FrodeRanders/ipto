@@ -66,6 +66,17 @@
     </entry>
 
     <!--
+      Get latest unit id by correlation id.
+      Call with: (tenantId, corrId)
+    -->
+    <entry key="sql.unit.get_by_corrid">
+        SELECT unitid
+        FROM repo_unit_kernel
+        WHERE tenantid=? AND corrid=?
+        FETCH FIRST 2 ROWS ONLY
+    </entry>
+
+    <!--
       Set/update status of unit.
       Call with: (status, tenantId, unitId)
     -->
@@ -308,6 +319,5 @@
         INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES (?, ?, ?, ?, ?)
     </entry>
 </properties>
-
 
 

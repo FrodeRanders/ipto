@@ -37,6 +37,9 @@ public interface Statements {
     @Configurable(property = "sql.unit.get_latest")
     String unitGetLatest();
 
+    @Configurable(property = "sql.unit.get_by_corrid")
+    String unitGetByCorrId();
+
     @Configurable(property = "sql.unit.set_status")
     String unitSetStatus();
 

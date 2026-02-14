@@ -22,7 +22,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
-import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.config.IptoConfig;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.configuration.OperationsWireParameters;
@@ -124,8 +123,7 @@ public class IptoBootstrap {
                     log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
                 }
 
-                byte[] translated = translateYrkanJsonLd(params, bytes, tenantId);
-                return params.runtimeService().storeRawUnit(translated);
+                return params.runtimeService().storeDomainRawUnit(tenantId, "Yrkan", bytes);
             };
 
             params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeYrkanJson));
@@ -213,42 +211,7 @@ public class IptoBootstrap {
     }
 
     private static Optional<Unit> findUnitByCorrId(Repository repo, int tenantId, UUID corrId) {
-        String sql = """
-                SELECT unitid
-                FROM repo_unit_kernel
-                WHERE tenantid = ?
-                  AND corrid = ?
-                """;
-
-        final Long[] unitId = { null };
-        try {
-            repo.withConnection(conn ->
-                    Database.useReadonlyPreparedStatement(
-                            conn,
-                            sql,
-                            pStmt -> {
-                                int i = 0;
-                                pStmt.setInt(++i, tenantId);
-                                pStmt.setObject(++i, corrId);
-                            },
-                            rs -> {
-                                if (rs.next()) {
-                                    unitId[0] = rs.getLong("unitid");
-                                    if (rs.next()) {
-                                        throw new IllegalArgumentException("Multiple units found for corrid " + corrId);
-                                    }
-                                }
-                            }
-                    )
-            );
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Failed to lookup unit by corrid " + corrId, e);
-        }
-
-        if (unitId[0] == null) {
-            return Optional.empty();
-        }
-        return repo.getUnit(tenantId, unitId[0]);
+        return repo.getUnit(tenantId, corrId);
     }
 
     private static ObjectNode buildFysiskPerson(JsonNode node) {

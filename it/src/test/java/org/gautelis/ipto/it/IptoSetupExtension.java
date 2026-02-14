@@ -125,8 +125,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
                 log.trace("↩ {}::{}({}) : {}", type, operationName, headHex(bytes, 16), outputType);
             }
 
-            byte[] translated = YrkanJsonLdSupport.translateYrkanJsonLd(params, bytes, tenantId);
-            return params.runtimeService().storeRawUnit(translated);
+            return params.runtimeService().storeDomainRawUnit(tenantId, "Yrkan", bytes);
         };
 
         params.runtimeWiring().type(type, t -> t.dataFetcher(operationName, storeYrkanJson));

@@ -20,6 +20,8 @@ import com.networknt.schema.*;
 import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.graphql.configuration.Configurator;
 import org.gautelis.ipto.graphql.model.CatalogAttribute;
+import org.gautelis.ipto.graphql.model.CatalogRecord;
+import org.gautelis.ipto.graphql.model.CatalogTemplate;
 import org.gautelis.ipto.graphql.model.GqlOperationShape;
 import org.gautelis.ipto.graphql.model.Query;
 import org.gautelis.ipto.graphql.runtime.box.AttributeBox;
@@ -33,12 +35,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 
@@ -47,6 +51,9 @@ public class RuntimeService {
 
     private final Repository repo;
     private final Map</* attribute alias */ String, CatalogAttribute> allAttributesByAlias = new HashMap<>();
+    private final Map<String, CatalogTemplate> templatesByName = new HashMap<>();
+    private final Map<String, CatalogRecord> recordsByAttributeName = new HashMap<>();
+    private final Map<Integer, CatalogAttribute> attributesById = new HashMap<>();
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -68,6 +75,17 @@ public class RuntimeService {
             String alias = attribute.alias();
             if (alias != null && !alias.isEmpty()) {
                 allAttributesByAlias.put(alias, attribute);
+            }
+            attributesById.put(attribute.attrId(), attribute);
+        }
+
+        for (CatalogTemplate template : catalogView.templates().values()) {
+            templatesByName.put(template.templateName(), template);
+        }
+        for (CatalogRecord record : catalogView.records().values()) {
+            CatalogAttribute recordAttribute = attributesById.get(record.recordAttrId());
+            if (recordAttribute != null) {
+                recordsByAttributeName.put(recordAttribute.attrName(), record);
             }
         }
 
@@ -128,6 +146,46 @@ public class RuntimeService {
             log.info("↪ JSON validation errors: {}", buf);
             return Map.of("validation-errors", buf.toString());
         }
+    }
+
+    public Object storeDomainRawUnit(
+            int tenantId,
+            String templateName,
+            byte[] bytes
+    ) {
+        log.trace("↪ RuntimeService::storeDomainRawUnit(template={}, tenant={}, payload={}...)", templateName, tenantId, headHex(bytes, 16));
+
+        JsonNode payload = MAPPER.readTree(bytes);
+        if (!(payload instanceof ObjectNode payloadObject)) {
+            throw new IllegalArgumentException("Domain payload must be a JSON object");
+        }
+
+        CatalogTemplate template = templatesByName.get(templateName);
+        if (template == null) {
+            throw new IllegalArgumentException("Unknown template: " + templateName);
+        }
+
+        UUID corrId = DomainPayloadIndexer.extractCorrId(payloadObject);
+        Optional<Unit> existing = repo.getUnit(tenantId, corrId);
+        DomainPayloadIndexer.validateVersion(existing, payloadObject, corrId);
+
+        Long existingUnitId = existing.map(Unit::getUnitId).orElse(null);
+        String existingUnitName = existing.flatMap(Unit::getName).orElse(null);
+
+        ObjectNode unit = DomainPayloadIndexer.toIptoUnit(
+                payloadObject,
+                bytes,
+                tenantId,
+                templateName,
+                template,
+                recordsByAttributeName,
+                corrId,
+                existingUnitId,
+                existingUnitName
+        );
+
+        Unit stored = repo.storeUnit(unit);
+        return stored.asJson(false).getBytes(StandardCharsets.UTF_8);
     }
 
     public Box loadUnit(int tenantId, long unitId) {
