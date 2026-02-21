@@ -39,13 +39,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Tag("GraphQL")
 @IptoIT
-class YrkanRawMutationIT {
+class YrkandeRawMutationIT {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @Test
     void storesFfaExampleThroughCustomMutation(GraphQL graphQL) throws Exception {
         byte[] payload;
-        try (InputStream in = YrkanRawMutationIT.class.getResourceAsStream("ffa-example.json")) {
+        try (InputStream in = YrkandeRawMutationIT.class.getResourceAsStream("ffa-example.json")) {
             assertNotNull(in, "Missing test resource: ffa-example.json");
             payload = in.readAllBytes();
         }
@@ -54,7 +54,7 @@ class YrkanRawMutationIT {
 
         String mutation = """
                 mutation Store($tenantId: Int!, $data: Bytes!) {
-                  lagraYrkanRaw(tenantId: $tenantId, data: $data)
+                  lagraYrkandeRaw(tenantId: $tenantId, data: $data)
                 }
                 """;
 
@@ -73,8 +73,8 @@ class YrkanRawMutationIT {
 
         Map<String, String> data = result.getData();
         assertNotNull(data);
-        String b64Stored = data.get("lagraYrkanRaw");
-        assertNotNull(b64Stored, "Missing response value for lagraYrkanRaw");
+        String b64Stored = data.get("lagraYrkandeRaw");
+        assertNotNull(b64Stored, "Missing response value for lagraYrkandeRaw");
 
         byte[] storedBytes = Base64.getDecoder().decode(b64Stored.getBytes(StandardCharsets.UTF_8));
         JsonNode stored = MAPPER.readTree(storedBytes);

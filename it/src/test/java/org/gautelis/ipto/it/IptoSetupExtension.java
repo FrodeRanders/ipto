@@ -113,7 +113,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
 
     private static void wireOperations(OperationsWireParameters params) {
         String type = "Mutation";
-        String operationName = "lagraYrkanRaw";
+        String operationName = "lagraYrkandeRaw";
         String outputType = "Bytes";
 
         DataFetcher<?> storeYrkanJson = env -> {
