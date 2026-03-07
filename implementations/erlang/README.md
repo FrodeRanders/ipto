@@ -11,6 +11,8 @@
 - Search parser supports a minimal query-string syntax for PostgreSQL search.
 - Unit write/read in PostgreSQL mode now prefers stored procedures and falls back to direct SQL if procedure calls fail.
 
+Detailed parity scope and roadmap are tracked in `FEATURE_COMPLETENESS.md`.
+
 ## Intended migration path
 
 1. Expand PostgreSQL search coverage (attributes/relations) to match Java parity.
@@ -35,6 +37,8 @@
 - `ipto_graphql` GraphQL facade
 - `ipto_graphql_adapter` `graphql_erl` adapter and API discovery
 - `ipto_graphql_schema` SDL definition for repo primitives
+- `ipto_graphql_sdl` SDL inspection/validation parser for setup configuration
+- `ipto_graphql_operations` operation registration metadata and allowlist filtering
 - `ipto_graphql_resolvers` resolver mapping to `ipto` operations
 
 ## Running tests without rebar3
@@ -118,12 +122,55 @@ SDL configuration/initialization options:
 - App env `graphql_schema_sdl` (inline SDL binary/string)
 - App env `graphql_schema_file` (path to SDL file)
 - Env var `IPTO_GRAPHQL_SCHEMA_FILE` (fallback path)
+- App env `graphql_operation_allowlist` (optional list of allowed operation names for registration metadata)
 
 At runtime you can reload schema/config after changing overrides:
 
 ```erlang
 ok = ipto_graphql:reload_schema().
 ```
+
+SDL inspection/setup APIs (current first step):
+
+```erlang
+Catalog = ipto:inspect_graphql_sdl(SdlBin),
+{ok, Summary} = ipto:configure_graphql_sdl(SdlBin).
+
+%% file convenience
+{ok, Summary2} = ipto:configure_graphql_sdl_file("/path/to/schema.graphqls").
+```
+
+GraphQL setup operations are also exposed:
+
+- Query: `inspectGraphqlSdl(sdl: String!): SdlCatalog!`
+- Query: `registeredOperations: RegisteredOperations!` (`queries/mutations` as operation-name entries)
+- Query: `unitByCorrid(corrid: String!, tenantid: Int): Unit`
+- Query: `unitExists(tenantid: Int!, unitid: Int!): Boolean!`
+- Query: `unitLocked(tenantid: Int!, unitid: Int!): Boolean!`
+- Mutation: `configureGraphqlSdl(sdl: String!): SdlConfigureResult!`
+- Mutation: `configureGraphqlSdlFile(path: String!): SdlConfigureResult!`
+- Query: `units(query: String, orderField: String, orderDir: String, limit: Int, offset: Int): SearchResult!`
+- Query: `unitsByExpression(tenantid: Int, unitid: Int, status: Int, name: String, nameLike: String, corrid: String, orderField: String, orderDir: String, limit: Int, offset: Int): SearchResult!`
+- Query: `rightRelation(tenantid: Int!, unitid: Int!, reltype: Int!): Relation`
+- Query: `rightRelations(tenantid: Int!, unitid: Int!, reltype: Int!): [Relation!]!`
+- Query: `leftRelations(tenantid: Int!, unitid: Int!, reltype: Int!): [Relation!]!`
+- Query: `countRightRelations(tenantid: Int!, unitid: Int!, reltype: Int!): Int!`
+- Query: `countLeftRelations(tenantid: Int!, unitid: Int!, reltype: Int!): Int!`
+- Query: `rightAssociation(tenantid: Int!, unitid: Int!, assoctype: Int!): Association`
+- Query: `rightAssociations(tenantid: Int!, unitid: Int!, assoctype: Int!): [Association!]!`
+- Query: `leftAssociations(assoctype: Int!, assocstring: String!): [Association!]!`
+- Query: `countRightAssociations(tenantid: Int!, unitid: Int!, assoctype: Int!): Int!`
+- Query: `countLeftAssociations(assoctype: Int!, assocstring: String!): Int!`
+- Query: `tenantInfo(id: Int, name: String): TenantInfo`
+- Query: `attributeInfo(id: Int, name: String): AttributeInfo`
+- Mutation: `lockUnit(tenantid: Int!, unitid: Int!, locktype: Int!, purpose: String!): Boolean!`
+- Mutation: `unlockUnit(tenantid: Int!, unitid: Int!): Boolean!`
+- Mutation: `requestStatusTransition(tenantid: Int!, unitid: Int!, status: Int!): StatusTransitionResult!`
+- Mutation: `transitionUnitStatus(tenantid: Int!, unitid: Int!, status: Int!): StatusTransitionResult!`
+- Mutation: `addRelation(tenantid: Int!, unitid: Int!, reltype: Int!, reltenantid: Int!, relunitid: Int!): Boolean!`
+- Mutation: `removeRelation(tenantid: Int!, unitid: Int!, reltype: Int!, reltenantid: Int!, relunitid: Int!): Boolean!`
+- Mutation: `addAssociation(tenantid: Int!, unitid: Int!, assoctype: Int!, assocstring: String!): Boolean!`
+- Mutation: `removeAssociation(tenantid: Int!, unitid: Int!, assoctype: Int!, assocstring: String!): Boolean!`
 
 ## Runtime startup defaults
 
@@ -203,42 +250,70 @@ IPTO_NEO4J_INTEGRATION=1 \
 IPTO_NEO4J_URL=http://localhost:7474 \
 IPTO_NEO4J_DATABASE=neo4j \
 IPTO_NEO4J_USER=neo4j \
-IPTO_NEO4J_PASSWORD=neo4j \
+IPTO_NEO4J_PASSWORD=neo4j-repo \
 rebar3 eunit
 ```
 
-## Current PostgreSQL search expression format
+Run backend parity search corpus (same query corpus totals across PG and Neo4j):
+
+```sh
+IPTO_BACKEND_PARITY=1 \
+IPTO_PG_INTEGRATION=1 \
+IPTO_NEO4J_INTEGRATION=1 \
+IPTO_PG_HOST=localhost \
+IPTO_PG_PORT=5432 \
+IPTO_PG_USER=repo \
+IPTO_PG_PASSWORD=repo \
+IPTO_PG_DATABASE=repo \
+IPTO_NEO4J_URL=http://localhost:7474 \
+IPTO_NEO4J_DATABASE=neo4j \
+IPTO_NEO4J_USER=neo4j \
+IPTO_NEO4J_PASSWORD=neo4j-repo \
+rebar3 as pg eunit
+```
+
+## Current search expression format
 
 `ipto:search_units/3` accepts:
 
 - a map expression in `pg` mode, or
 - a query string parsed by `ipto_search_parser`.
 
-Query string fields/operators:
+Query string supports:
 
-- `tenantid=...`
-- `unitid=...`
-- `status=...`
-- `name=...`
-- `name~...` (ILIKE pattern)
-- `created>=...`
-- `created<...`
+- Boolean composition: `and`, `or`, `not`, parenthesis grouping.
+- Comparison: `=`, `!=`, `<>`, `>`, `>=`, `<`, `<=`.
+- Pattern: `~`, `like`.
+- Set/range: `in (...)`, `not in (...)`, `between ... and ...`.
+- Field aliases: `tenant_id`, `unit_id`, `corr_id|correlationid`, `unitname|unit_name|name`.
+- Status literals: `PENDING_DISPOSITION`, `PENDING_DELETION`, `OBLITERATED`, `EFFECTIVE`, `ARCHIVED`.
 
-Equivalent map fields:
+Equivalent map fields include (non-exhaustive):
 
 - `tenantid` (integer)
 - `unitid` (integer)
 - `status` (integer)
 - `name` (exact unit name)
+- `name_ne`
 - `name_ilike` (pattern, e.g. `\"%foo%\"`)
+- `corrid`
+- `corrid_ne`
+- `corrid_ilike`
+- `tenantid_ne|gt|gte|lt|lte`
+- `unitid_ne|gt|gte|lt|lte`
+- `status_ne|gt|gte|lt|lte`
+- `created`, `created_ne|gt|gte|lt|lte`
 - `created_after`
 - `created_before`
+- `modified`, `modified_ne|gt|gte|lt|lte`
+- `modified_after`
+- `modified_before`
 
 Example:
 
 ```erlang
 ipto:search_units(
-    "tenantid=1 and status=30 and name~\"%case%\"",
+    "tenantid=1 and (status in (30, 40)) and not name=\"obsolete\" and unitid between 1 and 999999",
     {created, desc},
     #{limit => 50, offset => 0}
 ).
@@ -257,46 +332,18 @@ Endpoints:
 
 ## Setting up Neo4j as backend
 
-```terminaloutput
-➜  docker pull neo4j
-Using default tag: latest
-latest: Pulling from library/neo4j
-0bab5b9a037a: Pull complete
-6c6e74c6e4d2: Pull complete
-809c4a6247c8: Pull complete
-da7560e339a5: Pull complete
-de7499ca303e: Pull complete
-4f4fb700ef54: Pull complete
-Digest: sha256:c64d8750884c95ae57441a103d64d08fdaf55265acc3af687aa8ec25aa77d0c3
-Status: Downloaded newer image for neo4j:latest
-docker.io/library/neo4j:latest
-```
-```terminaloutput
-➜  mkdir data
+Use the helper script (start, wait-for-ready, stop, logs):
+
+```sh
+./scripts/setup-neo4j-for-test.sh start
+./scripts/setup-neo4j-for-test.sh status
+./scripts/setup-neo4j-for-test.sh logs
+./scripts/setup-neo4j-for-test.sh stop
 ```
 
-```terminaloutput
-➜  docker run -d --name neo4j -p7474:7474 -p7687:7687 -e NEO4J_AUTH=neo4j/neo4j-repo -v ./data:/data neo4j
-3abbdf87d0137d9761e741bbf19ea6539967d65b65a4e62ad9611e9ce49db12a
-```
+For local Docker runs, use this integration env:
 
-```terminaloutput
-➜  curl -i -u neo4j:neo4j-repo \
--H 'Content-Type: application/json' \
--d '{"statements":[{"statement":"RETURN 1"}]}' \
-http://127.0.0.1:7474/db/neo4j/tx/commit
-
-HTTP/1.1 200 OK
-Date: Wed, 04 Feb 2026 11:57:00 GMT
-Access-Control-Allow-Origin: *
-Content-Type: application/json
-Content-Length: 130
-
-{"results":[{"columns":["1"],"data":[{"row":[1],"meta":[null]}]}],"errors":[],"lastBookmarks":["FB:kcwQqSBvcCitShaLaDe6hsHTwQOQ"]}
-```
-
-So running the tests with these parameters works:
-```
+```sh
 IPTO_NEO4J_URL=http://127.0.0.1:7474
 IPTO_NEO4J_DATABASE=neo4j
 IPTO_NEO4J_USER=neo4j
