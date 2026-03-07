@@ -290,6 +290,7 @@ public class PerformanceIT {
 
             RunningStatistics averageTPI = new RunningStatistics(); // Average time per iteration
             AtomicLong processedChildren = new AtomicLong(0L);
+            repo.getTimingData().clear();
 
             Unit tree = null;
             Optional<Unit> _tree = repo.getUnit(tenantId, 0);

@@ -520,7 +520,7 @@ public final class Database {
             Connection conn, String sql, CheckedConsumer<PreparedStatement> sBlock
     ) throws DatabaseReadException {
         try {
-            try (PreparedStatement pStmt = conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+            try (PreparedStatement pStmt = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                 sBlock.accept(pStmt);
             }
         } catch (SQLException sqle) {
@@ -543,7 +543,7 @@ public final class Database {
             Connection conn, String sql, CheckedConsumer<PreparedStatement> sBlock, CheckedConsumer<ResultSet> rsBlock
     ) throws DatabaseReadException {
         try {
-            try (PreparedStatement pStmt = conn.prepareStatement(sql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)) {
+            try (PreparedStatement pStmt = conn.prepareStatement(sql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)) {
                 sBlock.accept(pStmt);
 
                 try (ResultSet rs = Database.executeQuery(pStmt)) {

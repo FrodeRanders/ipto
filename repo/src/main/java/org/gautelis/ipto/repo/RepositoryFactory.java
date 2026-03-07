@@ -116,6 +116,19 @@ public class RepositoryFactory {
             hConfig.setPassword(password);
         }
         hConfig.setMaximumPoolSize(config.maxActive());
+        hConfig.setMinimumIdle(Math.min(2, config.maxActive()));
+        hConfig.setAutoCommit(false);
+
+        // JDBC driver tuning for high call rates on prepared/callable statements.
+        // Generic/common flags:
+        hConfig.addDataSourceProperty("cachePrepStmts", "true");
+        hConfig.addDataSourceProperty("prepStmtCacheSize", "512");
+        hConfig.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        // PostgreSQL-specific statement caching:
+        hConfig.addDataSourceProperty("preparedStatementCacheQueries", "512");
+        hConfig.addDataSourceProperty("preparedStatementCacheSizeMiB", "16");
+        hConfig.addDataSourceProperty("prepareThreshold", "3");
+        hConfig.addDataSourceProperty("reWriteBatchedInserts", "true");
         HikariDataSource dataSource = new HikariDataSource(hConfig);
 
         //
