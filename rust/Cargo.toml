@@ -1,0 +1,30 @@
+[package]
+name = "ipto_rust"
+version = "0.1.0"
+edition = "2021"
+description = "Rust implementation scaffold for IPTO repo/graphql with Python bindings"
+license = "Apache-2.0"
+
+[lib]
+name = "ipto_rust"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"], optional = true }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+uuid = { version = "1", features = ["serde", "v7"] }
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+postgres = { version = "0.19", features = ["with-serde_json-1", "with-uuid-1", "with-chrono-0_4"] }
+ureq = { version = "2.10", features = ["json"] }
+base64 = "0.22"
+
+[features]
+default = []
+python = ["dep:pyo3"]
+backend-postgres = []
+backend-neo4j = []
+
+[dev-dependencies]
+pretty_assertions = "1"

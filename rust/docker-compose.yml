@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ipto-rust-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: repo
+      POSTGRES_PASSWORD: repo
+      POSTGRES_DB: repo
+    ports:
+      - "${IPTO_PG_PORT:-5432}:5432"
+    volumes:
+      - ./docker/init/00_schema.sql:/docker-entrypoint-initdb.d/00_schema.sql:ro
+      - ./docker/init/01_procedures.sql:/docker-entrypoint-initdb.d/01_procedures.sql:ro
+
+  neo4j:
+    image: neo4j:5
+    container_name: ipto-rust-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: "${IPTO_NEO4J_AUTH:-neo4j/neo4jtest}"
+    ports:
+      - "${IPTO_NEO4J_HTTP_PORT:-7474}:7474"
+      - "${IPTO_NEO4J_BOLT_PORT:-7687}:7687"

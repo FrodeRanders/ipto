@@ -1,0 +1,467 @@
+# Rust Feature Completeness Tracker (vs Java `repo`)
+
+Last updated: 2026-03-07
+
+Legend: `DONE`, `PARTIAL`, `MISSING`
+
+## Scope
+This tracks `rust/` parity against Java `repo/src/main/java/org/gautelis/ipto/repo/model/Repository.java`.
+It focuses on externally meaningful repository behavior (not Java-internal listener/cache plumbing).
+
+## Repository Core
+- `DONE` get unit by tenant+unit id (latest and exact version)
+- `DONE` get unit by correlation id (`getUnit(tenantId, corrId)` parity via `get_unit_by_corrid_json`)
+- `DONE` unit existence check
+- `DONE` store unit from JSON payload (new and new-version paths)
+- `PARTIAL` store semantics parity (readonly/locked/status transition behavior differs in edge cases)
+- `DONE` explicit cache controls (`flush_cache` parity surface; currently no-op for stateless backends)
+
+## Search
+- `DONE` attribute-driven search entrypoint with paging + ordering
+- `PARTIAL` query language parity (Rust currently supports a practical subset of expression filters)
+- `MISSING` exact Java search strategy/behavior parity (set-op strategy and all expression types)
+
+## Relations and Associations
+- `DONE` add/remove relation
+- `DONE` query right/left relation(s)
+- `DONE` relation counts
+- `DONE` add/remove association
+- `DONE` query right/left association(s)
+- `DONE` association counts
+
+## Locking and Status
+- `DONE` lock unit
+- `DONE` unlock unit
+- `DONE` lock-state query (`is_unit_locked`)
+- `DONE` set status directly
+- `DONE` Java lifecycle helpers (`activateUnit`, `inactivateUnit`) as first-class Rust methods
+- `DONE` status-transition guard/error taxonomy surface (`request_status_transition` strict matrix; helper-vs-matrix policy documented and tested)
+
+## Attributes and Tenants
+- `DONE` create attribute
+- `DONE` instantiate attribute (metadata instantiation surface)
+- `DONE` get attribute info (by id/name/alias/qualname)
+- `DONE` get tenant info (by id/name)
+- `DONE` `canChangeAttribute` parity surface (PostgreSQL via value-table usage; Neo4j via `USES_ATTRIBUTE` usage links from stored unit payload attributes)
+- `DONE` convenience mapping helpers (`attributeNameToId`, `attributeIdToName`, `tenantNameToId`, `tenantIdToName`)
+
+## Python (PyO3/maturin)
+- `DONE` pyo3 class covering core repo operations for PostgreSQL + Neo4j
+- `DONE` per-operation runtime statistics API on `PyIpto` (`reset_statistics`, `get_statistics`, `get_statistics_json`)
+- `DONE` Python GraphQL bridge (`graphql_execute`) backed by Rust `GraphqlRuntime`
+- `DONE` `get_unit_by_corrid_json` exposed in Python API
+- `DONE` `requirements-dev.txt` includes `maturin`; `make py-test` runs `maturin develop` before pytest
+- `DONE` Python integration tests for Postgres/Neo4j core roundtrip
+- `DONE` Python integration checks for status-transition and lock-state edge cases (`is_unit_locked`, invalid transition input handling)
+- `DONE` Python integration checks for attribute search coercion/validation and wildcard semantics (`attribute_cmp` numeric-string/time-millis-string coercion; boolean-op validation; `attribute_eq` wildcard matching)
+
+## Test Tooling
+- `DONE` real-backend test runner script (`scripts/run_real_backend_tests.sh`) for PostgreSQL/Neo4j with env defaults, startup/readiness handling, and scope selection
+- `DONE` Makefile shortcuts for real-backend runs (`real-tests`, `real-tests-down`)
+- `DONE` PyO3-backed soak benchmark script (`scripts/python_backend_benchmark.py`) with running statistics, summary reporting, and configurable parallel workers (`--workers`)
+
+## Neo4j backend parity state
+- `DONE` core unit lifecycle CRUD/version/search support
+- `DONE` relations, associations, locks, attributes, tenant info
+- `DONE` startup bootstrap for constraints/indexes (idempotent)
+- `PARTIAL` payload-shape details still differ in some edge cases (timestamps are now normalized to ISO-8601 strings)
+
+## GraphQL
+- `PARTIAL` GraphQL runtime parity:
+  - `DONE` minimal `execute` path for read-only `searchUnits` mapped to `RepoService::search_units`
+  - `DONE` operation discovery query: `registeredOperations`
+  - `DONE` read-only unit fetches: `getUnit` and `getUnitByCorrid`
+  - `DONE` raw payload compatibility operations: `unitRaw`, `unitsRaw`
+  - `DONE` unit existence/lock-state queries: `unitExists`, `isUnitLocked`
+  - `DONE` read-only metadata fetches: `getAttributeInfo`, `instantiateAttribute`, and `getTenantInfo`
+  - `DONE` mapping helper reads: `attributeNameToId`, `attributeIdToName`, `tenantNameToId`, `tenantIdToName`
+  - `DONE` `canChangeAttribute` query
+  - `DONE` relation/association read operations and counts
+  - `DONE` health read
+  - `DONE` scoped mutations: `setStatus`, `storeUnit`, `createAttribute`, `flushCache`, `activateUnit`, `inactivateUnit`, `requestStatusTransition`, `lockUnit`, `unlockUnit`, `addRelation`, `removeRelation`, `addAssociation`, `removeAssociation`
+  - `DONE` raw mutation compatibility alias: `lagraUnitRaw` (base64-encoded JSON payload input/output)
+  - `DONE` GraphQL-style error envelope with `data: null` and `errors[].extensions.code`
+  - `DONE` exact root-field dispatch to avoid substring operation collisions
+  - `DONE` operation registration/allowlist metadata (`with_operation_allowlist`, `registered_operations`, unsupported-operation metadata fields)
+  - `MISSING` wider schema/operation coverage and richer mutation/status-lifecycle semantics
+- `DONE` SDL-driven configuration/setup ingestion surface (without full runtime GraphQL engine):
+  - parses GraphQL SDL `@attributeRegistry` entries and derives attribute setup payloads
+  - parses `@record` and `@template` type shapes and validates `@use(attribute: ...)` references
+  - `RepoService` now exposes:
+    - `inspect_graphql_sdl(sdl)` for parsed catalog inspection
+    - `configure_graphql_sdl(sdl)` to apply attribute setup and validate record/template references
+  - PyO3 now exposes:
+    - `PyIpto.inspect_graphql_sdl(sdl)`
+    - `PyIpto.configure_graphql_sdl(sdl)`
+    - `PyIpto.configure_graphql_sdl_file(path)`
+  - backend persistence hooks added for shape metadata:
+    - PostgreSQL now upserts `repo_record_template`/`repo_record_template_elements`
+    - PostgreSQL now upserts `repo_unit_template`/`repo_unit_template_elements`
+    - unsupported backends report capability via `configure_graphql_sdl(...).persistence`
+
+## What was completed in the latest step
+- Extended SDL setup to persist record/template metadata (PostgreSQL):
+  - added backend trait hooks: `upsert_record_template`, `upsert_unit_template`
+  - implemented transactional PostgreSQL upsert flow for record and unit template tables
+  - `configure_graphql_sdl` now resolves attribute ids and persists record/template fields in order
+  - response summary now reports persisted counts and backend support flags
+- Added SDL ingestion/configuration support focused on setup parity:
+  - introduced `src/graphql_sdl.rs` parser for `@attributeRegistry`, `@record`, and `@template` shapes
+  - added SDL catalog validation for record/template attribute references
+  - added `RepoService.inspect_graphql_sdl` and `RepoService.configure_graphql_sdl`
+  - setup flow now creates missing attributes from SDL and enforces compatibility checks for existing attributes
+  - setup flow validates that record root attributes resolve and are type `RECORD`
+  - added SDL parser unit coverage
+- Hardened `store_unit_json` lifecycle semantics toward Java behavior:
+  - update path now resolves existing unit by `tenantid`/`unitid` and optional exact `unitver`
+  - exact historical (`isreadonly`) version updates are now rejected before backend write
+  - locked-unit updates are now rejected before backend write
+  - status handling now uses lifecycle transition gate semantics (`request_status_transition`) instead of unconditional payload overwrite
+  - status-only updates now avoid creating a new unit version (status is applied without version bump)
+  - no-op updates avoid backend writes; name/attribute changes still produce a new version
+  - added `RepoService` unit coverage for readonly rejection, lock rejection, status-only no-version-bump, and name-change version bump
+  - expanded cross-backend parity coverage for store semantics:
+    - readonly exact-version (`unitver`) update attempt is rejected
+    - locked update attempt is rejected
+    - status-only update does not create new version (version unchanged)
+  - validated with full Docker-backed real-backend run (`postgres_integration`, `neo4j_integration`, `parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded GraphQL runtime compatibility with Java raw operations:
+  - added query `unitRaw` (base64-encoded JSON for single unit lookup by id)
+  - added query `unitsRaw` (base64-encoded JSON array of payloads for filter/search lookups)
+  - added mutation `lagraUnitRaw` (base64 JSON decode -> `store_unit_json` -> base64 JSON encode)
+  - `unitsRaw` now accepts Java-style `filter` object with `tenantId`, `where`/`query`, `order`, and `paging`
+  - added GraphQL unit coverage for `unitRaw`, `unitsRaw`, and `lagraUnitRaw`
+- Expanded GraphQL compatibility aliases toward Java runtime operation naming:
+  - added query aliases:
+    - `unit` -> `getUnit`
+    - `units` -> `searchUnits`
+    - `unitByCorrid` -> `getUnitByCorrid`
+    - `unitRawByCorrid` -> base64-encoded raw payload lookup by corrid
+  - added mutation alias:
+    - `storeRawUnit` -> `lagraUnitRaw`
+  - added GraphQL unit coverage for all aliases above
+- Expanded GraphQL Java runtime-operation naming compatibility:
+  - added query aliases:
+    - `loadUnit` -> `getUnit`
+    - `loadUnitRaw` -> `unitRaw`
+    - `loadByCorrId` -> `getUnitByCorrid`
+    - `loadRawPayloadByCorrId` -> `unitRawByCorrid`
+    - `search` -> `searchUnits`
+    - `searchRaw` / `searchRawPayload` -> `unitsRaw`
+  - added GraphQL unit coverage for the aliases above
+  - validated with full Docker-backed real-backend run (`postgres_integration`, `neo4j_integration`, `parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Closed a major Neo4j search parity gap for attribute selector semantics:
+  - Neo4j `attribute_eq` / `attribute_cmp` attribute selector (`name_or_id`) now resolves by attribute `name`, `alias`, and `qualname` in addition to id/name link forms
+  - matching now aligns with Java/PostgreSQL expectation where selector can target canonical attribute names or aliases/qualified names
+  - backend parity scenario now asserts selector behavior for `name`, `id`, `alias`, and `qualname`
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded GraphQL variable-shape parity with Java-style runtime argument forms:
+  - unit-identification operations now accept nested `id` object (`tenantId`/`unitId`) in addition to flat vars
+  - corrid lookup now accepts nested `id` object (`tenantId`/`corrId`) in addition to flat vars
+  - `getUnit` now also accepts version aliases (`unitver` / `unit_ver`) at top level and inside `id`
+  - search operations now accept nested `filter` object with `expression`/`query`, `order`, and `paging`, in addition to flat vars
+  - added GraphQL unit coverage for nested `id` and `filter` paths
+- Expanded GraphQL unit metadata read surface:
+  - added `getUnitMeta` query returning `{ exists, status, unitver, corrid, isreadonly }` for latest unit snapshot by tenant/unit id
+  - query returns `exists = false` with null metadata fields when no matching unit exists
+  - added GraphQL unit coverage for both found and missing-unit cases
+- Expanded GraphQL unit lifecycle read surface:
+  - added `unitLifecycle` query returning `{ exists, locked, status }` for a tenant/unit pair
+  - added GraphQL unit coverage for `unitLifecycle`
+- Expanded GraphQL lifecycle/status read coverage:
+  - added `getUnitStatus` query to return latest unit status by tenant/unit id
+  - added GraphQL unit coverage for `getUnitStatus`
+- Expanded GraphQL lifecycle mutation breadth with compatibility alias:
+  - added `transitionUnitStatus` mutation as an alias of existing status-transition semantics (`request_status_transition`)
+  - alias accepts the same input shape (`tenantid`/`unitid` + `requestedStatus`) and returns resulting status
+  - added GraphQL unit coverage for `transitionUnitStatus`
+- Expanded GraphQL query breadth with compatibility alias operation:
+  - added `searchUnit` query as an alias of `searchUnits` (same expression/order/paging semantics)
+  - `registeredOperations`/allowlist now include `searchUnit` as a first-class query operation
+  - added GraphQL unit coverage for `searchUnit` alias execution
+- Expanded Java-like `attribute_cmp` operator parity across parser and both backends:
+  - added support for `neq` and explicit `like` operators in shared attribute constraint parsing
+  - text-query parser now preserves attribute `!=` (`neq`) and `like` operators instead of coercing/rejecting them
+  - PostgreSQL and Neo4j compilers now support `neq` for string/number/time/boolean and `like` for string attribute comparisons
+  - backend parity scenario now asserts `attribute_cmp` with explicit `like` and numeric `neq`
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded GraphQL mutation breadth with unit-creation convenience operation:
+  - added mutation `createUnit` (maps to existing `store_unit_json` flow with required `tenantid` and optional `unitname`/`corrid`/`status`)
+  - added GraphQL unit coverage for `createUnit` mutation
+- Expanded top-level JSON leaf corrid alias parity:
+  - both backends now accept `corr_id` as alias of `corrid` in native leaf search expressions (in addition to existing `correlationid`)
+  - backend parity scenario now asserts `search_units({"tenantid": ..., "corr_id": ...})`
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded top-level JSON leaf alias parity for id fields:
+  - both backends now accept `tenant_id` and `unit_id` aliases (in addition to `tenantid` / `unitid`) in native leaf search expressions
+  - tenant-scope inference for set-expression/not paths now recognizes `tenant_id` (including numeric-string values) in service-level and backend-native inference
+  - backend parity scenario now asserts alias-based leaf filtering (`{"tenant_id": ..., "unit_id": ...}`)
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded top-level JSON leaf wildcard parity for unit-name matching:
+  - both backends now treat top-level `name`/`unitname`/`unit_name` values containing wildcard tokens (`*`, `%`, `_`) as pattern constraints (equivalent to `name_ilike`)
+  - PostgreSQL maps wildcard leaf names to `ILIKE`; Neo4j maps wildcard leaf names to regex matching via existing `like` conversion
+  - added backend unit coverage for wildcard leaf normalization in both backends and parity scenario assertion for `{"tenantid": ..., "name": "<prefix>*"}`
+- Added native top-level `unitver` / `unit_ver` leaf-expression support across both backends:
+  - PostgreSQL and Neo4j native search compilers now honor JSON leaf filters on unit version (for example `{"tenantid": ..., "unit_ver": 2}`)
+  - backend parity scenario now asserts `unit_ver` leaf filtering after version bump
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Improved PostgreSQL leaf-expression coercion parity for numeric ids:
+  - top-level leaf fields (`tenantid`, `unitid`, and other numeric i32/i64 paths) now accept numeric strings in addition to numeric JSON values, aligned with existing Neo4j behavior
+  - backend parity scenario now asserts `search_units({"tenantid": "<id>", "unitid": "<id>"})` works end-to-end
+  - validated with Docker-backed real-backend parity run (`parity_postgres_core_flow`, `parity_neo4j_core_flow`)
+- Expanded status-literal support to JSON leaf search expressions across both backends:
+  - top-level search expression `status` now accepts status names (for example `EFFECTIVE`) in addition to numeric values for PostgreSQL and Neo4j native compilers
+  - added backend parity scenario assertion for `search_units({"tenantid": ..., "status": "EFFECTIVE"})`
+- Expanded JSON predicate field alias parity with Java unit-field mapping:
+  - `predicates.field` now accepts `unit_name` as alias of `unitname`/`name`
+  - `predicates.field` now accepts `correlationid` as alias of `corrid`
+  - added focused unit tests in `search_filters` for both aliases
+- Hardened text-query syntax validation parity:
+  - unterminated quoted string literals are now rejected with explicit parse errors (instead of being silently accepted)
+  - added parser unit test coverage for unterminated-string rejection
+- Hardened Java-like relation unit-reference validation:
+  - relation unit refs with version suffix now validate `tenant.unit[:version]` shape and reject non-numeric version tokens (for example `7.100:abc`)
+  - validation is now enforced consistently in both text-query parse path and backend relation-constraint extraction
+  - added parser unit test coverage for invalid-version rejection
+- Expanded Java-like status-literal parity in search expressions:
+  - text query parser now accepts status names (for example `EFFECTIVE`, `PENDING_DELETION`) and coerces them to numeric status ids
+  - JSON predicate extraction now supports the same status-name coercion for `predicates.field = status`
+  - added parser unit coverage and backend parity scenario assertion for `search_units_query("status = EFFECTIVE")`
+- Expanded GraphQL name-or-id input parity for attribute/tenant operations:
+  - GraphQL operations that accept `nameOrId` now also accept numeric `id` values directly in variables (without string coercion by callers)
+  - covered operations: `getAttributeInfo`, `instantiateAttribute`, `instantiateAttributeMutation`, `getTenantInfo`, `canChangeAttribute`
+  - added GraphQL unit coverage for numeric-id variable paths
+- Hardened runner argument validation UX and contract coverage:
+  - script now prints usage hints on invalid `--backend` / `--scope` values before exiting with code `2`
+  - added contract tests asserting invalid backend/scope exit behavior and usage-hint stderr output
+- Expanded real-backend runner contract tests:
+  - added verbose contract test asserting `--verbose` maps to `cargo test ... -- --nocapture`
+  - added all-backend parity contract test asserting `--backend all --scope parity` routes to the combined `backend_parity` test target
+  - added env-wiring contract tests asserting backend-driven integration flags:
+    - `--backend postgres` => `IPTO_PG_INTEGRATION=1`, `IPTO_NEO4J_INTEGRATION` unset
+    - `--backend neo4j` => `IPTO_NEO4J_INTEGRATION=1`, `IPTO_PG_INTEGRATION` unset
+    - `--backend all` => both integration flags set for both integration test invocations
+- Expanded real-backend runner contract tests:
+  - added Neo4j parity-only routing contract test
+  - added teardown contract test for `--down-volumes` (`docker compose down -v`)
+- Expanded Python GraphQL allowlist/error-envelope coverage for new operations:
+  - added allowlist-pass and allowlist-block (`UNSUPPORTED`) checks for `searchUnitsQuery`
+  - added allowlist-block (`UNSUPPORTED`) checks for `instantiateAttributeMutation`
+- Expanded Python GraphQL error-envelope metadata coverage for allowlist-blocked operations:
+  - now asserts `operationType`, `operation`, and `supportedOperations` consistency in addition to `extensions.code`
+  - covered for both blocked query (`searchUnitsQuery`) and blocked mutation (`instantiateAttributeMutation`) on PostgreSQL and Neo4j integration tests
+- Addressed Python integration coverage for text-query entrypoints:
+  - Python integration tests now exercise `search_units_query` and `search_units_query_strict` on both PostgreSQL and Neo4j
+  - added strict-mode rejection checks (unknown implicit field) and strict-mode success checks with explicit `attr:<name>`
+  - added GraphQL-level Python checks for `searchUnitsQuery` and `searchUnitsQueryStrict`
+- Expanded GraphQL operation coverage for admin/search flows:
+  - added query operations: `searchUnitsQuery`, `searchUnitsQueryStrict`
+  - added mutation operation: `instantiateAttributeMutation`
+  - added GraphQL unit tests for the new operations
+  - validated with Rust unit/integration tests and full Docker-backed real-backend run
+- Expanded text-query parser Java-like operation/value nuances:
+  - unit string field wildcard behavior now mirrors Java intent: `name = '*foo*'` is normalized to `LIKE` at parse-time
+  - broadened symbolic relation/association type-name acceptance (`parentchild`, `replace`, `caseassoc` variants)
+  - added parser tests for wildcard `=` -> `LIKE` normalization and symbolic type synonyms
+  - parity scenario now exercises symbolic relation synonym query (`relation:right-parentchild = ...`) on both backends
+  - validated via `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Expanded text-query parser list-membership parity (`IN (...)`):
+  - parser now accepts `field in (v1, v2, ...)` and rewrites to OR-composed equality expressions
+  - works for unit fields and attribute predicates (strict mode still requires `attr:<name>` for implicit attributes)
+  - added parser unit tests for OR expansion, strict-mode behavior, and empty-list rejection
+  - backend parity scenario now exercises `unitid in (...)` query path on both PostgreSQL and Neo4j
+- Expanded text-query parser negated list-membership parity (`NOT IN (...)`):
+  - parser now accepts `field not in (v1, v2, ...)` and rewrites to AND-composed inequality expressions
+  - added parser unit tests for NOT-IN expansion and invalid `field not <value>` rejection
+  - backend parity scenario now exercises `unitid not in (...)` query path on both PostgreSQL and Neo4j
+- Expanded text-query operator-token parity for inequality:
+  - parser now accepts SQL-style `<>` as an alias of `!=` (`neq`) in query expressions
+  - added parser unit test for `<>` normalization and backend parity scenario assertion using `unitid <> ...`
+- Expanded text-query range-expression parity (`BETWEEN ... AND ...`):
+  - parser now accepts `field between low and high` and rewrites to AND-composed `gte`/`lte` predicates
+  - added parser unit tests for BETWEEN expansion and missing-`and` validation
+  - backend parity scenario now exercises `unitid between ... and ...` query path on both PostgreSQL and Neo4j
+- Expanded text-query parser alias coverage and added optional strict parsing mode:
+  - added `unitver` / `unit_ver` unit-field alias support end-to-end (shared parser + PostgreSQL + Neo4j compilation)
+  - added strict text-query entrypoint (`parse_search_query_strict`, `RepoService::search_units_query_strict`, and Python `search_units_query_strict`)
+  - strict mode now rejects unknown implicit fields and requires explicit `attr:<name>` / `attribute:<name>` for attribute predicates
+  - parser tests and service tests added for strict-mode behavior and `unit_ver` alias
+  - parity scenario now validates `search_units_query(\"unit_ver = 2\")` on both backends
+  - validated via `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Expanded text-query parser parity for Java symbolic relation/association type names:
+  - text queries now accept symbolic type tokens in addition to numeric ids:
+    - relation: `parent-child` / `PARENT_CHILD_RELATION` -> `1`, `replacement` / `REPLACEMENT_RELATION` -> `3`
+    - association: `case` / `CASE_ASSOCIATION` -> `2`
+  - parser keeps Java-like token normalization (`-`/space -> `_`, case-insensitive, implicit `_RELATION`/`_ASSOCIATION` suffix handling)
+  - added parser tests for symbolic success and unknown-type failure
+  - backend parity scenario now exercises `search_units_query` end-to-end with symbolic relation/association constraints on both PostgreSQL and Neo4j
+  - validated via `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Added text-query parser entrypoint (Java `SearchExpressionQueryParser`-style surface) mapped into dynamic JSON expressions:
+  - new `src/search_query.rs` with recursive parser for `and`/`or`/`not`, parentheses, and comparison operators (`=`, `!=`, `>`, `>=`, `<`, `<=`, `like`)
+  - parser maps unit fields to `predicates`, unknown fields to `attribute_cmp`, and supports relation/association prefix predicates:
+    - `relation|relations|rel[:side]:<type> = <tenant.unit[:ver]>`
+    - `association|associations|assoc[:side]:<type> = <reference>`
+  - added `RepoService::search_units_query(query, order, paging)` that parses query text and reuses existing dynamic backend-native search execution/fallback logic
+  - exposed Python binding `PyIpto.search_units_query(...)`
+  - added parser unit tests and `RepoService` tests validating query parsing and set-expression fallback behavior
+  - validated with `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Expanded parser-compatible relation/association search while preserving dynamic native assembly:
+  - added shared relation/association parsing in `src/search_filters.rs` with Java-style aliases and object forms:
+    - relation aliases: `relation_type|relationtype|reltype`, `related_tenantid|relation_tenantid|reltenantid`, `related_unitid|relation_unitid|relunitid`
+    - association aliases: `association_type|associationtype|assoctype`, `association_reference|association_ref|assocstring|refstring`
+    - object forms: `relation`/`relations`/`rel` and `association`/`associations`/`assoc`
+  - added relation side semantics (`left`/`right`) and backend-native compilation for both PostgreSQL and Neo4j
+  - added parser-compatible unit-field aliases in leaf parsing (`correlationid`, `unitname`, `unit_name`)
+  - backend parity tests now cover alias forms, object forms, and `relation.side = right`
+  - validated via `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Reduced search code duplication with shared parsing/coercion helpers:
+  - added `src/search_filters.rs` for shared `predicates` and `attribute_eq`/`attribute_cmp` parsing logic
+  - PostgreSQL and Neo4j now reuse the same field/operator/value parsing and coercion rules, with backend-specific compilation only
+  - preserved dynamic recursive backend-native expression assembly in both backends
+  - validated with `cargo clippy --lib --tests -q`, Rust tests, and Docker-backed parity run
+- Hardened attribute coercion consistency across backends:
+  - numeric coercion now rejects non-finite values (`NaN`, `inf`, `-inf`) in both PostgreSQL and Neo4j paths
+  - Neo4j `attribute_cmp` time coercion now rejects out-of-range millis values (aligned with PostgreSQL) instead of silently normalizing to epoch
+  - parity integration tests now cover invalid numeric-string (`NaN`) and invalid out-of-range millis-string time inputs
+  - Python integration tests now cover the same invalid coercion cases for PostgreSQL and Neo4j
+- Added contract tests for the real-backend runner script:
+  - `tests/real_backend_runner_contract.rs` validates help output and backend/scope test selection behavior using fake command shims
+- Added shared set-expression parser module:
+  - new `src/search_expr.rs` with reusable boolean expression parsing (`and`/`or`/`not`) and tenant-scoped `not` fallback hook
+  - both PostgreSQL and Neo4j now consume shared parser logic instead of duplicating parser/combine code
+- Hardened native dynamic search assembly:
+  - PostgreSQL and Neo4j now compile recursive search expressions into backend-native predicates with bind parameters
+  - backend-native path now handles complex expression composition directly without the prior limited mergeable-only set-expression path
+- Cleaned Rust code-smells:
+  - added `Default` for `PostgresBackend` and `Neo4jBackend`
+  - reduced expression enum size pressure by boxing leaf variants in shared boolean expression type
+  - removed unnecessary `clone()` on `Uuid` (`Copy` type)
+  - normalized string sanitization helper style (`replace(['\\'', '\"'], " ")`)
+- Added real-backend test runner workflow:
+  - `scripts/run_real_backend_tests.sh` can run `integration`, `parity`, or `all` scopes for `postgres`, `neo4j`, or `all`
+  - supports optional startup/teardown controls (`--no-up`, `--down`, `--down-volumes`) and readiness waits (`pg_isready`, `cypher-shell`)
+  - documented in `README.md`, and wired through `make real-tests` / `make real-tests-down`
+- Fixed parity regressions discovered by real-backend script:
+  - PostgreSQL `get_unit_json` now normalizes returned `created`/`modified` payload timestamps to include timezone suffix
+  - Neo4j keeps `UnitVersion.payload` as a JSON string (property-safe) and now indexes attribute values via `(:UnitVersion)-[:HAS_ATTR_VALUE]->(:AttributeValue)` for `attribute_eq` / `attribute_cmp` predicates
+  - attribute search in Neo4j now evaluates against `AttributeValue` nodes instead of `v.payload.attributes`
+- Extended parser-compatible search surface while keeping dynamic recursive assembly:
+  - added `predicates` leaf array on search expressions:
+    - shape: `{"predicates":[{"field","op","value"}, ...]}`
+    - operators: `eq|neq|gt|gte|lt|lte|like` (field-specific validation)
+    - fields: `tenantid`, `unitid`, `status`, `name`, `corrid`, `created`, `modified`
+  - predicates are composed with existing leaf/set-expression logic (`and`/`or`/`not`) in both PostgreSQL and Neo4j native paths
+  - backend parity scenario now validates `predicates` (`status gte` + `name like` + tenant scoping)
+- Validation status after changes:
+  - `cargo clippy --lib --tests -q` clean
+  - `cargo test --lib` passing
+  - full real-backend run (`./scripts/run_real_backend_tests.sh --down`) passing:
+    - `postgres_integration`
+    - `neo4j_integration`
+    - `backend_parity` (PostgreSQL + Neo4j)
+
+- Added `get_unit_by_corrid_json` end-to-end:
+  - backend trait
+  - PostgreSQL backend implementation
+  - Neo4j backend implementation
+  - service method in `RepoService`
+  - Python binding method in `PyIpto`
+  - parity and Python integration tests updated to exercise lookup-by-corrid
+- Added Java-style ID/name mapping helpers end-to-end:
+  - `attribute_name_to_id`, `attribute_id_to_name`
+  - `tenant_name_to_id`, `tenant_id_to_name`
+  - exposed in Python API
+  - covered by Rust integration tests and Python integration tests
+- Added lifecycle parity helpers:
+  - `activate_unit` (10/20 -> 30)
+  - `inactivate_unit` (30 -> 10) with lock guard
+  - `is_unit_locked` backend capability (PostgreSQL + Neo4j)
+  - Rust parity tests and Python integration tests updated
+- Normalized timestamp return shapes across backends:
+  - unit `created`/`modified` now serialized as ISO-8601 strings in both PostgreSQL and Neo4j
+  - Neo4j search accepts both millis and RFC3339 for `created_after`/`created_before`
+  - parity tests now assert timestamp field shape
+- Added attribute parity surface:
+  - `instantiate_attribute` and `can_change_attribute` in `RepoService` and Python API
+  - PostgreSQL `can_change_attribute` checks `repo_attribute_value` usage
+  - Neo4j `can_change_attribute` uses usage links (`UnitVersion` -> `USES_ATTRIBUTE` -> `Attribute`)
+  - Rust parity tests + backend integration tests + Python integration tests extended
+- Added explicit status-transition API parity:
+  - `request_status_transition` enforces Java-style transition matrix and unknown-status validation
+  - exposed in Python API
+  - parity tests and Python integration tests extended
+- Closed Neo4j `can_change_attribute` gap:
+  - `store_unit_json` now links version-to-attribute usage (`UnitVersion` -> `USES_ATTRIBUTE` -> `Attribute`)
+  - `can_change_attribute` now checks actual usage in Neo4j
+  - Neo4j integration tests updated to verify `true` before use and `false` after use
+- Resolved/documented status inconsistency policy:
+  - strict matrix in `request_status_transition`
+  - direct lifecycle transitions in `activate_unit` / `inactivate_unit`
+  - explicit parity tests for helper-vs-matrix behavior
+- Added GraphQL MVP runtime:
+  - `GraphqlRuntime` now executes read-only `searchUnits`, `getUnit`, `getUnitByCorrid`, `getAttributeInfo`, `instantiateAttribute`, `getTenantInfo`
+  - plus mapping helper reads, relation/association reads+counts, `canChangeAttribute`, and `health`
+  - and scoped mutations `setStatus`, `activateUnit`, `inactivateUnit`, `requestStatusTransition`, `lockUnit`, `unlockUnit`, `addRelation`, `removeRelation`, `addAssociation`, `removeAssociation`
+  - routes variables to existing `RepoService` operations
+  - returns GraphQL-shaped `data` payloads
+  - unit tests added for supported and unsupported operations
+- Added GraphQL operation registry/allowlist surface:
+  - `with_operation_allowlist(repo, &[...])` to constrain enabled operations per runtime
+  - `registered_operations()` introspection helper for enabled query/mutation operation names
+  - unsupported responses now include `operationType`, `operation`, and `supportedOperations` metadata
+  - unit tests added for allowlist behavior and metadata content
+- Added explicit cache-control parity surface:
+  - `Backend::flush_cache` + `RepoService::flush_cache`
+  - `PyIpto.flush_cache()` for Python callers
+  - parity and Python integration tests call `flush_cache` as pre-/post-flight guard
+- Expanded search subset parity coverage:
+  - added `corrid` and modified-time filters (`modified_after`, `modified_before`) across PostgreSQL and Neo4j
+  - PostgreSQL timestamp filters now accept both RFC3339 and epoch-millis (aligned with Neo4j behavior)
+  - parity tests and Python integration tests now exercise `corrid` search paths
+  - added relation/association-aware search constraints (`relation_type` + related unit, `association_type` + reference)
+  - parity tests and Python integration tests now exercise association-constrained searches
+  - added set-operation composition support in `RepoService::search_units` for recursive `and`/`or`/`not` expressions over existing leaf filters
+  - `not` currently requires tenant scope (explicit or inferred from child expression)
+  - parity tests now exercise `and`, `or`, and `not` expression composition
+  - `RepoService` now attempts backend-native set-expression execution first and falls back to service-level composition on `Unsupported`
+  - PostgreSQL and Neo4j backends now natively handle:
+    - recursive mergeable `and` expressions
+    - bounded mergeable `or` expressions (branch-union with backend-side dedupe/sort/paging)
+    - tenant-scoped `not` expressions (base-universe minus excluded branch)
+  - `RepoService` unit tests now explicitly verify native-path short-circuiting and fallback-path behavior for set expressions
+  - `RepoService` now validates set-expression shape before any backend-native dispatch
+  - added regression test to ensure invalid mixed root operators (`and` + `or`) are rejected before backend calls
+  - added `attribute_eq` leaf constraint across PostgreSQL and Neo4j:
+    - expression shape: `{"attribute_eq": {"name_or_id"| "attrid"| "name", "value"}}`
+    - supports exact value matching for scalar/stringified primitive values in current unit version
+  - added typed `attribute_cmp` leaf constraint across PostgreSQL and Neo4j:
+    - expression shape: `{"attribute_cmp": {"name_or_id"| "attrid"| "name", "op", "value", "value_type?"}}`
+    - operators: `eq`, `gt`, `gte`, `lt`, `lte`
+    - value types: `string`, `number`, `boolean` (`eq` only), `time` (RFC3339/millis input)
+    - string comparisons now use case-insensitive normalization (aligned with Java `lower(...)` semantics)
+    - `attribute_eq` string values accept wildcard patterns (`*` normalized to `%`, `%`/`_` pattern semantics) across both backends
+  - backend parity integration scenario now exercises attribute-value roundtrip search by both attribute id and name
+  - backend parity integration scenario now exercises numeric range filtering via `attribute_cmp` (`gt`)
+  - backend parity integration scenario now exercises case-insensitive string attribute equality
+  - backend parity integration scenario now exercises wildcard string attribute equality
+  - backend parity integration scenario now exercises coercion/validation edges:
+    - numeric comparison with numeric-string input
+    - time comparison with millis-string input
+    - boolean comparison rejects non-`eq` operators
+- Expanded GraphQL operation coverage:
+  - added `registeredOperations` query (runtime operation discovery; allowlist-aware)
+  - added `unitExists` query
+  - added `isUnitLocked` query
+  - added `storeUnit`, `createAttribute`, and `flushCache` mutations
+  - extended GraphQL unit tests for the new operations
+- Added Python GraphQL integration bridge:
+  - `PyIpto.graphql_execute(query, variables_json=None)`
+  - `PyIpto.graphql_execute_allowlist(query, allowlist, variables_json=None)`
+  - Python integration tests now validate GraphQL queries (`unitExists`, `isUnitLocked`) and mutations (`storeUnit`, `flushCache`, `createAttribute`) on both backends
+  - Python integration tests validate allowlist contract gating (`UNSUPPORTED` on blocked operations)
+  - Python integration tests validate `registeredOperations` in both default and allowlisted execution modes
+
+## Next recommended step
+1. Continue payload-shape parity hardening (remaining edge cases).
+2. Extend GraphQL schema/operation breadth further toward Java module parity (remaining tenant/attribute admin and lifecycle edges).
+3. Continue Java search-query parity nuances (status alias breadth, remaining expression aliases/operators, and strict-mode consistency checks).

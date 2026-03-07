@@ -1,0 +1,18 @@
+[build-system]
+requires = ["maturin>=1.6,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "ipto-rust"
+version = "0.1.0"
+description = "Rust implementation scaffold for IPTO with Python bindings"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+module-name = "ipto_rust"
+features = ["python"]
