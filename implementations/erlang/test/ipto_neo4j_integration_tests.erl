@@ -32,7 +32,11 @@ neo4j_backend_roundtrip() ->
     %% Ensure backend override survives application load defaults.
     ok = application:set_env(ipto, backend, neo4j),
 
-    TenantId = 9001,
+    Tag = integer_to_binary(erlang:system_time(microsecond) rem 1000000000),
+    TenantName = <<"neo4j-it-", Tag/binary>>,
+    {ok, TenantInfo0} = ipto:get_tenant_info(TenantName),
+    TenantId = maps:get(id, TenantInfo0),
+    AssocRef = <<"neo4j:assoc:", Tag/binary>>,
     {ok, U0} = ipto:create_unit(TenantId, <<"neo4j-smoke">>),
     {ok, Stored1} = ipto:store_unit(U0),
     true = maps:is_key(unitid, Stored1),
@@ -67,6 +71,19 @@ neo4j_backend_roundtrip() ->
     ARef = #{tenantid => TenantId, unitid => maps:get(unitid, Stored1)},
     BRef = #{tenantid => TenantId, unitid => maps:get(unitid, B1)},
 
+    UnitAId = maps:get(unitid, Stored1),
+    UnitBId = maps:get(unitid, B1),
+    Lower = erlang:min(UnitAId, UnitBId),
+    Upper = erlang:max(UnitAId, UnitBId),
+    SearchCorpus = [
+        {"tenantid=~p and unitid in (~p, ~p)", [TenantId, UnitAId, UnitBId], 2},
+        {"tenantid=~p and unitid in (~p, ~p) and not unitid=~p", [TenantId, UnitAId, UnitBId, UnitBId], 1},
+        {"tenantid in (~p, ~p) and unitid in (~p, ~p)", [TenantId, TenantId + 1000, UnitAId, UnitBId], 2},
+        {"tenantid=~p and unitid in (~p, ~p) and unitid not in (~p)", [TenantId, UnitAId, UnitBId, UnitBId], 1},
+        {"tenantid=~p and unitid between ~p and ~p and unitid in (~p, ~p)", [TenantId, Lower, Upper, UnitAId, UnitBId], 2}
+    ],
+    ok = verify_search_corpus(SearchCorpus),
+
     ok = ipto:add_relation(ARef, 1, BRef),
     {ok, RightRel} = ipto:get_right_relation(ARef, 1),
     {ok, RightRels} = ipto:get_right_relations(ARef, 1),
@@ -78,18 +95,18 @@ neo4j_backend_roundtrip() ->
     1 = length(LeftRels),
     ok = ipto:remove_relation(ARef, 1, BRef),
 
-    ok = ipto:add_association(ARef, 2, <<"neo4j:assoc">>),
-    ok = ipto:add_association(BRef, 2, <<"neo4j:assoc">>),
+    ok = ipto:add_association(ARef, 2, AssocRef),
+    ok = ipto:add_association(BRef, 2, AssocRef),
     {ok, RightAssoc} = ipto:get_right_association(ARef, 2),
     {ok, RightAssocs} = ipto:get_right_associations(ARef, 2),
-    {ok, LeftAssocs} = ipto:get_left_associations(2, <<"neo4j:assoc">>),
+    {ok, LeftAssocs} = ipto:get_left_associations(2, AssocRef),
     {ok, 1} = ipto:count_right_associations(ARef, 2),
-    {ok, 2} = ipto:count_left_associations(2, <<"neo4j:assoc">>),
-    ?assertEqual(<<"neo4j:assoc">>, maps:get(assocstring, RightAssoc)),
+    {ok, 2} = ipto:count_left_associations(2, AssocRef),
+    ?assertEqual(AssocRef, maps:get(assocstring, RightAssoc)),
     1 = length(RightAssocs),
     2 = length(LeftAssocs),
-    ok = ipto:remove_association(ARef, 2, <<"neo4j:assoc">>),
-    ok = ipto:remove_association(BRef, 2, <<"neo4j:assoc">>),
+    ok = ipto:remove_association(ARef, 2, AssocRef),
+    ok = ipto:remove_association(BRef, 2, AssocRef),
 
     ok = ipto:lock_unit(ARef, 30, <<"integration-lock">>),
     already_locked = ipto:lock_unit(ARef, 30, <<"integration-lock">>),
@@ -112,5 +129,17 @@ neo4j_backend_roundtrip() ->
 
     {ok, TenantById} = ipto:get_tenant_info(TenantId),
     TenantId = maps:get(id, TenantById),
-    {ok, TenantByName} = ipto:get_tenant_info(maps:get(name, TenantById)),
+    {ok, TenantByName} = ipto:get_tenant_info(TenantName),
     ?assertEqual(maps:get(name, TenantById), maps:get(name, TenantByName)).
+
+-spec verify_search_corpus([{string(), [term()], non_neg_integer()}]) -> ok.
+verify_search_corpus(CorpusQueries) ->
+    lists:foreach(
+        fun({Fmt, Args, ExpectedTotal}) ->
+            Query = iolist_to_binary(io_lib:format(Fmt, Args)),
+            {ok, Result} = ipto:search_units(Query, {created, desc}, #{limit => 100}),
+            ExpectedTotal = maps:get(total, Result)
+        end,
+        CorpusQueries
+    ),
+    ok.

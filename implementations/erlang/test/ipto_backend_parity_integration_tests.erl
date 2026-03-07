@@ -84,9 +84,9 @@ run_corpus(Backend, Fixture) ->
     Corpus = [
         {"tenantid=~p and (name=\"~ts\" or name=\"~ts\")", [TenantId, NameA, NameB], 2},
         {"tenantid=~p and not name=\"~ts\" and name=\"~ts\"", [TenantId, NameB, NameA], 1},
-        {"tenantid in (~p, ~p) and status in (30, 40)", [TenantId, TenantId + 1000], 2},
-        {"tenantid=~p and unitid not in (~p)", [TenantId, UnitB], 1},
-        {"tenantid=~p and unitid between ~p and ~p", [TenantId, Lower, Upper], 2}
+        {"tenantid in (~p, ~p) and unitid in (~p, ~p) and status in (30, 40)", [TenantId, TenantId + 1000, UnitA, UnitB], 2},
+        {"tenantid=~p and unitid in (~p, ~p) and unitid not in (~p)", [TenantId, UnitA, UnitB, UnitB], 1},
+        {"tenantid=~p and unitid between ~p and ~p and unitid in (~p, ~p)", [TenantId, Lower, Upper, UnitA, UnitB], 2}
     ],
     [
         begin
