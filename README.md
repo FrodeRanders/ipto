@@ -2,8 +2,21 @@
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FrodeRanders/ipto)
 
+## Why IPTO?
+
+IPTO lets you model information first and treat storage as an implementation detail.
+You define schemas and metadata with GraphQL SDL (plus directives), and IPTO handles:
+
+- versioned persistence mechanics
+- typed attribute handling (including nested records)
+- search expression execution
+- relations, associations, locks, and status lifecycle
+
+The practical value is less custom database plumbing in application code, faster evolution of domain models,
+and stronger information governance as schemas change across services.
+
 ## What is this?
-This Java project implements management of data as versioned `units`, where each version
+IPTO implements management of data as versioned `units`, where each version
 binds to a number of typed attributes. These attributes can be `primitive`, meaning that
 they only hold values of one type (string, boolean, instants, and so on), or they can be
 `records`, meaning that they hold a list of nested attributes -- even records. Units
@@ -14,7 +27,7 @@ types of primitive attributes are sufficient. One such attribute type is `data` 
 maps to a series of bytes, which can be used to store JSON.
 
 By default, and internally, attribute values are vectors, so you have vectors of string,
-vectors of integers, vectors of instants, vectors of records and even vectors of data.
+vectors of integers, vectors of time, vectors of records and even vectors of data.
 
 Additionally, units can have locks and relations to other units. There are some different
 types of relations implemented, such as parent-child-relation that can be used to create
@@ -88,6 +101,7 @@ interface for applications that need fine-grained control or operate in non-Grap
 ## Details on setup and configuration:
 * [Setup](doc/Setup.md)
 * [Configuration](doc/Configuration.md)
+* [Model and value proposition](doc/Model.md)
 * [Using GraphQL for retrieving data](doc/Retrieving_using_GraphQL.md)
 * [Using Java for creating and retrieving data](doc/Using_Java.md)
 

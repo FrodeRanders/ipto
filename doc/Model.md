@@ -191,3 +191,30 @@ erDiagram
     repo_unit_kernel ||--o{ repo_internal_relation : "reltenantid, relunitid"
     repo_unit_kernel ||--o{ repo_external_assoc : "tenantid, unitid"
 ```
+
+## Why this model exists
+
+IPTO is designed so teams can focus on information design instead of storage implementation.
+The intent is:
+
+- define schema and information structure first
+- evolve model semantics without rewriting database-centric application code
+- keep a consistent set of information primitives across runtimes
+
+In practice, IPTO gives you versioned units, typed attributes (including nested records),
+search support, lifecycle/status transitions, relations, associations, locks, and tenant-aware identity.
+
+This means less time spent on:
+
+- hand-rolling table-per-domain structures for every new change
+- repetitive persistence mapping and migration plumbing in application code
+- query mechanics tied tightly to physical schema layout
+
+And more time spent on:
+
+- schema meaning and domain behavior
+- lifecycle policy and governance of information
+- API/use-case design for consumers
+
+The underlying database still matters, but IPTO aims to make it an implementation concern
+behind a schema-driven information model, rather than the center of day-to-day development.
