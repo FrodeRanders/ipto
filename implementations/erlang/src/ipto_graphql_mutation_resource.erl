@@ -22,13 +22,33 @@
 -export([execute/4]).
 
 -spec execute(map(), map() | undefined, binary(), map()) ->
-    {ok, unit_map() | boolean()} | {error, unsupported_mutation_field | ipto_reason()}.
+    {ok, unit_map() | boolean() | map()} | {error, unsupported_mutation_field | ipto_reason()}.
 execute(Context, _Source, <<"createUnit">>, Args) ->
     ipto_graphql_resolvers:resolve(mutation, createUnit, normalize_args(Args), Context);
 execute(Context, _Source, <<"inactivateUnit">>, Args) ->
     ipto_graphql_resolvers:resolve(mutation, inactivateUnit, normalize_args(Args), Context);
 execute(Context, _Source, <<"activateUnit">>, Args) ->
     ipto_graphql_resolvers:resolve(mutation, activateUnit, normalize_args(Args), Context);
+execute(Context, _Source, <<"requestStatusTransition">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, requestStatusTransition, normalize_args(Args), Context);
+execute(Context, _Source, <<"transitionUnitStatus">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, transitionUnitStatus, normalize_args(Args), Context);
+execute(Context, _Source, <<"lockUnit">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, lockUnit, normalize_args(Args), Context);
+execute(Context, _Source, <<"unlockUnit">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, unlockUnit, normalize_args(Args), Context);
+execute(Context, _Source, <<"addRelation">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, addRelation, normalize_args(Args), Context);
+execute(Context, _Source, <<"removeRelation">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, removeRelation, normalize_args(Args), Context);
+execute(Context, _Source, <<"addAssociation">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, addAssociation, normalize_args(Args), Context);
+execute(Context, _Source, <<"removeAssociation">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, removeAssociation, normalize_args(Args), Context);
+execute(Context, _Source, <<"configureGraphqlSdl">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, configureGraphqlSdl, normalize_args(Args), Context);
+execute(Context, _Source, <<"configureGraphqlSdlFile">>, Args) ->
+    ipto_graphql_resolvers:resolve(mutation, configureGraphqlSdlFile, normalize_args(Args), Context);
 execute(_Context, _Source, _Field, _Args) ->
     {error, unsupported_mutation_field}.
 

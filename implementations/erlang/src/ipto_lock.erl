@@ -19,7 +19,7 @@
 
 -include("ipto.hrl").
 
--export([lock/3, unlock/1]).
+-export([lock/3, unlock/1, is_locked/1]).
 
 -spec lock(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 lock(UnitRef, LockType, Purpose) ->
@@ -28,3 +28,7 @@ lock(UnitRef, LockType, Purpose) ->
 -spec unlock(unit_ref_value()) -> ok | {error, ipto_reason()}.
 unlock(UnitRef) ->
     ipto_db:unlock_unit(UnitRef).
+
+-spec is_locked(unit_ref_value()) -> boolean().
+is_locked(UnitRef) ->
+    ipto_db:is_unit_locked(UnitRef).

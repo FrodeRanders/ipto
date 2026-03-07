@@ -41,10 +41,13 @@
     count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
+    is_unit_locked/1,
     set_status/2,
     create_attribute/5,
     get_attribute_info/1,
-    get_tenant_info/1
+    get_tenant_info/1,
+    upsert_record_template/3,
+    upsert_unit_template/2
 ]).
 
 -define(DEFAULT_DB, "neo4j").
@@ -625,6 +628,25 @@ unlock_unit(UnitRef) ->
             {error, invalid_unit_ref}
     end.
 
+-spec is_unit_locked(unit_ref_value()) -> boolean().
+is_unit_locked(UnitRef) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            Cypher =
+                "MATCH (k:UnitKernel {tenantid: $tenantid, unitid: $unitid}) "
+                "OPTIONAL MATCH (k)-[:HAS_LOCK]->(l:UnitLock) "
+                "RETURN count(l) > 0 AS locked",
+            Params = #{tenantid => TenantId, unitid => UnitId},
+            case neo4j_query(Cypher, Params) of
+                {ok, [[Locked] | _]} when is_boolean(Locked) ->
+                    Locked;
+                _ ->
+                    false
+            end;
+        _ ->
+            false
+    end.
+
 -spec set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 set_status(UnitRef, Status) when is_integer(Status) ->
     case normalize_ref(UnitRef) of
@@ -782,6 +804,14 @@ get_tenant_info(NameOrId) when is_binary(NameOrId) ->
     end;
 get_tenant_info(_NameOrId) ->
     {error, invalid_tenant_id_or_name}.
+
+-spec upsert_record_template(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_record_template(_RecordId, _RecordName, _Fields) ->
+    {error, unsupported_operation}.
+
+-spec upsert_unit_template(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_unit_template(_TemplateName, _Fields) ->
+    {error, unsupported_operation}.
 
 -spec store_new_unit(unit_map()) -> ipto_result(unit_map()).
 store_new_unit(UnitMap) ->
@@ -1577,65 +1607,253 @@ is_proplist(_) ->
 
 -spec normalize_expr_keys(map()) -> map().
 normalize_expr_keys(Expr) ->
-    maps:from_list([{normalize_expr_key(K), V} || {K, V} <- maps:to_list(Expr)]).
+    maps:from_list([{normalize_expr_key(K), normalize_expr_value(V)} || {K, V} <- maps:to_list(Expr)]).
+
+-spec normalize_expr_value(term()) -> term().
+normalize_expr_value(V) when is_map(V) ->
+    normalize_expr_keys(V);
+normalize_expr_value(V) when is_list(V) ->
+    [normalize_expr_value(E) || E <- V];
+normalize_expr_value(V) ->
+    V.
 
 -spec normalize_expr_key(term()) -> term().
 normalize_expr_key(<<"tenantid">>) -> tenantid;
 normalize_expr_key(<<"unitid">>) -> unitid;
 normalize_expr_key(<<"status">>) -> status;
 normalize_expr_key(<<"name">>) -> name;
+normalize_expr_key(<<"name_ne">>) -> name_ne;
 normalize_expr_key(<<"name_ilike">>) -> name_ilike;
+normalize_expr_key(<<"corrid">>) -> corrid;
+normalize_expr_key(<<"corrid_ne">>) -> corrid_ne;
+normalize_expr_key(<<"corrid_ilike">>) -> corrid_ilike;
+normalize_expr_key(<<"tenantid_ne">>) -> tenantid_ne;
+normalize_expr_key(<<"tenantid_gt">>) -> tenantid_gt;
+normalize_expr_key(<<"tenantid_gte">>) -> tenantid_gte;
+normalize_expr_key(<<"tenantid_lt">>) -> tenantid_lt;
+normalize_expr_key(<<"tenantid_lte">>) -> tenantid_lte;
+normalize_expr_key(<<"unitid_ne">>) -> unitid_ne;
+normalize_expr_key(<<"unitid_gt">>) -> unitid_gt;
+normalize_expr_key(<<"unitid_gte">>) -> unitid_gte;
+normalize_expr_key(<<"unitid_lt">>) -> unitid_lt;
+normalize_expr_key(<<"unitid_lte">>) -> unitid_lte;
+normalize_expr_key(<<"status_ne">>) -> status_ne;
+normalize_expr_key(<<"status_gt">>) -> status_gt;
+normalize_expr_key(<<"status_gte">>) -> status_gte;
+normalize_expr_key(<<"status_lt">>) -> status_lt;
+normalize_expr_key(<<"status_lte">>) -> status_lte;
+normalize_expr_key(<<"created">>) -> created;
+normalize_expr_key(<<"created_ne">>) -> created_ne;
+normalize_expr_key(<<"created_gt">>) -> created_gt;
+normalize_expr_key(<<"created_gte">>) -> created_gte;
 normalize_expr_key(<<"created_after">>) -> created_after;
+normalize_expr_key(<<"created_lt">>) -> created_lt;
 normalize_expr_key(<<"created_before">>) -> created_before;
+normalize_expr_key(<<"created_lte">>) -> created_lte;
+normalize_expr_key(<<"modified">>) -> modified;
+normalize_expr_key(<<"modified_ne">>) -> modified_ne;
+normalize_expr_key(<<"modified_gt">>) -> modified_gt;
+normalize_expr_key(<<"modified_gte">>) -> modified_gte;
+normalize_expr_key(<<"modified_after">>) -> modified_after;
+normalize_expr_key(<<"modified_lt">>) -> modified_lt;
+normalize_expr_key(<<"modified_before">>) -> modified_before;
+normalize_expr_key(<<"modified_lte">>) -> modified_lte;
 normalize_expr_key(K) -> K.
 
 -spec build_where(map()) -> {ok, string(), map()} | {error, ipto_reason()}.
 build_where(Expression) ->
-    Entries = maps:to_list(Expression),
-    build_where_entries(Entries, [], #{}).
+    case compile_where_expr(Expression, 1) of
+        {ok, "TRUE", Params, _NextIdx} ->
+            {ok, "", Params};
+        {ok, Sql, Params, _NextIdx} ->
+            {ok, " AND (" ++ Sql ++ ")", Params};
+        Error ->
+            Error
+    end.
 
--spec build_where_entries([{term(), term()}], [string()], map()) ->
-    {ok, string(), map()} | {error, ipto_reason()}.
-build_where_entries([], ClausesAcc, ParamsAcc) ->
-    Sql =
-        case lists:reverse(ClausesAcc) of
-            [] -> "";
-            Clauses -> " AND " ++ string:join(Clauses, " AND ")
-        end,
-    {ok, Sql, ParamsAcc};
-build_where_entries([{Key, Value} | Rest], ClausesAcc, ParamsAcc) ->
-    case where_clause(Key, Value) of
-        skip ->
-            build_where_entries(Rest, ClausesAcc, ParamsAcc);
-        {Clause, K, V} ->
-            build_where_entries(Rest, [Clause | ClausesAcc], ParamsAcc#{K => V});
+-spec compile_where_expr(map(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+compile_where_expr(Expr, NextIdx) when is_map(Expr), map_size(Expr) =:= 0 ->
+    {ok, "TRUE", #{}, NextIdx};
+compile_where_expr(Expr, NextIdx) when is_map(Expr) ->
+    compile_where_kvs(maps:to_list(Expr), [], #{}, NextIdx);
+compile_where_expr(_Expr, _NextIdx) ->
+    {error, invalid_query}.
+
+-spec compile_where_kvs([{term(), term()}], [string()], map(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+compile_where_kvs([], ClausesAcc, ParamsAcc, NextIdx) ->
+    Sql = case lists:reverse(ClausesAcc) of
+        [] -> "TRUE";
+        Clauses -> string:join(Clauses, " AND ")
+    end,
+    {ok, Sql, ParamsAcc, NextIdx};
+compile_where_kvs([{Key, Value} | Rest], ClausesAcc, ParamsAcc, NextIdx) ->
+    case compile_where_clause(Key, Value, NextIdx) of
+        {skip, NextIdx2} ->
+            compile_where_kvs(Rest, ClausesAcc, ParamsAcc, NextIdx2);
+        {ok, Clause, Params, NextIdx2} ->
+            compile_where_kvs(Rest, [Clause | ClausesAcc], maps:merge(ParamsAcc, Params), NextIdx2);
         {error, _} = Error ->
             Error
     end.
 
--spec where_clause(term(), term()) -> skip | {string(), atom(), term()} | {error, ipto_reason()}.
-where_clause(tenantid, Value) when is_integer(Value) ->
-    {"k.tenantid = $tenantid", tenantid, Value};
-where_clause(unitid, Value) when is_integer(Value) ->
-    {"k.unitid = $unitid", unitid, Value};
-where_clause(status, Value) when is_integer(Value) ->
-    {"k.status = $status", status, Value};
-where_clause(name, Value) ->
-    {"coalesce(v.unitname, '') = $name", name, normalize_string(Value)};
-where_clause(name_ilike, Value) ->
-    {"coalesce(v.unitname, '') =~ $name_regex", name_regex, like_to_regex(Value)};
-where_clause(created_after, Value) ->
-    case to_int_maybe(Value) of
-        {ok, N} -> {"toInteger(k.created) >= $created_after", created_after, N};
-        error -> {error, {invalid_created_after, Value}}
+-spec compile_where_clause(term(), term(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {skip, pos_integer()} | {error, ipto_reason()}.
+compile_where_clause('$and', Exprs, NextIdx) when is_list(Exprs) ->
+    compile_where_expr_list("AND", Exprs, NextIdx);
+compile_where_clause('$or', Exprs, NextIdx) when is_list(Exprs) ->
+    compile_where_expr_list("OR", Exprs, NextIdx);
+compile_where_clause('$not', Expr, NextIdx) when is_map(Expr) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            {ok, "NOT (" ++ Sql ++ ")", Params, NextIdx2};
+        Error ->
+            Error
     end;
-where_clause(created_before, Value) ->
+compile_where_clause(Key, Value, NextIdx) ->
+    compile_scalar_where_clause(Key, Value, NextIdx).
+
+-spec compile_where_expr_list(string(), [map()], pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+compile_where_expr_list("AND", [], NextIdx) ->
+    {ok, "TRUE", #{}, NextIdx};
+compile_where_expr_list("OR", [], NextIdx) ->
+    {ok, "FALSE", #{}, NextIdx};
+compile_where_expr_list(Joiner, [Expr | Rest], NextIdx) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            compile_where_expr_list_tail(Joiner, Rest, ["(" ++ Sql ++ ")"], Params, NextIdx2);
+        Error ->
+            Error
+    end.
+
+-spec compile_where_expr_list_tail(string(), [map()], [string()], map(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+compile_where_expr_list_tail(Joiner, [], SqlAcc, ParamsAcc, NextIdx) ->
+    {ok, string:join(lists:reverse(SqlAcc), " " ++ Joiner ++ " "), ParamsAcc, NextIdx};
+compile_where_expr_list_tail(Joiner, [Expr | Rest], SqlAcc, ParamsAcc, NextIdx) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            compile_where_expr_list_tail(Joiner, Rest, ["(" ++ Sql ++ ")" | SqlAcc], maps:merge(ParamsAcc, Params), NextIdx2);
+        Error ->
+            Error
+    end.
+
+-spec compile_scalar_where_clause(term(), term(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {skip, pos_integer()} | {error, ipto_reason()}.
+compile_scalar_where_clause(tenantid, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid = ", Value, NextIdx);
+compile_scalar_where_clause(tenantid_ne, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid <> ", Value, NextIdx);
+compile_scalar_where_clause(tenantid_gt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid > ", Value, NextIdx);
+compile_scalar_where_clause(tenantid_gte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid >= ", Value, NextIdx);
+compile_scalar_where_clause(tenantid_lt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid < ", Value, NextIdx);
+compile_scalar_where_clause(tenantid_lte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.tenantid <= ", Value, NextIdx);
+compile_scalar_where_clause(unitid, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid = ", Value, NextIdx);
+compile_scalar_where_clause(unitid_ne, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid <> ", Value, NextIdx);
+compile_scalar_where_clause(unitid_gt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid > ", Value, NextIdx);
+compile_scalar_where_clause(unitid_gte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid >= ", Value, NextIdx);
+compile_scalar_where_clause(unitid_lt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid < ", Value, NextIdx);
+compile_scalar_where_clause(unitid_lte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.unitid <= ", Value, NextIdx);
+compile_scalar_where_clause(status, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status = ", Value, NextIdx);
+compile_scalar_where_clause(status_ne, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status <> ", Value, NextIdx);
+compile_scalar_where_clause(status_gt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status > ", Value, NextIdx);
+compile_scalar_where_clause(status_gte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status >= ", Value, NextIdx);
+compile_scalar_where_clause(status_lt, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status < ", Value, NextIdx);
+compile_scalar_where_clause(status_lte, Value, NextIdx) when is_integer(Value) ->
+    sql_param_clause("k.status <= ", Value, NextIdx);
+compile_scalar_where_clause(name, Value, NextIdx) ->
+    sql_param_clause("coalesce(v.unitname, '') = ", normalize_string(Value), NextIdx);
+compile_scalar_where_clause(name_ne, Value, NextIdx) ->
+    sql_param_clause("coalesce(v.unitname, '') <> ", normalize_string(Value), NextIdx);
+compile_scalar_where_clause(name_ilike, Value, NextIdx) ->
+    sql_param_clause("coalesce(v.unitname, '') =~ ", like_to_regex(Value), NextIdx);
+compile_scalar_where_clause(corrid, Value, NextIdx) ->
+    sql_param_clause("coalesce(k.corrid, '') = ", normalize_string(Value), NextIdx);
+compile_scalar_where_clause(corrid_ne, Value, NextIdx) ->
+    sql_param_clause("coalesce(k.corrid, '') <> ", normalize_string(Value), NextIdx);
+compile_scalar_where_clause(corrid_ilike, Value, NextIdx) ->
+    sql_param_clause("coalesce(k.corrid, '') =~ ", like_to_regex(Value), NextIdx);
+compile_scalar_where_clause(created, Value, NextIdx) ->
+    numeric_created_clause("=", Value, NextIdx);
+compile_scalar_where_clause(created_ne, Value, NextIdx) ->
+    numeric_created_clause("<>", Value, NextIdx);
+compile_scalar_where_clause(created_gt, Value, NextIdx) ->
+    numeric_created_clause(">", Value, NextIdx);
+compile_scalar_where_clause(created_gte, Value, NextIdx) ->
+    numeric_created_clause(">=", Value, NextIdx);
+compile_scalar_where_clause(created_after, Value, NextIdx) ->
+    numeric_created_clause(">=", Value, NextIdx);
+compile_scalar_where_clause(created_lt, Value, NextIdx) ->
+    numeric_created_clause("<", Value, NextIdx);
+compile_scalar_where_clause(created_before, Value, NextIdx) ->
+    numeric_created_clause("<", Value, NextIdx);
+compile_scalar_where_clause(created_lte, Value, NextIdx) ->
+    numeric_created_clause("<=", Value, NextIdx);
+compile_scalar_where_clause(modified, Value, NextIdx) ->
+    numeric_modified_clause("=", Value, NextIdx);
+compile_scalar_where_clause(modified_ne, Value, NextIdx) ->
+    numeric_modified_clause("<>", Value, NextIdx);
+compile_scalar_where_clause(modified_gt, Value, NextIdx) ->
+    numeric_modified_clause(">", Value, NextIdx);
+compile_scalar_where_clause(modified_gte, Value, NextIdx) ->
+    numeric_modified_clause(">=", Value, NextIdx);
+compile_scalar_where_clause(modified_after, Value, NextIdx) ->
+    numeric_modified_clause(">=", Value, NextIdx);
+compile_scalar_where_clause(modified_lt, Value, NextIdx) ->
+    numeric_modified_clause("<", Value, NextIdx);
+compile_scalar_where_clause(modified_before, Value, NextIdx) ->
+    numeric_modified_clause("<", Value, NextIdx);
+compile_scalar_where_clause(modified_lte, Value, NextIdx) ->
+    numeric_modified_clause("<=", Value, NextIdx);
+compile_scalar_where_clause(_, _, NextIdx) ->
+    {skip, NextIdx}.
+
+-spec numeric_created_clause(string(), term(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+numeric_created_clause(Op, Value, NextIdx) ->
     case to_int_maybe(Value) of
-        {ok, N} -> {"toInteger(k.created) < $created_before", created_before, N};
-        error -> {error, {invalid_created_before, Value}}
-    end;
-where_clause(_, _) ->
-    skip.
+        {ok, N} ->
+            sql_param_clause("toInteger(k.created) " ++ Op ++ " ", N, NextIdx);
+        error ->
+            {error, invalid_created_filter}
+    end.
+
+-spec numeric_modified_clause(string(), term(), pos_integer()) ->
+    {ok, string(), map(), pos_integer()} | {error, ipto_reason()}.
+numeric_modified_clause(Op, Value, NextIdx) ->
+    case to_int_maybe(Value) of
+        {ok, N} ->
+            sql_param_clause("toInteger(v.modified) " ++ Op ++ " ", N, NextIdx);
+        error ->
+            {error, invalid_modified_filter}
+    end.
+
+-spec sql_param_clause(string(), term(), pos_integer()) -> {ok, string(), map(), pos_integer()}.
+sql_param_clause(Prefix, Value, NextIdx) ->
+    PName = param_name(NextIdx),
+    PRef = "$" ++ binary_to_list(PName),
+    {ok, Prefix ++ PRef, #{PName => Value}, NextIdx + 1}.
+
+-spec param_name(pos_integer()) -> binary().
+param_name(Idx) ->
+    iolist_to_binary(io_lib:format("p~p", [Idx])).
 
 -spec build_order(search_order() | map() | tuple()) -> {string(), map()}.
 build_order({Field, Dir}) ->

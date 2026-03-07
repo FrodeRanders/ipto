@@ -41,10 +41,13 @@
     count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
+    is_unit_locked/1,
     set_status/2,
     create_attribute/5,
     get_attribute_info/1,
-    get_tenant_info/1
+    get_tenant_info/1,
+    upsert_record_template/3,
+    upsert_unit_template/2
 ]).
 
 -spec get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
@@ -127,6 +130,10 @@ lock_unit(UnitRef, LockType, Purpose) ->
 unlock_unit(UnitRef) ->
     ipto_db:memory_unlock_unit_backend(UnitRef).
 
+-spec is_unit_locked(unit_ref_value()) -> boolean().
+is_unit_locked(UnitRef) ->
+    ipto_db:memory_is_unit_locked_backend(UnitRef).
+
 -spec set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 set_status(UnitRef, Status) ->
     ipto_db:memory_set_status_backend(UnitRef, Status).
@@ -143,3 +150,11 @@ get_attribute_info(NameOrId) ->
 -spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 get_tenant_info(NameOrId) ->
     ipto_db:memory_get_tenant_info_backend(NameOrId).
+
+-spec upsert_record_template(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_record_template(RecordId, RecordName, Fields) ->
+    ipto_db:memory_upsert_record_template_backend(RecordId, RecordName, Fields).
+
+-spec upsert_unit_template(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_unit_template(TemplateName, Fields) ->
+    ipto_db:memory_upsert_unit_template_backend(TemplateName, Fields).

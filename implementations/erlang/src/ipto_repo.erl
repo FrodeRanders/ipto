@@ -44,11 +44,16 @@
     count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
+    is_unit_locked/1,
+    request_status_transition/2,
     activate_unit/1,
     inactivate_unit/1,
     create_attribute/5,
     get_attribute_info/1,
     get_tenant_info/1,
+    inspect_graphql_sdl/1,
+    configure_graphql_sdl/1,
+    configure_graphql_sdl_file/1,
     sync/0
 ]).
 
@@ -175,13 +180,30 @@ lock_unit(UnitRef, LockType, Purpose) ->
 unlock_unit(UnitRef) ->
     ipto_lock:unlock(UnitRef).
 
+-spec is_unit_locked(unit_ref_value()) -> boolean().
+is_unit_locked(UnitRef) ->
+    ipto_lock:is_locked(UnitRef).
+
+-spec request_status_transition(unit_ref_value(), unit_status()) ->
+    {ok, unit_status()} | {error, ipto_reason()}.
+request_status_transition(UnitRef, RequestedStatus) when is_integer(RequestedStatus) ->
+    transition_status(UnitRef, RequestedStatus);
+request_status_transition(_UnitRef, _RequestedStatus) ->
+    {error, invalid_status}.
+
 -spec activate_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
 activate_unit(UnitRef) ->
-    transition_status(UnitRef, ?STATUS_EFFECTIVE).
+    case request_status_transition(UnitRef, ?STATUS_EFFECTIVE) of
+        {ok, _Status} -> ok;
+        Error -> Error
+    end.
 
 -spec inactivate_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
 inactivate_unit(UnitRef) ->
-    transition_status(UnitRef, ?STATUS_PENDING_DELETION).
+    case request_status_transition(UnitRef, ?STATUS_PENDING_DELETION) of
+        {ok, _Status} -> ok;
+        Error -> Error
+    end.
 
 -spec create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
     ipto_result(attribute_info()).
@@ -195,6 +217,30 @@ get_attribute_info(NameOrId) ->
 -spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 get_tenant_info(NameOrId) ->
     ipto_db:get_tenant_info(NameOrId).
+
+-spec inspect_graphql_sdl(binary() | string()) -> map().
+inspect_graphql_sdl(Sdl) ->
+    ipto_graphql_sdl:inspect(Sdl).
+
+-spec configure_graphql_sdl(binary() | string()) -> {ok, map()} | {error, ipto_reason()}.
+configure_graphql_sdl(Sdl) ->
+    case ipto_graphql_sdl:parse(Sdl) of
+        {ok, Catalog} ->
+            apply_sdl_catalog(Catalog);
+        {error, {invalid_sdl, Errors, _Catalog}} ->
+            {error, {invalid_sdl, Errors}}
+    end.
+
+-spec configure_graphql_sdl_file(binary() | string()) -> {ok, map()} | {error, ipto_reason()}.
+configure_graphql_sdl_file(Path) when is_binary(Path); is_list(Path) ->
+    case file:read_file(Path) of
+        {ok, Sdl} ->
+            configure_graphql_sdl(Sdl);
+        {error, Reason} ->
+            {error, {configure_graphql_sdl_file_failed, Reason}}
+    end;
+configure_graphql_sdl_file(_Path) ->
+    {error, invalid_sdl_file_path}.
 
 -spec sync() -> ok.
 sync() ->
@@ -210,7 +256,8 @@ normalize_name(Name) when is_list(Name) ->
 maybe_emit_event(Action, Payload) ->
     ipto_event:emit(Action, Payload).
 
--spec transition_status(unit_ref_value() | unit_ref_tuple() | unit_ref_map(), unit_status()) -> ok | {error, ipto_reason()}.
+-spec transition_status(unit_ref_value() | unit_ref_tuple() | unit_ref_map(), unit_status()) ->
+    {ok, unit_status()} | {error, ipto_reason()}.
 transition_status(#{tenantid := TenantId, unitid := UnitId}, RequestedStatus) ->
     transition_status({TenantId, UnitId}, RequestedStatus);
 transition_status({TenantId, UnitId}, RequestedStatus) ->
@@ -218,8 +265,13 @@ transition_status({TenantId, UnitId}, RequestedStatus) ->
         {ok, UnitMap} ->
             CurrentStatus = maps:get(status, UnitMap, ?STATUS_EFFECTIVE),
             case allowed_transition(CurrentStatus, RequestedStatus) of
-                true -> ipto_db:set_status({TenantId, UnitId}, RequestedStatus);
-                false -> ok
+                true ->
+                    case ipto_db:set_status({TenantId, UnitId}, RequestedStatus) of
+                        ok -> {ok, RequestedStatus};
+                        Error -> Error
+                    end;
+                false ->
+                    {ok, CurrentStatus}
             end;
         not_found ->
             {error, not_found};
@@ -246,3 +298,234 @@ allowed_transition(?STATUS_OBLITERATED, ?STATUS_EFFECTIVE) ->
     true;
 allowed_transition(_Current, _Requested) ->
     false.
+
+-spec apply_sdl_catalog(map()) -> {ok, map()} | {error, ipto_reason()}.
+apply_sdl_catalog(Catalog) ->
+    Registry = maps:get(attribute_registry, Catalog, #{}),
+    AttrDefs = maps:get(attribute_defs, Registry, []),
+    case ensure_attributes(AttrDefs, #{created => 0, existing => 0, failed => []}) of
+        {ok, AttrSummary} ->
+            AttrIdMap = build_attribute_id_map(AttrDefs),
+            {RecordSummary, TemplateSummary} = persist_templates(Catalog, AttrIdMap),
+            Result = #{
+                attributes => AttrSummary,
+                records => RecordSummary,
+                templates => TemplateSummary
+            },
+            {ok, Result};
+        {error, Reason, AttrSummary} ->
+            {error, {configure_graphql_sdl_failed, Reason, AttrSummary}}
+    end.
+
+-spec build_attribute_id_map([map()]) -> map().
+build_attribute_id_map(AttrDefs) ->
+    lists:foldl(
+        fun(AttrDef, Acc) ->
+            Symbol = maps:get(symbol, AttrDef),
+            Name = attribute_name(AttrDef, Symbol),
+            case get_attribute_info(Symbol) of
+                {ok, Info} ->
+                    Acc#{Symbol => maps:get(id, Info)};
+                _ ->
+                    case get_attribute_info(Name) of
+                        {ok, Info2} -> Acc#{Symbol => maps:get(id, Info2)};
+                        _ -> Acc
+                    end
+            end
+        end,
+        #{},
+        AttrDefs
+    ).
+
+-spec persist_templates(map(), map()) -> {map(), map()}.
+persist_templates(Catalog, AttrIdMap) ->
+    case current_backend() of
+        pg ->
+            persist_templates_pg(Catalog, AttrIdMap);
+        _ ->
+            {
+                #{
+                    supported => false,
+                    reason => <<"record template persistence unsupported by current backend">>,
+                    count => maps:get(records, maps:get(counts, Catalog, #{}), 0)
+                },
+                #{
+                    supported => false,
+                    reason => <<"unit template persistence unsupported by current backend">>,
+                    count => maps:get(templates, maps:get(counts, Catalog, #{}), 0)
+                }
+            }
+    end.
+
+-spec current_backend() -> memory | pg | neo4j.
+current_backend() ->
+    case application:get_env(ipto, backend) of
+        {ok, pg} -> pg;
+        {ok, postgres} -> pg;
+        {ok, neo4j} -> neo4j;
+        _ -> memory
+    end.
+
+-spec persist_templates_pg(map(), map()) -> {map(), map()}.
+persist_templates_pg(Catalog, AttrIdMap) ->
+    Records = maps:get(records, Catalog, []),
+    Templates = maps:get(templates, Catalog, []),
+    RecordResult = persist_record_templates_pg(Records, AttrIdMap),
+    TemplateResult = persist_unit_templates_pg(Templates, AttrIdMap),
+    {RecordResult, TemplateResult}.
+
+-spec persist_record_templates_pg([map()], map()) -> map().
+persist_record_templates_pg(Records, AttrIdMap) ->
+    {Persisted, Failed} = lists:foldl(
+        fun(Record, {P0, F0}) ->
+            RecordAttr = maps:get(attribute, Record),
+            RecordName = maps:get(type_name, Record),
+            Uses = maps:get(uses, Record, []),
+            case maps:get(RecordAttr, AttrIdMap, undefined) of
+                undefined ->
+                    {P0, [#{record => RecordName, reason => unresolved_record_attribute, attribute => RecordAttr} | F0]};
+                RecordId ->
+                    case resolve_template_fields(Uses, AttrIdMap) of
+                        {ok, Fields} ->
+                            case ipto_db:upsert_record_template(RecordId, RecordName, Fields) of
+                                ok -> {P0 + 1, F0};
+                                {ok, _} -> {P0 + 1, F0};
+                                {error, Reason} ->
+                                    {P0, [#{record => RecordName, reason => Reason} | F0]}
+                            end;
+                        {error, Reason} ->
+                            {P0, [#{record => RecordName, reason => Reason} | F0]}
+                    end
+            end
+        end,
+        {0, []},
+        Records
+    ),
+    #{
+        supported => true,
+        persisted => Persisted,
+        count => length(Records),
+        failed => lists:reverse(Failed)
+    }.
+
+-spec persist_unit_templates_pg([map()], map()) -> map().
+persist_unit_templates_pg(Templates, AttrIdMap) ->
+    {Persisted, Failed} = lists:foldl(
+        fun(Template, {P0, F0}) ->
+            TemplateTypeName = maps:get(type_name, Template),
+            TemplateName0 = maps:get(name, Template, <<>>),
+            TemplateName = case TemplateName0 of
+                <<>> -> TemplateTypeName;
+                _ -> TemplateName0
+            end,
+            Uses = maps:get(uses, Template, []),
+            case resolve_template_fields(Uses, AttrIdMap) of
+                {ok, Fields} ->
+                    case ipto_db:upsert_unit_template(TemplateName, Fields) of
+                        ok -> {P0 + 1, F0};
+                        {ok, _} -> {P0 + 1, F0};
+                        {error, Reason} ->
+                            {P0, [#{template => TemplateName, reason => Reason} | F0]}
+                    end;
+                {error, Reason} ->
+                    {P0, [#{template => TemplateName, reason => Reason} | F0]}
+            end
+        end,
+        {0, []},
+        Templates
+    ),
+    #{
+        supported => true,
+        persisted => Persisted,
+        count => length(Templates),
+        failed => lists:reverse(Failed)
+    }.
+
+-spec resolve_template_fields([map()], map()) -> {ok, [{integer(), binary()}]} | {error, term()}.
+resolve_template_fields(Uses, AttrIdMap) ->
+    resolve_template_fields(Uses, AttrIdMap, []).
+
+-spec resolve_template_fields([map()], map(), [{integer(), binary()}]) -> {ok, [{integer(), binary()}]} | {error, term()}.
+resolve_template_fields([], _AttrIdMap, Acc) ->
+    {ok, lists:reverse(Acc)};
+resolve_template_fields([Use | Rest], AttrIdMap, Acc) ->
+    AttrSymbol = maps:get(attribute, Use),
+    Alias = maps:get(field_name, Use),
+    case maps:get(AttrSymbol, AttrIdMap, undefined) of
+        undefined ->
+            {error, {unresolved_use_attribute, AttrSymbol}};
+        AttrId ->
+            resolve_template_fields(Rest, AttrIdMap, [{AttrId, Alias} | Acc])
+    end.
+
+-spec ensure_attributes([map()], map()) -> {ok, map()} | {error, term(), map()}.
+ensure_attributes([], Summary) ->
+    case maps:get(failed, Summary, []) of
+        [] -> {ok, Summary};
+        Failed -> {error, {attribute_setup_failed, Failed}, Summary}
+    end;
+ensure_attributes([AttrDef | Rest], Summary0) ->
+    Symbol = maps:get(symbol, AttrDef),
+    Name = attribute_name(AttrDef, Symbol),
+    Alias = Symbol,
+    QualName = attribute_qualname(AttrDef, Name),
+    IsArray = maps:get(is_array, AttrDef, true),
+    case datatype_to_id(maps:get(datatype, AttrDef, <<"STRING">>)) of
+        {ok, TypeId} ->
+            Summary1 = ensure_attribute(Alias, Name, QualName, TypeId, IsArray, Summary0),
+            ensure_attributes(Rest, Summary1);
+        {error, invalid_datatype} ->
+            Failed = #{
+                attribute => Name,
+                reason => invalid_datatype,
+                datatype => maps:get(datatype, AttrDef, undefined)
+            },
+            ensure_attributes(Rest, Summary0#{failed => [Failed | maps:get(failed, Summary0, [])]})
+    end.
+
+-spec ensure_attribute(binary(), binary(), binary(), integer(), boolean(), map()) -> map().
+ensure_attribute(Alias, Name, QualName, TypeId, IsArray, Summary0) ->
+    case get_attribute_info(Name) of
+        {ok, _Info} ->
+            Summary0#{existing => maps:get(existing, Summary0, 0) + 1};
+        not_found ->
+            case create_attribute(Alias, Name, QualName, TypeId, IsArray) of
+                {ok, _Created} ->
+                    Summary0#{created => maps:get(created, Summary0, 0) + 1};
+                {error, Reason} ->
+                    Failed = #{attribute => Name, reason => Reason},
+                    Summary0#{failed => [Failed | maps:get(failed, Summary0, [])]}
+            end;
+        {error, Reason} ->
+            Failed = #{attribute => Name, reason => Reason},
+            Summary0#{failed => [Failed | maps:get(failed, Summary0, [])]}
+    end.
+
+-spec datatype_to_id(binary() | undefined) -> {ok, integer()} | {error, invalid_datatype}.
+datatype_to_id(<<"STRING">>) -> {ok, 1};
+datatype_to_id(<<"TIME">>) -> {ok, 2};
+datatype_to_id(<<"INTEGER">>) -> {ok, 3};
+datatype_to_id(<<"LONG">>) -> {ok, 4};
+datatype_to_id(<<"DOUBLE">>) -> {ok, 5};
+datatype_to_id(<<"BOOLEAN">>) -> {ok, 6};
+datatype_to_id(<<"DATA">>) -> {ok, 7};
+datatype_to_id(<<"RECORD">>) -> {ok, 99};
+datatype_to_id(_) -> {error, invalid_datatype}.
+
+-spec attribute_name(map(), binary()) -> binary().
+attribute_name(AttrDef, Symbol) ->
+    case maps:get(name, AttrDef, undefined) of
+        undefined -> Symbol;
+        <<>> -> Symbol;
+        Name when is_binary(Name) -> Name;
+        _ -> Symbol
+    end.
+
+-spec attribute_qualname(map(), binary()) -> binary().
+attribute_qualname(AttrDef, Name) ->
+    case maps:get(qualname, AttrDef, undefined) of
+        undefined -> Name;
+        <<>> -> Name;
+        QualName when is_binary(QualName) -> QualName;
+        _ -> Name
+    end.

@@ -45,11 +45,16 @@
     count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
+    is_unit_locked/1,
+    request_status_transition/2,
     activate_unit/1,
     inactivate_unit/1,
     create_attribute/5,
     get_attribute_info/1,
     get_tenant_info/1,
+    inspect_graphql_sdl/1,
+    configure_graphql_sdl/1,
+    configure_graphql_sdl_file/1,
     sync/0,
     reset_timing_data/0,
     get_timing_data/0,
@@ -182,6 +187,18 @@ lock_unit(UnitRef, LockType, Purpose) ->
 unlock_unit(UnitRef) ->
     timed(unlock_unit, fun() -> ipto_repo:unlock_unit(UnitRef) end).
 
+-spec is_unit_locked(unit_ref_value()) -> boolean().
+is_unit_locked(UnitRef) ->
+    timed(is_unit_locked, fun() -> ipto_repo:is_unit_locked(UnitRef) end).
+
+-spec request_status_transition(unit_ref_value(), unit_status()) ->
+    {ok, unit_status()} | {error, ipto_reason()}.
+request_status_transition(UnitRef, RequestedStatus) ->
+    timed(
+        request_status_transition,
+        fun() -> ipto_repo:request_status_transition(UnitRef, RequestedStatus) end
+    ).
+
 -spec activate_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
 activate_unit(UnitRef) ->
     timed(activate_unit, fun() -> ipto_repo:activate_unit(UnitRef) end).
@@ -202,6 +219,18 @@ get_attribute_info(NameOrId) ->
 -spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 get_tenant_info(NameOrId) ->
     timed(get_tenant_info, fun() -> ipto_repo:get_tenant_info(NameOrId) end).
+
+-spec inspect_graphql_sdl(binary() | string()) -> map().
+inspect_graphql_sdl(Sdl) ->
+    timed(inspect_graphql_sdl, fun() -> ipto_repo:inspect_graphql_sdl(Sdl) end).
+
+-spec configure_graphql_sdl(binary() | string()) -> {ok, map()} | {error, ipto_reason()}.
+configure_graphql_sdl(Sdl) ->
+    timed(configure_graphql_sdl, fun() -> ipto_repo:configure_graphql_sdl(Sdl) end).
+
+-spec configure_graphql_sdl_file(binary() | string()) -> {ok, map()} | {error, ipto_reason()}.
+configure_graphql_sdl_file(Path) ->
+    timed(configure_graphql_sdl_file, fun() -> ipto_repo:configure_graphql_sdl_file(Path) end).
 
 -spec sync() -> ok.
 sync() ->

@@ -40,7 +40,15 @@ status_transition_rules_test() ->
 
     ok = ipto:activate_unit(UnitRef),
     {ok, AfterActivate} = ipto:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
-    30 = maps:get(status, AfterActivate).
+    30 = maps:get(status, AfterActivate),
+
+    {ok, 10} = ipto:request_status_transition(UnitRef, 10),
+    {ok, AfterRequestedDelete} = ipto:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
+    10 = maps:get(status, AfterRequestedDelete),
+
+    {ok, 10} = ipto:request_status_transition(UnitRef, 40),
+    {ok, AfterRejectedTransition} = ipto:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
+    10 = maps:get(status, AfterRejectedTransition).
 
 relation_assoc_lock_test() ->
     application:set_env(ipto, backend, memory),
@@ -59,9 +67,12 @@ relation_assoc_lock_test() ->
     ok = ipto:add_association(ARef, 2, <<"case:123">>),
     ok = ipto:remove_association(ARef, 2, <<"case:123">>),
 
+    false = ipto:is_unit_locked(ARef),
     ok = ipto:lock_unit(ARef, 30, <<"test">>),
+    true = ipto:is_unit_locked(ARef),
     already_locked = ipto:lock_unit(ARef, 30, <<"test">>),
-    ok = ipto:unlock_unit(ARef).
+    ok = ipto:unlock_unit(ARef),
+    false = ipto:is_unit_locked(ARef).
 
 relation_assoc_query_test() ->
     application:set_env(ipto, backend, memory),
@@ -126,7 +137,42 @@ memory_search_units_test() ->
     {ok, ByNameLike} = ipto:search_units("tenantid=42 and name~\"%beta%\"", {created, desc}, 10),
     1 = maps:get(total, ByNameLike),
     [Only] = maps:get(results, ByNameLike),
-    <<"beta-two">> = maps:get(unitname, Only).
+    <<"beta-two">> = maps:get(unitname, Only),
+
+    {ok, ByOrNot} = ipto:search_units(
+        "tenantid=42 and (name=\"alpha-one\" or name=\"beta-two\") and not status=10",
+        {created, desc},
+        10
+    ),
+    2 = maps:get(total, ByOrNot),
+
+    {ok, ByOrSingle} = ipto:search_units(
+        "tenantid=42 and (name=\"beta-two\" or name=\"missing\")",
+        {created, desc},
+        10
+    ),
+    1 = maps:get(total, ByOrSingle),
+
+    {ok, ByIn} = ipto:search_units(
+        "tenantid in (41, 42) and status in (30, 40)",
+        {created, desc},
+        10
+    ),
+    2 = maps:get(total, ByIn),
+
+    {ok, ByNotIn} = ipto:search_units(
+        "tenantid=42 and unitid not in (" ++ integer_to_list(maps:get(unitid, V2)) ++ ")",
+        {created, desc},
+        10
+    ),
+    1 = maps:get(total, ByNotIn),
+
+    {ok, ByBetween} = ipto:search_units(
+        "tenantid=42 and unitid between 1 and 999999",
+        {created, desc},
+        10
+    ),
+    2 = maps:get(total, ByBetween).
 
 attribute_roundtrip_mixed_types_test() ->
     application:set_env(ipto, backend, memory),

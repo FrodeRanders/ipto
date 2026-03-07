@@ -186,6 +186,10 @@ make pg-test
 make pg-down
 ```
 
+Note: Rust Docker PostgreSQL initialization mounts SQL directly from
+`shared/db/postgresql/schema.sql` and `shared/db/postgresql/procedures.sql`.
+There are no Rust-local schema copies to keep in sync.
+
 Neo4j MVP currently implemented:
 - `health`, `unit_exists`, `set_status`
 - unit API: `store_unit_json`, `get_unit_json`, `search_units`

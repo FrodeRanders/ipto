@@ -39,8 +39,13 @@
 -callback count_left_associations(association_type(), ref_string()) -> ipto_result(non_neg_integer()).
 -callback lock_unit(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 -callback unlock_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
+-callback is_unit_locked(unit_ref_value()) -> boolean().
 -callback set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 -callback create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
     ipto_result(attribute_info()).
 -callback get_attribute_info(name_or_id()) -> {ok, attribute_info()} | not_found | {error, ipto_reason()}.
 -callback get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
+-callback upsert_record_template(integer(), binary(), [{integer(), binary()}]) ->
+    ok | {error, ipto_reason()}.
+-callback upsert_unit_template(binary(), [{integer(), binary()}]) ->
+    ok | {error, ipto_reason()}.
