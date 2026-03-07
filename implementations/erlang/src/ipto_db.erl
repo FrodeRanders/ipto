@@ -40,10 +40,13 @@
     count_left_associations/2,
     lock_unit/3,
     unlock_unit/1,
+    is_unit_locked/1,
     set_status/2,
     create_attribute/5,
     get_attribute_info/1,
-    get_tenant_info/1
+    get_tenant_info/1,
+    upsert_record_template/3,
+    upsert_unit_template/2
 ]).
 
 %% Internal adapters used by backend modules while refactoring.
@@ -68,10 +71,13 @@
     memory_count_left_associations_backend/2,
     memory_lock_unit_backend/3,
     memory_unlock_unit_backend/1,
+    memory_is_unit_locked_backend/1,
     memory_set_status_backend/2,
     memory_create_attribute_backend/5,
     memory_get_attribute_info_backend/1,
     memory_get_tenant_info_backend/1,
+    memory_upsert_record_template_backend/3,
+    memory_upsert_unit_template_backend/2,
     pg_get_unit_json_backend/3,
     pg_unit_exists_backend/2,
     pg_store_unit_json_backend/1,
@@ -92,10 +98,13 @@
     pg_count_left_associations_backend/2,
     pg_lock_unit_backend/3,
     pg_unlock_unit_backend/1,
+    pg_is_unit_locked_backend/1,
     pg_set_status_backend/2,
     pg_create_attribute_backend/5,
     pg_get_attribute_info_backend/1,
-    pg_get_tenant_info_backend/1
+    pg_get_tenant_info_backend/1,
+    pg_upsert_record_template_backend/3,
+    pg_upsert_unit_template_backend/2
 ]).
 
 -define(ATTR_SEQ_KEY, {meta, attr_seq}).
@@ -194,6 +203,10 @@ lock_unit(UnitRef, LockType, Purpose) ->
 unlock_unit(UnitRef) ->
     call_backend(unlock_unit, [UnitRef]).
 
+-spec is_unit_locked(unit_ref_value()) -> boolean().
+is_unit_locked(UnitRef) ->
+    call_backend(is_unit_locked, [UnitRef]).
+
 -spec set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 set_status(UnitRef, Status) when is_integer(Status) ->
     call_backend(set_status, [UnitRef, Status]);
@@ -212,6 +225,19 @@ get_attribute_info(NameOrId) ->
 -spec get_tenant_info(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
 get_tenant_info(NameOrId) ->
     call_backend(get_tenant_info, [NameOrId]).
+
+-spec upsert_record_template(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_record_template(RecordId, RecordName, Fields)
+  when is_integer(RecordId), RecordId > 0, is_binary(RecordName), is_list(Fields) ->
+    call_backend(upsert_record_template, [RecordId, RecordName, Fields]);
+upsert_record_template(_RecordId, _RecordName, _Fields) ->
+    {error, invalid_record_template}.
+
+-spec upsert_unit_template(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+upsert_unit_template(TemplateName, Fields) when is_binary(TemplateName), is_list(Fields) ->
+    call_backend(upsert_unit_template, [TemplateName, Fields]);
+upsert_unit_template(_TemplateName, _Fields) ->
+    {error, invalid_unit_template}.
 
 %% Backend selection and config
 
@@ -533,8 +559,10 @@ pg_get_right_relation(UnitRef, RelType) when is_integer(RelType) ->
                         not_found;
                     {ok, [Row | _]} ->
                         case relation_from_row(row_values(Row)) of
-                            #{} -> {error, invalid_relation_row};
-                            Rel -> {ok, Rel}
+                            Rel when is_map(Rel), map_size(Rel) =:= 0 ->
+                                {error, {invalid_relation_row, Row}};
+                            Rel ->
+                                {ok, Rel}
                         end;
                     Error ->
                         {error, Error}
@@ -679,7 +707,8 @@ pg_get_right_association(UnitRef, AssocType) when is_integer(AssocType) ->
                         not_found;
                     {ok, [Row | _]} ->
                         case association_from_row(row_values(Row)) of
-                            #{} -> {error, invalid_association_row};
+                            Assoc when is_map(Assoc), map_size(Assoc) =:= 0 ->
+                                {error, {invalid_association_row, Row}};
                             Assoc -> {ok, Assoc}
                         end;
                     Error ->
@@ -810,6 +839,25 @@ pg_unlock_unit(UnitRef) ->
             {error, invalid_unit_ref}
     end.
 
+-spec pg_is_unit_locked(unit_ref_value()) -> boolean().
+pg_is_unit_locked(UnitRef) ->
+    case normalize_ref(UnitRef) of
+        {TenantId, UnitId} ->
+            case with_pg(fun(Conn) ->
+                Sql = "SELECT 1 FROM repo.repo_lock WHERE tenantid = $1 AND unitid = $2 FETCH FIRST 1 ROWS ONLY",
+                case query_rows(epgsql:equery(Conn, Sql, [TenantId, UnitId])) of
+                    {ok, [_ | _]} -> true;
+                    {ok, []} -> false;
+                    _ -> false
+                end
+            end) of
+                true -> true;
+                _ -> false
+            end;
+        _ ->
+            false
+    end.
+
 -spec pg_create_attribute(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
     ipto_result(attribute_info()).
 pg_create_attribute(Alias, Name, QualName, Type, IsArray)
@@ -881,6 +929,57 @@ pg_get_tenant_info(NameOrId) when is_binary(NameOrId) ->
 pg_get_tenant_info(_NameOrId) ->
     {error, invalid_tenant_id_or_name}.
 
+-spec pg_upsert_record_template(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+pg_upsert_record_template(RecordId, RecordName, Fields)
+  when is_integer(RecordId), RecordId > 0, is_binary(RecordName), is_list(Fields) ->
+    with_pg(fun(Conn) ->
+        pg_tx(Conn, fun() ->
+            UpsertSql = "INSERT INTO repo.repo_record_template (recordid, name) VALUES ($1, $2) "
+                        "ON CONFLICT (recordid) DO UPDATE SET name = EXCLUDED.name",
+            case epgsql:equery(Conn, UpsertSql, [RecordId, to_pg_text(RecordName)]) of
+                {ok, _} ->
+                    DeleteSql = "DELETE FROM repo.repo_record_template_elements WHERE recordid = $1",
+                    case epgsql:equery(Conn, DeleteSql, [RecordId]) of
+                        {ok, _} ->
+                            insert_record_template_elements(Conn, RecordId, Fields, 1);
+                        DeleteError ->
+                            {error, DeleteError}
+                    end;
+                UpsertError ->
+                    {error, UpsertError}
+            end
+        end)
+    end);
+pg_upsert_record_template(_RecordId, _RecordName, _Fields) ->
+    {error, invalid_record_template}.
+
+-spec pg_upsert_unit_template(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+pg_upsert_unit_template(TemplateName, Fields) when is_binary(TemplateName), is_list(Fields) ->
+    with_pg(fun(Conn) ->
+        pg_tx(Conn, fun() ->
+            UpsertSql = "INSERT INTO repo.repo_unit_template (name) VALUES ($1) "
+                        "ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name "
+                        "RETURNING templateid",
+            case query_rows(epgsql:equery(Conn, UpsertSql, [to_pg_text(TemplateName)])) of
+                {ok, [Row | _]} ->
+                    [TemplateId] = row_values(Row),
+                    DeleteSql = "DELETE FROM repo.repo_unit_template_elements WHERE templateid = $1",
+                    case epgsql:equery(Conn, DeleteSql, [TemplateId]) of
+                        {ok, _} ->
+                            insert_unit_template_elements(Conn, TemplateId, Fields, 1);
+                        DeleteError ->
+                            {error, DeleteError}
+                    end;
+                {ok, []} ->
+                    {error, missing_template_id};
+                UpsertError ->
+                    {error, UpsertError}
+            end
+        end)
+    end);
+pg_upsert_unit_template(_TemplateName, _Fields) ->
+    {error, invalid_unit_template}.
+
 %% Backend adapter exports (temporary bridge during backend module split)
 -spec memory_get_unit_json_backend(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 -spec memory_unit_exists_backend(tenantid(), unitid()) -> boolean().
@@ -902,11 +1001,14 @@ pg_get_tenant_info(_NameOrId) ->
 -spec memory_count_left_associations_backend(association_type(), ref_string()) -> ipto_result(non_neg_integer()).
 -spec memory_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 -spec memory_unlock_unit_backend(unit_ref_value()) -> ok | {error, ipto_reason()}.
+-spec memory_is_unit_locked_backend(unit_ref_value()) -> boolean().
 -spec memory_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 -spec memory_create_attribute_backend(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
     ipto_result(attribute_info()).
 -spec memory_get_attribute_info_backend(name_or_id()) -> {ok, attribute_info()} | not_found | {error, ipto_reason()}.
 -spec memory_get_tenant_info_backend(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
+-spec memory_upsert_record_template_backend(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+-spec memory_upsert_unit_template_backend(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
 -spec pg_get_unit_json_backend(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 -spec pg_unit_exists_backend(tenantid(), unitid()) -> boolean().
 -spec pg_store_unit_json_backend(unit_map()) -> ipto_result(unit_map()).
@@ -927,11 +1029,14 @@ pg_get_tenant_info(_NameOrId) ->
 -spec pg_count_left_associations_backend(association_type(), ref_string()) -> ipto_result(non_neg_integer()).
 -spec pg_lock_unit_backend(unit_ref_value(), lock_type(), ref_string()) -> ok | already_locked | {error, ipto_reason()}.
 -spec pg_unlock_unit_backend(unit_ref_value()) -> ok | {error, ipto_reason()}.
+-spec pg_is_unit_locked_backend(unit_ref_value()) -> boolean().
 -spec pg_set_status_backend(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 -spec pg_create_attribute_backend(attribute_alias(), attribute_name(), attribute_qualname(), attribute_type(), boolean()) ->
     ipto_result(attribute_info()).
 -spec pg_get_attribute_info_backend(name_or_id()) -> {ok, attribute_info()} | not_found | {error, ipto_reason()}.
 -spec pg_get_tenant_info_backend(name_or_id()) -> {ok, tenant_info()} | not_found | {error, ipto_reason()}.
+-spec pg_upsert_record_template_backend(integer(), binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
+-spec pg_upsert_unit_template_backend(binary(), [{integer(), binary()}]) -> ok | {error, ipto_reason()}.
 
 memory_get_unit_json_backend(TenantId, UnitId, Version) ->
     memory_get_unit_json(TenantId, UnitId, Version).
@@ -973,6 +1078,8 @@ memory_lock_unit_backend(UnitRef, LockType, Purpose) ->
     memory_lock_unit(UnitRef, LockType, Purpose).
 memory_unlock_unit_backend(UnitRef) ->
     memory_unlock_unit(UnitRef).
+memory_is_unit_locked_backend(UnitRef) ->
+    memory_is_unit_locked(UnitRef).
 memory_set_status_backend(UnitRef, Status) ->
     memory_set_status(UnitRef, Status).
 memory_create_attribute_backend(Alias, Name, QualName, Type, IsArray) ->
@@ -981,6 +1088,10 @@ memory_get_attribute_info_backend(NameOrId) ->
     memory_get_attribute_info(NameOrId).
 memory_get_tenant_info_backend(NameOrId) ->
     memory_get_tenant_info(NameOrId).
+memory_upsert_record_template_backend(_RecordId, _RecordName, _Fields) ->
+    {error, unsupported_operation}.
+memory_upsert_unit_template_backend(_TemplateName, _Fields) ->
+    {error, unsupported_operation}.
 
 pg_get_unit_json_backend(TenantId, UnitId, Version) ->
     pg_get_unit_json(TenantId, UnitId, Version).
@@ -1022,6 +1133,8 @@ pg_lock_unit_backend(UnitRef, LockType, Purpose) ->
     pg_lock_unit(UnitRef, LockType, Purpose).
 pg_unlock_unit_backend(UnitRef) ->
     pg_unlock_unit(UnitRef).
+pg_is_unit_locked_backend(UnitRef) ->
+    pg_is_unit_locked(UnitRef).
 pg_set_status_backend(UnitRef, Status) ->
     pg_set_status(UnitRef, Status).
 pg_create_attribute_backend(Alias, Name, QualName, Type, IsArray) ->
@@ -1030,6 +1143,10 @@ pg_get_attribute_info_backend(NameOrId) ->
     pg_get_attribute_info(NameOrId).
 pg_get_tenant_info_backend(NameOrId) ->
     pg_get_tenant_info(NameOrId).
+pg_upsert_record_template_backend(RecordId, RecordName, Fields) ->
+    pg_upsert_record_template(RecordId, RecordName, Fields).
+pg_upsert_unit_template_backend(TemplateName, Fields) ->
+    pg_upsert_unit_template(TemplateName, Fields).
 
 %% Memory implementation
 
@@ -1256,6 +1373,12 @@ memory_unlock_unit(UnitRef) ->
     ipto_cache:put(?LOCK_KEY, maps:remove(Ref, Locks0)),
     ok.
 
+-spec memory_is_unit_locked(unit_ref_value()) -> boolean().
+memory_is_unit_locked(UnitRef) ->
+    Locks0 = get_meta_map(?LOCK_KEY),
+    Ref = normalize_ref(UnitRef),
+    maps:is_key(Ref, Locks0).
+
 -spec memory_set_status(unit_ref_value(), unit_status()) -> ok | {error, ipto_reason()}.
 memory_set_status(UnitRef, Status) ->
     case normalize_ref(UnitRef) of
@@ -1390,26 +1513,102 @@ memory_match_unit(_Unit, Expr) when map_size(Expr) =:= 0 ->
 memory_match_unit(Unit, Expr) ->
     maps:fold(
       fun(Key, Value, Acc) ->
-          Acc andalso memory_match_field(Unit, Key, Value)
+          Acc andalso memory_match_expr_key(Unit, Key, Value)
       end,
       true,
       Expr).
 
+-spec memory_match_expr_key(unit_map(), atom(), term()) -> boolean().
+memory_match_expr_key(Unit, '$and', Exprs) when is_list(Exprs) ->
+    lists:all(fun(E) -> memory_match_unit(Unit, E) end, Exprs);
+memory_match_expr_key(Unit, '$or', Exprs) when is_list(Exprs) ->
+    lists:any(fun(E) -> memory_match_unit(Unit, E) end, Exprs);
+memory_match_expr_key(Unit, '$not', Expr) when is_map(Expr) ->
+    not memory_match_unit(Unit, Expr);
+memory_match_expr_key(Unit, Key, Value) ->
+    memory_match_field(Unit, Key, Value).
+
 -spec memory_match_field(unit_map(), atom(), term()) -> boolean().
 memory_match_field(Unit, tenantid, Value) when is_integer(Value) ->
     maps:get(tenantid, Unit, undefined) =:= Value;
+memory_match_field(Unit, tenantid_ne, Value) when is_integer(Value) ->
+    maps:get(tenantid, Unit, undefined) =/= Value;
+memory_match_field(Unit, tenantid_gt, Value) when is_integer(Value) ->
+    maps:get(tenantid, Unit, undefined) > Value;
+memory_match_field(Unit, tenantid_gte, Value) when is_integer(Value) ->
+    maps:get(tenantid, Unit, undefined) >= Value;
+memory_match_field(Unit, tenantid_lt, Value) when is_integer(Value) ->
+    maps:get(tenantid, Unit, undefined) < Value;
+memory_match_field(Unit, tenantid_lte, Value) when is_integer(Value) ->
+    maps:get(tenantid, Unit, undefined) =< Value;
 memory_match_field(Unit, unitid, Value) when is_integer(Value) ->
     maps:get(unitid, Unit, undefined) =:= Value;
+memory_match_field(Unit, unitid_ne, Value) when is_integer(Value) ->
+    maps:get(unitid, Unit, undefined) =/= Value;
+memory_match_field(Unit, unitid_gt, Value) when is_integer(Value) ->
+    maps:get(unitid, Unit, undefined) > Value;
+memory_match_field(Unit, unitid_gte, Value) when is_integer(Value) ->
+    maps:get(unitid, Unit, undefined) >= Value;
+memory_match_field(Unit, unitid_lt, Value) when is_integer(Value) ->
+    maps:get(unitid, Unit, undefined) < Value;
+memory_match_field(Unit, unitid_lte, Value) when is_integer(Value) ->
+    maps:get(unitid, Unit, undefined) =< Value;
 memory_match_field(Unit, status, Value) when is_integer(Value) ->
     maps:get(status, Unit, undefined) =:= Value;
+memory_match_field(Unit, status_ne, Value) when is_integer(Value) ->
+    maps:get(status, Unit, undefined) =/= Value;
+memory_match_field(Unit, status_gt, Value) when is_integer(Value) ->
+    maps:get(status, Unit, undefined) > Value;
+memory_match_field(Unit, status_gte, Value) when is_integer(Value) ->
+    maps:get(status, Unit, undefined) >= Value;
+memory_match_field(Unit, status_lt, Value) when is_integer(Value) ->
+    maps:get(status, Unit, undefined) < Value;
+memory_match_field(Unit, status_lte, Value) when is_integer(Value) ->
+    maps:get(status, Unit, undefined) =< Value;
 memory_match_field(Unit, name, Value) ->
     normalize_string(maps:get(unitname, Unit, <<"">>)) =:= normalize_string(Value);
+memory_match_field(Unit, name_ne, Value) ->
+    normalize_string(maps:get(unitname, Unit, <<"">>)) =/= normalize_string(Value);
 memory_match_field(Unit, name_ilike, Pattern) ->
     like_match(normalize_string(maps:get(unitname, Unit, <<"">>)), normalize_string(Pattern));
+memory_match_field(Unit, corrid, Value) ->
+    normalize_string(maps:get(corrid, Unit, <<"">>)) =:= normalize_string(Value);
+memory_match_field(Unit, corrid_ne, Value) ->
+    normalize_string(maps:get(corrid, Unit, <<"">>)) =/= normalize_string(Value);
+memory_match_field(Unit, corrid_ilike, Pattern) ->
+    like_match(normalize_string(maps:get(corrid, Unit, <<"">>)), normalize_string(Pattern));
+memory_match_field(Unit, created, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, eq);
+memory_match_field(Unit, created_ne, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, ne);
+memory_match_field(Unit, created_gt, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, gt);
 memory_match_field(Unit, created_after, Value) ->
     compare_created(maps:get(created, Unit, 0), Value, ge);
+memory_match_field(Unit, created_gte, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, ge);
+memory_match_field(Unit, created_lt, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, lt);
 memory_match_field(Unit, created_before, Value) ->
     compare_created(maps:get(created, Unit, 0), Value, lt);
+memory_match_field(Unit, created_lte, Value) ->
+    compare_created(maps:get(created, Unit, 0), Value, le);
+memory_match_field(Unit, modified, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, eq);
+memory_match_field(Unit, modified_ne, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, ne);
+memory_match_field(Unit, modified_gt, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, gt);
+memory_match_field(Unit, modified_after, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, ge);
+memory_match_field(Unit, modified_gte, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, ge);
+memory_match_field(Unit, modified_lt, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, lt);
+memory_match_field(Unit, modified_before, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, lt);
+memory_match_field(Unit, modified_lte, Value) ->
+    compare_created(maps:get(modified, Unit, 0), Value, le);
 memory_match_field(_Unit, _Key, _Value) ->
     true.
 
@@ -1436,7 +1635,7 @@ like_pattern_char(C) when C =:= $.; C =:= $^; C =:= $$; C =:= $*; C =:= $+; C =:
 like_pattern_char(C) ->
     [C].
 
--spec compare_created(term(), term(), ge | lt) -> boolean().
+-spec compare_created(term(), term(), eq | ne | gt | ge | lt | le) -> boolean().
 compare_created(Created, FilterValue, Op) ->
     case to_int_maybe(FilterValue) of
         {ok, N} ->
@@ -1458,13 +1657,21 @@ to_int_maybe(Value) when is_list(Value) ->
 to_int_maybe(_) ->
     error.
 
--spec compare_int(integer(), integer(), ge | lt) -> boolean().
+-spec compare_int(integer(), integer(), eq | ne | gt | ge | lt | le) -> boolean().
+compare_int(A, B, eq) -> A =:= B;
+compare_int(A, B, ne) -> A =/= B;
+compare_int(A, B, gt) -> A > B;
 compare_int(A, B, ge) -> A >= B;
-compare_int(A, B, lt) -> A < B.
+compare_int(A, B, lt) -> A < B;
+compare_int(A, B, le) -> A =< B.
 
--spec compare_text(term(), term(), ge | lt) -> boolean().
+-spec compare_text(term(), term(), eq | ne | gt | ge | lt | le) -> boolean().
+compare_text(A, B, eq) -> A =:= B;
+compare_text(A, B, ne) -> A =/= B;
+compare_text(A, B, gt) -> A > B;
 compare_text(A, B, ge) -> A >= B;
-compare_text(A, B, lt) -> A < B.
+compare_text(A, B, lt) -> A < B;
+compare_text(A, B, le) -> A =< B.
 
 -spec memory_sort_units([unit_map()], search_order()) -> [unit_map()].
 memory_sort_units(Units, Order) ->
@@ -1662,8 +1869,38 @@ relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId]) ->
         reltenantid => RelTenantId,
         relunitid => RelUnitId
     };
+relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId | _]) ->
+    relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId]);
+relation_from_row([Inner]) when is_list(Inner); is_tuple(Inner); is_map(Inner) ->
+    relation_from_row(Inner);
+relation_from_row([Map]) when is_map(Map) ->
+    relation_from_row(Map);
+relation_from_row(Tuple) when is_tuple(Tuple) ->
+    relation_from_row(tuple_to_list(Tuple));
+relation_from_row(Map) when is_map(Map) ->
+    case {
+        map_get_any(Map, [tenantid, <<"tenantid">>, <<"tenant_id">>]),
+        map_get_any(Map, [unitid, <<"unitid">>, <<"unit_id">>]),
+        map_get_any(Map, [reltype, <<"reltype">>, <<"rel_type">>]),
+        map_get_any(Map, [reltenantid, <<"reltenantid">>, <<"rel_tenantid">>, <<"rel_tenant_id">>]),
+        map_get_any(Map, [relunitid, <<"relunitid">>, <<"rel_unitid">>, <<"rel_unit_id">>])
+    } of
+        {undefined, _, _, _, _} ->
+            #{};
+        {TenantId, UnitId, RelType, RelTenantId, RelUnitId} ->
+            relation_from_row([TenantId, UnitId, RelType, RelTenantId, RelUnitId])
+    end;
 relation_from_row(_) ->
     #{}.
+
+-spec map_get_any(map(), [term()]) -> term().
+map_get_any(_Map, []) ->
+    undefined;
+map_get_any(Map, [Key | Rest]) ->
+    case maps:get(Key, Map, undefined) of
+        undefined -> map_get_any(Map, Rest);
+        Value -> Value
+    end.
 
 -spec association_from_row(list()) -> association() | #{}.
 association_from_row([TenantId, UnitId, AssocType, AssocString]) ->
@@ -1673,6 +1910,24 @@ association_from_row([TenantId, UnitId, AssocType, AssocString]) ->
         assoctype => AssocType,
         assocstring => normalize_string(AssocString)
     };
+association_from_row([TenantId, UnitId, AssocType, AssocString | _]) ->
+    association_from_row([TenantId, UnitId, AssocType, AssocString]);
+association_from_row([Inner]) when is_list(Inner); is_tuple(Inner); is_map(Inner) ->
+    association_from_row(Inner);
+association_from_row(Tuple) when is_tuple(Tuple) ->
+    association_from_row(tuple_to_list(Tuple));
+association_from_row(Map) when is_map(Map) ->
+    case {
+        map_get_any(Map, [tenantid, <<"tenantid">>, <<"tenant_id">>]),
+        map_get_any(Map, [unitid, <<"unitid">>, <<"unit_id">>]),
+        map_get_any(Map, [assoctype, <<"assoctype">>, <<"assoc_type">>]),
+        map_get_any(Map, [assocstring, <<"assocstring">>, <<"assoc_string">>, refstring, <<"refstring">>, <<"ref_string">>])
+    } of
+        {undefined, _, _, _} ->
+            #{};
+        {TenantId, UnitId, AssocType, AssocString} ->
+            association_from_row([TenantId, UnitId, AssocType, AssocString])
+    end;
 association_from_row(_) ->
     #{}.
 
@@ -1789,53 +2044,208 @@ pg_tx(Conn, Fun) ->
             {error, Error}
     end.
 
+-spec insert_record_template_elements(term(), integer(), [{integer(), binary()}], integer()) ->
+    {ok, ok} | {error, term()}.
+insert_record_template_elements(_Conn, _RecordId, [], _Idx) ->
+    {ok, ok};
+insert_record_template_elements(Conn, RecordId, [{AttrId, Alias} | Rest], Idx) ->
+    Sql = "INSERT INTO repo.repo_record_template_elements (recordid, attrid, idx, alias) "
+          "VALUES ($1, $2, $3, $4)",
+    case epgsql:equery(Conn, Sql, [RecordId, AttrId, Idx, to_pg_text(Alias)]) of
+        {ok, _} ->
+            insert_record_template_elements(Conn, RecordId, Rest, Idx + 1);
+        Error ->
+            {error, Error}
+    end.
+
+-spec insert_unit_template_elements(term(), integer(), [{integer(), binary()}], integer()) ->
+    {ok, ok} | {error, term()}.
+insert_unit_template_elements(_Conn, _TemplateId, [], _Idx) ->
+    {ok, ok};
+insert_unit_template_elements(Conn, TemplateId, [{AttrId, Alias} | Rest], Idx) ->
+    Sql = "INSERT INTO repo.repo_unit_template_elements (templateid, attrid, idx, alias) "
+          "VALUES ($1, $2, $3, $4)",
+    case epgsql:equery(Conn, Sql, [TemplateId, AttrId, Idx, to_pg_text(Alias)]) of
+        {ok, _} ->
+            insert_unit_template_elements(Conn, TemplateId, Rest, Idx + 1);
+        Error ->
+            {error, Error}
+    end.
+
 -spec build_where(term()) -> {string(), list(), pos_integer()}.
 build_where(undefined) ->
     {"", [], 1};
-build_where(Expr) when is_map(Expr) ->
-    Keys = maps:keys(Expr),
-    build_where_from_keys(Keys, Expr, [], [], 1);
 build_where(Expr) when is_list(Expr) ->
-    MapExpr = maps:from_list(Expr),
-    build_where(MapExpr);
+    case is_proplist(Expr) of
+        true ->
+            build_where(maps:from_list(Expr));
+        false ->
+            {"", [], 1}
+    end;
+build_where(Expr) when is_map(Expr) ->
+    case compile_where_expr(Expr, 1) of
+        {ok, "TRUE", Params, NextIdx} ->
+            {"", Params, NextIdx};
+        {ok, Sql, Params, NextIdx} ->
+            {" WHERE " ++ Sql, Params, NextIdx};
+        {error, _Reason} ->
+            {"", [], 1}
+    end;
 build_where(_) ->
     {"", [], 1}.
 
--spec build_where_from_keys([term()], map(), [string()], list(), pos_integer()) -> {string(), list(), pos_integer()}.
-build_where_from_keys([], _Expr, ClausesAcc, ParamsAcc, NextIdx) ->
-    Clauses = lists:reverse(ClausesAcc),
-    Params = lists:reverse(ParamsAcc),
-    WhereSql = case Clauses of
-        [] -> "";
-        _ -> " WHERE " ++ string:join(Clauses, " AND ")
+-spec compile_where_expr(map(), pos_integer()) -> {ok, string(), list(), pos_integer()} | {error, term()}.
+compile_where_expr(Expr, NextIdx) when is_map(Expr), map_size(Expr) =:= 0 ->
+    {ok, "TRUE", [], NextIdx};
+compile_where_expr(Expr, NextIdx) when is_map(Expr) ->
+    compile_where_kvs(maps:to_list(Expr), [], [], NextIdx);
+compile_where_expr(_Expr, _NextIdx) ->
+    {error, invalid_where_expression}.
+
+-spec compile_where_kvs([{term(), term()}], [string()], list(), pos_integer()) ->
+    {ok, string(), list(), pos_integer()} | {error, term()}.
+compile_where_kvs([], ClausesAcc, ParamsAcc, NextIdx) ->
+    Sql = case lists:reverse(ClausesAcc) of
+        [] -> "TRUE";
+        Clauses -> string:join(Clauses, " AND ")
     end,
-    {WhereSql, Params, NextIdx};
-build_where_from_keys([Key | Rest], Expr, ClausesAcc, ParamsAcc, NextIdx) ->
-    {MaybeClause, MaybeParam} =
-        case {Key, maps:get(Key, Expr)} of
-            {tenantid, TenantId} when is_integer(TenantId) ->
-                {"uk.tenantid = $" ++ integer_to_list(NextIdx), TenantId};
-            {unitid, UnitId} when is_integer(UnitId) ->
-                {"uk.unitid = $" ++ integer_to_list(NextIdx), UnitId};
-            {status, Status} when is_integer(Status) ->
-                {"uk.status = $" ++ integer_to_list(NextIdx), Status};
-            {name, Name} ->
-                {"uv.unitname = $" ++ integer_to_list(NextIdx), normalize_string(Name)};
-            {name_ilike, NameLike} ->
-                {"uv.unitname ILIKE $" ++ integer_to_list(NextIdx), normalize_string(NameLike)};
-            {created_after, CreatedAfter} ->
-                {"uk.created >= $" ++ integer_to_list(NextIdx), to_pg_text(CreatedAfter)};
-            {created_before, CreatedBefore} ->
-                {"uk.created < $" ++ integer_to_list(NextIdx), to_pg_text(CreatedBefore)};
-            _ ->
-                {undefined, undefined}
-        end,
-    case MaybeClause of
-        undefined ->
-            build_where_from_keys(Rest, Expr, ClausesAcc, ParamsAcc, NextIdx);
-        _ ->
-            build_where_from_keys(Rest, Expr, [MaybeClause | ClausesAcc], [MaybeParam | ParamsAcc], NextIdx + 1)
+    {ok, Sql, lists:reverse(ParamsAcc), NextIdx};
+compile_where_kvs([{Key, Value} | Rest], ClausesAcc, ParamsAcc, NextIdx) ->
+    case compile_where_clause(Key, Value, NextIdx) of
+        {skip, NextIdx2} ->
+            compile_where_kvs(Rest, ClausesAcc, ParamsAcc, NextIdx2);
+        {ok, Sql, Params, NextIdx2} ->
+            compile_where_kvs(Rest, [Sql | ClausesAcc], lists:reverse(Params) ++ ParamsAcc, NextIdx2);
+        {error, _Reason} = Error ->
+            Error
     end.
+
+-spec compile_where_clause(term(), term(), pos_integer()) ->
+    {ok, string(), list(), pos_integer()} | {skip, pos_integer()} | {error, term()}.
+compile_where_clause('$and', Exprs, NextIdx) when is_list(Exprs) ->
+    compile_where_expr_list("AND", Exprs, NextIdx);
+compile_where_clause('$or', Exprs, NextIdx) when is_list(Exprs) ->
+    compile_where_expr_list("OR", Exprs, NextIdx);
+compile_where_clause('$not', Expr, NextIdx) when is_map(Expr) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            {ok, "NOT (" ++ Sql ++ ")", Params, NextIdx2};
+        Error ->
+            Error
+    end;
+compile_where_clause(Key, Value, NextIdx) ->
+    compile_scalar_where_clause(Key, Value, NextIdx).
+
+-spec compile_where_expr_list(string(), [map()], pos_integer()) ->
+    {ok, string(), list(), pos_integer()} | {error, term()}.
+compile_where_expr_list("AND", [], NextIdx) ->
+    {ok, "TRUE", [], NextIdx};
+compile_where_expr_list("OR", [], NextIdx) ->
+    {ok, "FALSE", [], NextIdx};
+compile_where_expr_list(Joiner, [Expr | Rest], NextIdx) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            compile_where_expr_list_tail(Joiner, Rest, ["(" ++ Sql ++ ")"], Params, NextIdx2);
+        Error ->
+            Error
+    end.
+
+-spec compile_where_expr_list_tail(string(), [map()], [string()], list(), pos_integer()) ->
+    {ok, string(), list(), pos_integer()} | {error, term()}.
+compile_where_expr_list_tail(_Joiner, [], SqlAcc, ParamsAcc, NextIdx) ->
+    {ok, string:join(lists:reverse(SqlAcc), " " ++ _Joiner ++ " "), ParamsAcc, NextIdx};
+compile_where_expr_list_tail(Joiner, [Expr | Rest], SqlAcc, ParamsAcc, NextIdx) ->
+    case compile_where_expr(Expr, NextIdx) of
+        {ok, Sql, Params, NextIdx2} ->
+            compile_where_expr_list_tail(Joiner, Rest, ["(" ++ Sql ++ ")" | SqlAcc], ParamsAcc ++ Params, NextIdx2);
+        Error ->
+            Error
+    end.
+
+-spec compile_scalar_where_clause(term(), term(), pos_integer()) ->
+    {ok, string(), list(), pos_integer()} | {skip, pos_integer()}.
+compile_scalar_where_clause(tenantid, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid = $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(tenantid_ne, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid <> $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(tenantid_gt, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid > $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(tenantid_gte, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid >= $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(tenantid_lt, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid < $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(tenantid_lte, TenantId, NextIdx) when is_integer(TenantId) ->
+    {ok, "uk.tenantid <= $" ++ integer_to_list(NextIdx), [TenantId], NextIdx + 1};
+compile_scalar_where_clause(unitid, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid = $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(unitid_ne, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid <> $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(unitid_gt, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid > $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(unitid_gte, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid >= $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(unitid_lt, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid < $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(unitid_lte, UnitId, NextIdx) when is_integer(UnitId) ->
+    {ok, "uk.unitid <= $" ++ integer_to_list(NextIdx), [UnitId], NextIdx + 1};
+compile_scalar_where_clause(status, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status = $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(status_ne, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status <> $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(status_gt, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status > $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(status_gte, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status >= $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(status_lt, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status < $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(status_lte, Status, NextIdx) when is_integer(Status) ->
+    {ok, "uk.status <= $" ++ integer_to_list(NextIdx), [Status], NextIdx + 1};
+compile_scalar_where_clause(name, Name, NextIdx) ->
+    {ok, "uv.unitname = $" ++ integer_to_list(NextIdx), [normalize_string(Name)], NextIdx + 1};
+compile_scalar_where_clause(name_ne, Name, NextIdx) ->
+    {ok, "uv.unitname <> $" ++ integer_to_list(NextIdx), [normalize_string(Name)], NextIdx + 1};
+compile_scalar_where_clause(name_ilike, NameLike, NextIdx) ->
+    {ok, "uv.unitname ILIKE $" ++ integer_to_list(NextIdx), [normalize_string(NameLike)], NextIdx + 1};
+compile_scalar_where_clause(corrid, CorrId, NextIdx) ->
+    {ok, "uk.corrid = $" ++ integer_to_list(NextIdx), [normalize_string(CorrId)], NextIdx + 1};
+compile_scalar_where_clause(corrid_ne, CorrId, NextIdx) ->
+    {ok, "uk.corrid <> $" ++ integer_to_list(NextIdx), [normalize_string(CorrId)], NextIdx + 1};
+compile_scalar_where_clause(corrid_ilike, CorrLike, NextIdx) ->
+    {ok, "uk.corrid ILIKE $" ++ integer_to_list(NextIdx), [normalize_string(CorrLike)], NextIdx + 1};
+compile_scalar_where_clause(created, Created, NextIdx) ->
+    {ok, "uk.created = $" ++ integer_to_list(NextIdx), [to_pg_text(Created)], NextIdx + 1};
+compile_scalar_where_clause(created_ne, Created, NextIdx) ->
+    {ok, "uk.created <> $" ++ integer_to_list(NextIdx), [to_pg_text(Created)], NextIdx + 1};
+compile_scalar_where_clause(created_gt, Created, NextIdx) ->
+    {ok, "uk.created > $" ++ integer_to_list(NextIdx), [to_pg_text(Created)], NextIdx + 1};
+compile_scalar_where_clause(created_after, CreatedAfter, NextIdx) ->
+    {ok, "uk.created >= $" ++ integer_to_list(NextIdx), [to_pg_text(CreatedAfter)], NextIdx + 1};
+compile_scalar_where_clause(created_gte, CreatedAfter, NextIdx) ->
+    {ok, "uk.created >= $" ++ integer_to_list(NextIdx), [to_pg_text(CreatedAfter)], NextIdx + 1};
+compile_scalar_where_clause(created_lt, CreatedBefore, NextIdx) ->
+    {ok, "uk.created < $" ++ integer_to_list(NextIdx), [to_pg_text(CreatedBefore)], NextIdx + 1};
+compile_scalar_where_clause(created_before, CreatedBefore, NextIdx) ->
+    {ok, "uk.created < $" ++ integer_to_list(NextIdx), [to_pg_text(CreatedBefore)], NextIdx + 1};
+compile_scalar_where_clause(created_lte, CreatedBefore, NextIdx) ->
+    {ok, "uk.created <= $" ++ integer_to_list(NextIdx), [to_pg_text(CreatedBefore)], NextIdx + 1};
+compile_scalar_where_clause(modified, Modified, NextIdx) ->
+    {ok, "uv.modified = $" ++ integer_to_list(NextIdx), [to_pg_text(Modified)], NextIdx + 1};
+compile_scalar_where_clause(modified_ne, Modified, NextIdx) ->
+    {ok, "uv.modified <> $" ++ integer_to_list(NextIdx), [to_pg_text(Modified)], NextIdx + 1};
+compile_scalar_where_clause(modified_gt, Modified, NextIdx) ->
+    {ok, "uv.modified > $" ++ integer_to_list(NextIdx), [to_pg_text(Modified)], NextIdx + 1};
+compile_scalar_where_clause(modified_after, ModifiedAfter, NextIdx) ->
+    {ok, "uv.modified >= $" ++ integer_to_list(NextIdx), [to_pg_text(ModifiedAfter)], NextIdx + 1};
+compile_scalar_where_clause(modified_gte, ModifiedAfter, NextIdx) ->
+    {ok, "uv.modified >= $" ++ integer_to_list(NextIdx), [to_pg_text(ModifiedAfter)], NextIdx + 1};
+compile_scalar_where_clause(modified_lt, ModifiedBefore, NextIdx) ->
+    {ok, "uv.modified < $" ++ integer_to_list(NextIdx), [to_pg_text(ModifiedBefore)], NextIdx + 1};
+compile_scalar_where_clause(modified_before, ModifiedBefore, NextIdx) ->
+    {ok, "uv.modified < $" ++ integer_to_list(NextIdx), [to_pg_text(ModifiedBefore)], NextIdx + 1};
+compile_scalar_where_clause(modified_lte, ModifiedBefore, NextIdx) ->
+    {ok, "uv.modified <= $" ++ integer_to_list(NextIdx), [to_pg_text(ModifiedBefore)], NextIdx + 1};
+compile_scalar_where_clause(_Key, _Value, NextIdx) ->
+    {skip, NextIdx}.
 
 -spec build_order(search_order() | map() | tuple()) -> string().
 build_order(#{field := Field, dir := Dir}) ->
