@@ -50,15 +50,17 @@ where the search facility is a bit simplified as compared to the Java version.
 
 ## The layout of this project:
 
-- `./repo` contains the Java core functionality, which is plain Java (no CDI) and JDBC.
-- `./db/postgresql` contains PostgreSQL specific parts (schema, initial data, ...).
-- `./db/db2` contains DB2 (LUW-version) specific parts (schema, initial data, ...).
-- `./db/java` contains some things that DB2 needs, but is generic JDBC.
-- `./graphql` contains the GraphQL part for configuration and query/mutation (if needed).
-- `./repo-cdi` contains setup/boot functionality using CDI.
-- `./quarkus-app` contains a Quarkus application that exposes HTTP endpoints.
-- `./it` contains integration tests.
-- `./erl` contains a separate Erlang implementation of the stuff in `./repo` (and `./graphql`).
+- `./implementations/java/repo` contains the Java core functionality, which is plain Java (no CDI) and JDBC.
+- `./implementations/java/graphql` contains the GraphQL part for configuration and query/mutation (if needed).
+- `./implementations/java/repo-cdi` contains setup/boot functionality using CDI.
+- `./implementations/java/quarkus-app` contains a Quarkus application that exposes HTTP endpoints.
+- `./implementations/java/it` contains integration tests.
+- `./implementations/erlang` contains a separate Erlang implementation of the Java core.
+- `./implementations/rust` contains a separate Rust implementation.
+- `./shared/db/postgresql` contains PostgreSQL specific parts (schema, initial data, ...).
+- `./shared/db/db2` contains DB2 (LUW-version) specific parts (schema, initial data, ...).
+- `./shared/db/java` contains some things that DB2 needs, but is generic JDBC.
+- `./apps/admin-web` contains the web-based administration interface.
 
 The Erlang version stores data to either PostgreSQL or Neo4j.
 
@@ -77,10 +79,10 @@ for each entity type, IPTO uses an Entity-Attribute-Value (EAV) pattern with typ
 storage optimizations. 
 
 IPTO exposes two interfaces for data interaction, each serving different use cases:
-* The GraphQL API (the `graphql` module) provides declarative data access through standard 
+* The GraphQL API (the `implementations/java/graphql` module) provides declarative data access through standard 
 GraphQL queries and mutations. The API surface is automatically generated from the SDL 
 schema, ensuring type safety and schema alignment.
-* The Java API (the `repo` module) provides programmatic access through the Repository 
+* The Java API (the `implementations/java/repo` module) provides programmatic access through the Repository 
 interface for applications that need fine-grained control or operate in non-GraphQL contexts.
 
 ## Details on setup and configuration:

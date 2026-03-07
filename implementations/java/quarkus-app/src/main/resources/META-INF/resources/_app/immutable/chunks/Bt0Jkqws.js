@@ -1,0 +1,1 @@
+import{w as o}from"./DLj011EF.js";const n="ipto.tenantId",r=()=>{if(typeof window>"u")return null;const e=window.localStorage.getItem(n);if(!e)return null;const t=Number(e);return Number.isFinite(t)?t:null},i=o(r());typeof window<"u"&&i.subscribe(e=>{if(e==null){window.localStorage.removeItem(n);return}window.localStorage.setItem(n,String(e))});export{i as t};

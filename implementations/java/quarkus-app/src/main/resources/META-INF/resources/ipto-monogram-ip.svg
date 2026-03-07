@@ -1,0 +1,26 @@
+<!-- ipto-monogram-ip.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="IPTO">
+  <defs>
+    <style>
+      :root{
+        --bg:#0B1220;
+        --fg:#E6F0FF;
+        --accent:#2DD4BF;
+      }
+    </style>
+  </defs>
+
+  <!-- Rounded square badge (favicons often look better than circles/hex at 16px) -->
+  <rect x="6" y="6" width="52" height="52" rx="12" fill="var(--bg)"/>
+
+  <!-- "I" -->
+  <path d="M20 18v28" stroke="var(--fg)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- "P" (stem + bowl) -->
+  <path d="M32 18v28" stroke="var(--fg)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M32 18h10a8 8 0 0 1 0 16H32"
+        fill="none" stroke="var(--fg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Tiny directive hint (subtle) -->
+  <circle cx="46" cy="46" r="3.5" fill="var(--accent)"/>
+</svg>
