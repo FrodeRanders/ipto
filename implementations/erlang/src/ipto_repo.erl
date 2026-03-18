@@ -19,6 +19,12 @@
 
 -include("ipto.hrl").
 
+%% Central orchestration layer for the Erlang implementation.
+%%
+%% The facade in `ipto` calls into this module, which then coordinates unit
+%% helpers, persistence backends, relation primitives, SDL parsing, and event
+%% emission.
+
 -export([
     create_unit/1,
     create_unit/2,
@@ -104,6 +110,7 @@ store_unit(_Unit) ->
 store_unit_json(UnitMap) when is_map(UnitMap) ->
     case ipto_db:store_unit_json(UnitMap) of
         {ok, StoredMap} ->
+            %% Events are best-effort notifications; persistence is authoritative.
             maybe_emit_event(updated, StoredMap),
             {ok, StoredMap};
         Error ->
@@ -192,6 +199,7 @@ request_status_transition(_UnitRef, _RequestedStatus) ->
     {error, invalid_status}.
 
 -spec activate_unit(unit_ref_value()) -> ok | {error, ipto_reason()}.
+%% Convenience helpers matching the Java surface.
 activate_unit(UnitRef) ->
     case request_status_transition(UnitRef, ?STATUS_EFFECTIVE) of
         {ok, _Status} -> ok;
@@ -226,6 +234,8 @@ inspect_graphql_sdl(Sdl) ->
 configure_graphql_sdl(Sdl) ->
     case ipto_graphql_sdl:parse(Sdl) of
         {ok, Catalog} ->
+            %% Parsing only validates and catalogs the SDL. Applying it is a
+            %% separate step because attribute/template persistence may fail.
             apply_sdl_catalog(Catalog);
         {error, {invalid_sdl, Errors, _Catalog}} ->
             {error, {invalid_sdl, Errors}}
@@ -282,6 +292,8 @@ transition_status(_UnitRef, _RequestedStatus) ->
     {error, invalid_unit_ref}.
 
 -spec allowed_transition(unit_status(), unit_status()) -> boolean().
+%% Status rules are intentionally conservative. Unsupported transitions are
+%% treated as no-ops by returning the current status from `transition_status/2`.
 allowed_transition(?STATUS_ARCHIVED, _Requested) ->
     false;
 allowed_transition(?STATUS_EFFECTIVE, ?STATUS_PENDING_DELETION) ->
@@ -305,6 +317,8 @@ apply_sdl_catalog(Catalog) ->
     AttrDefs = maps:get(attribute_defs, Registry, []),
     case ensure_attributes(AttrDefs, #{created => 0, existing => 0, failed => []}) of
         {ok, AttrSummary} ->
+            %% Templates refer to attributes by SDL symbol, so ids must be
+            %% resolved after the attribute pass has converged.
             AttrIdMap = build_attribute_id_map(AttrDefs),
             {RecordSummary, TemplateSummary} = persist_templates(Catalog, AttrIdMap),
             Result = #{
@@ -343,6 +357,7 @@ persist_templates(Catalog, AttrIdMap) ->
         pg ->
             persist_templates_pg(Catalog, AttrIdMap);
         _ ->
+            %% Template persistence is currently only backed by PostgreSQL.
             {
                 #{
                     supported => false,

@@ -19,6 +19,11 @@
 
 -include("ipto.hrl").
 
+%% Behaviour implemented by each persistence backend.
+%%
+%% The contract mirrors the repository storage surface rather than exposing
+%% backend-specific concerns, which keeps `ipto_db` as the single dispatch point.
+
 -callback get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 -callback unit_exists(tenantid(), unitid()) -> boolean().
 -callback store_unit_json(unit_map()) -> ipto_result(unit_map()).

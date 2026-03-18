@@ -19,6 +19,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Parses a valid SDL snippet and checks that the catalog counts line up with
+%% the declared registry, record, and template definitions.
 parse_valid_sdl_catalog_test() ->
     Sdl = <<
         "directive @attributeRegistry on ENUM\n"
@@ -42,6 +44,7 @@ parse_valid_sdl_catalog_test() ->
     ?assertEqual(1, maps:get(templates, maps:get(counts, Catalog))),
     ?assertEqual([], maps:get(errors, Catalog)).
 
+%% Duplicate attribute symbols should be rejected during SDL parsing.
 parse_duplicate_attribute_fails_test() ->
     Sdl = <<
         "enum Attributes @attributeRegistry {\n"
@@ -52,6 +55,7 @@ parse_duplicate_attribute_fails_test() ->
     {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
     true = has_error_code(Errors, duplicate_attribute).
 
+%% A record directive must reference an attribute that exists in the registry.
 parse_unresolved_record_attribute_fails_test() ->
     Sdl = <<
         "enum Attributes @attributeRegistry {\n"
@@ -64,6 +68,7 @@ parse_unresolved_record_attribute_fails_test() ->
     {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
     true = has_error_code(Errors, unresolved_record_attribute).
 
+%% Field-level `@use` directives must resolve to declared attributes.
 parse_unresolved_use_attribute_fails_test() ->
     Sdl = <<
         "enum Attributes @attributeRegistry {\n"
@@ -76,6 +81,8 @@ parse_unresolved_use_attribute_fails_test() ->
     {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
     true = has_error_code(Errors, unresolved_use_attribute).
 
+%% `inspect/1` is intentionally lossy: it should return the partial catalog even
+%% when validation fails.
 inspect_returns_catalog_even_when_invalid_test() ->
     Sdl = <<"type Person @record(attribute: person) { fullName: String @use(attribute: name) }">>,
     Catalog = ipto_graphql_sdl:inspect(Sdl),
@@ -83,6 +90,8 @@ inspect_returns_catalog_even_when_invalid_test() ->
     true = has_error_code(Errors, missing_attribute_registry),
     ?assertEqual(0, maps:get(attributes, maps:get(counts, Catalog))).
 
+%% Applying the same SDL twice should create attributes on the first pass and
+%% reuse them on the second.
 configure_graphql_sdl_creates_and_reuses_attributes_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -108,6 +117,8 @@ configure_graphql_sdl_creates_and_reuses_attributes_test() ->
     ?assertEqual(false, maps:get(supported, maps:get(records, Second))),
     ?assertEqual(false, maps:get(supported, maps:get(templates, Second))).
 
+%% Configuration should surface SDL validation failures instead of partially
+%% applying an invalid catalog.
 configure_graphql_sdl_invalid_returns_error_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -122,6 +133,7 @@ configure_graphql_sdl_invalid_returns_error_test() ->
     {error, {invalid_sdl, Errors}} = ipto:configure_graphql_sdl(Sdl),
     true = has_error_code(Errors, unresolved_use_attribute).
 
+%% File-based SDL configuration is a thin wrapper over the same setup pipeline.
 configure_graphql_sdl_file_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),

@@ -19,6 +19,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Runs only when Neo4j integration has been explicitly enabled.
 neo4j_backend_roundtrip_test_() ->
     case os:getenv("IPTO_NEO4J_INTEGRATION") of
         "1" ->
@@ -27,6 +28,8 @@ neo4j_backend_roundtrip_test_() ->
             {"neo4j integration disabled (set IPTO_NEO4J_INTEGRATION=1)", fun() -> ok end}
     end.
 
+%% Covers the Neo4j backend's end-to-end behavior across unit lifecycle,
+%% attributes, search, relations, associations, locks, and lookups.
 neo4j_backend_roundtrip() ->
     {ok, _} = ipto:start_link(),
     %% Ensure backend override survives application load defaults.
@@ -132,6 +135,8 @@ neo4j_backend_roundtrip() ->
     {ok, TenantByName} = ipto:get_tenant_info(TenantName),
     ?assertEqual(maps:get(name, TenantById), maps:get(name, TenantByName)).
 
+%% Replays a shared search corpus against the Neo4j fixture and checks the
+%% expected totals.
 -spec verify_search_corpus([{string(), [term()], non_neg_integer()}]) -> ok.
 verify_search_corpus(CorpusQueries) ->
     lists:foreach(

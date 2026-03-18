@@ -19,6 +19,11 @@
 
 -include("ipto.hrl").
 
+%% Public GraphQL facade.
+%%
+%% This module stays intentionally small: schema discovery, context construction,
+%% query execution, and explicit schema reloads all route through the adapter.
+
 -export([
     schema/0,
     build_context/1,
@@ -33,6 +38,8 @@ schema() ->
 
 -spec build_context(map()) -> map().
 build_context(Options) when is_map(Options) ->
+    %% Only a small set of keys is propagated into resolver context so callers
+    %% cannot accidentally depend on arbitrary option map contents.
     #{
         tenantid => maps:get(tenantid, Options, undefined),
         authz => maps:get(authz, Options, undefined),
@@ -43,6 +50,8 @@ build_context(_Options) ->
 
 -spec execute(binary() | string(), map()) -> ipto_result(map()).
 execute(Query, Variables) ->
+    %% The 2-arity form is the convenience entry point used by tests and simple
+    %% callers that do not need a custom resolver context.
     Context = build_context(#{}),
     execute(Query, Variables, Context).
 

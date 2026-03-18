@@ -19,12 +19,14 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Verifies that inline SDL overrides replace the default schema source.
 schema_override_from_sdl_test() ->
     ok = ipto_graphql_config:set_schema_sdl("type Query { ping: String }"),
     Bin = ipto_graphql_config:get_schema(),
     true = binary:match(Bin, <<"ping">>) =/= nomatch,
     ok = ipto_graphql_config:clear_schema_overrides().
 
+%% Verifies that file-based schema overrides are loaded and later cleared.
 schema_override_from_file_test() ->
     Tmp = filename:join([os:getenv("TMPDIR", "/tmp"), "ipto-graphql-schema.graphql"]),
     ok = file:write_file(Tmp, <<"type Query { pong: String }">>),

@@ -19,6 +19,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Enables the long-running performance scenario only when requested explicitly.
 performance_large_test_() ->
     case os:getenv("IPTO_PERFORMANCE") of
         "1" ->
@@ -27,6 +28,8 @@ performance_large_test_() ->
             {"performance disabled (set IPTO_PERFORMANCE=1)", fun() -> ok end}
     end.
 
+%% Measures create/store/search throughput at scale and records timing data for
+%% later inspection.
 performance_large() ->
     Backend = env_backend("IPTO_PERF_BACKEND", memory),
     Units = env_int("IPTO_PERF_UNITS", 100000),
@@ -83,6 +86,7 @@ performance_large() ->
     mirror_to_log_file(["\n", Report, "\n"]),
     logger:notice("~n~ts~n", [Report]).
 
+%% Runs the configured workload either serially or across worker processes.
 run_parallel_store_and_search(Units, TenantId, Prefix, SearchEvery, ProgressEvery, Workers0, Mode, ProgressCounter) ->
     Workers = normalize_workers(Units, Workers0),
     case Workers of
@@ -97,6 +101,8 @@ run_parallel_store_and_search(Units, TenantId, Prefix, SearchEvery, ProgressEver
             collect_workers(Pids, #{})
     end.
 
+%% Spawns workers in contiguous ranges or round-robin mode depending on the
+%% benchmark configuration.
 spawn_workers(range, Parent, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter, Workers) ->
     Ranges = build_ranges(Units, Workers),
     [
@@ -120,9 +126,11 @@ spawn_workers(round_robin, Parent, Units, TenantId, Prefix, SearchEvery, Progres
      || Offset <- Offsets
     ].
 
+%% Sequential worker loop for the range-based execution mode.
 run_range(StartIdx, EndIdx, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter) ->
     run_range_loop(StartIdx, EndIdx, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter).
 
+%% Range-mode worker body: create, store, optionally search, then advance.
 run_range_loop(Index, EndIdx, _Units, _TenantId, _Prefix, _SearchEvery, _ProgressEvery, _ProgressCounter)
   when Index > EndIdx ->
     ok;
@@ -136,9 +144,11 @@ run_range_loop(Index, EndIdx, Units, TenantId, Prefix, SearchEvery, ProgressEver
 
     run_range_loop(Index + 1, EndIdx, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter).
 
+%% Sequential worker loop for the round-robin execution mode.
 run_round_robin(StartIdx, Step, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter) ->
     run_round_robin_loop(StartIdx, Step, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter).
 
+%% Round-robin worker body: each worker processes every Nth index.
 run_round_robin_loop(Index, _Step, Units, _TenantId, _Prefix, _SearchEvery, _ProgressEvery, _ProgressCounter)
   when Index > Units ->
     ok;
@@ -152,6 +162,7 @@ run_round_robin_loop(Index, Step, Units, TenantId, Prefix, SearchEvery, Progress
 
     run_round_robin_loop(Index + Step, Step, Units, TenantId, Prefix, SearchEvery, ProgressEvery, ProgressCounter).
 
+%% Collects worker completions and treats abnormal exits as benchmark failures.
 collect_workers([], _Seen) ->
     ok;
 collect_workers(Monitors, Seen) ->

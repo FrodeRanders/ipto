@@ -19,16 +19,20 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Parses a valid GraphQL HTTP payload into query text, variables, and context.
 parse_payload_ok_test() ->
     Payload = json:encode(#{query => <<"{ __typename }">>, variables => #{}}),
     {ok, <<"{ __typename }">>, Vars, Ctx} = ipto_http_graphql_handler:parse_payload(unicode:characters_to_binary(Payload)),
     #{} = Vars,
     #{} = Ctx.
 
+%% The HTTP handler should reject payloads that omit the required query field.
 parse_payload_missing_query_test() ->
     Payload = json:encode(#{variables => #{}}),
     {error, missing_query} = ipto_http_graphql_handler:parse_payload(unicode:characters_to_binary(Payload)).
 
+%% Expands into a live HTTP roundtrip only when Cowboy, GraphQL, and socket bind
+%% support are all available.
 graphql_http_roundtrip_test_() ->
     case {code:ensure_loaded(cowboy), code:ensure_loaded(graphql), can_bind_socket()} of
         {{module, cowboy}, {module, graphql}, true} ->
@@ -40,6 +44,8 @@ graphql_http_roundtrip_test_() ->
             {"cowboy/graphql deps or local socket bind unavailable in this profile", fun() -> ok end}
     end.
 
+%% Starts the HTTP listener on a reserved port so the roundtrip test can use the
+%% real request path.
 setup_http_graphql() ->
     ok = ensure_inets_started(),
     application:set_env(ipto, backend, memory),
@@ -55,10 +61,13 @@ setup_http_graphql() ->
             erlang:error({http_start_failed, Error})
     end.
 
+%% Stops the listener after the live roundtrip test.
 cleanup_http_graphql(_Port) ->
     _ = ipto_http:stop(),
     ok.
 
+%% Sends an actual POST request to `/graphql` and checks that JSON GraphQL data
+%% comes back over HTTP.
 graphql_http_roundtrip(Port) ->
     Body = unicode:characters_to_binary(json:encode(#{query => <<"{ __typename }">>, variables => #{}})),
     Url = "http://127.0.0.1:" ++ integer_to_list(Port) ++ "/graphql",

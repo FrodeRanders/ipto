@@ -19,6 +19,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Guards the PostgreSQL roundtrip test behind an explicit integration flag.
 pg_backend_roundtrip_test_() ->
     case os:getenv("IPTO_PG_INTEGRATION") of
         "1" ->
@@ -27,6 +28,7 @@ pg_backend_roundtrip_test_() ->
             {"pg integration disabled (set IPTO_PG_INTEGRATION=1)", fun() -> ok end}
     end.
 
+%% Guards the PostgreSQL SDL persistence test behind the same integration flag.
 pg_sdl_configure_persists_templates_test_() ->
     case os:getenv("IPTO_PG_INTEGRATION") of
         "1" ->
@@ -35,6 +37,8 @@ pg_sdl_configure_persists_templates_test_() ->
             {"pg integration disabled (set IPTO_PG_INTEGRATION=1)", fun() -> ok end}
     end.
 
+%% Covers the PostgreSQL backend's end-to-end unit, relation, association,
+%% search, and lock behavior against a real database.
 pg_backend_roundtrip() ->
     application:set_env(ipto, backend, pg),
     {ok, _} = ipto:start_link(),
@@ -105,6 +109,8 @@ pg_backend_roundtrip() ->
             ok
     end.
 
+%% Replays a small search corpus and checks that every query returns the
+%% expected total.
 -spec verify_search_corpus([{string(), [term()], non_neg_integer()}]) -> ok.
 verify_search_corpus(CorpusQueries) ->
     lists:foreach(
@@ -117,6 +123,8 @@ verify_search_corpus(CorpusQueries) ->
     ),
     ok.
 
+%% Verifies that SDL setup persists record and unit templates in PostgreSQL when
+%% that backend is active.
 pg_sdl_configure_persists_templates() ->
     application:set_env(ipto, backend, pg),
     {ok, _} = ipto:start_link(),
@@ -195,6 +203,8 @@ pg_sdl_configure_persists_templates() ->
         epgsql:close(Conn)
     end.
 
+%% Opens a direct PostgreSQL connection for verification queries used by the
+%% integration tests.
 -spec pg_connect() -> {ok, term()} | {error, term()}.
 pg_connect() ->
     case code:ensure_loaded(epgsql) of
@@ -209,6 +219,8 @@ pg_connect() ->
             {error, Error}
     end.
 
+%% Clears persisted units for the chosen tenant so the roundtrip test starts
+%% from a predictable database state.
 -spec pg_reset_test_tenant(pos_integer()) -> ok.
 pg_reset_test_tenant(TenantId) ->
     {ok, Conn} = pg_connect(),
@@ -225,6 +237,8 @@ pg_reset_test_tenant(TenantId) ->
         epgsql:close(Conn)
     end.
 
+%% Normalizes the different `epgsql` row shapes used by count queries into a
+%% single integer result.
 -spec pg_scalar_count(term()) -> non_neg_integer().
 pg_scalar_count({ok, _Cols, [[Count] | _]}) when is_integer(Count), Count >= 0 ->
     Count;

@@ -19,6 +19,11 @@
 
 -include("ipto.hrl").
 
+%% Public facade for the Erlang implementation.
+%%
+%% The module keeps the surface area close to the Java API while delegating the
+%% actual work to `ipto_repo` and wrapping each call in timing collection.
+
 -export([
     start_link/0,
     create_unit/1,
@@ -72,6 +77,9 @@ start_link() ->
         {ok, _} = Ok ->
             Ok;
         {error, {ipto, {"no such file or directory", "ipto.app"}}} ->
+            %% Tests and embedded shells may compile modules without packaging an
+            %% OTP application resource file. Fall back to the supervisor so the
+            %% public API is still usable in those contexts.
             ipto_log:warning(ipto, "application .app missing, starting supervisor directly", []),
             case ipto_sup:start_link() of
                 {ok, _} = Ok ->
@@ -96,9 +104,12 @@ create_unit(TenantId) ->
 
 -spec create_unit(tenantid(), unit_name() | string() | {corrid, corrid()}) ->
     {ok, #unit{}} | {error, invalid_tenantid | invalid_create_unit_argument}.
+%% `create_unit/2` accepts either a display name or an explicit correlation id.
 create_unit(TenantId, NameOrCorrId) ->
     timed(create_unit_with_name_or_corrid, fun() -> ipto_repo:create_unit(TenantId, NameOrCorrId) end).
 
+%% Read operations delegate directly to the repository layer but still pass
+%% through the timing wrapper so they show up in runtime metrics.
 -spec get_unit(tenantid(), unitid()) -> unit_lookup_result().
 get_unit(TenantId, UnitId) ->
     timed(get_unit, fun() -> ipto_repo:get_unit(TenantId, UnitId) end).
@@ -120,6 +131,7 @@ store_unit_json(UnitJsonMap) ->
     timed(store_unit_json, fun() -> ipto_repo:store_unit_json(UnitJsonMap) end).
 
 -spec search_units(search_expression() | map(), search_order(), search_paging()) -> ipto_result(search_result()).
+%% Search, relation, association, and lock operations are thin facade calls.
 search_units(Expression, Order, PagingOrLimit) ->
     timed(search_units, fun() -> ipto_repo:search_units(Expression, Order, PagingOrLimit) end).
 
@@ -221,6 +233,8 @@ get_tenant_info(NameOrId) ->
     timed(get_tenant_info, fun() -> ipto_repo:get_tenant_info(NameOrId) end).
 
 -spec inspect_graphql_sdl(binary() | string()) -> map().
+%% SDL setup APIs are intentionally exposed here so callers can bootstrap the
+%% GraphQL layer through the same entry module they use for repository calls.
 inspect_graphql_sdl(Sdl) ->
     timed(inspect_graphql_sdl, fun() -> ipto_repo:inspect_graphql_sdl(Sdl) end).
 
@@ -241,6 +255,8 @@ reset_timing_data() ->
     ipto_timing_data:reset().
 
 -spec get_timing_data() -> map().
+%% Timing data is collected centrally so the facade can report costs without
+%% every downstream module having to care about instrumentation.
 get_timing_data() ->
     ipto_timing_data:get_stats().
 

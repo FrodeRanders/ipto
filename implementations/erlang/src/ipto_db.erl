@@ -19,6 +19,11 @@
 
 -include("ipto.hrl").
 
+%% Persistence boundary and backend dispatcher.
+%%
+%% All repository code comes through this module so backend selection, argument
+%% validation, and temporary compatibility shims stay in one place.
+
 -export([
     get_unit_json/3,
     unit_exists/2,
@@ -115,6 +120,10 @@
 -define(LOCK_KEY, {meta, locks}).
 
 %% Public API
+
+%% The exported persistence functions are deliberately thin. Their primary job
+%% is to validate obvious shape errors before handing control to the selected
+%% backend.
 
 -spec get_unit_json(tenantid(), unitid(), version_selector()) -> unit_lookup_result().
 get_unit_json(TenantId, UnitId, Version) ->
@@ -241,6 +250,8 @@ upsert_unit_template(_TemplateName, _Fields) ->
 
 %% Backend selection and config
 
+%% Application env decides which backend module handles the actual IO.
+
 -spec backend() -> pg | neo4j | memory.
 backend() ->
     case application:get_env(ipto, backend) of
@@ -262,6 +273,8 @@ backend_module() ->
 call_backend(Fun, Args) ->
     Module = backend_module(),
     try
+        %% Backend errors are logged here so the individual adapters can stay
+        %% focused on data access rather than repeating the same logging policy.
         Result = apply(Module, Fun, Args),
         case Result of
             {error, ErrorReason} ->
@@ -311,6 +324,7 @@ env_int(Name, Default) ->
 with_pg(Fun) ->
     case ipto_pg_pool:with_connection(Fun) of
         {error, pool_unavailable} ->
+            %% Keep PG support usable even when the optional pool is not running.
             with_pg_direct(Fun);
         Result ->
             Result

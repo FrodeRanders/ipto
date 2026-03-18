@@ -19,10 +19,13 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Checks that the built-in schema still exposes a query root.
 schema_contains_query_root_test() ->
     Schema = ipto_graphql:schema(),
     true = binary:match(Schema, <<"type Query">>) =/= nomatch.
 
+%% Validates the facade behavior when `graphql_erl` is either available or
+%% intentionally absent in the current profile.
 graphql_adapter_smoke_test() ->
     Result = ipto_graphql:execute("{ __typename }", #{}),
     case Result of
@@ -32,6 +35,8 @@ graphql_adapter_smoke_test() ->
         _ -> ?assert(false)
     end.
 
+%% Expands into runtime GraphQL tests only when the external dependency is
+%% loaded; otherwise it reports a skipped EUnit case.
 graphql_real_execution_test_() ->
     case code:ensure_loaded(graphql) of
         {module, graphql} ->
@@ -45,6 +50,7 @@ graphql_real_execution_test_() ->
             {"graphql_erl dependency not loaded in this profile", fun() -> ok end}
     end.
 
+%% Covers the simplest mutation flow through the real GraphQL executor.
 graphql_real_execution() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -53,6 +59,8 @@ graphql_real_execution() ->
     true = is_map(Response),
     ok.
 
+%% Verifies that SDL inspection and configuration operations are wired into the
+%% executable GraphQL schema.
 graphql_setup_execution() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -71,6 +79,8 @@ graphql_setup_execution() ->
     false = has_graphql_errors(ConfigureResponse),
     ok.
 
+%% Exercises both text-query and structured-expression search operations through
+%% GraphQL.
 graphql_search_execution() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -93,6 +103,8 @@ graphql_search_execution() ->
     false = has_graphql_errors(ExprResponse),
     ok.
 
+%% Runs a broad GraphQL end-to-end scenario across lookup, lifecycle, relation,
+%% and association operations.
 graphql_extended_execution() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),

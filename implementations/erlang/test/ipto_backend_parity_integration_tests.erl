@@ -19,6 +19,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Runs only when explicit parity integration is enabled because it requires a
+%% configured Neo4j-backed comparison target.
 backend_search_parity_test_() ->
     case {os:getenv("IPTO_BACKEND_PARITY"), os:getenv("IPTO_NEO4J_INTEGRATION")} of
         {"1", "1"} ->
@@ -29,6 +31,8 @@ backend_search_parity_test_() ->
             {"backend parity integration disabled (set IPTO_BACKEND_PARITY=1)", fun() -> ok end}
     end.
 
+%% Seeds equivalent data in PostgreSQL and Neo4j and compares the search corpus
+%% result counts across both backends.
 backend_search_parity() ->
     {ok, _} = ipto:start_link(),
 
@@ -43,6 +47,8 @@ backend_search_parity() ->
     NeoCounts = run_corpus(neo4j, NeoFixture),
     ?assertEqual(PgCounts, NeoCounts).
 
+%% The parity test assumes an existing PostgreSQL tenant that can be used for
+%% deterministic fixture setup.
 -spec resolve_pg_tenant() -> pos_integer().
 resolve_pg_tenant() ->
     ok = application:set_env(ipto, backend, pg),
@@ -53,6 +59,8 @@ resolve_pg_tenant() ->
             erlang:error(pg_tenant_missing)
     end.
 
+%% Creates two distinguishable units in the selected backend so the same search
+%% corpus can be run against each fixture.
 -spec seed_backend(pg | neo4j, pos_integer(), string()) -> map().
 seed_backend(Backend, TenantId, Tag) ->
     ok = application:set_env(ipto, backend, Backend),
@@ -71,6 +79,8 @@ seed_backend(Backend, TenantId, Tag) ->
         name_b => NameB
     }.
 
+%% Executes the shared query corpus and returns the expected totals for parity
+%% comparison.
 -spec run_corpus(pg | neo4j, map()) -> [non_neg_integer()].
 run_corpus(Backend, Fixture) ->
     ok = application:set_env(ipto, backend, Backend),

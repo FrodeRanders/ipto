@@ -19,6 +19,11 @@
 
 -include("ipto.hrl").
 
+%% Adapter around `graphql_erl`.
+%%
+%% The adapter hides dependency checks, schema caching, and the translation from
+%% IPTO's calling conventions into the execution flow expected by `graphql_erl`.
+
 -export([execute/3, reload_schema/0]).
 
 -define(STATE_KEY, {?MODULE, state}).
@@ -35,6 +40,8 @@ execute(Query, Variables, Context) ->
 -spec reload_schema() -> ok.
 reload_schema() ->
     ok = ipto_graphql_config:reload(),
+    %% Schema and resolver mapping are cached together; dropping the digest
+    %% forces `ensure_schema_loaded/0` to rebuild both on the next request.
     persistent_term:erase(?STATE_KEY),
     ok.
 
@@ -84,6 +91,8 @@ ensure_schema_loaded() ->
         #{digest := Digest} ->
             ok;
         _ ->
+            %% The digest lets the adapter avoid repeated schema rebuilds while
+            %% still reacting to runtime reloads.
             load_schema(SchemaData, Mapping, Digest)
     end.
 

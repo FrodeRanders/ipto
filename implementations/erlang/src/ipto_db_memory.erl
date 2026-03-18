@@ -20,6 +20,12 @@
 
 -include("ipto.hrl").
 
+%% In-memory backend adapter.
+%%
+%% The implementation itself lives in `ipto_db`; this adapter keeps the backend
+%% contract stable while the refactoring toward dedicated backend modules
+%% continues.
+
 -export([
     get_unit_json/3,
     unit_exists/2,
@@ -55,6 +61,8 @@ get_unit_json(TenantId, UnitId, Version) ->
     ipto_db:memory_get_unit_json_backend(TenantId, UnitId, Version).
 
 -spec unit_exists(tenantid(), unitid()) -> boolean().
+%% These functions are pass-throughs so callers can depend on the behaviour
+%% module without knowing where the current memory implementation resides.
 unit_exists(TenantId, UnitId) ->
     ipto_db:memory_unit_exists_backend(TenantId, UnitId).
 

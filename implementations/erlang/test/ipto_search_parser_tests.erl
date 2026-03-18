@@ -19,26 +19,32 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Parses a straightforward conjunction of tenant, status, and name filters.
 parse_basic_query_test() ->
     {ok, Expr} = ipto_search_parser:parse("tenantid=1 and status=30 and name~\"%foo%\""),
     1 = maps:get(tenantid, Expr),
     30 = maps:get(status, Expr),
     <<"%foo%">> = maps:get(name_ilike, Expr).
 
+%% Verifies timestamp range parsing for created-date predicates.
 parse_created_query_test() ->
     {ok, Expr} = ipto_search_parser:parse("created>=\"2026-01-01 00:00:00\" and created<\"2027-01-01 00:00:00\""),
     <<"2026-01-01 00:00:00">> = maps:get(created_after, Expr),
     <<"2027-01-01 00:00:00">> = maps:get(created_before, Expr).
 
+%% Confirms invalid fields and malformed values are rejected.
 parse_invalid_query_test() ->
     {error, _} = ipto_search_parser:parse("unsupported=1 and tenantid=abc").
 
+%% Ensures parser aliases and symbolic status literals normalize into the
+%% canonical expression map.
 parse_alias_and_status_literal_test() ->
     {ok, Expr} = ipto_search_parser:parse("tenant_id=7 and unit_name=\"foo\" and status=EFFECTIVE"),
     7 = maps:get(tenantid, Expr),
     <<"foo">> = maps:get(name, Expr),
     30 = maps:get(status, Expr).
 
+%% Covers the non-equality and range operators added beyond the initial parser.
 parse_extended_operators_test() ->
     {ok, Expr} = ipto_search_parser:parse(
         "unitid>=10 and unitid<20 and corr_id~\"abc%\" and name!=\"x\" and modified<=\"2027-01-01 00:00:00\""
@@ -49,12 +55,14 @@ parse_extended_operators_test() ->
     <<"x">> = maps:get(name_ne, Expr),
     <<"2027-01-01 00:00:00">> = maps:get(modified_lte, Expr).
 
+%% Ensures explicit parentheses are preserved as grouped boolean expressions.
 parse_boolean_grouping_test() ->
     {ok, Expr} = ipto_search_parser:parse("tenantid=1 and (status=30 or status=40) and not name=\"z\""),
     true = maps:is_key('$and', Expr),
     AndExprs = maps:get('$and', Expr),
     3 = length(AndExprs).
 
+%% Verifies that `and` binds tighter than `or` in mixed boolean expressions.
 parse_boolean_precedence_test() ->
     {ok, Expr} = ipto_search_parser:parse("status=30 or status=40 and tenantid=1"),
     true = maps:is_key('$or', Expr),
@@ -63,6 +71,7 @@ parse_boolean_precedence_test() ->
     40 = maps:get(status, Right),
     1 = maps:get(tenantid, Right).
 
+%% Confirms `in` and `not in` are lowered into boolean subexpressions.
 parse_in_not_in_test() ->
     {ok, Expr} = ipto_search_parser:parse("status in (30, 40) and tenantid not in (2,3)"),
     true = maps:is_key('$and', Expr),
@@ -70,6 +79,7 @@ parse_in_not_in_test() ->
     true = maps:is_key('$or', InExpr),
     true = maps:is_key('$not', NotInExpr).
 
+%% Verifies `between` expands into inclusive lower and upper bounds.
 parse_between_test() ->
     {ok, Expr} = ipto_search_parser:parse("unitid between 10 and 20"),
     true = maps:is_key('$and', Expr),

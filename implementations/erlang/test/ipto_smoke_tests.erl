@@ -19,6 +19,7 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Verifies the smallest happy path: create an in-memory unit and persist it.
 create_and_store_unit_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -27,6 +28,8 @@ create_and_store_unit_test() ->
     true = maps:is_key(unitid, Stored),
     true = maps:is_key(unitver, Stored).
 
+%% Exercises the allowed status transitions and confirms disallowed ones are
+%% treated as no-ops that preserve the current status.
 status_transition_rules_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -50,6 +53,8 @@ status_transition_rules_test() ->
     {ok, AfterRejectedTransition} = ipto:get_unit(maps:get(tenantid, Stored0), maps:get(unitid, Stored0)),
     10 = maps:get(status, AfterRejectedTransition).
 
+%% Covers the mutating relation, association, and lock APIs without querying the
+%% resulting state in detail.
 relation_assoc_lock_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -74,6 +79,8 @@ relation_assoc_lock_test() ->
     ok = ipto:unlock_unit(ARef),
     false = ipto:is_unit_locked(ARef).
 
+%% Verifies the read-side relation and association APIs after writing a small
+%% in-memory graph.
 relation_assoc_query_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -112,6 +119,8 @@ relation_assoc_query_test() ->
     ?assertEqual(RightAssoc, RightAssocOne),
     2 = length(LeftAssocs).
 
+%% Confirms that the memory backend search path supports direct expressions,
+%% parser-driven queries, paging, ordering, and the extended operators.
 memory_search_units_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -174,6 +183,8 @@ memory_search_units_test() ->
     ),
     2 = maps:get(total, ByBetween).
 
+%% Ensures attribute values survive a full store/load roundtrip for primitive
+%% and record-shaped payloads.
 attribute_roundtrip_mixed_types_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),

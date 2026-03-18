@@ -19,6 +19,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+%% Confirms the query resource exposes SDL inspection without going through the
+%% full GraphQL text parser.
 inspect_graphql_sdl_query_resource_test() ->
     Sdl = <<
         "enum Attributes @attributeRegistry {\n"
@@ -34,6 +36,7 @@ inspect_graphql_sdl_query_resource_test() ->
     true = is_map(JsonBin),
     true = maps:is_key(attribute_registry, JsonBin).
 
+%% Confirms the mutation resource can apply SDL and return the setup summary.
 configure_graphql_sdl_mutation_resource_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -54,6 +57,7 @@ configure_graphql_sdl_mutation_resource_test() ->
     true = is_map(JsonBin),
     true = maps:is_key(attributes, JsonBin).
 
+%% Missing SDL files should be surfaced as resource-level configuration errors.
 configure_graphql_sdl_file_mutation_resource_error_test() ->
     {error, {configure_graphql_sdl_file_failed, _}} = ipto_graphql_mutation_resource:execute(
         #{},
@@ -62,6 +66,8 @@ configure_graphql_sdl_file_mutation_resource_error_test() ->
         #{<<"path">> => <<"/no/such/file.graphqls">>}
     ).
 
+%% Exercises the structured search query resource with expression-style
+%% arguments and paging controls.
 units_by_expression_query_resource_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -86,6 +92,8 @@ units_by_expression_query_resource_test() ->
     true = is_map(Result),
     true = maps:get(total, Result) >= 2.
 
+%% Covers the resource-layer equivalents of the broader GraphQL read and
+%% mutation surface.
 graphql_extended_read_mutation_resource_test() ->
     application:set_env(ipto, backend, memory),
     {ok, _} = ipto:start_link(),
@@ -305,6 +313,7 @@ graphql_extended_read_mutation_resource_test() ->
         }
     ).
 
+%% The registered-operations resource should respect the configured allowlist.
 registered_operations_query_resource_test() ->
     application:set_env(ipto, graphql_operation_allowlist, [<<"registeredOperations">>, <<"unit">>, <<"createUnit">>]),
     try
