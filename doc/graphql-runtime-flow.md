@@ -239,7 +239,7 @@ The code becomes easier to read if you keep this model in mind:
 - Field closures call runtime services using the parent `Box`.
 - A `Box` is just the transport object that carries enough repository context to let the next resolver step continue.
 
-So yes, the runtime is not deeply complicated. The fiddly part is that there are two kinds of transitions:
+The runtime is not deeply complicated, but keep in that there are two kinds of transitions:
 
 - GraphQL arguments -> runtime service call -> initial `Box`
 - parent `Box` -> attribute lookup -> child scalar or child `Box`
