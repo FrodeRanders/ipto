@@ -15,9 +15,9 @@ The short version is:
 
 At startup, Quarkus loads the configured SDL resource and hands it to `Configurator.load(...)`:
 
-- `IptoBootstrap.init()` loads the SDL resource and calls `Configurator.load(repository, reader, this::wireOperations, ...)` in [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L71) through [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L93).
-- `Configurator.load(...)` parses SDL, builds `RuntimeWiring`, derives the SDL view (`GqlViewpoint`), reconciles catalog state, creates `RuntimeService`, and asks it to wire GraphQL fetchers in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L81) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L121).
-- `RuntimeService.wire(...)` is just the coordination point that delegates to `RuntimeOperators.wireRecords(...)`, `wireUnions(...)`, and `wireOperations(...)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L112) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L119).
+- `IptoBootstrap.init()` loads the SDL resource and calls `Configurator.load(repository, reader, this::wireOperations, ...)` in [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L71).
+- `Configurator.load(...)` parses SDL, builds `RuntimeWiring`, derives the SDL view (`GqlViewpoint`), reconciles catalog state, creates `RuntimeService`, and asks it to wire GraphQL fetchers in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L81).
+- `RuntimeService.wire(...)` is just the coordination point that delegates to `RuntimeOperators.wireRecords(...)`, `wireUnions(...)`, and `wireOperations(...)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L112).
 
 That means the SDL is not only used to create the executable GraphQL schema. It is also used as input to synthesize the runtime fetchers.
 
@@ -29,13 +29,13 @@ There are really two resolver layers in play.
 
 These are GraphQL root fields on `Query` and `Mutation`. They are auto-wired in `RuntimeOperators.wireOperations(...)`:
 
-- For each `GqlOperationShape`, a `DataFetcher` is registered on the GraphQL root type in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L251) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L299).
-- For normal query/mutation operations, that fetcher simply calls `runtimeService.invokeOperation(operation, env.getArguments())` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L280) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L286).
+- For each `GqlOperationShape`, a `DataFetcher` is registered on the GraphQL root type in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L251).
+- For normal query/mutation operations, that fetcher simply calls `runtimeService.invokeOperation(operation, env.getArguments())` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L280).
 
 There is also a manual override hook:
 
-- After the generic auto-wiring is installed, `Configurator.load(...)` invokes the caller-supplied `operationsWireBlock` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L112) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L115).
-- In this application, `IptoBootstrap.wireOperations(...)` adds a domain-specific `Mutation.lagraYrkanRaw` fetcher that directly calls `params.runtimeService().storeDomainRawUnit(...)` in [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L104) through [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L134).
+- After the generic auto-wiring is installed, `Configurator.load(...)` invokes the caller-supplied `operationsWireBlock` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/configuration/Configurator.java#L112).
+- In this application, `IptoBootstrap.wireOperations(...)` adds a domain-specific `Mutation.lagraYrkanRaw` fetcher that directly calls `params.runtimeService().storeDomainRawUnit(...)` in [implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java](../implementations/java/repo-cdi/src/main/java/org/gautelis/ipto/bootstrap/IptoBootstrap.java#L104).
 
 So the root-operation rule is:
 
@@ -46,9 +46,9 @@ So the root-operation rule is:
 
 These are the fetchers for fields inside SDL object types representing IPTO records.
 
-- `RuntimeOperators.wireRecords(...)` iterates through every record type and every field in that record in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L42) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L188).
+- `RuntimeOperators.wireRecords(...)` iterates through every record type and every field in that record in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L42).
 - For each SDL field, it creates a closure that is later run by GraphQL Java.
-- That closure does not look at root arguments. Instead, it reads `env.getSource()`, which is expected to be a `Box` representing the parent object currently being resolved in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L127) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L180).
+- That closure does not look at root arguments. Instead, it reads `env.getSource()`, which is expected to be a `Box` representing the parent object currently being resolved in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L127)
 
 This is the key separation:
 
@@ -63,7 +63,7 @@ The `Box` hierarchy is a lightweight adapter between the repository model and Gr
 
 `Box` is the common base type and mainly carries the owning `Unit`:
 
-- See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java#L23) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java#L43).
+- See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/Box.java#L23).
 
 Every child box keeps the same `Unit`, which is why nested resolvers still know which unit they belong to.
 
@@ -71,17 +71,17 @@ Every child box keeps the same `Unit`, which is why nested resolvers still know 
 
 `AttributeBox` is a mapping from GraphQL field name or alias to repository `Attribute<?>`:
 
-- See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java#L29) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java#L105).
+- See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/AttributeBox.java#L29).
 
 This is typically the box used for a top-level loaded unit. `UnitBoxFactory.fromUnit(...)` builds it by indexing the unit's attributes by alias:
 
-- [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java#L25) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java#L38).
+- [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/UnitBoxFactory.java#L25).
 
 ### 3.3 `RecordBox`
 
 `RecordBox` extends `AttributeBox` and additionally remembers the record attribute from which it was created:
 
-- [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java#L26) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java#L58).
+- [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/box/RecordBox.java#L26).
 
 That extra `recordAttribute` is what makes union resolution possible later, because the union resolver looks at that record attribute alias to decide which concrete GraphQL object type to expose.
 
@@ -89,8 +89,8 @@ That extra `recordAttribute` is what makes union resolution possible later, beca
 
 `RuntimeService` is the central entry point used by the auto-wired root operation fetchers:
 
-- `invokeOperation(...)` delegates to `RuntimeOperationInvoker` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L122) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L127).
-- `RuntimeOperationInvoker` coerces GraphQL argument maps into typed runtime records such as `Query.UnitIdentification` and `Query.Filter` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L147) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L179).
+- `invokeOperation(...)` delegates to `RuntimeOperationInvoker` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeService.java#L122).
+- `RuntimeOperationInvoker` coerces GraphQL argument maps into typed runtime records such as `Query.UnitIdentification` and `Query.Filter` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L147).
 - It then maps the SDL operation to one of a small set of runtime actions:
   - load unit by `(tenantId, unitId)`
   - load unit by `(tenantId, corrId)`
@@ -98,7 +98,7 @@ That extra `recordAttribute` is what makes union resolution possible later, beca
   - store raw unit
   - return raw bytes instead of boxed unit results
 
-The main routing logic is in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L41) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L144).
+The main routing logic is in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeOperationInvoker.java#L41).
 
 The important thing for the box story is the return type:
 
@@ -113,7 +113,7 @@ That means only some root operations produce a GraphQL object tree that needs ne
 
 When a root operation loads a unit, `RuntimeUnitService` fetches the repository `Unit` and wraps it in an `AttributeBox`:
 
-- `loadUnit(...)` and `loadUnitByCorrId(...)` call `UnitBoxFactory.fromUnit(unit)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java#L41) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java#L67).
+- `loadUnit(...)` and `loadUnitByCorrId(...)` call `UnitBoxFactory.fromUnit(unit)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeUnitService.java#L41).
 
 That is the first box GraphQL Java sees as the value of the root field.
 
@@ -133,7 +133,7 @@ For each SDL field, `RuntimeOperators.wireRecords(...)` precomputes:
 - whether the field is mandatory
 - a list of candidate attribute aliases called `fieldNames`
 
-See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L72) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L124).
+See [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L72).
 
 That `fieldNames` list is important. It is the runtime fallback list used to find the underlying repository attribute. Usually it contains the direct alias for the field. For union-typed fields it also includes aliases for each union member record type.
 
@@ -146,7 +146,7 @@ When the field is actually requested, the fetcher:
 3. Distinguishes between `AttributeBox` and `RecordBox`
 4. Calls the matching `RuntimeService` helper
 
-This branch is in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L127) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L180).
+This branch is in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L127).
 
 The meaning of the branch is:
 
@@ -157,8 +157,8 @@ The meaning of the branch is:
 
 The actual lookup happens in `RuntimeAttributeResolver`:
 
-- `resolveFromAttributeBox(...)` searches the current box map by alias in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L125) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L160).
-- `resolveFromRecord(...)` scans the nested record attribute contents in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L99) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L123).
+- `resolveFromAttributeBox(...)` searches the current box map by alias in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L125).
+- `resolveFromRecord(...)` scans the nested record attribute contents in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L99).
 
 After it has found the target attribute, it decides whether to return:
 
@@ -167,7 +167,7 @@ After it has found the target attribute, it decides whether to return:
 - a newly created `RecordBox`
 - a list of child `Box` objects
 
-That conversion happens in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L175) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L246).
+That conversion happens in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/service/RuntimeAttributeResolver.java#L175).
 
 This is the core box-passing loop:
 
@@ -183,13 +183,13 @@ Union fields are the one place where the runtime needs extra type-discrimination
 
 At wiring time:
 
-- `wireRecords(...)` detects that a field type is a union and expands `fieldNames` with aliases for all union member record types in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L102) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L124).
+- `wireRecords(...)` detects that a field type is a union and expands `fieldNames` with aliases for all union member record types in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L102).
 
 At execution time:
 
-- `wireUnions(...)` has already registered a `TypeResolver` for the GraphQL union in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L191) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L248).
+- `wireUnions(...)` has already registered a `TypeResolver` for the GraphQL union in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L191).
 - That resolver expects the runtime value to be a `RecordBox`.
-- It looks at `recordBox.getRecordAttribute().getAlias()`, maps that alias to a concrete GraphQL object type, and returns `env.getSchema().getObjectType(typeName)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L226) through [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L240).
+- It looks at `recordBox.getRecordAttribute().getAlias()`, maps that alias to a concrete GraphQL object type, and returns `env.getSchema().getObjectType(typeName)` in [implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java](../implementations/java/graphql/src/main/java/org/gautelis/ipto/graphql/runtime/wiring/RuntimeOperators.java#L226).
 
 So unions work because `RecordBox` preserves the identity of the record attribute that produced it.
 
