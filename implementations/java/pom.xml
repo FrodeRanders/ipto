@@ -29,17 +29,17 @@
         <guid-gen.version>5.2.0</guid-gen.version>
 
         <!-- JSON related -->
-        <jackson.version>3.0.4</jackson.version>
-        <networknt.version>3.0.0</networknt.version>
+        <jackson.version>3.1.1</jackson.version>
+        <networknt.version>3.0.1</networknt.version>
 
         <!-- GraphQL related -->
         <graphql-java.version>25.0</graphql-java.version>
 
         <!-- test related -->
-        <junit.version>6.0.2</junit.version>
+        <junit.version>6.0.3</junit.version>
 
         <!-- logging related -->
-        <log4j.version>2.25.3</log4j.version>
+        <log4j.version>2.25.4</log4j.version>
         <slf4j.version>2.0.17</slf4j.version>
 
         <!-- cache related -->
@@ -51,7 +51,7 @@
         <!-- db related -->
         <hikari.version>7.0.2</hikari.version>
         <postgresql.version>42.7.10</postgresql.version>
-        <db2.version>12.1.3.0</db2.version>
+        <db2.version>12.1.4.0</db2.version>
     </properties>
 
     <dependencyManagement>
