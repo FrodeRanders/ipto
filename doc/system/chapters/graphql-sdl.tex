@@ -1,0 +1,150 @@
+\section{GraphQL SDL Configuration}
+\label{sec:GraphqlSDL}
+
+IPTO uses GraphQL SDL for two related but distinct purposes. First, SDL defines the executable GraphQL surface exposed at runtime. Second, the same SDL is used as a configuration source from which the system derives repository datatypes, attributes, records, templates and operation bindings.
+
+The central entry point is the Java class \literalbreak{org.gautelis.ipto.graphql.configuration.Configurator}. Its \texttt{load(...)} method parses SDL, derives a GraphQL-side model, loads the current catalog from the repository, reconciles the two views, and finally builds the executable GraphQL schema.
+
+\subsection{Top-level loading flow}
+
+The configuration flow is intentionally staged:
+\begin{enumerate}
+\item parse SDL into a GraphQL \texttt{TypeDefinitionRegistry},
+\item derive the SDL viewpoint: datatypes, attributes, records, templates, unions and operations,
+\item read the current repository viewpoint from the database catalog,
+\item reconcile the differences and populate missing catalog entries,
+\item build runtime wiring and create the executable GraphQL schema.
+\end{enumerate}
+
+This makes the SDL the authoritative description of the intended logical model, while the database remains the durable store of the resulting catalog and template metadata.
+
+\subsection{Directive vocabulary}
+
+The shipped schema file \filepath{implementations/java/quarkus-app/src/main/resources/ipto.graphqls} defines a small directive vocabulary used by the loader:
+\begin{description}
+\item[\texttt{@datatypeRegistry}] Marks an enum whose values define basic datatypes.
+\item[\texttt{@datatype(id: Int)}] Assigns the numeric repository datatype id used internally by IPTO.
+\item[\texttt{@attributeRegistry}] Marks an enum whose values define repository attributes.
+\item[\texttt{@attribute(...)}] Declares the datatype, cardinality, repository name, URI and description of an attribute.
+\item[\texttt{@template(name: String)}] Marks an object type as a top-level unit template.
+\item[\texttt{@record(attribute: Attributes!)}] Marks an object type as a nested record bound to a record attribute.
+\item[\texttt{@use(attribute: Attributes!)}] Binds a field in a template or record to a declared repository attribute.
+\item[\texttt{@ipto(operation: String!)}] Binds a GraphQL operation field to a known runtime operation.
+\end{description}
+
+The SDL layer is therefore not generic GraphQL schema usage. It is GraphQL plus a repository-specific annotation vocabulary that drives catalog synthesis.
+
+\subsection{Datatype registry}
+
+Basic datatypes are derived from an enum annotated with \texttt{@datatypeRegistry}. In the current schema this is the \texttt{DataTypes} enum. Values such as \texttt{STRING}, \texttt{TIME}, \texttt{INTEGER}, \texttt{LONG}, \texttt{DOUBLE}, \texttt{BOOLEAN}, \texttt{DATA} and \texttt{RECORD} are each annotated with a numeric id via \texttt{@datatype(id: ...)}.
+
+The loader validates these ids against the internal Java enum \texttt{AttributeType}. This is an important constraint: SDL cannot invent arbitrary numeric datatypes. It can only refer to the officially supported storage types already known to the repository implementation.
+
+\subsection{Attribute registry}
+
+Repository attributes are derived from an enum annotated with \texttt{@attributeRegistry}. Each enum value becomes a logical attribute definition. The \texttt{@attribute} directive contributes the important parts:
+\begin{itemize}
+\item the underlying datatype,
+\item whether the attribute is array-capable,
+\item the repository attribute name,
+\item the qualified URI or namespace-backed identifier,
+\item an optional human-readable description.
+\end{itemize}
+
+If the \texttt{name} argument is omitted, the enum value name is used. If the \texttt{uri} argument is omitted, the repository name is reused as fallback. The resulting attribute shapes are later compared with the rows in \texttt{repo\_attribute} and \texttt{repo\_attribute\_description}.
+
+This is the bridge between the GraphQL schema vocabulary and the database catalog described in Section~\ref{sec:Database}.
+
+\subsection{Templates and records}
+
+Top-level domain objects are represented as GraphQL object types. The loader distinguishes operation root types from ordinary domain types, and then interprets the remaining object types in one of two ways:
+\begin{description}
+\item[\texttt{@template}] Declares that an object type describes a top-level unit template.
+\item[\texttt{@record}] Declares that an object type describes a reusable nested record.
+\end{description}
+
+For both templates and records, the actual field structure is derived from fields annotated with \texttt{@use(attribute: ...)}. That directive allows the field name used in SDL to differ from the underlying repository attribute name. If \texttt{@use} is omitted, the loader attempts to resolve the field name directly against the attribute registry.
+
+For templates, the resulting metadata is persisted in \texttt{repo\_unit\_template} and \texttt{repo\_unit\_template\_elements}. For records, the corresponding metadata is persisted in \texttt{repo\_record\_template} and \texttt{repo\_record\_template\_elements}.
+
+\subsection{Operation roots and runtime bindings}
+
+Operation roots are resolved from the GraphQL \texttt{schema \{ ... \}} declaration when present, otherwise the defaults \texttt{Query}, \texttt{Mutation} and \texttt{Subscription} are assumed. The loader derives one operation shape per field in those root types.
+
+Each operation shape contains:
+\begin{itemize}
+\item the operation category: query, mutation or subscription,
+\item the operation name,
+\item its input parameters,
+\item the result type,
+\item an optional runtime binding from \texttt{@ipto(operation: ...)}.
+\end{itemize}
+
+At present, subscriptions are recognized structurally, but runtime subscription support is not yet implemented. That means the SDL may describe subscription fields, but operational support remains incomplete.
+
+\subsection{Reconciliation with the repository catalog}
+
+After the SDL viewpoint has been derived, the configuration layer loads the current catalog viewpoint from the repository. This includes:
+\begin{itemize}
+\item the supported datatypes,
+\item the stored attribute definitions,
+\item stored record templates,
+\item stored unit templates.
+\end{itemize}
+
+The \texttt{CatalogReconciler} then compares the SDL-derived model with the catalog model. The purpose is not just validation. It is also to create missing catalog entities so that subsequent repository operations can store unit data that conforms to the SDL.
+
+This is the operational meaning of using SDL to ``prep'' the system. The SDL does not merely document the domain. It actively drives the population and alignment of the repository catalog.
+
+\subsection{Runtime wiring}
+
+Once reconciliation is complete, \texttt{Configurator.load(...)} constructs the runtime GraphQL schema. It registers custom scalars such as \texttt{Long}, \texttt{DateTime} and \texttt{Bytes}, delegates repository-backed behavior to the runtime service layer, and then optionally allows additional operation wiring to be attached by the embedding application.
+
+The result is that one SDL file plays three roles at once:
+\begin{enumerate}
+\item it defines the repository-facing metadata model,
+\item it defines the GraphQL query and mutation surface,
+\item it defines how those two views are stitched together at runtime.
+\end{enumerate}
+
+\subsection{Worked example}
+
+The pattern becomes clearer with a very small example. A schema may define an attribute registry entry, a record type and a template type along the following lines:
+
+\begin{lstlisting}[style=GraphQL]
+enum DataTypes @datatypeRegistry {
+    STRING @datatype(id: 1)
+    RECORD @datatype(id: 99)
+}
+
+enum Attributes @attributeRegistry {
+    title @attribute(datatype: STRING, array: false, name: "dcterms:title")
+    personName @attribute(datatype: STRING, array: false, name: "example:personName")
+    person @attribute(datatype: RECORD, array: false, name: "example:person")
+}
+
+type Person @record(attribute: person) {
+    name: String @use(attribute: personName)
+}
+
+type ExampleUnit @template(name: ExampleUnit) {
+    title: String @use(attribute: title)
+    owner: Person @use(attribute: person)
+}
+\end{lstlisting}
+
+From this, the configuration layer can derive:
+\begin{itemize}
+\item datatype identities for \texttt{STRING} and \texttt{RECORD},
+\item catalog entries for \texttt{dcterms:title}, \texttt{example:personName} and \texttt{example:person},
+\item a record template for \texttt{Person},
+\item a unit template for \texttt{ExampleUnit}.
+\end{itemize}
+
+Once those catalog entries exist, a stored unit can refer to the repository attributes by id and datatype in the generic JSON persistence format described by the repository layer.
+
+\subsection{Observations}
+
+The GraphQL SDL approach is central to how IPTO avoids hard-coding domain-specific storage models. Instead of creating new database tables for each business object type, the system derives catalog and template metadata from SDL and stores actual data through the generic unit, attribute and vector structures described in the database chapter.
+
+That design also explains why the GraphQL configuration code is not just a thin schema parser. It is effectively a model compiler from SDL into repository metadata and runtime behavior.

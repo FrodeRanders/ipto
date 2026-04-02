@@ -1,0 +1,91 @@
+\section{Development Notes}
+\label{sec:DevelopmentNotes}
+
+This chapter summarizes the practical build, test and setup workflow that ties the different implementation areas together. It is intentionally operational. The subsystem chapters explain what the system is; this chapter explains how to develop or work with IPTO.
+
+\subsection{Repository layout}
+
+Development work is split across several implementation roots:
+\begin{description}
+\item[\texttt{implementations/java}] Reference implementation and GraphQL runtime.
+\item[\texttt{implementations/erlang}] OTP-based alternative implementation with PostgreSQL, Neo4j, GraphQL and HTTP support.
+\item[\texttt{implementations/rust}] Rust implementation with PostgreSQL and Neo4j backends plus a Python bridge via PyO3.
+\item[\texttt{apps/admin-web}] SvelteKit-based administration web client.
+\item[\texttt{shared/db}] Shared schema, procedures and setup scripts for PostgreSQL and DB2.
+\item[\texttt{doc/system}] The system manual itself.
+\end{description}
+
+\subsection{Java build and test workflow}
+
+The Java build is Maven-based and centered on the parent project under \texttt{implementations/java/pom.xml}. The most useful commands are:
+\begin{itemize}
+\item \shellcmd{mvn -f implementations/java/pom.xml -q test} for Java unit tests across modules,
+\item \shellcmd{mvn -f implementations/java/pom.xml -pl repo test} to focus on the repository module,
+\item \shellcmd{mvn -f implementations/java/pom.xml -pl graphql test} to focus on the GraphQL module,
+\item \shellcmd{mvn -f implementations/java/pom.xml -pl it verify} for integration tests.
+\end{itemize}
+
+The Java implementation expects a running database with schema and procedures already loaded when integration tests are executed.
+
+\subsection{Database provisioning}
+
+The shared database scripts under \texttt{shared/db/postgresql} and \texttt{shared/db/db2} are part of day-to-day development. In particular:
+\begin{itemize}
+\item \texttt{shared/db/postgresql/setup-for-test.py} provisions a local Docker-based PostgreSQL environment and loads schema, procedures and boot data,
+\item \texttt{shared/db/db2/setup-for-test.py} does the corresponding setup for DB2,
+\item \texttt{schema.sql}, \texttt{procedures.sql} and \texttt{boot.sql} define the persistent baseline used by multiple implementations.
+\end{itemize}
+
+These scripts are not merely test conveniences. They are the practical way to establish the canonical persistence environment used by Java integration tests and by backends in other language implementations.
+
+\subsection{Erlang workflow}
+
+The Erlang implementation uses \texttt{rebar3}. Useful commands include:
+\begin{itemize}
+\item \texttt{rebar3 compile},
+\item \texttt{rebar3 eunit},
+\item \texttt{rebar3 as graphql eunit} for GraphQL-enabled tests,
+\item \texttt{rebar3 as pg eunit} for PostgreSQL-backed integration tests when the required environment variables are set.
+\end{itemize}
+
+The Erlang implementation also supports runtime profiles for optional subsystems such as GraphQL and HTTP, along with release-oriented workflows including hot upgrade handling.
+
+\subsection{Rust and Python workflow}
+
+The Rust implementation is developed with both Cargo and Python tooling in mind. The local \texttt{Makefile} provides a compact workflow:
+\begin{itemize}
+\item \texttt{cargo test} for Rust-only tests,
+\item \texttt{make pg-up} and \texttt{make pg-test} for PostgreSQL-backed tests,
+\item \texttt{make neo4j-test} for Neo4j-backed tests,
+\item \texttt{maturin develop} for building the Python extension in development mode,
+\item \shellcmd{python3 -m pytest -q python_tests/test_ipto.py} for Python-facing tests of the PyO3 bridge.
+\end{itemize}
+
+This reflects the dual nature of the Rust implementation: it is both a Rust codebase and a Python-consumable package surface.
+
+\subsection{Admin web workflow}
+
+The administration web client under \texttt{apps/admin-web} is a SvelteKit application. The basic local workflow is:
+\begin{itemize}
+\item \texttt{npm install}
+\item \texttt{npm run dev}
+\item \texttt{npm run build}
+\end{itemize}
+
+It provides a minimal UI for administration, tree browsing and search. The build output can be packaged into the Quarkus application resources so the UI is served by the same HTTP server as the backend.
+
+\subsection{SDL-driven development}
+
+One recurring development pattern across implementations is SDL-first modeling. A GraphQL schema file is not just an API contract. In IPTO it also influences repository catalog setup. That means changes to SDL may require:
+\begin{itemize}
+\item validation of directives and type shapes,
+\item reconciliation against stored attributes, records and templates,
+\item database-backed tests to confirm the resulting catalog state,
+\item runtime checks in GraphQL-facing code.
+\end{itemize}
+
+For this reason, SDL evolution should be treated as a persistence-affecting change, not as a purely presentation-layer change.
+
+\subsection{Observations}
+
+The most important practical point is that IPTO is not developed as one isolated codebase. It is a coordinated system with a shared database model, a shared schema/configuration model, and several implementation surfaces. Good development practice therefore means verifying changes at the boundary they affect: database, catalog, SDL, runtime behavior, or language binding. The appendix in Section~\ref{sec:AppendixOperations} collects the most common commands and variables used in that work.

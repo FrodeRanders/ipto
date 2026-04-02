@@ -1,0 +1,99 @@
+\section{Erlang Implementation}
+\label{sec:ErlangImplementation}
+
+The repository also contains an Erlang implementation area under \texttt{implementations/erlang}. This is not just a placeholder. It is structured as an OTP application with repository, backend, GraphQL and HTTP modules. In the overall system structure it should still be understood as an alternative implementation surface rather than as the canonical definition of the data model. The canonical persistent model remains the database schema, and the canonical configuration model remains the GraphQL SDL and the repository catalog.
+
+\subsection{Overall structure}
+
+The Erlang implementation is organized around a layered module structure:
+\begin{description}
+\item[\texttt{ipto}] Public facade API. This module exposes the main repository-facing functions and wraps calls in timing collection.
+\item[\texttt{ipto\_repo}] Central orchestration layer. This module coordinates unit helpers, persistence dispatch, search, relation and association helpers, lock handling and SDL-based GraphQL setup.
+\item[\texttt{ipto\_backend}] Behaviour definition for persistence backends.
+\item[\texttt{ipto\_db}] Backend dispatch point selecting the active implementation from application configuration.
+\item[\texttt{ipto\_db\_memory}, \texttt{ipto\_db\_pg}, \texttt{ipto\_db\_neo4j}] Concrete backend implementations.
+\item[\texttt{ipto\_graphql} and related modules] GraphQL facade, SDL handling, resolver mapping and schema support.
+\item[\texttt{ipto\_http} and related modules] HTTP server and request handlers for GraphQL and health endpoints.
+\end{description}
+
+This is close in spirit to the Java split between facade, repository, backend-specific search/database logic and GraphQL runtime, but expressed in OTP style.
+
+\subsection{Facade and orchestration}
+
+The public entry module \texttt{ipto} is intentionally thin. It presents a surface close to the Java API and delegates actual work to \texttt{ipto\_repo}. That means callers can work with functions such as:
+\begin{itemize}
+\item unit creation, retrieval and storage,
+\item search,
+\item relation and association management,
+\item lock management,
+\item status transitions,
+\item attribute and tenant lookup,
+\item GraphQL SDL inspection and configuration.
+\end{itemize}
+
+The actual coordination logic lives in \texttt{ipto\_repo}. This module is the Erlang equivalent of a central repository service. It creates units, routes persistence through \texttt{ipto\_db}, delegates relation and association work to dedicated helper modules, and applies SDL catalogs through the GraphQL setup path.
+
+Search in the Erlang implementation includes parser support and symbolic query handling, but the textual-query surface is currently simpler than the Java implementation. It should be viewed as a practical operational query frontend rather than as full grammar-level parity with Java.
+
+\subsection{Backend contract}
+
+The persistence layer is explicitly abstracted behind the \texttt{ipto\_backend} behaviour. The documented backend contract includes callbacks for:
+\begin{itemize}
+\item unit retrieval and existence checks,
+\item unit storage,
+\item search,
+\item relation and association mutation and lookup,
+\item lock handling,
+\item status updates,
+\item attribute and tenant metadata lookup,
+\item persistence of record and unit template metadata.
+\end{itemize}
+
+This is an architectural choice. Instead of scattering backend checks throughout the code, Erlang routes persistence through one behaviour-driven boundary and lets \texttt{ipto\_db} dispatch to the selected backend implementation.
+
+\subsection{Backend implementations}
+
+The codebase currently defines three backend modes:
+\begin{description}
+\item[\texttt{memory}] In-memory behavior for tests and lightweight runs.
+\item[\texttt{pg}] PostgreSQL-backed behavior.
+\item[\texttt{neo4j}] Neo4j-backed behavior.
+\end{description}
+
+PostgreSQL support prefers stored procedures for unit write/read and falls back to direct SQL if procedure calls fail. The Neo4j module implements the full callback surface of the backend contract.
+
+This makes the Erlang implementation notable in one respect: compared to the Java implementation, which targets relational backends directly, the Erlang code is structured around backend plurality as a first-class concern.
+
+\subsection{GraphQL and HTTP surfaces}
+
+The Erlang implementation includes its own GraphQL subsystem:
+\begin{description}
+\item[\texttt{ipto\_graphql}] Public GraphQL facade.
+\item[\texttt{ipto\_graphql\_adapter}] Adapter layer for \texttt{graphql\_erl}.
+\item[\texttt{ipto\_graphql\_sdl}] SDL inspection and validation support.
+\item[\texttt{ipto\_graphql\_schema}] Schema definition for repository primitives.
+\item[\texttt{ipto\_graphql\_resolvers} and resource modules] Resolver and operation mapping.
+\end{description}
+
+It also includes an HTTP layer with handlers for \texttt{/graphql} and \texttt{/health}, managed through supervised OTP components. This gives the Erlang implementation a self-hosted service shape, not just an embedded library shape.
+
+\subsection{Testing and completeness}
+
+The Erlang tree contains both ordinary EUnit tests and backend-specific integration tests, including:
+\begin{itemize}
+\item smoke tests,
+\item search parser tests,
+\item PostgreSQL integration tests,
+\item Neo4j integration tests,
+\item backend parity tests,
+\item GraphQL setup and execution tests,
+\item HTTP tests.
+\end{itemize}
+
+The implementation is still evolving, especially with respect to parity with Java search semantics and full persistence behavior. 
+
+\subsection{Observations}
+
+Architecturally, the Erlang code is valuable for two reasons.
+
+First, it makes the repository and GraphQL boundaries explicit in a way that is easy to compare with the Java and Rust implementations. Second, it treats backend substitution as a core design concern through the behaviour contract, which is useful when documenting the system as a whole.

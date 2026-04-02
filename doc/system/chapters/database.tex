@@ -1,0 +1,177 @@
+\section{Database}
+\label{sec:Database}
+
+This section describes the persistence model that the rest of the system is built around. The database is not just a passive storage layer. It holds the canonical catalog of tenants, units, versions, attributes, templates, relations and associations, and it is designed so that the higher-level APIs can ingest and retrieve structured metadata without hard-coding a domain-specific table layout for each information type.
+
+\subsection{Overview}
+
+At the database level, \emph{units} are the primary persistent entities. A unit belongs to a tenant, has a stable identity, carries status and audit information, and may exist in several versions over time. Each version is described by a set of attributes. Attribute definitions are global and live in a catalog, while actual attribute occurrences are stored per unit version.
+
+The schema is implemented twice: once for PostgreSQL in \texttt{shared/db/postgresql} and once for DB2 in \texttt{shared/db/db2}. The two implementations share the same logical model and table groups, but differ where the database products require different data types, function mechanisms or deployment steps.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.92\linewidth]{images/unit-kernel-version-attribute-value.png}
+    \captionof{figure}{Core persistent concepts: a unit kernel, its versions, the attributes used in a version, and the corresponding value instances}
+    \label{fig:UnitKernelVersionAttributeValue}
+\end{figure}
+\FloatBarrier
+
+\subsection{Unit identity and versioning}
+
+The central unit lifecycle is represented by two tables:
+\begin{description}
+\item[\texttt{repo\_unit\_kernel}] Holds the stable identity of a unit. The row contains the tenant id, the unit id, a correlation id, the current status, the latest version number and the original creation timestamp.
+\item[\texttt{repo\_unit\_version}] Holds version-specific state for the same unit. Each row is keyed by \texttt{(tenantid, unitid, unitver)} and contains a version-local name and modification timestamp.
+\end{description}
+
+This split is important. It allows the system to keep a durable identity and current status in the kernel while storing historical changes in the version table. The latest version is found by following \texttt{repo\_unit\_kernel.lastver} to the matching row in \texttt{repo\_unit\_version}. Java repository queries use this directly when loading either a specific version or the latest one.
+
+Tenant separation is explicit throughout the schema. Most tables that store unit-related information include \texttt{tenantid} as part of the key. This keeps multi-tenant isolation visible and queryable in the relational model rather than leaving it implicit in application code.
+
+\subsection{Attribute catalog}
+
+The database distinguishes between \emph{what an attribute means} and \emph{where an attribute value occurs}.
+
+The catalog side consists primarily of the following tables:
+\begin{description}
+\item[\texttt{repo\_namespace}] Maps namespace aliases to full namespace URIs. The boot script preloads commonly used vocabularies such as Dublin Core, FOAF, DCAT and related namespaces.
+\item[\texttt{repo\_attribute}] Stores one row per known attribute. The row contains a qualified name, a local attribute name, an optional alias, the logical attribute type and whether the attribute is scalar or vector-valued.
+\item[\texttt{repo\_attribute\_description}] Stores human-readable descriptions per language.
+\end{description}
+
+The attribute catalog is intentionally global. Units do not invent their own attribute definitions when data is written. Instead, repository code and the GraphQL-based configuration layer reconcile the incoming schema description against this catalog and populate missing definitions before units are ingested.
+
+\subsection{Attribute occurrences and version ranges}
+
+Actual use of an attribute in a unit version is represented by \texttt{repo\_attribute\_value}. This table is the bridge between the stable catalog and the typed value tables. Each row records:
+\begin{itemize}
+\item which tenant and unit the attribute belongs to,
+\item which catalog attribute is used,
+\item a generated \texttt{valueid},
+\item the version interval where that value is valid, expressed as \texttt{unitverfrom} and \texttt{unitverto}.
+\end{itemize}
+
+The version interval is one of the key design decisions in the schema. A new version does not always require duplicating every value. In the PostgreSQL ingestion logic, \texttt{ingest\_new\_version\_json} delegates to \texttt{repo\_ingest\_attributes\_delta}. If an attribute occurrence is marked as unmodified, the existing value range is simply extended to cover the new version. If it is modified, a new \texttt{valueid} is created and fresh vector rows are written.
+
+This gives the system snapshot semantics for units while still allowing physical reuse of unchanged values across successive versions.
+
+\subsection{Typed vector storage}
+
+The actual payload values are not stored directly in \texttt{repo\_attribute\_value}. Instead, each attribute occurrence points to one of several vector tables depending on datatype:
+\begin{center}
+\begin{tabular}{|p{.34\textwidth}|p{.56\textwidth}|}
+\hline
+\textbf{Table} & \textbf{Stored values} \\
+\hline
+\texttt{repo\_string\_vector} & text values \\
+\hline
+\texttt{repo\_time\_vector} & timestamps \\
+\hline
+\texttt{repo\_integer\_vector} & integer values \\
+\hline
+\texttt{repo\_long\_vector} & 64-bit integer values \\
+\hline
+\texttt{repo\_double\_vector} & floating point values \\
+\hline
+\texttt{repo\_boolean\_vector} & boolean values \\
+\hline
+\texttt{repo\_data\_vector} & binary payloads \\
+\hline
+\texttt{repo\_record\_vector} & references from a record value to nested child values \\
+\hline
+\end{tabular}
+\end{center}
+
+Each vector table uses \texttt{(valueid, idx)} as primary key. The \texttt{idx} column preserves order and also allows the same logical attribute to carry multiple values. In other words, arrays are a first-class part of the storage model rather than an application-side convention.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.75\linewidth]{images/attribute-value.png}
+    \captionof{figure}{A single attribute occurrence may hold a vector of ordered values of one datatype}
+    \label{fig:AttributeValueVector}
+\end{figure}
+\FloatBarrier
+
+The special case is \texttt{repo\_record\_vector}. It does not store scalar payload data. Instead, it stores references to other attribute values, making nested record structures representable without abandoning the relational model. PostgreSQL uses recursive PL/pgSQL functions to walk nested JSON and populate these links. DB2 exposes equivalent ingest and extract operations through Java-backed stored procedures.
+
+\subsection{Templates and record structure}
+
+Two metadata table groups describe reusable structural shapes:
+\begin{description}
+\item[\texttt{repo\_unit\_template} and \texttt{repo\_unit\_template\_elements}] Describe the ordered set of attributes that make up a top-level unit template.
+\item[\texttt{repo\_record\_template} and \texttt{repo\_record\_template\_elements}] Describe nested record types and the ordered attributes that belong to each record.
+\end{description}
+
+These tables are not populated by ad hoc SQL in day-to-day use. They are synthesized from the GraphQL SDL configuration described later in this manual. The configuration layer reads directives such as \texttt{@template}, \texttt{@record} and \texttt{@use}, compares the SDL view with the catalog already present in the repository, and inserts or reconciles the corresponding catalog and template rows.
+
+\subsection{Relations, external associations, locks and log}
+
+Besides metadata content itself, the schema contains supporting tables for operational behavior:
+\begin{description}
+\item[\texttt{repo\_internal\_relation}] Stores typed relations between two units in the repository.
+\item[\texttt{repo\_external\_assoc}] Stores typed associations from a unit to an identifier in an external system.
+\item[\texttt{repo\_lock}] Stores repository locks with a purpose, a lock type and an optional expiry timestamp.
+\item[\texttt{repo\_log}] Stores audit-like event information per unit version.
+\end{description}
+
+These tables keep relationship management and coordination close to the unit model. They are also referenced by the Java repository layer through predefined SQL statements, for example when loading log entries, counting relations or deleting a unit and relying on cascading cleanup.
+
+\subsection{Bootstrap and deployment}
+
+Both database variants are provisioned from a small set of scripts:
+\begin{description}
+\item[\texttt{schema.sql}] Creates the schema, tables, constraints and indexes.
+\item[\texttt{procedures.sql}] Installs the ingest and extract routines.
+\item[\texttt{boot.sql}] Loads initial tenants, root units and namespace mappings.
+\end{description}
+
+The PostgreSQL test setup script executes \texttt{schema.sql}, \texttt{procedures.sql} and \texttt{boot.sql} inside a Docker-hosted PostgreSQL instance. The default configuration used by the Java repository points at \texttt{jdbc:postgresql://localhost:5432/repo}.
+
+The DB2 setup follows the same logical sequence, but with one additional deployment step. Before the DB2 procedures are created, \texttt{load-udf.sql} installs the Java archive that implements the stored procedures. This is why the DB2 procedure definitions refer to Java entry points such as \literalbreak{org.gautelis.ipto.repo.udpf.Routines.ingestNewUnit}.
+
+\subsection{Ingestion and extraction flow}
+
+On PostgreSQL, unit persistence is intentionally centered on database procedures rather than distributing all persistence logic into application code. The main procedure pair is:
+\begin{description}
+\item[\texttt{ingest\_new\_unit\_json}] Creates a new kernel row, creates the first version row, and recursively ingests the attribute tree.
+\item[\texttt{ingest\_new\_version\_json}] Advances the kernel version, inserts the new version row, and applies delta-based attribute ingestion.
+\end{description}
+
+The recursive work is performed by \texttt{repo\_ingest\_attributes} and \texttt{repo\_ingest\_attributes\_delta}. These routines inspect each attribute occurrence, create a row in \texttt{repo\_attribute\_value}, route primitive payloads into the matching vector table, and create \texttt{repo\_record\_vector} links for nested records.
+
+The inverse operation is exposed through \texttt{extract\_unit\_json}. This procedure reconstructs a JSON representation of a unit by combining:
+\begin{itemize}
+\item kernel and version metadata,
+\item the active attribute occurrences for the requested version,
+\item the corresponding primitive vector content or nested record structure.
+\end{itemize}
+
+This means the relational schema is not only the persistent format. It is also the source from which the external JSON unit representation can be recreated.
+
+\subsection{A typical persistence round-trip}
+
+The typical storage round-trip in the current design looks like this:
+\begin{enumerate}
+\item a runtime constructs or receives a unit as JSON,
+\item the unit header is written into \texttt{repo\_unit\_kernel} and \texttt{repo\_unit\_version},
+\item each attribute occurrence becomes a \texttt{repo\_attribute\_value} row,
+\item primitive values are placed in the matching vector table,
+\item record-valued attributes recursively create child attribute values and parent-child links in \texttt{repo\_record\_vector},
+\item later retrieval reconstructs the unit by walking the same structures in reverse.
+\end{enumerate}
+
+This flow explains why the schema can remain generic while still supporting rich nested metadata structures. The database stores normalized relational state, while the procedures provide the translation boundary between that state and the JSON-shaped unit payloads used by higher layers.
+
+\subsection{Observations}
+
+The database design is deliberately hybrid:
+\begin{itemize}
+\item relational tables are used for identity, integrity, indexing and joins,
+\item vector tables provide ordered multi-value support for primitive datatypes,
+\item record vectors allow nested structures without creating one table per business object,
+\item version ranges make unchanged content reusable across successive unit versions,
+\item the catalog and template tables make the model configurable from external schema descriptions rather than fixed in compiled code.
+\end{itemize}
+
+That combination is what makes the rest of the system possible: GraphQL SDL can define shapes, the Java repository can persist and search them, and the alternative runtime implementations can target the same underlying conceptual model.

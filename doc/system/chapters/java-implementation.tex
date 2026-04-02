@@ -1,0 +1,271 @@
+\section{Java Implementation}
+\label{sec:JavaImplementation}
+
+The Java implementation is currently the primary and most complete implementation of IPTO. It contains the repository abstraction, the SQL-backed persistence layer, the GraphQL configuration and runtime logic, and the integration tests that exercise the end-to-end behavior against the database.
+
+\subsection{Module structure}
+
+The Java code is split across several Maven modules under \texttt{implementations/java}:
+\begin{description}
+\item[\texttt{repo}] The core repository implementation, including the model, persistence code, search query generation and database interaction.
+\item[\texttt{graphql}] The GraphQL configuration and runtime layer.
+\item[\texttt{it}] Integration tests that exercise the repository and GraphQL layers against a real database.
+\item[\texttt{quarkus-app}] An application packaging of the runtime with a concrete GraphQL schema resource.
+\end{description}
+
+\subsection{Bootstrapping and configuration}
+
+The repository is normally bootstrapped through \texttt{RepositoryFactory}. This factory loads:
+\begin{itemize}
+\item SQL statements from \texttt{sql-statements.xml},
+\item database configuration from either \texttt{configuration\_pg.xml} or \texttt{configuration\_db2.xml},
+\item optional action listeners via the plugin mechanism,
+\item the configured database adapter for search and backend-specific SQL generation.
+\end{itemize}
+
+Database access is pooled through HikariCP, and the factory applies prepared-statement cache settings suitable for high call rates. The database provider defaults to PostgreSQL unless the environment variable \texttt{IPTO\_DB\_PROVIDER} selects DB2.
+
+\subsection{Repository layer}
+
+The central class in the Java implementation is \texttt{org.gautelis.ipto.repo.model.Repository}. It is a high-level service that owns the main repository use cases rather than exposing raw SQL or raw table access.
+
+At a high level, the repository layer is responsible for:
+\begin{itemize}
+\item creating units and assigning correlation ids,
+\item storing and retrieving units,
+\item managing status transitions,
+\item handling locks,
+\item handling relations and external associations,
+\item exposing catalog lookup operations,
+\item executing searches through the configured database adapter,
+\item giving controlled access to raw JDBC connections when needed.
+\end{itemize}
+
+The repository is therefore the main Java-side abstraction boundary between the rest of the application and the persistence model described in the database chapter.
+
+\subsection{SQL statement management}
+
+Not all SQL is embedded directly in Java classes. A substantial part of the CRUD-style SQL is stored in \filepath{implementations/java/repo/src/main/resources/org/gautelis/ipto/repo/sql-statements.xml}. These statements cover, among other things:
+\begin{itemize}
+\item unit lookup and deletion,
+\item attribute creation and inspection,
+\item lock operations,
+\item log retrieval,
+\item internal relation and external association access.
+\end{itemize}
+
+This provides a stable named-statement layer for the repository implementation. By contrast, the more dynamic search path is synthesized through the database adapter mechanism.
+
+\subsection{Search expression model}
+
+The Java implementation contains a dedicated search subsystem under \literalbreak{org.gautelis.ipto.repo.search.query}. Search requests are expressed as typed search trees using the sealed \texttt{SearchExpression} hierarchy rather than concatenating SQL fragments by hand.
+
+The shape of the tree is deliberately small:
+\begin{description}
+\item[\texttt{LeafExpression}] A single search predicate backed by one \texttt{SearchItem}.
+\item[\texttt{AndExpression} and \texttt{OrExpression}] Binary nodes that combine two child expressions.
+\item[\texttt{NotExpression}] Unary negation around another expression.
+\end{description}
+
+At the leaves, the actual domain constraint is carried by typed \texttt{SearchItem} implementations. These distinguish between:
+\begin{itemize}
+\item unit-level predicates such as tenant, status, unit name and timestamps,
+\item attribute-level predicates such as string, time, integer, long, double or boolean attribute values,
+\item relation and association predicates.
+\end{itemize}
+
+This means the search tree is not just a syntactic structure. Each leaf already knows whether it constrains unit-kernel columns, version fields, attribute values, relations or associations, and it also carries the operator and typed value involved in that predicate.
+
+\subsection{Building search trees}
+
+Search expressions are normally assembled through \texttt{QueryBuilder}. That helper exposes methods such as \texttt{assembleAnd(...)}, \texttt{assembleOr(...)}, \texttt{assembleAndNot(...)} and a set of typed constraint builders such as \texttt{constrainToSpecificStatus(...)}, \texttt{constrainToSpecificTenant(...)} and \texttt{constrainOnValueEQ(...)}.
+
+Conceptually, a search can therefore be built as an abstract syntax tree:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+SearchExpression expr =
+    QueryBuilder.assembleAnd(
+        QueryBuilder.constrainToSpecificTenant(tenantId),
+        QueryBuilder.assembleAnd(
+            QueryBuilder.constrainToSpecificStatus(Unit.Status.EFFECTIVE),
+            StringAttributeSearchItem.constrainOnEQ("dcterms:title", "Example")
+        )
+    );
+\end{lstlisting}
+
+The important point is that this object tree remains backend-neutral. It captures repository search intent in a typed form before any SQL dialect decisions are made.
+
+\subsection{Translation into SQL}
+
+The database adapter translates that search tree into backend-specific SQL. The common logic lives in \texttt{CommonAdapter}, while concrete backends such as \texttt{PostgresAdapter} and \texttt{DB2Adapter} provide database-specific behavior.
+
+\texttt{CommonAdapter} first walks the tree and separates leaf predicates into two broad groups:
+\begin{itemize}
+\item unit constraints, which can be evaluated directly against unit kernel/version columns,
+\item non-unit constraints, such as attribute, relation and association predicates, which are given generated labels such as \texttt{c1}, \texttt{c2}, \texttt{c3}.
+\end{itemize}
+
+That separation matters because attribute-like predicates are not compiled into one large flat \texttt{WHERE} clause. Instead, each labeled leaf can produce its own SQL fragment, and the surrounding boolean structure of the AST is preserved by combining those fragments with SQL set operations.
+
+For example, in set-operation mode:
+\begin{itemize}
+\item \texttt{AND} between two labeled leaves becomes \texttt{INTERSECT},
+\item \texttt{OR} becomes \texttt{UNION},
+\item \texttt{NOT} wraps the generated subexpression as a negated set clause.
+\end{itemize}
+
+Each \texttt{LeafExpression} is itself responsible for producing the appropriate SQL fragment for its search item and search strategy. For attribute predicates, that means joining \texttt{repo\_attribute\_value} to the correct typed vector table, resolving the attribute name to an attribute id, applying the operator to the typed value column, and constraining the result to the effective unit-version interval. For unit predicates, the leaf instead emits a direct comparison against the corresponding unit or version column.
+
+The result is that Java search compilation is tree-driven rather than string-driven. The adapter does not try to parse SQL-like text. It compiles an already typed search AST into executable SQL while preserving the boolean structure of the original query.
+
+\subsection{Textual query representation}
+
+The Java search subsystem also supports a textual query form. This is useful when search criteria originate from user-facing filters, saved searches or API input rather than from direct Java construction through \texttt{QueryBuilder}. The textual form is parsed by \texttt{SearchExpressionQueryParser} and translated into the same \texttt{SearchExpression} tree described above.
+
+This means there is only one real search model in the implementation. Programmatic construction and textual parsing both converge on the same AST, and the adapter layer compiles both through the same SQL-generation path.
+
+The query language is intentionally compact:
+\begin{itemize}
+\item predicates have the form \texttt{field operator value},
+\item boolean composition uses \texttt{AND}, \texttt{OR} and \texttt{NOT},
+\item parentheses can be used for grouping,
+\item supported comparison operators include \texttt{=}, \texttt{==}, \texttt{!=}, \texttt{<>}, \texttt{<}, \texttt{<=}, \texttt{>} , \texttt{>=} and \texttt{LIKE},
+\item values can be strings, numbers, booleans or identifiers.
+\end{itemize}
+
+Operator precedence follows the parser grammar:
+\begin{itemize}
+\item \texttt{NOT} binds most tightly,
+\item \texttt{AND} binds more tightly than \texttt{OR},
+\item parentheses override the default grouping.
+\end{itemize}
+
+A representative query can therefore look like:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+tenantid = 17 AND status >= EFFECTIVE
+AND (dcterms:title LIKE "example*" OR unitname = "example-unit")
+\end{lstlisting}
+
+\subsection{Field resolution and typed leaves}
+
+When a textual query is parsed, each predicate field is resolved into one of the same typed search items used by programmatic search construction.
+
+The parser first checks whether the field refers to one of the built-in unit fields, such as:
+\begin{itemize}
+\item correlation id,
+\item unit name,
+\item tenant id,
+\item status,
+\item created timestamp.
+\end{itemize}
+
+If the field is not a unit field, the parser resolves it as an attribute name or alias through the repository-backed attribute resolver. That resolution step yields both the canonical attribute name and its datatype, which allows the parser to build the correct \texttt{AttributeSearchItem} variant. A textual predicate on a time-valued attribute therefore becomes a time search leaf; a predicate on an integer-valued attribute becomes an integer search leaf, and so on.
+
+The parser also recognizes relation and association predicates through qualified field prefixes such as \texttt{relation}, \texttt{relations}, \texttt{rel}, \texttt{association}, \texttt{associations} and \texttt{assoc}. Those predicates are mapped directly to the corresponding left/right relation or association search items. For those cases, only equality is accepted, which matches the underlying repository semantics.
+
+\subsection{Left and right relation semantics}
+
+The terms \emph{left} and \emph{right} are directional names taken from the binary relation model. In practice they should be read from the point of view of the unit being searched for.
+
+For internal relations, IPTO stores one unit on the left side of the relation row and one unit on the right side. A left-relation search asks for units that stand on the left side when the right-side unit is already known. A right-relation search asks for units that stand on the right side when the left-side unit is already known.
+
+For the built-in \texttt{PARENT\_CHILD\_RELATION}, that gives a natural hierarchy interpretation:
+\begin{itemize}
+\item a left-relation query retrieves children of a known parent,
+\item a right-relation query retrieves parents of a known child.
+\end{itemize}
+
+That is why left relations are a natural fit for optional directory-like hierarchies. If one unit represents a folder or container, and the contained units are related to it through \texttt{PARENT\_CHILD\_RELATION}, then a left-side relation query can enumerate the immediate children of that container. Repeating that step level by level yields a tenant-scoped browse tree without introducing a separate directory table into the schema.
+
+The important design point is that this hierarchy is optional and repository-level rather than structural in the storage kernel. Units do not have to belong to a tree. A tenant may use parent-child relations to maintain one or more browsing hierarchies, while other units may remain outside any hierarchy at all.
+
+Associations follow the same directional naming, but they point from a unit to an external identifier string rather than to another unit. A right association expresses that the current unit points to some external object. A left association finds units that are pointed to by a given external identifier. In other words:
+\begin{itemize}
+\item relations connect units to units inside the repository,
+\item associations connect units to references outside the repository.
+\end{itemize}
+
+This shared left/right convention keeps the parser and search model uniform. Once a field has been resolved as relation- or association-based, the resulting search leaf still fits into the same \texttt{SearchExpression} tree and is compiled by the same adapter pipeline as the other predicates.
+
+One subtle but useful behavior is that string equality can be normalized into \texttt{LIKE} when the parsed string value carries pattern syntax. This allows the textual form to stay compact while still producing the correct operator at the AST level.
+
+\subsection{Parsing pipeline}
+
+The textual form is parsed with an ANTLR grammar under \filepath{implementations/java/repo/src/main/antlr4/org/gautelis/ipto/repo/search/query/SearchExpression.g4}. The pipeline is:
+\begin{enumerate}
+\item tokenize and parse the query string,
+\item build a boolean expression tree with the grammar visitor,
+\item resolve fields into unit, attribute, relation or association search items,
+\item convert values into typed Java representations such as \texttt{Instant}, integer, long, double, boolean or string,
+\item return a fully typed \texttt{SearchExpression} ready to be wrapped in \texttt{UnitSearch} and compiled by the selected adapter.
+\end{enumerate}
+
+So the textual query language is not a separate execution path. It is an alternate frontend for creating the same internal search AST that Java code can also construct directly.
+
+Among the current implementations, Java has the richest textual-query frontend. The Erlang and Rust implementations also support textual or symbolic search forms, but those are currently simpler and should not be assumed to match the Java parser feature for feature.
+
+This split is important for the overall design:
+\begin{itemize}
+\item repository code can reason in terms of unit, status, time, relation and attribute constraints,
+\item search optimization and SQL strategy selection can be centralized in the adapter layer,
+\item PostgreSQL and DB2 differences can be isolated without duplicating the whole repository API.
+\end{itemize}
+
+\subsection{GraphQL configuration and runtime}
+
+The Java GraphQL module is the other major part of the implementation. It has two responsibilities.
+
+The first is configuration. As described in Chapter~\ref{sec:GraphqlSDL}, the \texttt{Configurator} parses SDL, derives shapes for datatypes, attributes, records, templates and operations, reconciles those shapes with the repository catalog, and then builds the executable GraphQL schema.
+
+The second is runtime execution. The central runtime class is \texttt{RuntimeService}. It keeps catalog metadata indexed in forms that are efficient for execution, wires GraphQL resolvers into the runtime, validates and stores raw units or domain payloads, loads units and payloads back from the repository, and delegates search and unit operations to specialized runtime services.
+
+In practice, the Java GraphQL runtime sits directly on top of the repository layer. It does not bypass it. That keeps GraphQL behavior aligned with the same unit lifecycle, search semantics and catalog model used elsewhere in the Java implementation.
+
+\subsection{A typical Java-side flow}
+
+The most common end-to-end Java flow is conceptually straightforward:
+\begin{enumerate}
+\item obtain a repository instance from \texttt{RepositoryFactory},
+\item construct or load a unit,
+\item store it through the repository layer,
+\item search or retrieve it again through repository or GraphQL runtime services.
+\end{enumerate}
+
+When a unit is stored from JSON, the repository reads the incoming JSON tree, updates status and unit name when applicable, pushes attributes into the unit model, and then persists the unit through the underlying storage path. When a search is executed, the repository builds a \texttt{UnitSearch} request around a \texttt{SearchExpression}, delegates SQL generation and execution to the configured database adapter, and then resurrects matching units through the unit factory and cache layer.
+
+So although the Java API surface looks object-oriented, the actual execution path is layered:
+\begin{description}
+\item[Repository API] Owns unit-oriented behavior.
+\item[Search adapter] Owns database-specific SQL for dynamic search.
+\item[Unit factory and cache] Own reconstruction and reuse of persisted units.
+\item[Database procedures and schema] Own the durable representation.
+\end{description}
+
+That layering is one of the main reasons the Java implementation serves well as the reference implementation: it makes the transition between high-level repository semantics and low-level persistent representation explicit.
+
+\subsection{Testing}
+
+Testing is split between unit tests in the Java modules and integration tests in \texttt{implementations/java/it}. The integration tests use real schema resources and real database-backed repository/GraphQL setup, which is important because much of IPTO's behavior emerges from the interaction between:
+\begin{itemize}
+\item the relational schema,
+\item the repository layer,
+\item the GraphQL SDL configuration,
+\item the runtime wiring.
+\end{itemize}
+
+\subsection{Observations}
+
+The Java implementation is the reference implementation of IPTO today. It is where the repository semantics, catalog reconciliation behavior, GraphQL runtime wiring and SQL-backed search model are most fully expressed.
+
+That also means the other implementation efforts are best documented relative to this one: either as parity-oriented ports, or as alternative runtime surfaces built on the same conceptual model.

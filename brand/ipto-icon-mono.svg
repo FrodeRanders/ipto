@@ -1,0 +1,16 @@
+<!-- Shared IPTO icon -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="IPTO">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M32 4 54 16v32L32 60 10 48V16Z" stroke-width="2.5"/>
+
+    <path d="M18 25h28" stroke-width="2"/>
+    <path d="M18 31h28" stroke-width="2" opacity="0.75"/>
+    <path d="M18 37h28" stroke-width="2" opacity="0.5"/>
+
+    <path d="M24 42 32 34 40 42" stroke-width="3"/>
+
+    <circle cx="24" cy="42" r="3.2" stroke-width="2"/>
+    <circle cx="32" cy="34" r="3.2" stroke-width="2"/>
+    <circle cx="40" cy="42" r="3.2" stroke-width="2"/>
+  </g>
+</svg>

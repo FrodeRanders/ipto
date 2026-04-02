@@ -1,0 +1,72 @@
+\section{System Overview}
+\label{sec:SystemOverview}
+
+At a high level, IPTO can be understood as a layered system with three centers:
+\begin{itemize}
+\item a persistent catalog and storage model in the database,
+\item a schema/configuration layer expressed in GraphQL SDL,
+\item one or more runtime implementations that expose repository and GraphQL functionality.
+\end{itemize}
+
+The database and the SDL layer are the shared conceptual backbone. The language-specific implementations differ in style and runtime environment, but they all relate back to those shared definitions.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=.78\linewidth]{images/system_architecture_overview.jpg}
+    \captionof{figure}{High-level view of the layered architecture: clients, API layer, core repository logic, service logic and data layer}
+    \label{fig:SystemArchitectureOverview}
+\end{figure}
+\FloatBarrier
+
+\subsection{Shared architectural ideas}
+
+Several design ideas recur across the repository:
+\begin{description}
+\item[Units as the primary entity] Data is stored as units that belong to tenants and evolve through versions.
+\item[Attributes as catalogued metadata] Units are described through attributes defined in a shared catalog rather than through bespoke tables per business object type.
+\item[Templates and records as shapes] Higher-level structures are described through templates and nested records rather than being hard-wired into the storage schema.
+\item[Backend separation] Repository operations are conceptually separated from backend-specific storage details, even if each implementation realizes that separation differently.
+\end{description}
+
+\subsection{Database as the canonical persistent model}
+
+The relational schema is the canonical persistent representation of IPTO concepts. It defines:
+\begin{itemize}
+\item tenants, units and versions,
+\item the attribute catalog,
+\item typed value vectors,
+\item record and template metadata,
+\item relations, associations, locks and log entries.
+\end{itemize}
+
+This is why the database chapter, Section~\ref{sec:Database}, comes early in the manual. The runtime layers make more sense once the storage model is understood.
+
+\subsection{GraphQL SDL as configuration and runtime contract}
+
+GraphQL SDL has a dual role in IPTO. It defines an API surface, but it also defines repository-facing metadata such as datatypes, attributes, records and templates. In other words, SDL is not just documentation for queries and mutations. It is also part of how the system is configured and aligned with the persistent catalog.
+
+That dual role explains why the GraphQL SDL chapter, Section~\ref{sec:GraphqlSDL}, also appears early. It is a shared architectural concern, not merely a feature of one runtime.
+
+\subsection{Implementation surfaces}
+
+The current implementations occupy different roles:
+\begin{description}
+\item[Java] The most complete implementation and the current reference point for repository semantics, catalog reconciliation and GraphQL runtime behavior. See Section~\ref{sec:JavaImplementation}.
+\item[Erlang] An OTP-oriented implementation with explicit backend abstraction, GraphQL support and HTTP service support. See Section~\ref{sec:ErlangImplementation}.
+\item[Rust plus Python] A Rust implementation that also exposes a Python-facing API through PyO3 and \texttt{maturin}. See Section~\ref{sec:RustPythonImplementation}.
+\item[Admin web] A SvelteKit-based administration client for schema administration, tree browsing and search. See Section~\ref{sec:AdminWeb}.
+\end{description}
+
+These implementations are not identical, and full feature parity should not be assumed. Still, they are all working against the same broader conceptual system.
+
+\subsection{How to read the rest of the manual}
+
+The remainder of the document follows the system from shared foundation to concrete implementation:
+\begin{enumerate}
+\item the database chapter explains the persistent model,
+\item the GraphQL SDL chapter explains how schema definitions are interpreted and applied,
+\item the implementation chapters describe how the different runtimes realize those concepts,
+\item the development chapter explains how the repository is built, tested and evolved in practice, with the appendix collecting the most commonly used commands and variables.
+\end{enumerate}
+
+This order is deliberate. In IPTO, storage and configuration are shared concepts, while the language-specific runtimes are realizations of those concepts.

@@ -15,3 +15,8 @@ buildNumber.properties
 *.iml
 
 .venv/
+
+*.aux
+*.out
+*.synctex.gz
+*.toc

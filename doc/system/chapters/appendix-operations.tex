@@ -1,0 +1,116 @@
+\section{Appendix: Key Commands and Environment Variables}
+\label{sec:AppendixOperations}
+
+This appendix gathers the most frequently used commands and configuration variables mentioned elsewhere in the manual.
+
+\subsection{Core commands}
+
+\begin{center}
+\begin{tabular}{|p{.28\textwidth}|p{.62\textwidth}|}
+\hline
+\textbf{Area} & \textbf{Typical command} \\
+\hline
+Java unit tests & \shellcmd{mvn -f implementations/java/pom.xml -q test} \\
+\hline
+Java integration tests & \shellcmd{mvn -f implementations/java/pom.xml -pl it verify} \\
+\hline
+PostgreSQL test DB setup & \shellcmd{python3 shared/db/postgresql/setup-for-test.py} \\
+\hline
+DB2 test DB setup & \shellcmd{python3 shared/db/db2/setup-for-test.py} \\
+\hline
+Erlang compile & \texttt{rebar3 compile} \\
+\hline
+Erlang tests & \texttt{rebar3 eunit} \\
+\hline
+Rust tests & \texttt{cargo test} \\
+\hline
+Rust Python extension & \texttt{maturin develop} \\
+\hline
+Rust Python tests & \shellcmd{python3 -m pytest -q python_tests/test_ipto.py} \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Important PostgreSQL variables}
+
+The PostgreSQL-backed implementations reuse a common naming scheme for local development:
+\begin{itemize}
+\item \texttt{IPTO\_PG\_HOST}
+\item \texttt{IPTO\_PG\_PORT}
+\item \texttt{IPTO\_PG\_USER}
+\item \texttt{IPTO\_PG\_PASSWORD}
+\item \texttt{IPTO\_PG\_DATABASE}
+\end{itemize}
+
+In Java, the default JDBC configuration is instead read from \texttt{configuration\_pg.xml}, but the practical target is the same local PostgreSQL instance used by tests and development tooling.
+
+\subsection{Important Neo4j variables}
+
+The Erlang and Rust implementations both use Neo4j-related environment variables. The common ones are:
+\begin{itemize}
+\item \texttt{IPTO\_NEO4J\_URL}
+\item \texttt{IPTO\_NEO4J\_DATABASE}
+\item \texttt{IPTO\_NEO4J\_USER}
+\item \texttt{IPTO\_NEO4J\_PASSWORD}
+\end{itemize}
+
+Additional tuning variables exist in the Erlang implementation for timeouts, retries and bootstrap behavior.
+
+\subsection{GraphQL SDL-related settings}
+
+Where the GraphQL layer is configurable at runtime, the most important settings are the ones that determine where SDL is read from. In the Erlang implementation, for example, this includes:
+\begin{itemize}
+\item app env \texttt{graphql\_schema\_sdl},
+\item app env \texttt{graphql\_schema\_file},
+\item env var \texttt{IPTO\_GRAPHQL\_SCHEMA\_FILE}.
+\end{itemize}
+
+In the Java implementation, the concrete application packaging currently provides a GraphQL schema resource under \filepath{implementations/java/quarkus-app/src/main/resources/ipto.graphqls}.
+
+\subsection{Practical advice}
+
+When working on IPTO, the most reliable sequence is usually:
+\begin{enumerate}
+\item provision the database or backend environment first,
+\item run the tests closest to the subsystem being changed,
+\item if SDL or persistence semantics changed, run an integration-level check rather than only unit tests,
+\item only then verify other implementation surfaces affected by the same conceptual change.
+\end{enumerate}
+
+This is a direct consequence of the architecture described in the manual: many changes cross the boundaries between schema, catalog, runtime and language binding.
+
+\subsection{Example unit payload}
+
+The repository-facing JSON format used by the current implementations is generic. A minimal unit payload looks like this:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+{
+  "tenantid": 1,
+  "corrid": "550e8400-e29b-41d4-a716-446655440000",
+  "status": 30,
+  "unitname": "example-unit",
+  "attributes": [
+    {
+      "attrid": 101,
+      "attrname": "dcterms:title",
+      "attrtype": 1,
+      "value": ["Example title"]
+    }
+  ]
+}
+\end{lstlisting}
+
+The important points are:
+\begin{itemize}
+\item the unit header identifies tenant, correlation id, status and optional name,
+\item each attribute occurrence carries the repository attribute id and datatype id,
+\item primitive values are represented as arrays, even when a single value is present,
+\item nested records follow the same idea recursively, but use record-valued attributes and child attribute arrays.
+\end{itemize}
+
+This is the payload shape that is translated into \texttt{repo\_unit\_kernel}, \texttt{repo\_unit\_version}, \texttt{repo\_attribute\_value} and the vector tables during ingestion.

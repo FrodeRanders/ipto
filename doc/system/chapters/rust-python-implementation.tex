@@ -1,0 +1,110 @@
+\section{Rust and Python}
+\label{sec:RustPythonImplementation}
+
+IPTO includes both a Rust implementation area and Python-facing entry points, and these two parts are intentionally connected. The Rust implementation exposes IPTO into a Python environment through \texttt{pyo3} and \texttt{maturin}. 
+
+\subsection{Rust}
+
+The Rust code under \texttt{implementations/rust} is another implementation surface for the same conceptual model. It contains:
+\begin{description}
+\item[\texttt{src/repo.rs}] Backend-agnostic repository orchestration.
+\item[\texttt{src/backend.rs}] The backend trait that defines the implementation contract.
+\item[\texttt{src/backends/postgres.rs}] The PostgreSQL backend.
+\item[\texttt{src/backends/neo4j.rs}] The Neo4j backend.
+\item[\texttt{src/graphql.rs} and \texttt{src/graphql\_sdl.rs}] A Rust-side GraphQL runtime and SDL handling layer.
+\item[\texttt{src/lib.rs}] The Python module entry point when the \texttt{python} feature is enabled.
+\end{description}
+
+The Rust implementation is \emph{maturin-ready} and exposes a stable Python API via \texttt{pyo3}. This means the Rust code is not just an internal library. It is also the provider of the Python-visible IPTO surface.
+
+\subsection{PyO3 bridge}
+
+When the Rust crate is built with the \texttt{python} feature, \texttt{src/lib.rs} exposes a Python class named \texttt{PyIpto}. This class wraps the Rust repository service and backend implementations and exports repository and GraphQL operations into Python.
+
+The Python-visible facade includes methods for:
+\begin{itemize}
+\item health checks and statistics,
+\item unit storage and retrieval,
+\item searches,
+\item status changes,
+\item lock handling,
+\item relation and association handling,
+\item attribute and tenant metadata lookup,
+\item GraphQL execution and SDL inspection/configuration.
+\end{itemize}
+
+This is the meaningful system-level connection between Rust and Python: Python is used as a host environment for the Rust implementation.
+
+\subsection{Build and packaging model}
+
+The Rust implementation is packaged for Python through \texttt{maturin}. The Rust project includes \texttt{Cargo.toml}, \texttt{pyproject.toml} and test/benchmark code that exercise the Python bridge. Python integration tests and soak benchmarks run through the \texttt{ipto\_rust.PyIpto} module, so the PyO3 path is treated as a first-class supported interface.
+
+\subsection{Backend abstraction}
+
+As in the Erlang implementation, backend plurality is explicit in the Rust code. The trait \texttt{Backend} in \texttt{src/backend.rs} defines the storage contract for:
+\begin{itemize}
+\item unit retrieval, existence checks and storage,
+\item search,
+\item relations and associations,
+\item locks and status changes,
+\item attribute and tenant metadata,
+\item template persistence hooks,
+\item health and cache-control hooks.
+\end{itemize}
+
+This trait is intentionally repository-shaped rather than database-shaped. It does not expose raw SQL or driver-level concerns. That keeps \texttt{RepoService} as the main place where IPTO semantics are enforced while allowing PostgreSQL and Neo4j backends to diverge internally.
+
+\subsection{Repository service layer}
+
+The Rust orchestration layer lives in \texttt{src/repo.rs} as \texttt{RepoService}. It plays a role very similar to the Java \texttt{Repository} and the Erlang \texttt{ipto\_repo} module.
+
+In particular, \texttt{RepoService} is responsible for:
+\begin{itemize}
+\item delegating unit reads and writes to the selected backend,
+\item enforcing lifecycle rules around readonly state, locks and status transitions,
+\item composing native or service-level set-operation searches,
+\item exposing relation, association, attribute and tenant operations through a uniform surface,
+\item parsing and applying SDL-driven configuration.
+\end{itemize}
+
+One important design choice is that Rust does not rely only on backend-native search composition. If the backend reports that a native set-expression execution path is unsupported, \texttt{RepoService} can evaluate boolean set operations in the service layer and then page the merged results. That keeps the external behavior more stable across backends even when their native capabilities differ.
+
+Rust also supports textual and symbolic search input, but that surface is currently simpler than the Java textual-query language. The Rust implementation is converging on Java semantics, yet the Java parser remains the more complete reference point for complex textual queries.
+
+\subsection{GraphQL runtime scope}
+
+The Rust implementation includes its own GraphQL runtime in \texttt{src/graphql.rs}. This runtime is not yet equivalent to the Java GraphQL runtime in breadth. It maintains a static registry of supported operations and dispatches repository-backed queries and mutations through the Rust service layer.
+
+The runtime supports:
+\begin{itemize}
+\item read operations such as unit lookup, search, metadata lookup, health, lock state and relation/association reads,
+\item mutation operations such as status changes, unit storage, attribute creation, lock handling and relation/association updates,
+\item operation registration and allowlist filtering,
+\item GraphQL-style error envelopes for execution failures.
+\end{itemize}
+
+This is a compatibility-oriented runtime surface rather than a full clone of the Java GraphQL engine. It exposes a practical operational subset while broader parity is still being developed.
+
+\subsection{Python}
+
+Python serves two different roles:
+\begin{description}
+\item[Embedded consumer of Rust] Through the \texttt{PyIpto} module exported by Rust via PyO3.
+\item[Operational tooling] Through scripts that provision test environments, run integration tests, or execute backend benchmarks.
+\end{description}
+
+The second role is incidental from an architectural point of view. The first role is structural.
+
+\subsection{Current parity position}
+
+The Rust implementation status:
+\begin{itemize}
+\item repository core behavior is largely implemented,
+\item relations, associations, locking and status-transition surfaces are present,
+\item PostgreSQL and Neo4j backends are both active targets,
+\item the PyO3 surface is substantial rather than minimal,
+\item GraphQL support is present but still partial compared to Java,
+\item exact search and lifecycle parity still has edge-case gaps.
+\end{itemize}
+
+The Rust implementation is an active parity-seeking runtime, not an experimental side branch. It already carries meaningful repository behavior, a Python-facing integration surface, backend abstraction, and a growing GraphQL compatibility layer.

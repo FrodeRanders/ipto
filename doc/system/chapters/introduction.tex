@@ -1,0 +1,14 @@
+\section{Introduction}
+
+IPTO is a metadata-oriented repository system built around a shared persistence model, a schema-driven configuration model, and several implementation surfaces. The core idea is that information is stored as versioned units composed from catalogued attributes, while external schema definitions are used to declare how those attributes are grouped into templates, records and operations.
+
+The repository is not a single program in a single language. It combines:
+\begin{itemize}
+\item a relational database model shared across implementations,
+\item a GraphQL SDL layer that also acts as configuration input,
+\item a Java reference implementation,
+\item an Erlang OTP-based implementation,
+\item a Rust implementation that can be embedded into Python through PyO3.
+\end{itemize}
+
+This manual is therefore organized by subsystem and responsibility. It begins with the shared architectural foundation in Section~\ref{sec:SystemOverview}, then covers the database and SDL layers in Sections~\ref{sec:Database} and~\ref{sec:GraphqlSDL}, and finally describes the implementation surfaces and the practical development workflow around them.

@@ -1,0 +1,51 @@
+\section{Admin Web}
+\label{sec:AdminWeb}
+
+IPTO includes a web-based administration client under \texttt{apps/admin-web}. This application is not part of the conceptual core of IPTO in the same way as the database schema or the SDL configuration layer, but it gives administrators and developers a browser-based view of the repository.
+
+\subsection{Role in the system}
+
+The web client is a SvelteKit application for:
+\begin{itemize}
+\item schema administration,
+\item tenant-scoped tree browsing,
+\item unit search and result inspection.
+\end{itemize}
+
+This makes it a client of IPTO rather than a defining part of the persistence model. It sits on top of the repository and API layers described elsewhere in the manual.
+
+\subsection{Structure}
+
+The application is organized around a clear split between routes and reusable UI components:
+\begin{description}
+\item[\texttt{src/routes/+page.svelte}] Overview page.
+\item[\texttt{src/routes/admin/+page.svelte}] Administration views for attributes, records and templates.
+\item[\texttt{src/routes/trees/+page.svelte}] Tenant-scoped unit tree browsing.
+\item[\texttt{src/routes/search/+page.svelte}] Search UI, saved searches, filters, results and unit detail.
+\item[\texttt{src/lib/components}] Shared UI components such as the header, lists, filters and detail panels.
+\item[\texttt{src/lib/api.js}] The client-side API access layer.
+\end{description}
+
+\subsection{Integration points}
+
+The application is structured to call backend HTTP endpoints rather than embedding repository logic locally. API access goes through \texttt{fetch(...)} calls in \texttt{src/lib/api.js}, which keeps the browser layer focused on interaction and presentation.
+
+The integration surface includes operations related to:
+\begin{itemize}
+\item tenants,
+\item attributes,
+\item records,
+\item templates,
+\item saved searches,
+\item unit search and unit detail retrieval.
+\end{itemize}
+
+That is consistent with the role of the application: it is an operational and administrative frontend over repository-backed services.
+
+\subsection{Packaging}
+
+The web app can be built into the Quarkus static resources folder so that it is served by the same HTTP server as the Java backend. This is a useful deployment pattern because it reduces the number of independently deployed artifacts for the common case of a Java-based runtime.
+
+\subsection{Observations}
+
+The admin web is a practical systems interface: it exposes repository capabilities to a browser user, but it does so by relying on the backend models and services described in the rest of this manual.
