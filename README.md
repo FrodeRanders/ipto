@@ -61,6 +61,10 @@ web interface, that also exposes a HTTP endpoint for GraphQL.
 Additionally, there is a separate Erlang implementation of the core functionality,
 where the search facility is a bit simplified as compared to the Java version.
 
+## Systems manual and documentation
+
+[Manual](doc/system/sysdoc.pdf)
+
 ## The layout of this project:
 
 - `./implementations/java/repo` contains the Java core functionality, which is plain Java (no CDI) and JDBC.
