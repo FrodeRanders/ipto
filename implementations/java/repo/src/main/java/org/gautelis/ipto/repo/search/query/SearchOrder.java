@@ -18,10 +18,20 @@ package org.gautelis.ipto.repo.search.query;
 
 import org.gautelis.ipto.repo.db.Column;
 
+/**
+ * Ordering specification for repository searches.
+ *
+ * @param columns the columns to order by, in priority order
+ * @param ascending per-column sort directions matching {@code columns}
+ */
 public record SearchOrder(Column[] columns, boolean[] ascending) {
 
     /**
-     * @throws IllegalArgumentException
+     * Creates an explicit search-order specification.
+     *
+     * @param columns the ordered columns
+     * @param ascending the corresponding sort directions
+     * @throws IllegalArgumentException if the vectors have different lengths
      */
     public SearchOrder(
             final Column[] columns, final boolean[] ascending
@@ -35,10 +45,9 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
     }
 
     /**
-     * Creates a basic search order, ordering on creation date in
-     * descending order.
+     * Returns the default search order.
      *
-     * @return the default search order
+     * @return creation time descending
      */
     public static SearchOrder getDefaultOrder() {
         return orderByCreation(false);
@@ -46,7 +55,10 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
 
 
     /**
-     * Creates a basic search order, ordering on creation date.
+     * Creates an order by creation time.
+     *
+     * @param ascending whether the sort should be ascending
+     * @return the requested search order
      */
     public static SearchOrder orderByCreation(boolean ascending) {
         Column[] order = new Column[1];
@@ -58,7 +70,10 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
     }
 
     /**
-     * Creates a basic search order, ordering on unit id.
+     * Creates an order by unit id.
+     *
+     * @param ascending whether the sort should be ascending
+     * @return the requested search order
      */
     public static SearchOrder orderByUnitId(boolean ascending) {
         Column[] order = new Column[1];
@@ -70,7 +85,10 @@ public record SearchOrder(Column[] columns, boolean[] ascending) {
     }
 
     /**
-     * Creates a basic search order, ordering on last modified date.
+     * Creates an order by last-modified timestamp.
+     *
+     * @param ascending whether the sort should be ascending
+     * @return the requested search order
      */
     public static SearchOrder orderByModified(boolean ascending) {
         Column[] order = new Column[1];

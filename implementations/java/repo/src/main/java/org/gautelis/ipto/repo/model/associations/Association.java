@@ -33,6 +33,13 @@ import java.util.Objects;
 /**
  * This is any kind of association between a unit and some external entity.
  * <p>
+ * Associations are directional. In the Java API, the unit identified by
+ * {@code tenantId}/{@code unitId} is the left side of the association, while
+ * the external identifier {@code assocString} is the right side. A "right"
+ * lookup therefore starts from a unit and returns the external identifiers
+ * associated with it. A "left" lookup starts from an external identifier and
+ * finds units associated with that identifier.
+ * <p>
  * The single/multiple association integrity is maintained
  * internally in AssociationManager.
  * <p>
@@ -67,7 +74,15 @@ public class Association {
     /**
      * Creates an association to an external entity.
      *
-     * @throws InvalidParameterException
+     * @param ctx repository context
+     * @param tenantId tenant identifier of the associated unit
+     * @param unitId unit identifier of the associated unit
+     * @param assocType association type to create
+     * @param assocString external identifier to associate with
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseWriteException if the association cannot be written
+     * @throws InvalidParameterException if the association request is invalid
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     /* Should be package accessible only */
     public static void create(
@@ -138,7 +153,14 @@ public class Association {
      * If multiple associations are allowed, the remaining associations
      * are left intact.
      *
-     * @throws InvalidParameterException
+     * @param ctx repository context
+     * @param tenantId tenant identifier of the associated unit
+     * @param unitId unit identifier of the associated unit
+     * @param assocType association type to remove
+     * @param assocString external identifier to disassociate
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseWriteException if the association cannot be removed
+     * @throws InvalidParameterException if the association request is invalid
      */
     /* Should be package accessible only */
     public static void remove(
@@ -201,18 +223,38 @@ public class Association {
         }
     }
 
+    /**
+     * Returns the right-side external identifier.
+     *
+     * @return right-side external identifier
+     */
     public String getAssocString() {
         return assocString;
     }
 
+    /**
+     * Returns the association type.
+     *
+     * @return association type
+     */
     public AssociationType getType() {
         return type;
     }
 
+    /**
+     * Returns the tenant id of the left-side unit.
+     *
+     * @return left-side tenant id
+     */
     public int getTenantId() {
         return tenantId;
     }
 
+    /**
+     * Returns the unit id of the left-side unit.
+     *
+     * @return left-side unit id
+     */
     public long getUnitId() {
         return unitId;
     }

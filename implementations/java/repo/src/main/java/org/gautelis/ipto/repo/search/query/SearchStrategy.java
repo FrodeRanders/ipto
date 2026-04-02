@@ -16,13 +16,15 @@
  */
 package org.gautelis.ipto.repo.search.query;
 
-// Currently supports two strategies of SQL production:
-//
-//  SET_OPS:    WITH c1.. final AS (INTERSECT/UNION)
-//  EXISTS:     kernel-driven WHERE ... AND EXISTS(...) AND EXISTS(...)
-//
+/**
+ * SQL-generation strategies supported by the search subsystem.
+ * <p>
+ * {@link #SET_OPS} builds SQL from labeled constraint subqueries combined with
+ * set operators such as {@code INTERSECT} and {@code UNION}. {@link #EXISTS}
+ * drives the search from the unit kernel and appends predicate-specific
+ * {@code EXISTS} clauses.
+ */
 public enum SearchStrategy {
     SET_OPS,
     EXISTS
 }
-

@@ -25,11 +25,19 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Optional;
 
 /**
- *
+ * Utility methods for loading optional repository plugins by class name.
  */
 public class PluginsHelper {
     private static final Logger log = LoggerFactory.getLogger(PluginsHelper.class);
 
+    /**
+     * Attempts to create a plugin instance using its no-argument constructor.
+     *
+     * @param className fully qualified implementation class name
+     * @param clazz expected plugin supertype
+     * @param <T> plugin type
+     * @return instantiated plugin, or {@link Optional#empty()} if the class could not be loaded
+     */
     public static <T> Optional<T> getPlugin(String className, Class<T> clazz) {
         try {
             Class<?> pluginClass = createClass(className);
@@ -41,6 +49,15 @@ public class PluginsHelper {
         }
     }
 
+    /**
+     * Attempts to create a plugin instance using constructor parameters.
+     *
+     * @param className fully qualified implementation class name
+     * @param clazz expected plugin supertype
+     * @param parameters constructor parameters
+     * @param <T> plugin type
+     * @return instantiated plugin, or {@link Optional#empty()} if the class could not be loaded
+     */
     public static <T> Optional<T> getPlugin(String className, Class<T> clazz, Object... parameters) {
         try {
             Class<?> pluginClass = createClass(className);
@@ -53,7 +70,11 @@ public class PluginsHelper {
     }
 
     /**
-     * Dynamically loads the named class (fully qualified classname).
+     * Dynamically loads the named class.
+     *
+     * @param className fully qualified class name
+     * @return loaded class object
+     * @throws ClassNotFoundException if the class could not be resolved or initialized
      */
     public static Class<?> createClass(String className) throws ClassNotFoundException {
 
@@ -81,10 +102,13 @@ public class PluginsHelper {
     }
 
     /**
-     * @param className
-     * @param clazz
-     * @return Some object
-     * @throws ClassNotFoundException
+     * Instantiates a class by calling its no-argument constructor.
+     *
+     * @param className fully qualified class name
+     * @param clazz class to instantiate
+     * @param <T> expected result type
+     * @return created object
+     * @throws ClassNotFoundException if the class could not be instantiated
      */
     private static <T> T createObject(
             String className, Class<?> clazz
@@ -118,11 +142,14 @@ public class PluginsHelper {
 
 
     /**
-     * @param className
-     * @param clazz
-     * @param parameters
-     * @return Some object
-     * @throws ClassNotFoundException
+     * Instantiates a class using constructor parameters.
+     *
+     * @param className fully qualified class name
+     * @param clazz class to instantiate
+     * @param parameters constructor parameters
+     * @param <T> expected result type
+     * @return created object
+     * @throws ClassNotFoundException if the class could not be instantiated
      */
     private static <T> T createObject(
             String className, Class<?> clazz, Object... parameters

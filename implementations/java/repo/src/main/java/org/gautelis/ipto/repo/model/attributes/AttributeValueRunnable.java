@@ -18,6 +18,17 @@ package org.gautelis.ipto.repo.model.attributes;
 
 import java.util.ArrayList;
 
+/**
+ * Callback receiving the mutable value vector of a resolved attribute.
+ *
+ * @param <A> the Java element type of the value vector
+ */
+@FunctionalInterface
 public interface AttributeValueRunnable<A> {
+    /**
+     * Invoked with the attribute value vector.
+     *
+     * @param value the mutable value vector
+     */
     void run(ArrayList<A> value);
 }

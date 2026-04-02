@@ -20,6 +20,9 @@ import org.gautelis.ipto.repo.exceptions.InvalidParameterException;
 import org.gautelis.ipto.repo.model.AssociationType;
 import org.gautelis.ipto.repo.search.query.LeafExpression;
 
+/**
+ * Search predicate that finds units on the left side of an association.
+ */
 public class LeftAssociationSearchItem extends AssociationSearchItem<String> {
     private final String assocString;
 
@@ -29,8 +32,12 @@ public class LeftAssociationSearchItem extends AssociationSearchItem<String> {
     }
 
     /**
-     * Generates constraint "Unit <--association-- {assocString}".
-     * <p>
+     * Generates a constraint that matches units associated from the supplied
+     * external identifier.
+     *
+     * @param type association type
+     * @param assocString external association identifier
+     * @return leaf expression representing the association predicate
      */
     public static LeafExpression<LeftAssociationSearchItem> constrainOnLeftAssociation(
             AssociationType type,
@@ -39,6 +46,11 @@ public class LeftAssociationSearchItem extends AssociationSearchItem<String> {
         return new LeafExpression<>(new LeftAssociationSearchItem(type, Operator.EQ, assocString));
     }
 
+    /**
+     * Returns the associated external identifier.
+     *
+     * @return external identifier value
+     */
     @Override
     public String getValue() {
         return assocString;

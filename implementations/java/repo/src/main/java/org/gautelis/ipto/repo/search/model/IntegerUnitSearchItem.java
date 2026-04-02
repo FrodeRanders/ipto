@@ -21,12 +21,19 @@ import org.gautelis.ipto.repo.db.Column;
 import org.gautelis.ipto.repo.model.AttributeType;
 
 /**
- *
+ * Unit-level search predicate with an integer value.
  */
 public class IntegerUnitSearchItem extends UnitSearchItem<Integer> {
 
     private final int value;
 
+    /**
+     * Creates an integer-valued unit predicate.
+     *
+     * @param column constrained column
+     * @param operator comparison operator
+     * @param value integer value to compare with
+     */
     public IntegerUnitSearchItem(Column column, Operator operator, int value) {
         // This isn't an attribute, but we currently use AttributeType.STRING
         // to tell how we want to treat the value when searching.
@@ -34,6 +41,11 @@ public class IntegerUnitSearchItem extends UnitSearchItem<Integer> {
         this.value = value;
     }
 
+    /**
+     * Returns the compared integer value.
+     *
+     * @return integer predicate value
+     */
     public Integer getValue() {
         return value;
     }

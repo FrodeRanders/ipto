@@ -30,7 +30,14 @@ import java.sql.*;
 import java.util.ArrayList;
 
 /**
+ * Represents one attribute attached to a {@code Unit}.
+ * <p>
+ * An attribute combines catalog metadata such as id, name, alias, and declared
+ * {@link AttributeType} with one typed value vector. Scalar attributes are
+ * represented as vectors of size one, while record attributes contain nested
+ * {@code Attribute} instances.
  *
+ * @param <T> the Java element type stored in the attribute value vector
  */
 public class Attribute<T> {
     private static final Logger log = LoggerFactory.getLogger(Attribute.class);
@@ -38,6 +45,12 @@ public class Attribute<T> {
     public static final int INVALID_ATTRID = -1;
     private static final long INVALID_VALUEID = -1L;
 
+    /**
+     * Lightweight identifier for an attribute in the catalog.
+     *
+     * @param id the catalog attribute id
+     * @param name the configured attribute name
+     */
     public record Reference(int id, String name) {}
 
     // Attribute related
@@ -122,15 +135,19 @@ public class Attribute<T> {
     }
 
     /**
-     * Gets attribute type
+     * Returns the declared repository type of this attribute.
+     *
+     * @return the attribute type
      */
     public AttributeType getType() {
         return value.getType();
     }
 
     /**
-     * Gets attribute concrete Java type
-     * @return
+     * Returns the concrete Java element type used by the underlying value
+     * vector.
+     *
+     * @return the concrete Java type used for stored values
      */
     public Class<T> getConcreteType() {
         return value.getConcreteType();
@@ -184,10 +201,26 @@ public class Attribute<T> {
         return id;
     }
 
+    /**
+     * Returns the persistent id of the current value vector.
+     * <p>
+     * Newly created attributes have no stored value id until persisted.
+     *
+     * @return the current value id, or a non-positive value if not yet stored
+     */
     public long getValueId() {
         return valueId;
     }
 
+    /**
+     * Serializes this attribute into the repository JSON shape.
+     *
+     * @param attributes the array that receives serialized attributes
+     * @param attributeNode the object node representing this attribute
+     * @param isChatty whether to emit verbose type metadata
+     * @param forPersistence whether to emit persistence-specific fields such as
+     *                       ids and modification flags
+     */
     public void toJson(ArrayNode attributes, ObjectNode attributeNode, boolean isChatty, boolean forPersistence) {
         /*
          * If children are reordered inside a record, treat that as a modification (set modified:true appropriately).
@@ -261,10 +294,18 @@ public class Attribute<T> {
         return value.isModified();
     }
 
+    /**
+     * Indicates whether this attribute has not yet been stored.
+     *
+     * @return {@code true} if the attribute or its value vector is new
+     */
     public boolean isNew() {
         return value.isNew() || valueId <= 0;
     }
 
+    /**
+     * Marks the attribute value as synchronized with persistent storage.
+     */
     public void setStored() {
         value.setStored();
     }
@@ -282,5 +323,4 @@ public class Attribute<T> {
                 "=" + value.toString() + "}";
     }
 }
-
 

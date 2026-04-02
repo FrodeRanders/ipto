@@ -26,7 +26,9 @@ import java.util.Locale;
 import java.util.Objects;
 
 /**
- * Handles individual criteria, specified on units and attributes.
+ * Base type for a single typed search predicate.
+ *
+ * @param <T> value type carried by the predicate
  */
 public abstract class SearchItem<T> {
     //
@@ -41,14 +43,29 @@ public abstract class SearchItem<T> {
         this.operator = operator;
     }
 
+    /**
+     * Returns the logical type of the predicate value.
+     *
+     * @return logical value type
+     */
     public Type getType() {
         return type;
     }
 
+    /**
+     * Returns the comparison operator for the predicate.
+     *
+     * @return comparison operator
+     */
     public Operator getOperator() {
         return operator;
     }
 
+    /**
+     * Returns the typed value compared by the predicate.
+     *
+     * @return predicate value
+     */
     public abstract T getValue();
 
     /**
@@ -57,11 +74,12 @@ public abstract class SearchItem<T> {
      * The general idea is to specify date + time, time being
      * 00:00:00.000 of that date.
      * <p>
-     * Match call with call to #toDate.
+     * Match calls with {@link #late(String, Locale)}.
      *
-     * @param str
-     * @param locale
-     * @return
+     * @param str textual date input
+     * @param locale locale used for parsing
+     * @return timestamp at the beginning of the represented day
+     * @throws ParseException if the value cannot be parsed as a date
      */
     public static Timestamp early(
             String str, Locale locale
@@ -85,11 +103,12 @@ public abstract class SearchItem<T> {
      * The general idea is to specify date + time, time being
      * 23:59:59.999 of that date.
      * <p>
-     * Match call with call to #fromDate.
+     * Match calls with {@link #early(String, Locale)}.
      *
-     * @param str
-     * @param locale
-     * @return
+     * @param str textual date input
+     * @param locale locale used for parsing
+     * @return timestamp at the end of the represented day
+     * @throws ParseException if the value cannot be parsed as a date
      */
     public static Timestamp late(
             String str, Locale locale

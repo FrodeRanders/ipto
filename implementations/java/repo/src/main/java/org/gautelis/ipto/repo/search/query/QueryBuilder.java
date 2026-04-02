@@ -27,17 +27,22 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.Objects;
 
+/**
+ * Factory methods for constructing search-expression trees.
+ * <p>
+ * This class provides a small programmatic DSL for combining
+ * {@link SearchExpression} instances and creating common leaf predicates over
+ * unit fields and typed attributes.
+ */
 public class QueryBuilder {
     private QueryBuilder() {}
 
     /**
-     * Helper method that adds two search expressions with logical
-     * operator AND.
+     * Combines two search expressions with logical {@code AND}.
      *
-     * @param left existing search expression
-     * @param right existing search expression
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the left-hand expression
+     * @param right the right-hand expression
+     * @return the combined expression
      */
     public static SearchExpression assembleAnd(
             SearchExpression left, SearchExpression right
@@ -46,13 +51,12 @@ public class QueryBuilder {
     }
 
     /**
-     * Helper method that adds a search item to an expression with logical
-     * operator AND (item).
+     * Combines an existing expression with one leaf predicate using logical
+     * {@code AND}.
      *
-     * @param left existing expression
-     * @param right item to add
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the existing expression
+     * @param right the leaf predicate to append
+     * @return the combined expression
      */
     public static SearchExpression assembleAnd(
             SearchExpression left, LeafExpression<?> right
@@ -60,6 +64,14 @@ public class QueryBuilder {
         return new AndExpression(left, right);
     }
 
+    /**
+     * Combines an existing expression with one search item using logical
+     * {@code AND}.
+     *
+     * @param left the existing expression
+     * @param item the predicate to append
+     * @return the combined expression
+     */
     public static SearchExpression assembleAnd(
             SearchExpression left, SearchItem<?> item
     ) {
@@ -67,13 +79,12 @@ public class QueryBuilder {
     }
 
     /**
-     * Helper method that adds a search item to an expression with logical
-     * operator AND NOT (item).
+     * Combines an existing expression with the negation of one leaf predicate
+     * using logical {@code AND}.
      *
-     * @param left existing expression
-     * @param right item to add
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the existing expression
+     * @param right the leaf predicate to negate and append
+     * @return the combined expression
      */
     public static SearchExpression assembleAndNot(
             SearchExpression left, LeafExpression<?> right
@@ -81,6 +92,14 @@ public class QueryBuilder {
         return new AndExpression(left, new NotExpression(right));
     }
 
+    /**
+     * Combines an existing expression with the negation of one search item
+     * using logical {@code AND}.
+     *
+     * @param left the existing expression
+     * @param item the predicate to negate and append
+     * @return the combined expression
+     */
     public static SearchExpression assembleAndNot(
             SearchExpression left, SearchItem<?> item
     ) {
@@ -88,13 +107,11 @@ public class QueryBuilder {
     }
 
     /**
-     * Helper method that adds two search expressions with logical
-     * operator OR.
+     * Combines two search expressions with logical {@code OR}.
      *
-     * @param left existing search expression
-     * @param right existing search expression
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the left-hand expression
+     * @param right the right-hand expression
+     * @return the combined expression
      */
     public static SearchExpression assembleOr(
             SearchExpression left, SearchExpression right
@@ -103,13 +120,12 @@ public class QueryBuilder {
     }
 
     /**
-     * Helper method that adds a search item to an expression with logical
-     * operator OR (item).
+     * Combines an existing expression with one leaf predicate using logical
+     * {@code OR}.
      *
-     * @param left existing expression
-     * @param right item to add
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the existing expression
+     * @param right the leaf predicate to append
+     * @return the combined expression
      */
     public static SearchExpression assembleOr(
             SearchExpression left, LeafExpression<?> right
@@ -117,6 +133,14 @@ public class QueryBuilder {
         return new OrExpression(left, right);
     }
 
+    /**
+     * Combines an existing expression with one search item using logical
+     * {@code OR}.
+     *
+     * @param left the existing expression
+     * @param item the predicate to append
+     * @return the combined expression
+     */
     public static SearchExpression assembleOr(
             SearchExpression left, SearchItem<?> item
     ) {
@@ -125,13 +149,12 @@ public class QueryBuilder {
 
 
     /**
-     * Helper method that adds a search item to an expression with logical
-     * operator OR NOT (item).
+     * Combines an existing expression with the negation of one leaf predicate
+     * using logical {@code OR}.
      *
-     * @param left existing expression
-     * @param right item to add
-     * @return search expression
-     * @throws InvalidParameterException
+     * @param left the existing expression
+     * @param right the leaf predicate to negate and append
+     * @return the combined expression
      */
     public static SearchExpression assembleOrNot(
             SearchExpression left, LeafExpression<?> right
@@ -139,6 +162,14 @@ public class QueryBuilder {
         return new OrExpression(left, new NotExpression(right));
     }
 
+    /**
+     * Combines an existing expression with the negation of one search item
+     * using logical {@code OR}.
+     *
+     * @param left the existing expression
+     * @param item the predicate to negate and append
+     * @return the combined expression
+     */
     public static SearchExpression assembleOrNot(
             SearchExpression left, SearchItem<?> item
     ) {
@@ -147,9 +178,15 @@ public class QueryBuilder {
 
 
     /**
-     * Generates constraint "attribute == value" for specified attribute.
+     * Creates an equality predicate for one configured attribute.
      * <p>
-     * This method will handle the various attribute types, EXCEPT 'DATA' and 'RECORD'.
+     * The value is interpreted according to the declared attribute type. Data
+     * and record attributes are not searchable through this helper.
+     *
+     * @param attribute the configured attribute
+     * @param value the textual value to parse
+     * @param locale the locale to use for locale-sensitive parsing
+     * @return a typed leaf expression
      */
     public static LeafExpression<? extends AttributeSearchItem<?>> constrainOnValueEQ(
             Attribute<?> attribute, String value, Locale locale
@@ -170,32 +207,39 @@ public class QueryBuilder {
     }
 
     /**
-     * Generates constraint "unit has specific status", identified by
-     * the enum Unit.Status.
+     * Creates a predicate matching one specific unit status.
      *
-     * @param status
-     * @return
+     * @param status the status to match
+     * @return a unit-status predicate
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToSpecificStatus(Unit.Status status) {
         return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_STATUS, Operator.EQ, status.getStatus()));
      }
 
      /**
-     * Generates constraint "unit has specific tenant", identified by tenantId.
+     * Creates a predicate matching one specific tenant id.
+     *
+     * @param tenantId the tenant id to match
+     * @return a tenant predicate
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToSpecificTenant(int tenantId) {
         return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_TENANTID, Operator.EQ, tenantId));
      }
 
      /**
-     * Generates constraint "unit is effective/operative/in use"
+     * Creates a predicate matching effective or later unit states.
+     *
+     * @return a status predicate for effective units
      */
      public static LeafExpression<IntegerUnitSearchItem> constrainToEffective() {
         return new LeafExpression<>(new IntegerUnitSearchItem(Column.UNIT_KERNEL_STATUS, Operator.GEQ, Unit.Status.EFFECTIVE.getStatus()));
      }
 
      /**
-     * Generates a constraint "unit was created before" (strict less than)
+     * Creates a strict upper-bound predicate on creation time.
+     *
+     * @param instant the exclusive creation-time upper bound
+     * @return a creation-time predicate
      */
      public static LeafExpression<TimeUnitSearchItem> constrainToCreatedBefore(Instant instant) {
         Objects.requireNonNull(instant, "instant");
@@ -203,12 +247,14 @@ public class QueryBuilder {
      }
 
      /**
-     * Generates a constraint "unit was created after (inclusive)"
+     * Creates an inclusive lower-bound predicate on creation time.
+     *
+     * @param instant the inclusive creation-time lower bound
+     * @return a creation-time predicate
      */
      public static LeafExpression<TimeUnitSearchItem> constrainToCreatedAfter(Instant instant) {
         Objects.requireNonNull(instant, "instant");
         return new LeafExpression<>(new TimeUnitSearchItem(Column.UNIT_KERNEL_CREATED, Operator.GEQ, instant));
      }
 }
-
 

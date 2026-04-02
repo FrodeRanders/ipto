@@ -33,6 +33,10 @@ import org.slf4j.LoggerFactory;
 import java.util.Collections;
 import java.util.Map;
 
+/**
+ * Quarkus HTTP endpoint that forwards GraphQL requests to the configured
+ * Java GraphQL runtime.
+ */
 @Path("/graphql")
 @Consumes(MediaType.APPLICATION_JSON)
 @Produces(MediaType.APPLICATION_JSON)
@@ -41,11 +45,22 @@ public class GraphQLResource {
 
     private final GraphQL graphQL;
 
+    /**
+     * Creates the resource with the configured GraphQL runtime.
+     *
+     * @param graphQL executable GraphQL instance
+     */
     @Inject
     public GraphQLResource(GraphQL graphQL) {
         this.graphQL = graphQL;
     }
 
+    /**
+     * Executes a GraphQL request and returns the GraphQL specification-shaped response.
+     *
+     * @param request request payload
+     * @return HTTP response containing GraphQL execution data or errors
+     */
     @POST
     public Response execute(GraphQLRequest request) {
         log.debug("GraphQLResource::execute({})", request);

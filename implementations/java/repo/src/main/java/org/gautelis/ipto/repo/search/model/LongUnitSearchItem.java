@@ -20,12 +20,19 @@ import org.gautelis.ipto.repo.db.Column;
 import org.gautelis.ipto.repo.model.AttributeType;
 
 /**
- *
+ * Unit-level search predicate with a long value.
  */
 public class LongUnitSearchItem extends UnitSearchItem<Long> {
 
     private final long value;
 
+    /**
+     * Creates a long-valued unit predicate.
+     *
+     * @param column constrained column
+     * @param operator comparison operator
+     * @param value long value to compare with
+     */
     public LongUnitSearchItem(Column column, Operator operator, long value) {
         // This isn't an attribute, but we currently use AttributeType.STRING
         // to tell how we want to treat the value when searching.
@@ -33,6 +40,11 @@ public class LongUnitSearchItem extends UnitSearchItem<Long> {
         this.value = value;
     }
 
+    /**
+     * Returns the compared long value.
+     *
+     * @return long predicate value
+     */
     public Long getValue() {
         return value;
     }

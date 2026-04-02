@@ -16,6 +16,17 @@
  */
 package org.gautelis.ipto.repo.model.attributes;
 
+/**
+ * Callback receiving a resolved attribute object.
+ *
+ * @param <A> the Java element type of the attribute value vector
+ */
+@FunctionalInterface
 public interface AttributeRunnable<A> {
+    /**
+     * Invoked with the resolved attribute.
+     *
+     * @param attribute the resolved attribute
+     */
     void run(Attribute<A> attribute);
 }

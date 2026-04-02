@@ -42,10 +42,24 @@ import java.io.Reader;
 import java.util.*;
 import java.util.function.Consumer;
 
+/**
+ * Loads GraphQL SDL, reconciles it with the repository catalog, and builds an
+ * executable GraphQL runtime for the Java implementation.
+ */
 public class Configurator {
     private static final Logger log = LoggerFactory.getLogger(Configurator.class);
     private static final String DEFAULT_DESCRIPTION_LANG = "SE";
 
+    /**
+     * View of the SDL-derived model used during configuration.
+     *
+     * @param datatypes datatypes declared in SDL
+     * @param attributes attributes declared in SDL
+     * @param records record definitions declared in SDL
+     * @param templates unit templates declared in SDL
+     * @param unions union definitions declared in SDL
+     * @param operations query/mutation/subscription operations declared in SDL
+     */
     public record GqlViewpoint(
             Map<String, GqlDatatypeShape> datatypes,
             Map<AttributeKey, GqlAttributeShape> attributes,
@@ -55,6 +69,14 @@ public class Configurator {
             Map<OperationKey, GqlOperationShape> operations
     ) {}
 
+    /**
+     * View of the repository catalog loaded from persistent state.
+     *
+     * @param datatypes datatypes known to the catalog
+     * @param attributes attributes known to the catalog
+     * @param records record templates known to the catalog
+     * @param templates unit templates known to the catalog
+     */
     public record CatalogViewpoint(
             Map<String, CatalogDatatype> datatypes,
             Map<AttributeKey, CatalogAttribute> attributes,
@@ -72,11 +94,11 @@ public class Configurator {
      * <p>
      * Note: callers are responsible for invoking repo.sync() after load().
      * <p>
-     * @param repo
-     * @param reader
-     * @param operationsWireBlock
-     * @param progress
-     * @return
+     * @param repo repository used for catalog reconciliation and runtime access
+     * @param reader SDL input
+     * @param operationsWireBlock optional custom wiring hook for overriding or adding operations
+     * @param progress optional progress output stream
+     * @return executable GraphQL runtime when SDL loading succeeds
      */
     public static Optional<GraphQL> load(
             Repository repo,
@@ -192,6 +214,12 @@ public class Configurator {
         out.println();
     }
 
+    /**
+     * Dumps the catalog view to the supplied stream.
+     *
+     * @param ipto catalog view to print
+     * @param out destination stream; ignored when {@code null}
+     */
     public static void dump(CatalogViewpoint ipto, PrintStream out) {
         if (null == out)
             return;

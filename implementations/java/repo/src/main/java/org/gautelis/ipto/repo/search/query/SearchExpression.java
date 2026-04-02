@@ -20,8 +20,25 @@ import org.gautelis.ipto.repo.search.model.SearchItem;
 
 import java.util.Map;
 
+/**
+ * Backend-neutral boolean search-expression tree.
+ * <p>
+ * A search expression is composed of leaf predicates and boolean operators. The
+ * Java search subsystem can build this tree programmatically or parse it from
+ * the textual query language before translating it into SQL through the search
+ * adapters.
+ */
 public sealed interface SearchExpression
         permits LeafExpression, BinaryExpression, AndExpression, OrExpression, NotExpression {
 
+    /**
+     * Renders this expression into SQL for the chosen search strategy.
+     *
+     * @param strategy the SQL-generation strategy to use
+     * @param usePrepare whether generated SQL should use prepared placeholders
+     * @param commonConstraintValues receives extracted prepared-statement values
+     * @param attributeNameToId mapping from attribute names to catalog ids
+     * @return the generated SQL fragment
+     */
     String toSql(SearchStrategy strategy, boolean usePrepare, Map<String, SearchItem<?>> commonConstraintValues, Map<String, Integer> attributeNameToId);
 }

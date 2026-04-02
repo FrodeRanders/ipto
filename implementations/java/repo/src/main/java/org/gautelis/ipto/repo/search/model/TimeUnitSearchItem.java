@@ -22,12 +22,19 @@ import org.gautelis.ipto.repo.model.AttributeType;
 import java.time.Instant;
 
 /**
- *
+ * Unit-level search predicate with a timestamp value.
  */
 public class TimeUnitSearchItem extends UnitSearchItem<Instant> {
 
     private final Instant value;
 
+    /**
+     * Creates a time-valued unit predicate.
+     *
+     * @param column constrained column
+     * @param operator comparison operator
+     * @param instant instant value to compare with
+     */
     public TimeUnitSearchItem(Column column, Operator operator, Instant instant) {
         // This isn't an attribute, but we currently use AttributeType.STRING
         // to tell how we want to treat the value when searching.
@@ -35,6 +42,11 @@ public class TimeUnitSearchItem extends UnitSearchItem<Instant> {
         this.value = instant;
     }
 
+    /**
+     * Returns the compared instant value.
+     *
+     * @return instant predicate value
+     */
     public Instant getValue() {
         return value;
     }

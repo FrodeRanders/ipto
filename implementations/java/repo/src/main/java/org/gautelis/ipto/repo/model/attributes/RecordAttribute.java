@@ -22,6 +22,13 @@ import org.gautelis.ipto.repo.model.Unit;
 import java.util.ArrayList;
 import java.util.Objects;
 
+/**
+ * Convenience wrapper for navigating a record-valued attribute.
+ * <p>
+ * Record attributes store nested {@link Attribute} instances. This wrapper
+ * exposes the same callback-oriented access style as {@link Unit}, but scoped
+ * to one record attribute and its nested members.
+ */
 public class RecordAttribute {
     private final Attribute<Attribute<?>> delegate;
     private final Unit unit;
@@ -38,10 +45,24 @@ public class RecordAttribute {
         this(asRecord(attr), unit);
     }
 
+    /**
+     * Wraps a repository attribute known to be a record attribute.
+     *
+     * @param unit the owning unit
+     * @param attr the underlying record attribute
+     * @return a record-attribute wrapper
+     */
     public static RecordAttribute from(Unit unit, Attribute<?> attr) {
         return new RecordAttribute(unit, attr);
     }
 
+    /**
+     * Wraps an already typed record attribute.
+     *
+     * @param unit the owning unit
+     * @param attr the underlying record attribute
+     * @return a record-attribute wrapper
+     */
     public static RecordAttribute wrap(Unit unit, Attribute<Attribute> attr) {
         @SuppressWarnings("unchecked")
         Attribute<Attribute<?>> nestedRecordAttr = (Attribute<Attribute<?>>) (Attribute<?>) attr;
@@ -60,17 +81,11 @@ public class RecordAttribute {
     }
 
     /**
-     * Access a nested record attribute inside this record.
+     * Resolves or creates a nested record attribute inside this record and
+     * passes it to the callback.
      *
-     * Example:
-     *
-     * unit.withRecordAttribute("outerRecord", outer -> {
-     *     outer.withRecordAttribute(unit, "innerRecord", inner -> {
-     *         inner.withNestedAttributeValue(unit, "dmo:foo", String.class, values -> {
-     *             values.add("bar");
-     *         });
-     *     });
-     * });
+     * @param name the nested record attribute name
+     * @param runnable callback receiving the resolved nested record
      */
     public void withRecordAttribute(
             String name,
@@ -79,6 +94,14 @@ public class RecordAttribute {
         withRecordAttribute(name, /* createIfMissing */ true, runnable);
     }
 
+    /**
+     * Resolves a nested record attribute and passes it to the callback.
+     *
+     * @param name the nested record attribute name
+     * @param createIfMissing whether the nested record attribute should be
+     *                        created when absent
+     * @param runnable callback receiving the resolved nested record
+     */
     public void withRecordAttribute(
             String name,
             boolean createIfMissing,
@@ -88,10 +111,28 @@ public class RecordAttribute {
         runnable.run(requireRecordAttribute(name, createIfMissing));
     }
 
+    /**
+     * Resolves a nested non-record attribute and passes the full attribute
+     * object to the callback.
+     *
+     * @param name the nested attribute name
+     * @param type the expected Java element type
+     * @param runnable callback receiving the resolved attribute
+     * @param <A> the expected Java element type
+     */
     public <A> void withNestedAttribute(String name, Class<A> type, AttributeRunnable<A> runnable) {
         unit.withAttribute(delegate, name, type, runnable);
     }
 
+    /**
+     * Resolves a nested non-record attribute and passes only its value vector to
+     * the callback.
+     *
+     * @param name the nested attribute name
+     * @param type the expected Java element type
+     * @param runnable callback receiving the resolved value vector
+     * @param <A> the expected Java element type
+     */
     public <A> void withNestedAttributeValue(String name, Class<A> type, AttributeValueRunnable<A> runnable) {
         withNestedAttribute(name, type, asAttributeRunnable(runnable));
     }
@@ -126,10 +167,20 @@ public class RecordAttribute {
         return resolved[0];
     }
 
+    /**
+     * Returns the wrapped repository attribute.
+     *
+     * @return the underlying record attribute
+     */
     public Attribute<Attribute<?>> getDelegate() {
         return delegate;
     }
 
+    /**
+     * Returns the nested attributes stored in this record.
+     *
+     * @return the value vector containing nested attributes
+     */
     public ArrayList<Attribute<?>> getValue() {
         return delegate.getValueVector();
     }

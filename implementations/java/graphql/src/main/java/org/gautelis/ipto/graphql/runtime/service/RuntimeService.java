@@ -45,7 +45,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-
+/**
+ * Main runtime facade for GraphQL-backed operations over the repository.
+ * <p>
+ * The service bridges between SDL-derived GraphQL shapes and the generic IPTO
+ * repository model. It handles operation invocation, raw payload flows, typed
+ * unit loading, and repository-backed search.
+ */
 public class RuntimeService {
     private static final Logger log = LoggerFactory.getLogger(RuntimeService.class);
 
@@ -63,6 +69,12 @@ public class RuntimeService {
     private final RuntimeSearchService searchService;
     private final RuntimeUnitService unitService;
 
+    /**
+     * Creates a runtime service for a configured repository/catalog pair.
+     *
+     * @param repo repository implementation
+     * @param catalogView reconciled catalog view
+     */
     public RuntimeService(
             Repository repo,
             Configurator.CatalogViewpoint catalogView
@@ -103,12 +115,26 @@ public class RuntimeService {
         unitService = new RuntimeUnitService(repo, log);
     }
 
+    /**
+     * Returns a short hexadecimal prefix of a byte array for logging.
+     *
+     * @param bytes source byte array
+     * @param n maximum number of bytes to include
+     * @return space-separated hexadecimal prefix
+     */
     public static String headHex(byte[] bytes, int n) {
         int len = Math.min(bytes.length, n);
         String hex = HexFormat.of().formatHex(bytes, 0, len);
         return hex.replaceAll("..(?!$)", "$0 ");
     }
 
+    /**
+     * Wires record, union, and operation resolvers into the GraphQL runtime.
+     *
+     * @param runtimeWiring wiring builder to augment
+     * @param gqlViewpoint SDL-derived GraphQL view
+     * @param subscriptionWiringPolicy subscription wiring policy
+     */
     public void wire(
             RuntimeWiring.Builder runtimeWiring,
             Configurator.GqlViewpoint gqlViewpoint,
@@ -119,6 +145,13 @@ public class RuntimeService {
         RuntimeOperators.wireOperations(runtimeWiring, this, gqlViewpoint, subscriptionWiringPolicy);
     }
 
+    /**
+     * Invokes a configured runtime operation.
+     *
+     * @param operation operation shape to invoke
+     * @param arguments GraphQL argument map
+     * @return operation result
+     */
     public Object invokeOperation(
             GqlOperationShape operation,
             Map<String, Object> arguments
@@ -126,6 +159,12 @@ public class RuntimeService {
         return operationInvoker.invokeOperation(operation, arguments);
     }
 
+    /**
+     * Stores a raw IPTO unit payload.
+     *
+     * @param bytes serialized unit JSON
+     * @return stored unit as JSON bytes, or validation-error information
+     */
     public Object storeRawUnit(byte[] bytes) {
         log.trace("↪ RuntimeService::storeRawUnit({}...)", headHex(bytes, 16));
 
@@ -148,6 +187,15 @@ public class RuntimeService {
         }
     }
 
+    /**
+     * Stores a raw domain payload by first indexing it into the generic IPTO
+     * unit representation defined by the configured template.
+     *
+     * @param tenantId tenant owning the unit
+     * @param templateName template name used to interpret the domain payload
+     * @param bytes serialized domain payload JSON
+     * @return stored unit as JSON bytes
+     */
     public Object storeDomainRawUnit(
             int tenantId,
             String templateName,
@@ -188,28 +236,69 @@ public class RuntimeService {
         return stored.asJson(false).getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Loads a typed unit projection by unit id.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @return boxed unit projection
+     */
     public Box loadUnit(int tenantId, long unitId) {
         return unitService.loadUnit(tenantId, unitId);
     }
 
+    /**
+     * Loads a typed unit projection by correlation id.
+     *
+     * @param tenantId tenant identifier
+     * @param corrId correlation identifier
+     * @return boxed unit projection
+     */
     public Box loadUnitByCorrId(int tenantId, UUID corrId) {
         return unitService.loadUnitByCorrId(tenantId, corrId);
     }
 
-
-
+    /**
+     * Loads a raw IPTO unit payload by unit id.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @return raw unit payload bytes
+     */
     public byte[] loadRawUnit(int tenantId, long unitId) {
         return unitService.loadRawUnit(tenantId, unitId);
     }
 
+    /**
+     * Loads a raw domain payload by unit id.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @return raw domain payload bytes
+     */
     public byte[] loadRawPayload(int tenantId, long unitId) {
         return unitService.loadRawPayload(tenantId, unitId);
     }
 
+    /**
+     * Loads a raw domain payload by correlation id.
+     *
+     * @param tenantId tenant identifier
+     * @param corrId correlation identifier
+     * @return raw domain payload bytes
+     */
     public byte[] loadRawPayloadByCorrId(int tenantId, UUID corrId) {
         return unitService.loadRawPayloadByCorrId(tenantId, corrId);
     }
 
+    /**
+     * Resolves a scalar value array from a record box.
+     *
+     * @param fieldNames path of GraphQL field names
+     * @param box record box
+     * @param isMandatory whether missing values should be treated as errors
+     * @return resolved value array
+     */
     public Object getValueArray(
             List<String> fieldNames,
             RecordBox box,
@@ -218,6 +307,14 @@ public class RuntimeService {
         return attributeResolver.getValueArray(fieldNames, box, isMandatory);
     }
 
+    /**
+     * Resolves an attribute array from a boxed unit/record context.
+     *
+     * @param fieldNames path of GraphQL field names
+     * @param box attribute box
+     * @param isMandatory whether missing values should be treated as errors
+     * @return resolved attribute array
+     */
     public Object getAttributeArray(
             List<String> fieldNames,
             AttributeBox box,
@@ -226,6 +323,13 @@ public class RuntimeService {
         return attributeResolver.getAttributeArray(fieldNames, box, isMandatory);
     }
 
+    /**
+     * Resolves an optional attribute array from a boxed unit/record context.
+     *
+     * @param fieldNames path of GraphQL field names
+     * @param box attribute box
+     * @return resolved attribute array
+     */
     public Object getAttributeArray(
             List<String> fieldNames,
             AttributeBox box
@@ -233,6 +337,14 @@ public class RuntimeService {
         return getAttributeArray(fieldNames, box, false);
     }
 
+    /**
+     * Resolves a scalar value from a record box.
+     *
+     * @param fieldNames path of GraphQL field names
+     * @param box record box
+     * @param isMandatory whether missing values should be treated as errors
+     * @return resolved scalar value
+     */
     public Object getValueScalar(
             List<String> fieldNames,
             RecordBox box,

@@ -16,10 +16,21 @@
  */
 package org.gautelis.ipto.repo.model.utils;
 
+/**
+ * Helpers for measuring execution time and accumulating timing statistics.
+ */
 public class TimedExecution {
 
     private TimedExecution() {}
 
+    /**
+     * Runs a task and records its elapsed time in one statistics bucket.
+     *
+     * @param rs the statistics bucket to update
+     * @param task the task to run
+     * @return the task result
+     * @param <T> the task result type
+     */
     public static <T> T run(final RunningStatistics rs, RepoRunnable<T> task) {
         long t0 = System.nanoTime();
         try {
@@ -33,11 +44,26 @@ public class TimedExecution {
         }
     }
 
+    /**
+     * Runs a task and records its elapsed time under one named measurement.
+     *
+     * @param timingData the timing registry to update
+     * @param timing the measurement name
+     * @param task the task to run
+     * @return the task result
+     * @param <T> the task result type
+     */
     public static <T> T run(final TimingData timingData, String timing, RepoRunnable<T> task) {
         RunningStatistics rs = timingData.computeIfAbsent(timing, k -> new RunningStatistics());
         return run(rs, task);
     }
 
+    /**
+     * Runs a void task and records its elapsed time in one statistics bucket.
+     *
+     * @param rs the statistics bucket to update
+     * @param task the task to run
+     */
     public static void run(final RunningStatistics rs, Runnable task) {
         long t0 = System.nanoTime();
         try {
@@ -51,6 +77,14 @@ public class TimedExecution {
         }
     }
 
+    /**
+     * Runs a void task and records its elapsed time under one named
+     * measurement.
+     *
+     * @param timingData the timing registry to update
+     * @param timing the measurement name
+     * @param task the task to run
+     */
     public static void run(final TimingData timingData, String timing, Runnable task) {
         RunningStatistics rs = timingData.computeIfAbsent(timing, k -> new RunningStatistics());
         run(rs, task);

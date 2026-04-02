@@ -33,6 +33,13 @@ import java.sql.SQLException;
 /**
  * This is any kind of relation between a unit and another unit.
  * <p>
+ * Relations are directional. In the Java API, the unit identified by
+ * {@code tenantId}/{@code unitId} is the left side of the relation, while the
+ * unit identified by {@code relationTenantId}/{@code relationUnitId} is the
+ * right side. A "right" lookup therefore starts from a unit and follows the
+ * relation outward to the related unit. A corresponding "left" lookup starts
+ * from the related unit and finds units that point to it.
+ * <p>
  * The single/multiple relation integrity is maintained
  * internally in RelationManager.
  */
@@ -64,7 +71,16 @@ public class Relation {
     /**
      * Creates a relation between units.
      *
-     * @throws InvalidParameterException
+     * @param ctx repository context
+     * @param tenantId tenant identifier of the left-side unit
+     * @param unitId unit identifier of the left-side unit
+     * @param relationType relation type to create
+     * @param relationTenantId tenant identifier of the right-side unit
+     * @param relationUnitId unit identifier of the right-side unit
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseWriteException if the relation cannot be written
+     * @throws InvalidParameterException if the relation request is invalid
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     /* Should be package accessible only */
     public static void create(
@@ -137,7 +153,15 @@ public class Relation {
      * If multiple associations are allowed, the remaining associations
      * are left intact.
      *
-     * @throws InvalidParameterException
+     * @param ctx repository context
+     * @param tenantId tenant identifier of the left-side unit
+     * @param unitId unit identifier of the left-side unit
+     * @param relationType relation type to remove
+     * @param relationTenantId tenant identifier of the right-side unit
+     * @param relationUnitId unit identifier of the right-side unit
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseWriteException if the relation cannot be removed
+     * @throws InvalidParameterException if the relation request is invalid
      */
     /* Should be package accessible only */
     public static void remove(
@@ -164,22 +188,47 @@ public class Relation {
         });
     }
 
+    /**
+     * Returns the tenant id of the right-side unit.
+     *
+     * @return right-side tenant id
+     */
     public int getRelationTenantId() {
         return relationTenantId;
     }
 
+    /**
+     * Returns the unit id of the right-side unit.
+     *
+     * @return right-side unit id
+     */
     public long getRelationUnitId() {
         return relationUnitId;
     }
 
+    /**
+     * Returns the relation type.
+     *
+     * @return relation type
+     */
     public RelationType getType() {
         return type;
     }
 
+    /**
+     * Returns the tenant id of the left-side unit.
+     *
+     * @return left-side tenant id
+     */
     public int getTenantId() {
         return tenantId;
     }
 
+    /**
+     * Returns the unit id of the left-side unit.
+     *
+     * @return left-side unit id
+     */
     public long getUnitId() {
         return unitId;
     }

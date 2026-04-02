@@ -20,6 +20,11 @@ import org.gautelis.ipto.repo.search.model.SearchItem;
 
 import java.util.Map;
 
+/**
+ * Unary boolean negation of a search expression.
+ *
+ * @param inner the negated subexpression
+ */
 public record NotExpression(SearchExpression inner) implements SearchExpression {
     @Override
     public String toSql(SearchStrategy strategy, boolean doPrepare, Map<String, SearchItem<?>> commonConstraintValues, Map<String, Integer> attributeNameToId) {

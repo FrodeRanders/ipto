@@ -18,6 +18,9 @@ package org.gautelis.ipto.repo.model.locks;
 
 import org.gautelis.ipto.repo.exceptions.LockTypeException;
 
+/**
+ * Lock levels supported by the repository.
+ */
 public enum LockType {
     READ(10),
     EXISTENCE(20),
@@ -38,6 +41,11 @@ public enum LockType {
         throw new LockTypeException("Unknown lock type: " + type);
     }
 
+    /**
+     * Returns the numeric representation persisted in the database.
+     *
+     * @return the persisted lock type id
+     */
     public int getType() {
         return type;
     }

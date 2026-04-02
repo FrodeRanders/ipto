@@ -22,8 +22,7 @@ package org.gautelis.ipto.repo.db;
 public interface Adapter {
 
     /**
-     * Possible unload issues for a specific database adapter.
-     * <p>
+     * Releases adapter-specific resources during shutdown.
      */
     default void unload() {
     }

@@ -25,12 +25,19 @@ import java.util.Objects;
 
 
 /**
- *
+ * Unit-level search predicate with a string value.
  */
 public class StringUnitSearchItem extends UnitSearchItem<String> {
 
     private final String value;
 
+    /**
+     * Creates a string-valued unit predicate.
+     *
+     * @param column constrained column
+     * @param operator comparison operator
+     * @param value string value to compare with
+     */
     public StringUnitSearchItem(
             Column column, Operator operator, String value
     ) {
@@ -40,6 +47,11 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
         this.value = value;
     }
 
+    /**
+     * Returns the compared string value.
+     *
+     * @return string predicate value
+     */
     public String getValue() {
         return value;
     }
@@ -49,6 +61,8 @@ public class StringUnitSearchItem extends UnitSearchItem<String> {
      * <p>
      * Will handle string and character wildcards in name.
      *
+     * @param name unit name or wildcard pattern
+     * @return leaf expression that constrains unit name
      * @throws InvalidParameterException if no name was specified.
      */
     public static LeafExpression<StringUnitSearchItem> constrainToSpecificName(

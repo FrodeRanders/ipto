@@ -34,12 +34,25 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedList;
 
-/* Should be package accessible only */
+/**
+ * Internal helper for loading and removing repository associations.
+ * <p>
+ * The manager uses the same directional convention as the search subsystem:
+ * right associations are retrieved from a known unit out to external
+ * identifiers, while left associations are resolved from a known external
+ * identifier back to units.
+ */
 public class AssociationManager {
     private static final Logger log = LoggerFactory.getLogger(AssociationManager.class);
 
     /**
      * Removes all external associations for specified unit.
+     *
+     * @param ctx repository context
+     * @param conn active connection participating in a wider transaction
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @throws DatabaseWriteException if association cleanup fails
      */
     /* package accessible only */
     public static void removeAllAssociations(
@@ -82,6 +95,19 @@ public class AssociationManager {
         }
     }
 
+    /**
+     * Returns one right-side association of the requested type for a known
+     * left-side unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param assocType association type to resolve
+     * @return one matching right-side association, or {@code null} if absent
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if association lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static Association getRightAssociation(
             Context ctx, int tenantId, long unitId, AssociationType assocType
@@ -105,8 +131,20 @@ public class AssociationManager {
     }
 
     /**
-     * Gets one (if only one exists) or many (if multiple exists) right associations
-     * of the specified type for the specified unit.
+     * Returns all right-side associations of the requested type for a known
+     * left-side unit.
+     * <p>
+     * For example, a right lookup on a unit returns the external case ids, file
+     * ids, or similar identifiers associated with that unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param assocType association type to resolve
+     * @return matching right-side associations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if association lookup fails
+     * @throws InvalidParameterException if the request is invalid
      */
     public static Collection<Association> getRightAssociations(
             Context ctx, int tenantId, long unitId, AssociationType assocType
@@ -132,6 +170,18 @@ public class AssociationManager {
         return v;
     }
 
+    /**
+     * Counts right-side associations of one type for a known left-side unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param assocType association type to count
+     * @return number of matching right-side associations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if association lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static int countRightAssociations(
             Context ctx, int tenantId, long unitId, AssociationType assocType
@@ -154,6 +204,18 @@ public class AssociationManager {
         return count[0];
     }
 
+    /**
+     * Counts left-side associations of one type for a known right-side external
+     * identifier.
+     *
+     * @param ctx repository context
+     * @param assocType association type to count
+     * @param assocString the right-side external identifier
+     * @return number of matching left-side associations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if association lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static int countLeftAssociations(
             Context ctx, AssociationType assocType, String assocString
@@ -174,6 +236,21 @@ public class AssociationManager {
         return count[0];
     }
 
+    /**
+     * Returns all left-side associations of the requested type for a known
+     * right-side external identifier.
+     * <p>
+     * A left lookup answers the inverse question: which units are associated
+     * with the supplied external identifier?
+     *
+     * @param ctx repository context
+     * @param assocType association type to resolve
+     * @param assocString the right-side external identifier
+     * @return matching left-side associations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if association lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     Collection<Association> getLeftAssociations(
             Context ctx, AssociationType assocType, String assocString

@@ -47,7 +47,13 @@ import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-
+/**
+ * Primary Java facade for repository operations.
+ * <p>
+ * The repository coordinates unit creation, persistence, retrieval, search,
+ * catalog access, lifecycle transitions, locks, relations, and associations
+ * over the shared IPTO persistence model.
+ */
 public class Repository {
     private static final Logger log = LoggerFactory.getLogger(Repository.class);
     private final Map<String, ActionListener> actionListeners = new HashMap<>();
@@ -55,6 +61,13 @@ public class Repository {
     private final Context context;
     private final int eventThreshold;
 
+    /**
+     * Creates a repository facade over a configured repository context.
+     *
+     * @param context repository context holding datasource, statements, and adapter
+     * @param eventThreshold threshold used for event generation
+     * @param actionListeners configured action listeners
+     */
     public Repository(Context context, int eventThreshold, Map<String, ActionListener> actionListeners) {
         this.context = context;
         this.eventThreshold = eventThreshold;
@@ -64,6 +77,8 @@ public class Repository {
     /**
      * Gives access to a database adapter, from which solution-related SQL can
      * be retrieved.
+     *
+     * @return active database adapter
      */
     public DatabaseAdapter getDatabaseAdapter() {
         return context.getDatabaseAdapter();
@@ -76,10 +91,10 @@ public class Repository {
      * @param name name of unit (may be null)
      * @param correlationId a correlation id specific for this unit
      * @return a new unit, not yet persisted
-     * @throws DatabaseConnectionException
-     * @throws DatabaseReadException
-     * @throws DatabaseWriteException
-     * @throws ConfigurationException
+     * @throws DatabaseConnectionException if the repository cannot establish required database access
+     * @throws DatabaseReadException if repository metadata must be read and the read fails
+     * @throws DatabaseWriteException if repository setup requires a write and the write fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     public Unit createUnit(
             int tenantId,
@@ -97,10 +112,10 @@ public class Repository {
      * A correlation id specific for this unit is automatically created (UUID v7)
      * <p>
      * @return a new unit, not yet persisted
-     * @throws DatabaseConnectionException
-     * @throws DatabaseReadException
-     * @throws DatabaseWriteException
-     * @throws ConfigurationException
+     * @throws DatabaseConnectionException if the repository cannot establish required database access
+     * @throws DatabaseReadException if repository metadata must be read and the read fails
+     * @throws DatabaseWriteException if repository setup requires a write and the write fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     public Unit createUnit(
             int tenantId,
@@ -118,10 +133,10 @@ public class Repository {
      * A correlation id specific for this unit is automatically created (UUID v7)
      * <p>
      * @return a new unit, not yet persisted
-     * @throws DatabaseConnectionException
-     * @throws DatabaseReadException
-     * @throws DatabaseWriteException
-     * @throws ConfigurationException
+     * @throws DatabaseConnectionException if the repository cannot establish required database access
+     * @throws DatabaseReadException if repository metadata must be read and the read fails
+     * @throws DatabaseWriteException if repository setup requires a write and the write fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     public Unit createUnit(
             int tenantId
@@ -135,10 +150,10 @@ public class Repository {
      * @param tenantId id of tenant
      * @param correlationId a correlation id specific for this unit
      * @return a new unit, not yet persisted
-     * @throws DatabaseConnectionException
-     * @throws DatabaseReadException
-     * @throws DatabaseWriteException
-     * @throws ConfigurationException
+     * @throws DatabaseConnectionException if the repository cannot establish required database access
+     * @throws DatabaseReadException if repository metadata must be read and the read fails
+     * @throws DatabaseWriteException if repository setup requires a write and the write fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     public Unit createUnit(
             int tenantId,
@@ -222,7 +237,9 @@ public class Repository {
      * Only objects with unit status of <B>PENDING_DISPOSITION</B>
      * are disposed.
      *
+     * @param tenantId tenant whose units should be examined
      * @param writer an (optional) writer onto which progress information is printed
+     * @throws InvalidParameterException if the underlying search parameters are invalid
      */
     public void dispose(
             int tenantId,

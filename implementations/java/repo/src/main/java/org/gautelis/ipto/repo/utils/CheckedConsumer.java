@@ -22,7 +22,10 @@ import java.sql.SQLException;
 import java.util.function.Consumer;
 
 /**
+ * Variant of {@link Consumer} whose implementation is allowed to throw checked
+ * SQL and repository exceptions.
  *
+ * @param <T> consumed element type
  */
 @FunctionalInterface
 public interface CheckedConsumer<T> extends Consumer<T> {
@@ -38,5 +41,12 @@ public interface CheckedConsumer<T> extends Consumer<T> {
         }
     }
 
+    /**
+     * Consumes the supplied element and may throw checked exceptions.
+     *
+     * @param elem element to consume
+     * @throws SQLException if SQL-backed processing fails
+     * @throws BaseException if repository processing fails
+     */
     void checkedAccept(T elem) throws SQLException, BaseException;
 }

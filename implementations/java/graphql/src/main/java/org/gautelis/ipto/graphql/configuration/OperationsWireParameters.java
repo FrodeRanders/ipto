@@ -20,6 +20,13 @@ import graphql.schema.idl.RuntimeWiring;
 import org.gautelis.ipto.graphql.runtime.service.RuntimeService;
 import org.gautelis.ipto.repo.model.Repository;
 
+/**
+ * Parameters supplied to custom GraphQL operation wiring callbacks.
+ *
+ * @param runtimeWiring GraphQL runtime wiring builder
+ * @param runtimeService configured runtime service
+ * @param repository backing repository
+ */
 public record OperationsWireParameters(
         RuntimeWiring.Builder runtimeWiring,
         RuntimeService runtimeService,

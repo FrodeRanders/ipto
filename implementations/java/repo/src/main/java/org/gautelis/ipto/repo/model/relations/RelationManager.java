@@ -35,12 +35,25 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.LinkedList;
 
-/* Should be package accessible only */
+/**
+ * Internal helper for loading and removing repository relations.
+ * <p>
+ * The manager uses the repository-wide directional convention:
+ * right relations are the relations stored on, or followed from, a known unit;
+ * left relations are the inverse view, that is, units that point to a known
+ * related unit.
+ */
 public class RelationManager {
     private static final Logger log = LoggerFactory.getLogger(RelationManager.class);
 
     /**
      * Removes all relations for specified unit.
+     *
+     * @param ctx repository context
+     * @param conn active connection participating in a wider transaction
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @throws DatabaseWriteException if relation cleanup fails
      */
     /* package accessible only */
     public static void removeAllRelations(
@@ -89,6 +102,19 @@ public class RelationManager {
         }
     }
 
+    /**
+     * Returns one right-side relation of the requested type for a known
+     * left-side unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param relType relation type to resolve
+     * @return one matching right-side relation, or {@code null} if absent
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if relation lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static Relation getRightRelation(
             Context ctx, int tenantId, long unitId, RelationType relType
@@ -112,8 +138,20 @@ public class RelationManager {
     }
 
     /**
-     * Gets one (if only one exists) or many (if multiple exists) right relations
-     * of the specified type for the specified unit.
+     * Returns all right-side relations of the requested type for a known
+     * left-side unit.
+     * <p>
+     * For example, for {@code PARENT_CHILD_RELATION}, a right lookup on a
+     * parent returns its children.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param relType relation type to resolve
+     * @return matching right-side relations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if relation lookup fails
+     * @throws InvalidParameterException if the request is invalid
      */
     public static Collection<Relation> getRightRelations(
             Context ctx, int tenantId, long unitId, RelationType relType
@@ -139,6 +177,18 @@ public class RelationManager {
         return v;
     }
 
+    /**
+     * Counts right-side relations of one type for a known left-side unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant id of the left-side unit
+     * @param unitId unit id of the left-side unit
+     * @param relType relation type to count
+     * @return number of matching right-side relations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if relation lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static int countRightRelations(
             Context ctx, int tenantId, long unitId, RelationType relType
@@ -161,6 +211,21 @@ public class RelationManager {
         return count[0];
     }
 
+    /**
+     * Counts left-side relations of one type for a known right-side unit.
+     * <p>
+     * For example, for {@code PARENT_CHILD_RELATION}, a left count on a child
+     * reports how many parents point to it.
+     *
+     * @param ctx repository context
+     * @param relType relation type to count
+     * @param relTenantId tenant id of the right-side unit
+     * @param relUnitId unit id of the right-side unit
+     * @return number of matching left-side relations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if relation lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     static int countLeftRelations(
             Context ctx, RelationType relType, int relTenantId, long relUnitId
@@ -183,6 +248,22 @@ public class RelationManager {
         return count[0];
     }
 
+    /**
+     * Returns all left-side relations of the requested type for a known
+     * right-side unit.
+     * <p>
+     * For example, for {@code PARENT_CHILD_RELATION}, a left lookup on a child
+     * returns the parents that point to it.
+     *
+     * @param ctx repository context
+     * @param relType relation type to resolve
+     * @param relTenantId tenant id of the right-side unit
+     * @param relUnitId unit id of the right-side unit
+     * @return matching left-side relations
+     * @throws DatabaseConnectionException if a database connection cannot be obtained
+     * @throws DatabaseReadException if relation lookup fails
+     * @throws InvalidParameterException if the request is invalid
+     */
     /* package accessible only */
     Collection<Relation> getLeftRelations(
             Context ctx, RelationType relType, int relTenantId, long relUnitId

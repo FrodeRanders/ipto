@@ -27,7 +27,7 @@ import java.sql.ResultSet;
 import static org.gautelis.ipto.repo.model.RelationType.PARENT_CHILD_RELATION;
 
 /**
- *
+ * Specialized relation representing a parent-child hierarchy.
  */
 class ParentChildRelation extends Relation {
 
@@ -57,10 +57,20 @@ class ParentChildRelation extends Relation {
         return RelationManager.countLeftRelations(ctx, PARENT_CHILD_RELATION, tenantId, unitId);
     }
 
+    /**
+     * Returns the tenant id of the parent unit.
+     *
+     * @return parent tenant id
+     */
     public int getParentTenantId() {
         return getRelationTenantId();
     }
 
+    /**
+     * Returns the unit id of the parent unit.
+     *
+     * @return parent unit id
+     */
     public long getParentUnitId() {
         return getRelationUnitId();
     }

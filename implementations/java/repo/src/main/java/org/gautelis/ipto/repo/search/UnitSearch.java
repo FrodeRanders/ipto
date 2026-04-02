@@ -36,8 +36,9 @@ public class UnitSearch {
 
     /**
      * Creates a bundle of data containing search expression, using default sort order.
-     * <p/>
-     * @param expression
+     *
+     * @param expression search expression to evaluate
+     * @param strategy SQL compilation strategy to use
      */
     public UnitSearch(
             SearchExpression expression,
@@ -55,9 +56,10 @@ public class UnitSearch {
 
     /**
      * Creates a bundle of data containing search expression, how to sort results.
-     * <p/>
-     * @param expression
-     * @param order
+     *
+     * @param expression search expression to evaluate
+     * @param strategy SQL compilation strategy to use
+     * @param order result ordering
      */
     public UnitSearch(
             SearchExpression expression,
@@ -78,10 +80,11 @@ public class UnitSearch {
     /**
      * Creates a bundle of data containing search expression, how to sort results,
      * as well as how to limit search results to 'selectionSize'.
-     * <p/>
-     * @param expression
-     * @param order
-     * @param selectionSize
+     *
+     * @param expression search expression to evaluate
+     * @param strategy SQL compilation strategy to use
+     * @param order result ordering
+     * @param selectionSize maximum number of rows to return
      */
     public UnitSearch(
             SearchExpression expression,
@@ -103,11 +106,12 @@ public class UnitSearch {
     /**
      * Creates a bundle of data containing search expression, how to sort results,
      * as well as how to page among search results.
-     * </p>
-     * @param expression
-     * @param order
-     * @param pageOffset
-     * @param pageSize
+     *
+     * @param expression search expression to evaluate
+     * @param strategy SQL compilation strategy to use
+     * @param order result ordering
+     * @param pageOffset row offset of the first result in the page
+     * @param pageSize maximum number of rows in the page
      */
     public UnitSearch(
             SearchExpression expression,
@@ -127,14 +131,29 @@ public class UnitSearch {
         this.selectionSize = 0;
     }
 
+    /**
+     * Returns the search expression.
+     *
+     * @return search expression
+     */
     public SearchExpression getExpression() {
         return expression;
     }
 
+    /**
+     * Returns the SQL compilation strategy.
+     *
+     * @return search strategy
+     */
     public SearchStrategy getStrategy() {
         return strategy;
     }
 
+    /**
+     * Returns the requested sort order.
+     *
+     * @return sort order
+     */
     public SearchOrder getOrder() {
         return order;
     }

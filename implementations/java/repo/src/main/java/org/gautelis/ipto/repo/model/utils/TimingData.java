@@ -22,12 +22,30 @@ import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.IntStream;
 
+/**
+ * Registry of named timing measurements.
+ * <p>
+ * Each entry maps one operation name to accumulated
+ * {@link RunningStatistics}. The class also formats the collected values as a
+ * human-readable timing report.
+ */
 public class TimingData extends ConcurrentHashMap<String, RunningStatistics> {
 
+    /**
+     * Adds one elapsed-time sample to a named measurement.
+     *
+     * @param name the measurement name
+     * @param sample the elapsed time sample, in milliseconds
+     */
     public void addSample(String name, double sample) {
         computeIfAbsent(name, k -> new RunningStatistics()).addSample(sample);
     }
 
+    /**
+     * Formats the collected timing statistics as a text table.
+     *
+     * @return a human-readable timing report
+     */
     public String report() {
         StringBuilder buf = new StringBuilder();
 

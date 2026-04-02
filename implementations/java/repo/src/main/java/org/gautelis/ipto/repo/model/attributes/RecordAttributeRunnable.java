@@ -16,7 +16,15 @@
  */
 package org.gautelis.ipto.repo.model.attributes;
 
+/**
+ * Callback receiving a resolved record attribute wrapper.
+ */
 @FunctionalInterface
 public interface RecordAttributeRunnable {
+    /**
+     * Invoked with the resolved record attribute.
+     *
+     * @param record the resolved record attribute
+     */
     void run(RecordAttribute record);
 }

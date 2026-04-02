@@ -27,7 +27,7 @@ import java.sql.ResultSet;
 import static org.gautelis.ipto.repo.model.AssociationType.CASE_ASSOCIATION;
 
 /**
- *
+ * Specialized association representing a case reference.
  */
 /* package accessible only */
 final class CaseAssociation extends Association {
@@ -62,7 +62,9 @@ final class CaseAssociation extends Association {
     }
 
     /**
-     * Gets case reference
+     * Returns the case reference.
+     *
+     * @return case reference string
      */
     /* package accessible only */
     String getCaseRef() {

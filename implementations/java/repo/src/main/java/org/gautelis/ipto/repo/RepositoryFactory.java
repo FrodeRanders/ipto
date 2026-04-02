@@ -33,7 +33,14 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 
-
+/**
+ * Bootstraps the singleton Java repository instance.
+ * <p>
+ * The factory loads SQL statements and repository configuration from bundled
+ * resources, creates the JDBC connection pool, initializes optional action
+ * listeners, loads the configured database adapter, and returns a ready-to-use
+ * {@link Repository}.
+ */
 public class RepositoryFactory {
     private static final Logger log = LoggerFactory.getLogger(RepositoryFactory.class);
     private static final Logger statistics = LoggerFactory.getLogger("STATISTICS");
@@ -62,6 +69,12 @@ public class RepositoryFactory {
         return getConfiguration(ConfigurationTool.loadFromResource(RepositoryFactory.class, configurationFile));
     }
 
+    /**
+     * Returns the shared repository instance, creating it on first access.
+     *
+     * @return configured repository singleton
+     * @throws ConfigurationException if repository configuration cannot be loaded
+     */
     public static Repository getRepository() {
         if (null != repo) {
             return repo;

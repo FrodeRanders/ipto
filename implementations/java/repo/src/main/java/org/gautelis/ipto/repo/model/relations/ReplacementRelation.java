@@ -22,7 +22,7 @@ import org.gautelis.ipto.repo.exceptions.DatabaseReadException;
 import java.sql.ResultSet;
 
 /**
- *
+ * Specialized relation representing replacement/supersession.
  */
 class ReplacementRelation extends Relation {
 
@@ -30,10 +30,20 @@ class ReplacementRelation extends Relation {
         super(rs);
     }
 
+    /**
+     * Returns the tenant id of the unit being replaced.
+     *
+     * @return replaced unit tenant id
+     */
     public int getReplacesTenantId() {
         return getRelationTenantId();
     }
 
+    /**
+     * Returns the unit id of the unit being replaced.
+     *
+     * @return replaced unit id
+     */
     public long getReplacesUnitId() {
         return getRelationUnitId();
     }

@@ -22,6 +22,9 @@ import org.gautelis.ipto.repo.model.RelationType;
 import org.gautelis.ipto.repo.model.Unit;
 import org.gautelis.ipto.repo.search.query.LeafExpression;
 
+/**
+ * Search predicate that finds units on the left side of a relation.
+ */
 public class LeftRelationSearchItem extends RelationSearchItem<Unit.Id> {
     private final Unit.Id rightId;
 
@@ -31,9 +34,12 @@ public class LeftRelationSearchItem extends RelationSearchItem<Unit.Id> {
     }
 
     /**
-     * Generates constraint "Unit <--relation-- Unit{tenantId, unitId}",
-     * e.g. corresponding to retrieving 'children' of a specific 'parent'.
-     * <p>
+     * Generates a constraint that matches units related from a known right-side
+     * unit, for example children of a known parent.
+     *
+     * @param type relation type
+     * @param rightId right-side unit identifier
+     * @return leaf expression representing the relation predicate
      */
     public static LeafExpression<LeftRelationSearchItem> constrainOnLeftRelationEQ(
             RelationType type,
@@ -42,6 +48,11 @@ public class LeftRelationSearchItem extends RelationSearchItem<Unit.Id> {
         return new LeafExpression<>(new LeftRelationSearchItem(type, Operator.EQ, rightId));
     }
 
+    /**
+     * Returns the right-side unit identifier used by the predicate.
+     *
+     * @return right-side unit identifier
+     */
     @Override
     public Unit.Id getValue() {
         return rightId;

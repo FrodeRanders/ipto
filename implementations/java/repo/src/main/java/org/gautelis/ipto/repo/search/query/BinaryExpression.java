@@ -22,12 +22,22 @@ import org.gautelis.ipto.repo.search.model.SearchItem;
 import java.util.Map;
 import java.util.Objects;
 
+/**
+ * Base class for binary boolean search expressions.
+ */
 public sealed abstract class BinaryExpression implements SearchExpression
         permits AndExpression, OrExpression {
 
     protected final SearchExpression left, right;
     protected final Operator operator;
 
+    /**
+     * Creates a binary expression over two subexpressions.
+     *
+     * @param operator the boolean operator joining the subexpressions
+     * @param left the left-hand expression
+     * @param right the right-hand expression
+     */
     protected BinaryExpression(Operator operator, SearchExpression left, SearchExpression right) {
         Objects.requireNonNull(operator, "operator");
         Objects.requireNonNull(left, "left");
@@ -38,14 +48,29 @@ public sealed abstract class BinaryExpression implements SearchExpression
         this.right = right;
     }
 
+    /**
+     * Returns the boolean operator joining the two subexpressions.
+     *
+     * @return the expression operator
+     */
     protected Operator operator() {
         return operator;
     }
 
+    /**
+     * Returns the left-hand subexpression.
+     *
+     * @return the left-hand expression
+     */
     public SearchExpression getLeft() {
         return left;
     }
 
+    /**
+     * Returns the right-hand subexpression.
+     *
+     * @return the right-hand expression
+     */
     public SearchExpression getRight() {
         return right;
     }

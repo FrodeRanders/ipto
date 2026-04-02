@@ -41,19 +41,48 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+/**
+ * Parses the textual search-query language into {@link SearchExpression}
+ * trees.
+ * <p>
+ * The parser resolves unit fields directly and delegates attribute resolution
+ * to either a repository-backed or caller-provided resolver. The resulting AST
+ * is the same backend-neutral expression tree used by the programmatic search
+ * API.
+ */
 public final class SearchExpressionQueryParser {
     protected static final Logger log = LoggerFactory.getLogger(SearchExpressionQueryParser.class);
 
+    /**
+     * Resolves a textual field name to a configured attribute and its declared
+     * type.
+     */
     public interface AttributeTypeResolver {
+        /**
+         * Resolves one textual attribute reference.
+         *
+         * @param name the attribute name or alias from the textual query
+         * @return the resolved attribute metadata, if known
+         */
         Optional<ResolvedAttribute> resolve(String name);
     }
 
+    /**
+     * Controls whether textual attribute references are interpreted as names,
+     * aliases, or both.
+     */
     public enum AttributeNameMode {
         NAMES,
         ALIASES,
         NAMES_OR_ALIASES
     }
 
+    /**
+     * Result of attribute-name resolution.
+     *
+     * @param name the canonical attribute name
+     * @param type the configured attribute type
+     */
     public record ResolvedAttribute(String name, AttributeType type) {}
 
     private static final Map<String, UnitField> UNIT_FIELDS = buildUnitFields();
@@ -63,10 +92,26 @@ public final class SearchExpressionQueryParser {
     private SearchExpressionQueryParser() {
     }
 
+    /**
+     * Parses a textual query using a caller-provided attribute resolver and the
+     * default name-resolution mode.
+     *
+     * @param query the textual query
+     * @param resolver the attribute resolver
+     * @return the parsed search expression tree
+     */
     public static SearchExpression parse(String query, AttributeTypeResolver resolver) {
         return parse(query, resolver, AttributeNameMode.NAMES);
     }
 
+    /**
+     * Parses a textual query using a caller-provided attribute resolver.
+     *
+     * @param query the textual query
+     * @param resolver the attribute resolver
+     * @param mode how unqualified attribute references should be resolved
+     * @return the parsed search expression tree
+     */
     public static SearchExpression parse(String query, AttributeTypeResolver resolver, AttributeNameMode mode) {
         Objects.requireNonNull(query, "query");
         Objects.requireNonNull(resolver, "resolver");
@@ -84,12 +129,29 @@ public final class SearchExpressionQueryParser {
         return new Builder(resolver, mode).visit(tree.expr());
     }
 
+    /**
+     * Parses a textual query using attribute metadata available through a
+     * repository instance.
+     *
+     * @param query the textual query
+     * @param repo the repository used for attribute resolution
+     * @return the parsed search expression tree
+     */
     public static SearchExpression parse(String query, Repository repo) {
         Objects.requireNonNull(repo, "repo");
         return parse(query, name -> repo.getAttributeInfo(name)
                 .map(info -> new ResolvedAttribute(name, AttributeType.of(info.type))), AttributeNameMode.NAMES);
     }
 
+    /**
+     * Parses a textual query using a repository instance and explicit
+     * name-resolution mode.
+     *
+     * @param query the textual query
+     * @param repo the repository used for attribute resolution
+     * @param mode how unqualified attribute references should be resolved
+     * @return the parsed search expression tree
+     */
     public static SearchExpression parse(String query, Repository repo, AttributeNameMode mode) {
         Objects.requireNonNull(repo, "repo");
         return parse(query, name -> repo.getAttributeInfo(name)

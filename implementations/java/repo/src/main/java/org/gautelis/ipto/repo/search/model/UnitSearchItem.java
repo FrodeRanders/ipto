@@ -20,7 +20,9 @@ import org.gautelis.ipto.repo.db.Column;
 import org.gautelis.ipto.repo.model.AttributeType;
 
 /**
+ * Search predicate that targets a concrete unit or version column.
  *
+ * @param <T> predicate value type
  */
 public abstract class UnitSearchItem<T> extends SearchItem<T> {
 
@@ -31,6 +33,11 @@ public abstract class UnitSearchItem<T> extends SearchItem<T> {
         this.column = column;
     }
 
+    /**
+     * Returns the database column constrained by this predicate.
+     *
+     * @return constrained column
+     */
     public Column getColumn() {
         return column;
     }

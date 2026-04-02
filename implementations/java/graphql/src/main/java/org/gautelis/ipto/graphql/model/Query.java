@@ -16,12 +16,37 @@
  */
 package org.gautelis.ipto.graphql.model;
 
+/**
+ * Common GraphQL input shapes used by the Java runtime layer.
+ */
 public class Query {
 
+    /**
+     * Identifies a stored unit by tenant and unit id.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     */
     public record UnitIdentification(int tenantId, long unitId) {}
 
+    /**
+     * Identifies a domain payload by tenant and correlation id.
+     *
+     * @param tenantId tenant identifier
+     * @param corrId correlation identifier
+     */
     public record YrkanIdentification(int tenantId, String corrId) {}
 
+    /**
+     * Search filter supplied to GraphQL search operations.
+     *
+     * @param tenantId tenant scope for the search
+     * @param where textual search predicate
+     * @param offset row offset for paging
+     * @param size page size
+     * @param orderBy optional sort field
+     * @param orderDirection optional sort direction
+     */
     public record Filter(
             int tenantId,
             String where,

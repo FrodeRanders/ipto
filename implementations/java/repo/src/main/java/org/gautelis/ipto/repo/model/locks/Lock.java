@@ -25,7 +25,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 /**
- * Wraps lock information.
+ * Immutable information about one lock held on a unit.
+ * <p>
+ * Locks are persisted in the repository and used to coordinate administrative
+ * and write-oriented operations on units.
  */
 public class Lock {
 
@@ -63,7 +66,13 @@ public class Lock {
     }
 
     /**
-     * Is unit locked?
+     * Indicates whether a unit is locked at or above one specific lock level.
+     *
+     * @param ctx the repository context
+     * @param tenantId the tenant id
+     * @param unitId the unit id
+     * @param lockLevel the minimum lock level to check for
+     * @return {@code true} if a matching lock exists
      */
     /* Should be package accessible only */
     public static boolean isLocked(Context ctx, int tenantId, long unitId, LockType lockLevel) throws DatabaseConnectionException, DatabaseReadException {
@@ -90,7 +99,12 @@ public class Lock {
     }
 
     /**
-     * Is unit locked?
+     * Indicates whether a unit currently has any lock.
+     *
+     * @param ctx the repository context
+     * @param tenantId the tenant id
+     * @param unitId the unit id
+     * @return {@code true} if any lock exists for the unit
      */
     /* Should be package accessible only */
     public static boolean isLocked(Context ctx, int tenantId, long unitId) throws DatabaseConnectionException, DatabaseReadException {
@@ -111,10 +125,15 @@ public class Lock {
     }
 
     /**
-     * Lock unit.
+     * Places a lock on a unit if it is currently unlocked.
      *
-     * @param purpose purpose of lock
-     * @return true if lock was successfully placed on unit, false otherwise
+     * @param ctx the repository context
+     * @param tenantId the tenant id
+     * @param unitId the unit id
+     * @param type the lock type to create
+     * @param purpose informational purpose text for the lock
+     * @return {@code true} if the lock was created, {@code false} if the unit
+     *         was already locked
      */
     /* Should be package accessible only */
     public static boolean lock(
@@ -152,9 +171,12 @@ public class Lock {
     }
 
     /**
-     * Gets information on locks.
+     * Returns all active locks on one unit.
      *
-     * @return LockInfo containing the information
+     * @param ctx the repository context
+     * @param tenantId the tenant id
+     * @param unitId the unit id
+     * @return the active locks
      * @see Lock
      */
     /* Should be package accessible only */
@@ -185,7 +207,11 @@ public class Lock {
     }
 
     /**
-     * Unlock unit.
+     * Removes all locks from one unit.
+     *
+     * @param ctx the repository context
+     * @param tenantId the tenant id
+     * @param unitId the unit id
      */
     /* Should be package accessible only */
     public static void unlock(Context ctx, int tenantId, long unitId) throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException {
@@ -203,44 +229,45 @@ public class Lock {
     }
 
     /**
-     * Get purpose of lock, i.e. some informational
-     * note on why lock was placed. This information is
-     * most often made automatically and may (in fact)
-     * not be very informational.
+     * Returns the informational purpose text associated with the lock.
+     *
+     * @return the lock purpose, if any
      */
     public String getPurpose() {
         return purpose;
     }
 
     /**
-     * Get locktype
+     * Returns the lock type.
+     *
+     * @return the lock type
      */
     public LockType getType() {
         return type;
     }
 
     /**
-     * Get time when lock was placed
+     * Returns the lock creation time.
+     *
+     * @return the lock timestamp
      */
     public java.sql.Timestamp getLockTime() {
         return lockTime;
     }
 
     /**
-     * Get time when lock expires if auto-unlock
-     * applies to the unit or null if no expiration
-     * time is set.
+     * Returns the lock expiration time, if any.
      *
-     * @return Timestamp if expiration time apply or null if not
+     * @return the expiration timestamp, or {@code null} for non-expiring locks
      */
     public java.sql.Timestamp getExpireTime() {
         return expireTime;
     }
 
     /**
-     * Overridden method from @see java.lang.Object
+     * Returns a textual description of the lock.
      *
-     * @return Returns created String
+     * @return a diagnostic string representation
      */
     public String toString() {
         String info = type + " lock set on " + lockTime;
@@ -251,6 +278,5 @@ public class Lock {
         return info;
     }
 }
-
 
 

@@ -41,12 +41,19 @@ import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
 /**
+ * Mutable in-memory representation of a repository unit.
+ * <p>
+ * A unit is the central domain object in the Java repository API. It carries a
+ * stable tenant-scoped identity, version information, lifecycle status, and a
+ * set of typed attributes that may include nested record attributes.
  */
 public class Unit implements Cloneable {
     private static final Logger log = LoggerFactory.getLogger(Unit.class);
 
+    /**
+     * Lifecycle status of a unit in the repository.
+     */
     public enum Status {
         PENDING_DISPOSITION(1),
         PENDING_DELETION(10),
@@ -69,11 +76,22 @@ public class Unit implements Cloneable {
             throw new StatusException("Unknown unit status: " + status);
         }
 
+        /**
+         * Returns the persisted integer status code.
+         *
+         * @return integer status code
+         */
         public int getStatus() {
             return status;
         }
     }
 
+    /**
+     * Immutable tenant-scoped unit identifier.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     */
     public record Id(int tenantId, long unitId) {
         @Override
         public String toString() {
@@ -109,6 +127,15 @@ public class Unit implements Cloneable {
 
     /**
      * Creates a <B>new</B> unit.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant owning the new unit
+     * @param name optional unit name
+     * @param correlationId correlation id assigned to the unit
+     * @throws DatabaseConnectionException if required repository access cannot be established
+     * @throws DatabaseReadException if repository metadata must be read and the read fails
+     * @throws DatabaseWriteException if repository setup requires a write and the write fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     /* package accessible only */
     Unit(
@@ -144,6 +171,15 @@ public class Unit implements Cloneable {
      * Observe that no new unit is created. We will use the
      * information provided in order to find this unit in
      * the database and inflate an object of it.
+     *
+     * @param ctx repository context
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @throws DatabaseConnectionException if the read cannot obtain a connection
+     * @throws DatabaseWriteException if transactional handling fails while loading
+     * @throws DatabaseReadException if the unit cannot be read
+     * @throws UnitNotFoundException if the unit does not exist
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     /* package accessible only */
     Unit(
@@ -179,6 +215,10 @@ public class Unit implements Cloneable {
 
     /**
      * Fetches an <I>existing</I> unit from a row in the resultset.
+     *
+     * @param ctx repository context
+     * @param rs result-set row representing the unit
+     * @throws DatabaseReadException if the row cannot be read
      */
     /* Should be package accessible only */
     public Unit(
@@ -200,6 +240,9 @@ public class Unit implements Cloneable {
 
     /**
      * Fetches an <I>existing</I> unit from JSON.
+     *
+     * @param ctx repository context
+     * @param json serialized unit JSON
      */
     /* Should be package accessible only */
     public Unit(
@@ -219,8 +262,12 @@ public class Unit implements Cloneable {
             log.trace("Inflating unit from JSON: {}", Unit.id2String(tenantId, unitId));
     }
 
-    /*
-     * Returns a standardised ID string, if the Unit has been persisted
+    /**
+     * Returns a standardized textual identifier for a persisted unit.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @return textual identifier, or {@code #NOID#} for non-persisted units
      */
     public static String id2String(int tenantId, long unitId) {
         if (unitId > 0L) {
@@ -229,8 +276,13 @@ public class Unit implements Cloneable {
         return "#NOID#";
     }
 
-    /*
-     * Returns a standardised ID string, if the Unit has been persisted
+    /**
+     * Returns a standardized textual identifier including version information.
+     *
+     * @param tenantId tenant identifier
+     * @param unitId unit identifier
+     * @param unitVersion unit version
+     * @return textual identifier, or {@code #NOID#} for non-persisted units
      */
     public static String id2String(int tenantId, long unitId, int unitVersion) {
         if (unitId > 0L) {
@@ -280,6 +332,12 @@ public class Unit implements Cloneable {
         return unitNode;
     }
 
+    /**
+     * Serializes the unit to JSON.
+     *
+     * @param pretty whether to pretty-print the output
+     * @return serialized JSON representation
+     */
     public String asJson(boolean pretty) {
         try {
             ObjectNode unitNode = getJson(/* be chatty and use type names */ true, /* for persistence? */ false);
@@ -294,7 +352,16 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Returns references to external resources associated with this unit.
+     * Returns the right-side associations of this unit.
+     * <p>
+     * In the left/right terminology used throughout the repository, this unit
+     * is the left side and the returned external identifiers are the right side.
+     *
+     * @param assocType association type to resolve
+     * @return associated external identifiers
+     * @throws DatabaseConnectionException if the lookup cannot obtain a connection
+     * @throws DatabaseReadException if the lookup fails
+     * @throws InvalidParameterException if the association request is invalid
      */
     public Collection<String> getAssociations(
             AssociationType assocType
@@ -314,7 +381,18 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Returns references to external resources associated with this unit.
+     * Returns the right-side relations of this unit.
+     * <p>
+     * In the left/right terminology used throughout the repository, this unit
+     * is the left side and the returned units are the right side. For a
+     * directory-like parent/child structure, this means a right lookup on a
+     * parent returns its children.
+     *
+     * @param relType relation type to resolve
+     * @return related right-side units
+     * @throws DatabaseConnectionException if the lookup cannot obtain a connection
+     * @throws DatabaseReadException if the lookup fails
+     * @throws InvalidParameterException if the relation request is invalid
      */
     public Collection<Unit> getRelations(
             RelationType relType
@@ -823,7 +901,11 @@ public class Unit implements Cloneable {
     /**
      * Get attribute associated with unit.
      *
-     * @return Attribute if attribute exists, null if it does not
+     * @param name attribute name
+     * @return attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws ConfigurationException if repository configuration is inconsistent
      */
     public Optional<Attribute<?>> getAttribute(
             String name
@@ -831,29 +913,89 @@ public class Unit implements Cloneable {
         return Optional.ofNullable(fetchAttributes().get(name));
     }
 
+    /**
+     * Returns an attribute by repository attribute id.
+     *
+     * @param attributeId repository attribute id
+     * @return attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws SecurityException if access is denied
+     * @throws AttributeTypeException if the attribute type is invalid
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws SystemInconsistencyException if repository metadata is inconsistent
+     * @throws ConfigurationException if repository configuration is inconsistent
+     */
     public Optional<Attribute<?>> getAttribute(
             int attributeId
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException {
         return getAttribute(attributeId, false);
     }
 
+    /**
+     * Returns a string-valued attribute by name.
+     *
+     * @param attributeName attribute name
+     * @return string attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws SecurityException if access is denied
+     * @throws AttributeTypeException if the stored attribute is not string-valued
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws SystemInconsistencyException if repository metadata is inconsistent
+     * @throws ConfigurationException if repository configuration is inconsistent
+     */
     public Optional<Attribute<String>> getStringAttribute(
             String attributeName
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException {
         return getStringAttribute(attributeName, false);
     }
+    /**
+     * Returns a string-valued attribute by repository attribute id.
+     *
+     * @param attributeId repository attribute id
+     * @return string attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws SecurityException if access is denied
+     * @throws AttributeTypeException if the stored attribute is not string-valued
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws SystemInconsistencyException if repository metadata is inconsistent
+     * @throws ConfigurationException if repository configuration is inconsistent
+     */
     public Optional<Attribute<String>> getStringAttribute(
             int attributeId
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException {
         return getStringAttribute(attributeId, false);
     }
 
+    /**
+     * Returns an integer-valued attribute by name.
+     *
+     * @param attributeName attribute name
+     * @return integer attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws SecurityException if access is denied
+     * @throws AttributeTypeException if the stored attribute is not integer-valued
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws SystemInconsistencyException if repository metadata is inconsistent
+     * @throws ConfigurationException if repository configuration is inconsistent
+     */
     public Optional<Attribute<Integer>> getIntegerAttribute(
             String attributeName
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException {
         return getIntegerAttribute(attributeName, false);
     }
 
+    /**
+     * Returns an integer-valued attribute by repository attribute id.
+     *
+     * @param attributeId repository attribute id
+     * @return integer attribute when present
+     * @throws DatabaseConnectionException if attribute loading cannot obtain a connection
+     * @throws SecurityException if access is denied
+     * @throws AttributeTypeException if the stored attribute is not integer-valued
+     * @throws DatabaseReadException if attribute loading fails
+     * @throws SystemInconsistencyException if repository metadata is inconsistent
+     * @throws ConfigurationException if repository configuration is inconsistent
+     */
     public Optional<Attribute<Integer>> getIntegerAttribute(
             int attributeId
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException {
@@ -920,6 +1062,16 @@ public class Unit implements Cloneable {
         return getDataAttribute(attributeId, false);
     }
 
+    /**
+     * Applies a callback to an attribute, creating it first when requested.
+     *
+     * @param name attribute name
+     * @param expectedClass expected Java value class
+     * @param createIfMissing whether a missing attribute should be created
+     * @param runnable callback receiving the typed attribute
+     * @param <A> attribute value type
+     * @return typed attribute passed to the callback
+     */
     @SuppressWarnings("unchecked")
     public <A> Attribute<A> withAttribute(String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Optional<Attribute<?>> _attribute = getAttribute(name, createIfMissing);
@@ -944,19 +1096,53 @@ public class Unit implements Cloneable {
         }
     }
 
+    /**
+     * Applies a callback to an attribute value, creating the attribute first when requested.
+     *
+     * @param name attribute name
+     * @param expectedClass expected Java value class
+     * @param createIfMissing whether a missing attribute should be created
+     * @param runnable callback receiving the attribute value wrapper
+     * @param <A> attribute value type
+     */
     public <A> void withAttributeValue(String name, Class<A> expectedClass, boolean createIfMissing, AttributeValueRunnable<A> runnable) {
         withAttribute(name, expectedClass, createIfMissing, asAttributeRunnable(runnable));
     }
 
-
+    /**
+     * Applies a callback to an attribute, creating it if it is missing.
+     *
+     * @param name attribute name
+     * @param expectedClass expected Java value class
+     * @param runnable callback receiving the typed attribute
+     * @param <A> attribute value type
+     */
     public <A> void withAttribute(String name, Class<A> expectedClass, AttributeRunnable<A> runnable) {
         withAttribute(name, expectedClass, true, runnable);
     }
 
+    /**
+     * Applies a callback to an attribute value, creating the attribute if it is missing.
+     *
+     * @param name attribute name
+     * @param expectedClass expected Java value class
+     * @param runnable callback receiving the attribute value wrapper
+     * @param <A> attribute value type
+     */
     public <A> void withAttributeValue(String name, Class<A> expectedClass, AttributeValueRunnable<A> runnable) {
         withAttribute(name, expectedClass, true, asAttributeRunnable(runnable));
     }
 
+    /**
+     * Applies a callback to a nested attribute inside a record attribute.
+     *
+     * @param recordAttribute record attribute containing the nested attribute
+     * @param name nested attribute name
+     * @param expectedClass expected Java value class
+     * @param createIfMissing whether a missing nested attribute should be created
+     * @param runnable callback receiving the typed nested attribute
+     * @param <A> nested attribute value type
+     */
     @SuppressWarnings("unchecked")
     public <A> void withAttribute(Attribute<Attribute<?>> recordAttribute, String name, Class<A> expectedClass, boolean createIfMissing, AttributeRunnable<A> runnable) {
         Objects.requireNonNull(recordAttribute, "recordAttribute");
@@ -1020,6 +1206,13 @@ public class Unit implements Cloneable {
         };
     }
 
+    /**
+     * Resolves a top-level record attribute and passes a wrapper for it to the
+     * callback.
+     *
+     * @param name the record attribute name
+     * @param runnable callback receiving the resolved record attribute
+     */
     public void withRecordAttribute(String name, RecordAttributeRunnable runnable) {
         runnable.run(requireRecordAttribute(name));
     }
@@ -1036,6 +1229,22 @@ public class Unit implements Cloneable {
         return new RecordAttribute(this, resolved);
     }
 
+    /**
+     * Returns an attribute by name, optionally creating it from the configured
+     * attribute catalog when absent.
+     *
+     * @param attrName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute, if present or created
+     * @throws DatabaseConnectionException if the repository database cannot be reached
+     * @throws SecurityException if the operation is not permitted
+     * @throws AttributeTypeException if the configured type cannot be materialized
+     * @throws DatabaseReadException if attribute state cannot be read
+     * @throws SystemInconsistencyException if the attribute is missing from the
+     *                                      known-attribute catalog
+     * @throws ConfigurationException if repository configuration is invalid
+     * @throws IllegalRequestException if the attribute cannot be added to this unit
+     */
     public Optional<Attribute<?>> getAttribute(
             String attrName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1064,6 +1273,21 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns an attribute by catalog id, optionally creating it when absent.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute, if present or created
+     * @throws DatabaseConnectionException if the repository database cannot be reached
+     * @throws SecurityException if the operation is not permitted
+     * @throws AttributeTypeException if the configured type cannot be materialized
+     * @throws DatabaseReadException if attribute state cannot be read
+     * @throws SystemInconsistencyException if the attribute is missing from the
+     *                                      known-attribute catalog
+     * @throws ConfigurationException if repository configuration is invalid
+     * @throws IllegalRequestException if the attribute cannot be added to this unit
+     */
     public Optional<Attribute<?>> getAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1092,6 +1316,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a string attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#STRING}
+     */
     public Optional<Attribute<String>> getStringAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1104,6 +1336,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a string attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#STRING}
+     */
     public Optional<Attribute<String>> getStringAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1116,6 +1356,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns an integer attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#INTEGER}
+     */
     public Optional<Attribute<Integer>> getIntegerAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1128,6 +1376,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns an integer attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#INTEGER}
+     */
     public Optional<Attribute<Integer>> getIntegerAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1140,6 +1396,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a long attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#LONG}
+     */
     public Optional<Attribute<Long>> getLongAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1152,6 +1416,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a long attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#LONG}
+     */
     public Optional<Attribute<Long>> getLongAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1164,6 +1436,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a double attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#DOUBLE}
+     */
     public Optional<Attribute<Double>> getDoubleAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1176,6 +1456,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a double attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#DOUBLE}
+     */
     public Optional<Attribute<Double>> getDoubleAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1188,6 +1476,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a boolean attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#BOOLEAN}
+     */
     public Optional<Attribute<Boolean>> getBooleanAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1200,6 +1496,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a boolean attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#BOOLEAN}
+     */
     public Optional<Attribute<Boolean>> getBooleanAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1212,6 +1516,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a time attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#TIME}
+     */
     public Optional<Attribute<Instant>> getTimeAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1224,6 +1536,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a time attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#TIME}
+     */
     public Optional<Attribute<Instant>> getTimeAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1236,6 +1556,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a data attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#DATA}
+     */
     public Optional<Attribute<Object>> getDataAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1248,6 +1576,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a data attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#DATA}
+     */
     public Optional<Attribute<Object>> getDataAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1260,6 +1596,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a record attribute by name.
+     *
+     * @param attributeName the configured attribute name
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#RECORD}
+     */
     public Optional<Attribute<Attribute<?>>> getRecordAttribute(
             String attributeName, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1272,6 +1616,14 @@ public class Unit implements Cloneable {
         return Optional.empty();
     }
 
+    /**
+     * Returns a record attribute by catalog id.
+     *
+     * @param attributeId the catalog attribute id
+     * @param createIfMissing whether a missing attribute should be created
+     * @return the resolved attribute if it exists and has type
+     *         {@link AttributeType#RECORD}
+     */
     public Optional<Attribute<Attribute<?>>> getRecordAttribute(
             int attributeId, boolean createIfMissing
     ) throws DatabaseConnectionException, SecurityException, AttributeTypeException, DatabaseReadException, SystemInconsistencyException, ConfigurationException, IllegalRequestException {
@@ -1285,7 +1637,10 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Get all attributes associated with unit.
+     * Returns all attributes associated with this unit, sorted by attribute
+     * name.
+     *
+     * @return an immutable collection of the unit attributes
      */
     public Collection<Attribute<?>> getAttributes() throws DatabaseConnectionException, DatabaseReadException, ConfigurationException {
         Map<String, Attribute<?>> myAttributes = fetchAttributes();
@@ -1328,14 +1683,18 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Gets id of unit
+     * Returns the logical unit identifier.
+     *
+     * @return the tenant-qualified unit id
      */
     public Id getId() {
         return new Id(tenantId, unitId);
     }
 
     /**
-     * Gets string reference to unit.
+     * Returns a stable textual reference to this concrete unit version.
+     *
+     * @return the tenant/unit/version reference string
      */
     public String getReference() {
         return id2String(tenantId, unitId, unitVersion);
@@ -1369,7 +1728,9 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Gets the correlation id of this unit
+     * Returns the correlation id carried by this unit instance.
+     *
+     * @return the correlation id
      */
     public UUID getCorrId() {
         return corrId;
@@ -1377,7 +1738,7 @@ public class Unit implements Cloneable {
 
     /**
      * Get unit created time.
-     * <p/>
+     * <p>
      * Creation time is assigned upon write to database and is not automatically
      * read back to the Unit (due to the extra round trip). In order to know
      * creation time, we need to load the parent unit from database
@@ -1403,15 +1764,18 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Is unit locked?
+     * Indicates whether this unit currently has one or more active locks.
+     *
+     * @return {@code true} if the unit is locked
      */
     public boolean isLocked() throws DatabaseConnectionException, DatabaseReadException {
         return Lock.isLocked(ctx, tenantId, unitId);
     }
 
     /**
-     * Lock unit.
+     * Places a lock on this unit.
      *
+     * @param type the type of lock to acquire
      * @param purpose purpose of lock
      * @return true if lock was successfully placed on unit, false otherwise
      */
@@ -1429,9 +1793,9 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Gets information on locks.
+     * Returns the active locks on this unit.
      *
-     * @return LockInfo containing the information
+     * @return the active locks
      * @see Lock
      */
     public Collection<Lock> getLocks() throws DatabaseConnectionException, DatabaseReadException {
@@ -1439,7 +1803,7 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Unlock unit.
+     * Removes all locks held on this unit.
      */
     public void unlock() throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException {
         Lock.unlock(ctx, tenantId, unitId);
@@ -1448,6 +1812,7 @@ public class Unit implements Cloneable {
     /**
      * Requests a status transition of a <I>unit</I>.
      *
+     * @param requestedStatus the desired target status
      * @return new internal status -or- old if request was rejected
      */
     public Status requestStatusTransition(
@@ -1578,9 +1943,11 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Activates a unit.
+     * Moves a unit back to {@link Status#EFFECTIVE} when current state allows
+     * it.
      * <p>
-     * The behaviour is depending on the internal status.
+     * This is a convenience wrapper around {@link #requestStatusTransition(Status)}
+     * for the common activation cases.
      */
     public void activate() throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, IllegalRequestException {
         try {
@@ -1596,9 +1963,11 @@ public class Unit implements Cloneable {
     }
 
     /**
-     * Inactivates a unit.
+     * Moves a unit from {@link Status#EFFECTIVE} to
+     * {@link Status#PENDING_DELETION}.
      * <p>
-     * The behaviour is depending on the internal status.
+     * This is a convenience wrapper around {@link #requestStatusTransition(Status)}
+     * for the common inactivation case.
      */
     public void inactivate() throws DatabaseConnectionException, DatabaseReadException, DatabaseWriteException, IllegalRequestException {
         try {
@@ -1617,6 +1986,12 @@ public class Unit implements Cloneable {
      *
      * @return Returns created String
      */
+    /**
+     * Returns a textual diagnostic representation of this unit and its loaded
+     * attributes.
+     *
+     * @return a diagnostic string representation
+     */
     public String toString() {
         String s = "Unit{" + getReference() + ":" + unitVersion + "(" + (null != unitName ? unitName : "") + ")" + (isNew ? "*" : "");
         if (null != attributes) {
@@ -1630,6 +2005,12 @@ public class Unit implements Cloneable {
         return s;
     }
 
+    /**
+     * Creates a deep copy of this unit, including cloned attribute state.
+     *
+     * @return a deep copy of this unit
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public Object clone() throws CloneNotSupportedException {
         // Deep-copy attributes to avoid shared mutable state in cached units.
         Unit copy = (Unit) super.clone();

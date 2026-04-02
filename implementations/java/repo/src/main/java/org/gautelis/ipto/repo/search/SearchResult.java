@@ -20,5 +20,12 @@ import org.gautelis.ipto.repo.model.Unit;
 
 import java.util.Collection;
 
+/**
+ * Result of a repository search.
+ *
+ * @param results the returned unit instances for the current page or window
+ * @param totalNumberOfHits the total number of matching units before paging is
+ *                          applied
+ */
 public record SearchResult(Collection<Unit> results, int totalNumberOfHits) {
 }

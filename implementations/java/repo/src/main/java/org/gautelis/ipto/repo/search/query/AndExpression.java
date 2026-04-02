@@ -18,7 +18,16 @@ package org.gautelis.ipto.repo.search.query;
 
 import org.gautelis.ipto.repo.search.model.Operator;
 
+/**
+ * Boolean conjunction of two child search expressions.
+ */
 public final class AndExpression extends BinaryExpression implements SearchExpression {
+    /**
+     * Creates a conjunction expression.
+     *
+     * @param left left-hand child expression
+     * @param right right-hand child expression
+     */
     public AndExpression(SearchExpression left, SearchExpression right) {
         super(Operator.AND, left, right);
     }

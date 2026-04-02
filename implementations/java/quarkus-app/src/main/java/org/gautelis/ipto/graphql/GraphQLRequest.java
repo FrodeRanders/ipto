@@ -18,6 +18,13 @@ package org.gautelis.ipto.graphql;
 
 import java.util.Map;
 
+/**
+ * HTTP request body for the Quarkus GraphQL endpoint.
+ *
+ * @param query GraphQL document
+ * @param operationName optional operation name within the document
+ * @param variables GraphQL variables
+ */
 public record GraphQLRequest(
         String query,
         String operationName,
