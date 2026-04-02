@@ -1,0 +1,234 @@
+\section{Appendix: Developing Against IPTO from Java}
+\label{sec:AppendixJavaApi}
+
+This appendix describes a practical Java development flow against IPTO, based on the integration setup in \texttt{implementations/java/it} and in particular the test \texttt{GraphQLIT}. The important architectural point is that development does not begin by inventing ad hoc Java classes and queries. It begins with SDL and the repository catalog that SDL drives.
+
+\subsection{Start from SDL}
+
+In IPTO, the SDL does not only describe a GraphQL schema. It also describes the catalog attributes, record shapes, templates and runtime operations that the system will expose. In the integration tests, this is done by loading \filepath{implementations/java/it/src/test/resources/org/gautelis/ipto/it/schema2.graphqls} through \texttt{Configurator.load(...)}.
+
+A representative excerpt from that SDL is:
+
+\begin{lstlisting}[style=GraphQL]
+type Beslut @record(attribute: beslut) {
+    datum : DateTime @use(attribute: date)
+    beslutsfattare : String
+    beslutstyp : BeslutsTyp
+    beslutsutfall : BeslutsUtfall
+}
+
+type Yrkan @record(attribute: yrkan) @template {
+    beskrivning : String @use(attribute: description)
+    beslut : Beslut
+    producerade_resultat : [ProduceratResultat]
+    person : Person
+}
+
+type Query {
+    yrkan(id : UnitIdentification!) : Yrkan @ipto(operation: "LOAD_UNIT")
+    yrkanden(filter: Filter!) : [Yrkan] @ipto(operation: "SEARCH")
+    unitRaw(id : UnitIdentification!) : Bytes @ipto(operation: "LOAD_UNIT_RAW")
+}
+\end{lstlisting}
+
+This SDL establishes several things at once:
+\begin{itemize}
+\item which attributes and records exist in the repository catalog,
+\item which record trees together form a unit template such as \texttt{Yrkan},
+\item which fields are available through typed GraphQL retrieval,
+\item which repository operations are exposed as GraphQL queries or mutations.
+\end{itemize}
+
+The result is that the SDL constrains and enables what can be done through both the general Java API and the GraphQL API. The Java repository API is broader and can work directly with units and attributes, but the practical shape of those units still comes from the configured catalog and templates. The GraphQL interface is even more directly shaped by the SDL because its query and mutation fields are derived from it.
+
+\subsection{Bootstrapping repository and runtime}
+
+The integration setup follows the same pattern that an application would use:
+\begin{enumerate}
+\item create a repository through \texttt{RepositoryFactory.getRepository()},
+\item load the SDL through \texttt{Configurator.load(repo, reader, ...)},
+\item let the configurator reconcile attributes, records and templates into the catalog,
+\item call \texttt{repo.sync()} so the repository sees the updated catalog state,
+\item use the resulting \texttt{Repository} and \texttt{GraphQL} instances.
+\end{enumerate}
+
+In simplified form, the setup looks like:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+Repository repo = RepositoryFactory.getRepository();
+
+try (InputStreamReader reader = new InputStreamReader(
+        Objects.requireNonNull(getClass().getResourceAsStream("schema2.graphqls")))) {
+    GraphQL graphQL = Configurator.load(repo, reader, wireOps, System.out).orElseThrow();
+    repo.sync();
+}
+\end{lstlisting}
+
+That sequence is important. The SDL must be loaded before higher-level Java code assumes that attributes, records and templates exist in the repository catalog.
+
+\subsection{Working through the general Java API}
+
+Once the repository is configured, Java code can create and store units using the generic repository API. The test code in \texttt{GraphQLIT} shows the style clearly: it creates a unit, attaches record-valued and scalar attributes, and stores the result.
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+Repository repo = RepositoryFactory.getRepository();
+Unit yrkan = repo.createUnit(tenantId, processId);
+
+yrkan.withRecordAttribute("ffa:fysisk_person", person ->
+    person.withNestedAttributeValue("ffa:personnummer", String.class,
+        value -> value.add("19121212-1212")));
+
+yrkan.withAttributeValue("dcterms:description", String.class,
+    value -> value.add("Yrkan om vard av husdjur"));
+
+yrkan.withRecordAttribute("ffa:beslut", beslut -> {
+    beslut.withNestedAttributeValue("dcterms:date", Instant.class,
+        datum -> datum.add(aSpecificInstant));
+    beslut.withNestedAttributeValue("ffa:beslutsfattare", String.class,
+        value -> value.add(aSpecificString));
+});
+
+repo.storeUnit(yrkan);
+\end{lstlisting}
+
+This API is generic rather than template-specific. There is no generated Java class for \texttt{Yrkan}. Instead, the code works with unit instances, attribute names and record attributes. The reason this remains usable is that the SDL has already established which attributes and record structures are meaningful. In other words, the Java API is general, but the configured catalog gives it a stable vocabulary.
+
+For record-valued attributes, the repository API allows nested construction through \texttt{RecordAttribute}. This is how compound structures such as \texttt{Beslut}, \texttt{Ersattning} and \texttt{Period} are assembled without introducing one Java class per record type.
+
+\subsection{What the SDL changes for Java development}
+
+From a Java developer's perspective, changing the SDL can change development in several ways:
+\begin{itemize}
+\item adding or renaming \texttt{@attribute} entries changes which attribute names can be instantiated and searched,
+\item adding or reshaping \texttt{@record} types changes how nested record trees should be assembled,
+\item adding or reordering \texttt{@template} content changes which structures are treated as first-class unit templates,
+\item adding or removing \texttt{@ipto} operations changes which GraphQL operations are exposed and auto-wired.
+\end{itemize}
+
+This is why IPTO development should be understood as schema-driven even when the immediate client is Java code. The repository API does not disappear, but its useful operating space is defined by the SDL-backed catalog.
+
+\subsection{Using the GraphQL interface}
+
+The same configured system can then be addressed through GraphQL. The integration test shows three main patterns:
+\begin{itemize}
+\item typed retrieval of a configured unit shape,
+\item text-filtered search,
+\item raw payload retrieval and storage.
+\end{itemize}
+
+A typed retrieval looks like:
+
+\begin{lstlisting}[style=GraphQL]
+query Unit($id: UnitIdentification!) {
+  yrkan(id: $id) {
+    person {
+      ... on FysiskPerson { personnummer }
+      ... on JuridiskPerson { orgnummer }
+    }
+    beslut {
+      datum
+      beslutsfattare
+    }
+  }
+}
+\end{lstlisting}
+
+The important point is that this query is possible because the SDL has defined:
+\begin{itemize}
+\item the \texttt{Yrkan} template,
+\item the nested \texttt{Beslut} and \texttt{Person} record shapes,
+\item the \texttt{yrkan(...)} query field,
+\item the operation binding \texttt{@ipto(operation: "LOAD\_UNIT")}.
+\end{itemize}
+
+So GraphQL is not discovering the domain structure dynamically from stored rows. It is using the configured record and template shapes to present a typed API over the generic repository model.
+
+\subsection{Text search through GraphQL}
+
+GraphQL search in the integration test uses the \texttt{Filter} input object and the Java textual-query parser described earlier in this manual:
+
+\begin{lstlisting}[style=GraphQL]
+query Yrkan($filter: Filter!) {
+  yrkanden(filter: $filter) {
+    beslut {
+      beslutsfattare
+    }
+  }
+}
+\end{lstlisting}
+
+with variables conceptually shaped as:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+Map.of(
+    "filter", Map.of(
+        "tenantId", 1,
+        "where", "beslutsfattare = \"" + beslutsfattare + "\""
+    )
+)
+\end{lstlisting}
+
+The search expression string is parsed by the Java search subsystem, resolved against the configured attribute catalog, compiled into a \texttt{SearchExpression}, and then translated into SQL by the active database adapter. That means the GraphQL search surface is thin in the right way: it delegates search semantics to the same repository search model used elsewhere in Java.
+
+\subsection{Raw payload flows}
+
+The integration test also demonstrates that GraphQL can expose raw repository payloads as \texttt{Bytes}. This is useful when a caller needs to move generic unit JSON in and out of the repository without going through the typed GraphQL projection.
+
+The configured SDL exposes both:
+\begin{itemize}
+\item raw reads such as \texttt{unitRaw(...)} and \texttt{unitsRaw(...)},
+\item raw writes such as \texttt{lagraUnitRaw(...)} and the custom \texttt{lagraYrkandeRaw(...)} mutation.
+\end{itemize}
+
+For the raw-write case, the test base64-encodes a JSON unit and submits it through GraphQL. The configured mutation then delegates to the runtime service and ultimately to repository-backed storage. This shows that GraphQL in IPTO can act both as a typed domain projection and as a transport surface for generic repository payloads.
+
+\subsection{Custom operations versus built-in operations}
+
+The integration setup wires one custom mutation explicitly:
+
+\begin{lstlisting}[language=Java,
+    framesep=8pt,
+    xleftmargin=5pt,
+    framexleftmargin=5pt,
+    frame=tb,
+    framerule=0pt]
+params.runtimeWiring().type("Mutation", t ->
+    t.dataFetcher("lagraYrkandeRaw", env ->
+        params.runtimeService().storeDomainRawUnit(tenantId, "Yrkan", bytes)));
+\end{lstlisting}
+
+This is the important distinction:
+\begin{itemize}
+\item many operations are standard repository/runtime operations selected by \texttt{@ipto(operation: ...)},
+\item some operations can be custom-wired as GraphQL data fetchers when application-specific behavior is needed.
+\end{itemize}
+
+So the SDL determines the exposed operation surface, but Java code can still attach custom behavior at wiring time where the built-in runtime operations are not sufficient.
+
+\subsection{Practical development advice}
+
+For Java development against IPTO, the most reliable workflow is:
+\begin{enumerate}
+\item change the SDL first when the information model changes,
+\item reload and reconcile the configuration into the repository catalog,
+\item adapt Java repository code to use the new or changed attribute and record vocabulary,
+\item adapt GraphQL queries or mutations only after the SDL and catalog are aligned,
+\item verify the result with an integration-style test similar to \texttt{GraphQLIT}.
+\end{enumerate}
+
+That sequence reflects the actual architecture. The Java API is broad and generic, but it becomes meaningful through the configured catalog. The GraphQL API is more explicitly shaped by the SDL, yet it still relies on the same repository and runtime services underneath.
