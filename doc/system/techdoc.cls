@@ -223,7 +223,7 @@
 \newcommand{\biggerfont}{\fontseries{s}\fontsize{26}{22}\selectfont}
 
 \newcommand{\iptotitleicon}{%
-    \begin{tikzpicture}[x=1pt,y=1pt,line cap=round,line join=round,baseline=(current bounding box.center)]
+    \begin{tikzpicture}[x=1pt,y=-1pt,line cap=round,line join=round,baseline=(current bounding box.center)]
         \path[fill=white,draw=iptoMuted,line width=2]
             (32,4) -- (54,16) -- (54,48) -- (32,60) -- (10,48) -- (10,16) -- cycle;
 
