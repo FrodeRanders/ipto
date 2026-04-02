@@ -9,6 +9,16 @@ At the database level, \emph{units} are the primary persistent entities. A unit 
 
 The schema is implemented twice: once for PostgreSQL in \texttt{shared/db/postgresql} and once for DB2 in \texttt{shared/db/db2}. The two implementations share the same logical model and table groups, but differ where the database products require different data types, function mechanisms or deployment steps.
 
+\begin{lyingfigure}
+    \centering
+    \includegraphics[width=.98\linewidth]{images/repo-schema.png}
+    \captionof{figure}{Repository schema overview derived from the Mermaid ER model in \texttt{doc/Model.md}}
+    \label{fig:RepositorySchemaOverview}
+\end{lyingfigure}
+\FloatBarrier
+
+Figure~\ref{fig:RepositorySchemaOverview} shows the full relational layout at schema level. The remainder of this chapter walks the same structure in conceptual groups so that the storage model is easier to understand than a table-by-table listing alone.
+
 \begin{figure}[h!]
     \centering
     \includegraphics[width=.92\linewidth]{images/unit-kernel-version-attribute-value.png}
