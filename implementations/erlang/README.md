@@ -144,7 +144,7 @@ GraphQL setup operations are also exposed:
 
 - Query: `inspectGraphqlSdl(sdl: String!): SdlCatalog!`
 - Query: `registeredOperations: RegisteredOperations!` (`queries/mutations` as operation-name entries)
-- Query: `unitByCorrid(corrid: String!, tenantid: Int): Unit`
+- Query: `unitByCorrid(corrid: String!): Unit`
 - Query: `unitExists(tenantid: Int!, unitid: Int!): Boolean!`
 - Query: `unitLocked(tenantid: Int!, unitid: Int!): Boolean!`
 - Mutation: `configureGraphqlSdl(sdl: String!): SdlConfigureResult!`

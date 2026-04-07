@@ -139,22 +139,22 @@ impl Backend for PostgresBackend {
         Ok(payload.map(normalize_payload_timestamps))
     }
 
-    fn get_unit_by_corrid_json(&self, tenant_id: i64, corrid: &str) -> RepoResult<Option<Value>> {
+    fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>> {
         let mut client = self.client()?;
-        let tenant = as_i32(tenant_id, "tenant_id")?;
         let corrid = Uuid::parse_str(corrid)
             .map_err(|e| RepoError::InvalidInput(format!("invalid corrid '{corrid}': {e}")))?;
 
         let row = client
             .query_opt(
-                "SELECT unitid FROM repo.repo_unit_kernel WHERE tenantid = $1 AND corrid = $2",
-                &[&tenant, &corrid],
+                "SELECT tenantid, unitid FROM repo.repo_unit_kernel WHERE corrid = $1",
+                &[&corrid],
             )
             .map_err(|e| RepoError::Backend(format!("lookup by corrid failed: {e}")))?;
 
         match row {
             Some(row) => {
-                let unit_id: i64 = row.get(0);
+                let tenant_id: i64 = i64::from(row.get::<_, i32>(0));
+                let unit_id: i64 = row.get(1);
                 self.get_unit_json(tenant_id, unit_id, VersionSelector::Latest)
             }
             None => Ok(None),

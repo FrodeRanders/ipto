@@ -174,7 +174,7 @@ Goal: increase operation surface beyond current `unit/units/createUnit/inactivat
 
 Current progress:
 
-- `DONE` query: `unitByCorrid(corrid, tenantid?)`.
+- `DONE` query: `unitByCorrid(corrid)`.
 - `DONE` query: `unitExists(tenantid, unitid)`.
 - `DONE` query: explicit lock-state read (`unitLocked(tenantid, unitid)`).
 - `DONE` query: relation/association reads and counts (`rightRelation(s)`, `leftRelations`, `count*Relations`, `rightAssociation(s)`, `leftAssociations`, `count*Associations`).

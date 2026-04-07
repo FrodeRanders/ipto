@@ -28,7 +28,7 @@ schema() ->
         "}\n\n"
         "type Query {\n"
         "  unit(tenantid: Int!, unitid: Int!): Unit\n"
-        "  unitByCorrid(corrid: String!, tenantid: Int): Unit\n"
+        "  unitByCorrid(corrid: String!): Unit\n"
         "  unitExists(tenantid: Int!, unitid: Int!): Boolean!\n"
         "  unitLocked(tenantid: Int!, unitid: Int!): Boolean!\n"
         "  units(query: String, orderField: String, orderDir: String, limit: Int, offset: Int): SearchResult!\n"

@@ -52,6 +52,10 @@ public class GraphQLIT {
     private final ObjectMapper MAPPER = new ObjectMapper();
 
     private long createUnit(int tenantId, String aSpecificString, Instant aSpecificInstant) {
+        return createAndStoreUnit(tenantId, aSpecificString, aSpecificInstant).getUnitId();
+    }
+
+    private Unit createAndStoreUnit(int tenantId, String aSpecificString, Instant aSpecificInstant) {
         Repository repo = RepositoryFactory.getRepository();
         final UUID processId = Generators.timeBasedEpochGenerator().generate(); // UUID v7
 
@@ -119,7 +123,7 @@ public class GraphQLIT {
         });
 
         repo.storeUnit(yrkan);
-        return yrkan.getUnitId();
+        return yrkan;
     }
 
     private void dumpMap(Map<String, ?> root) {
@@ -346,6 +350,66 @@ public class GraphQLIT {
 
     @Test
     @Order(4)
+    public void retrieveRawByCorrelationId(GraphQL graphQL) {
+        final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString();
+
+        final int tenantId = 1;
+        final Unit unit = createAndStoreUnit(tenantId, beslutsfattare, Instant.now());
+
+        String query = """
+            query Unit($id: YrkanIdentification!) {
+              yrkanRaw(id: $id)
+            }
+            """;
+        log.info(query);
+        System.out.println(query);
+
+        ExecutionResult result = graphQL.execute(
+                ExecutionInput.newExecutionInput()
+                        .query(query)
+                        .variables(Map.of(
+                                        "id", Map.of(
+                                                "corrId", unit.getCorrId().toString()
+                                        )
+                                )
+                        )
+                        .build());
+
+
+        List<GraphQLError> errors = result.getErrors();
+        if (errors.isEmpty()) {
+            Map<String, String> map = result.getData();
+            String b64 = map.get("yrkanRaw");
+            if (null != b64) {
+                final Base64.Decoder decoder = Base64.getDecoder();
+                String json = new String(decoder.decode(b64.getBytes(StandardCharsets.UTF_8)), StandardCharsets.UTF_8);
+
+                log.info("Result (base64 encoded): {}", b64);
+                log.info("Result (String/JSON): {}", json);
+
+                JsonNode root = MAPPER.readTree(json);
+                Assertions.assertEquals(unit.getCorrId().toString(), root.path("id").asText());
+            } else {
+                fail("No raw payload found for correlation-id lookup");
+            }
+        } else {
+            for (GraphQLError error : errors) {
+                log.error("error: {}: {}", error.getMessage(), error);
+
+                List<SourceLocation> locations = error.getLocations();
+                if (null != locations) {
+                    for (SourceLocation location : locations) {
+                        log.error("location: {}: {}", location.getLine(), location);
+                    }
+                }
+            }
+            fail("Unexpected GraphQL errors: " + errors);
+        }
+        System.out.println("---------------------------------------------------------------------------------------");
+    }
+
+    @Test
+    @Order(5)
     public void search(GraphQL graphQL) {
         final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 
@@ -419,7 +483,7 @@ public class GraphQLIT {
     }
 
     @Test
-    @Order(5)
+    @Order(6)
     public void searchWithInlineLiteral(GraphQL graphQL) {
         final String beslutsfattare1 = Generators.timeBasedEpochGenerator().generate().toString();
         final String beslutsfattare2 = Generators.timeBasedEpochGenerator().generate().toString();
@@ -486,7 +550,7 @@ public class GraphQLIT {
     }
 
     @Test
-    @Order(6)
+    @Order(7)
     public void searchRaw(GraphQL graphQL) {
         final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString(); // UUID v7
 

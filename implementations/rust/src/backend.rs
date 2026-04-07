@@ -27,7 +27,7 @@ pub trait Backend: Send + Sync {
         unit_id: i64,
         selector: VersionSelector,
     ) -> RepoResult<Option<Value>>;
-    fn get_unit_by_corrid_json(&self, tenant_id: i64, corrid: &str) -> RepoResult<Option<Value>>;
+    fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>>;
     fn unit_exists(&self, tenant_id: i64, unit_id: i64) -> RepoResult<bool>;
     fn store_unit_json(&self, unit: Value) -> RepoResult<Value>;
     fn search_units(

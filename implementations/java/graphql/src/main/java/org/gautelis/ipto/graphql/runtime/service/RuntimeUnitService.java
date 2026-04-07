@@ -52,16 +52,16 @@ final class RuntimeUnitService {
         return UnitBoxFactory.fromUnit(unit.get());
     }
 
-    Box loadUnitByCorrId(int tenantId, UUID corrId) {
-        log.trace("↪ RuntimeUnitService::loadUnitByCorrId({}, {})", tenantId, corrId);
+    Box loadUnitByCorrId(UUID corrId) {
+        log.trace("↪ RuntimeUnitService::loadUnitByCorrId({})", corrId);
 
-        Unit unit = findUnitByCorrId(tenantId, corrId);
+        Unit unit = findUnitByCorrId(corrId);
         if (unit == null) {
-            log.trace("↪ No unit with corrid {} for tenant {}", corrId, tenantId);
+            log.trace("↪ No unit with corrid {}", corrId);
             return null;
         }
         if (unit.getAttributes().isEmpty()) {
-            log.debug("↪ No attributes for unit identified by correlation ID {} in tenant {}", corrId, tenantId);
+            log.debug("↪ No attributes for unit identified by correlation ID {}", corrId);
         }
         return UnitBoxFactory.fromUnit(unit);
     }
@@ -96,12 +96,12 @@ final class RuntimeUnitService {
         return rawPayload(unit);
     }
 
-    byte[] loadRawPayloadByCorrId(int tenantId, UUID corrId) {
-        log.trace("↪ RuntimeUnitService::loadRawPayloadByCorrId({}, {})", tenantId, corrId);
+    byte[] loadRawPayloadByCorrId(UUID corrId) {
+        log.trace("↪ RuntimeUnitService::loadRawPayloadByCorrId({})", corrId);
 
-        Unit unit = findUnitByCorrId(tenantId, corrId);
+        Unit unit = findUnitByCorrId(corrId);
         if (unit == null) {
-            log.trace("↪ No unit with corrid {} for tenant {}", corrId, tenantId);
+            log.trace("↪ No unit with corrid {}", corrId);
             return null;
         }
         byte[] payload = rawPayload(unit);
@@ -111,8 +111,8 @@ final class RuntimeUnitService {
         return payload;
     }
 
-    private Unit findUnitByCorrId(int tenantId, UUID corrId) {
-        return repo.getUnit(tenantId, corrId).orElse(null);
+    private Unit findUnitByCorrId(UUID corrId) {
+        return repo.getUnit(corrId).orElse(null);
     }
 
     private byte[] rawPayload(Unit unit) {

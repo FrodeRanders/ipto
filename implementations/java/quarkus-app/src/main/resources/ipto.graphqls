@@ -532,7 +532,6 @@ input UnitIdentification {
 }
 
 input YrkanIdentification {
-    tenantId : Int!
     corrId : String!
 }
 

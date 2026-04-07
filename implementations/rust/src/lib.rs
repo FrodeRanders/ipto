@@ -271,13 +271,12 @@ mod pybindings {
 
         fn get_unit_by_corrid_json(
             &self,
-            tenant_id: i64,
             corrid: &str,
         ) -> PyResult<Option<String>> {
             self.timed("get_unit_by_corrid_json", || {
                 let result = self
                     .repo
-                    .get_unit_by_corrid_json(tenant_id, corrid)
+                    .get_unit_by_corrid_json(corrid)
                     .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
                 result

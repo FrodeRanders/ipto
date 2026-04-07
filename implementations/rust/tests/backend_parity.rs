@@ -99,7 +99,7 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
     assert_iso_timestamp_field(&latest, "modified");
 
     let by_corrid = repo
-        .get_unit_by_corrid_json(tenant_id, unit_a_corrid)
+        .get_unit_by_corrid_json(unit_a_corrid)
         .expect("get by corrid")
         .expect("unit found by corrid");
     assert_eq!(by_corrid["unitid"], unit_a_id);

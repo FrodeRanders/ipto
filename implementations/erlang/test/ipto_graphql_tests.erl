@@ -121,7 +121,7 @@ graphql_extended_execution() ->
     CorrIdA = binary_to_list(maps:get(corrid, A)),
 
     QueryByCorrid =
-        "{ unitByCorrid(tenantid: " ++ TenantId ++ ", corrid: \"" ++ CorrIdA ++ "\") { unitid } }",
+        "{ unitByCorrid(corrid: \"" ++ CorrIdA ++ "\") { unitid } }",
     {ok, ByCorridResp} = ipto_graphql:execute(QueryByCorrid, #{}),
     true = is_map(ByCorridResp),
     false = has_graphql_errors(ByCorridResp),

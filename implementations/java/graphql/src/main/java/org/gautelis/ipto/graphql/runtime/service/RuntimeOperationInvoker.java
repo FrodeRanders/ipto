@@ -64,15 +64,15 @@ final class RuntimeOperationInvoker {
                     return service.loadUnit(id.tenantId(), id.unitId());
                 }
 
-                Optional<TenantCorrId> corrIdentification = tryTenantCorrId(idValue);
+                Optional<CorrelationId> corrIdentification = tryCorrelationId(idValue);
 
                 if (corrIdentification.isPresent()) {
-                    TenantCorrId id = corrIdentification.get();
+                    CorrelationId id = corrIdentification.get();
 
                     if ("Bytes".equals(outputType)) {
-                        return service.loadRawPayloadByCorrId(id.tenantId(), id.corrId());
+                        return service.loadRawPayloadByCorrId(id.corrId());
                     }
-                    return service.loadUnitByCorrId(id.tenantId(), id.corrId());
+                    return service.loadUnitByCorrId(id.corrId());
                 }
             }
 
@@ -116,12 +116,12 @@ final class RuntimeOperationInvoker {
                 yield service.loadRawUnit(id.tenantId(), id.unitId());
             }
             case LOAD_BY_CORRID -> {
-                TenantCorrId id = requiredTenantCorrId(typedArguments, "id", operation.operationName(), runtimeOperation);
-                yield service.loadUnitByCorrId(id.tenantId(), id.corrId());
+                CorrelationId id = requiredCorrelationId(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield service.loadUnitByCorrId(id.corrId());
             }
             case LOAD_RAW_PAYLOAD_BY_CORRID -> {
-                TenantCorrId id = requiredTenantCorrId(typedArguments, "id", operation.operationName(), runtimeOperation);
-                yield service.loadRawPayloadByCorrId(id.tenantId(), id.corrId());
+                CorrelationId id = requiredCorrelationId(typedArguments, "id", operation.operationName(), runtimeOperation);
+                yield service.loadRawPayloadByCorrId(id.corrId());
             }
             case SEARCH -> {
                 Query.Filter filter = requiredFilter(typedArguments, "filter", operation.operationName(), runtimeOperation);
@@ -223,19 +223,19 @@ final class RuntimeOperationInvoker {
         throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' with tenantId and unitId");
     }
 
-    private TenantCorrId requiredTenantCorrId(
+    private CorrelationId requiredCorrelationId(
             Map<String, Object> typedArguments,
             String parameterName,
             String operationName,
             RuntimeOperation runtimeOperation
     ) {
         Object value = typedArguments.get(parameterName);
-        Optional<TenantCorrId> id = tryTenantCorrId(value);
+        Optional<CorrelationId> id = tryCorrelationId(value);
 
         if (id.isPresent()) {
             return id.get();
         }
-        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' with tenantId and corrId");
+        throw new IllegalArgumentException("Operation '" + operationName + "' with runtime operation '" + runtimeOperation + "' requires parameter '" + parameterName + "' with corrId");
     }
 
     private Optional<Query.UnitIdentification> tryUnitIdentification(Object value) {
@@ -285,16 +285,15 @@ final class RuntimeOperationInvoker {
         return Optional.empty();
     }
 
-    private Optional<TenantCorrId> tryTenantCorrId(Object value) {
+    private Optional<CorrelationId> tryCorrelationId(Object value) {
         if (value instanceof Query.YrkanIdentification identification) {
-            return tryParseUuid(identification.corrId()).map(corrId -> new TenantCorrId(identification.tenantId(), corrId));
+            return tryParseUuid(identification.corrId()).map(CorrelationId::new);
         }
 
         if (value instanceof Map<?, ?> map) {
-            Integer tenantId = parseInteger(map.get("tenantId"));
             String corrId = parseString(map.get("corrId"));
-            if (tenantId != null && corrId != null) {
-                return tryParseUuid(corrId).map(uuid -> new TenantCorrId(tenantId, uuid));
+            if (corrId != null) {
+                return tryParseUuid(corrId).map(CorrelationId::new);
             }
         }
         return Optional.empty();
@@ -395,5 +394,5 @@ final class RuntimeOperationInvoker {
                 && typeName.equals(parameter.parameterType().typeName());
     }
 
-    private record TenantCorrId(int tenantId, UUID corrId) {}
+    private record CorrelationId(UUID corrId) {}
 }

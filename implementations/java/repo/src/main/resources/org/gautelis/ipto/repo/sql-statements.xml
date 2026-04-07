@@ -66,13 +66,13 @@
     </entry>
 
     <!--
-      Get latest unit id by correlation id.
-      Call with: (tenantId, corrId)
+      Get latest unit by correlation id.
+      Call with: (corrId)
     -->
     <entry key="sql.unit.get_by_corrid">
-        SELECT unitid
+        SELECT tenantid, unitid
         FROM repo_unit_kernel
-        WHERE tenantid=? AND corrid=?
+        WHERE corrid=?
         FETCH FIRST 2 ROWS ONLY
     </entry>
 
@@ -319,5 +319,4 @@
         INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES (?, ?, ?, ?, ?)
     </entry>
 </properties>
-
 

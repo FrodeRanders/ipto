@@ -126,7 +126,7 @@ Current Python methods on `PyIpto`:
 - `flush_cache() -> None` (cache-control parity surface; currently a no-op for stateless backends)
 - `unit_exists(tenant_id, unit_id) -> bool`
 - `get_unit_json(tenant_id, unit_id, version=None) -> Optional[str]`
-- `get_unit_by_corrid_json(tenant_id, corrid) -> Optional[str]`
+- `get_unit_by_corrid_json(corrid) -> Optional[str]`
 - `store_unit_json(unit_json: str) -> str`
 - `search_units(expression_json, order_field, descending, limit, offset) -> str`
 - `set_status(tenant_id, unit_id, status) -> None`

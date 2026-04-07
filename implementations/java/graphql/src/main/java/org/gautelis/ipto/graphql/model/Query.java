@@ -30,12 +30,11 @@ public class Query {
     public record UnitIdentification(int tenantId, long unitId) {}
 
     /**
-     * Identifies a domain payload by tenant and correlation id.
+     * Identifies a domain payload by correlation id.
      *
-     * @param tenantId tenant identifier
      * @param corrId correlation identifier
      */
-    public record YrkanIdentification(int tenantId, String corrId) {}
+    public record YrkanIdentification(String corrId) {}
 
     /**
      * Search filter supplied to GraphQL search operations.

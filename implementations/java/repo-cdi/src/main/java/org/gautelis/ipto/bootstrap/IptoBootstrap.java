@@ -155,7 +155,7 @@ public class IptoBootstrap {
             Long unitId = null;
             String unitName = null;
 
-            Optional<Unit> _existingUnit = findUnitByCorrId(params.repository(), tenantId, corrId);
+            Optional<Unit> _existingUnit = findUnitByCorrId(params.repository(), corrId);
             if (_existingUnit.isPresent()) {
                 int existingVersion = _existingUnit.get().getVersion();
                 int expectedVersion = existingVersion + 1;
@@ -210,8 +210,8 @@ public class IptoBootstrap {
         }
     }
 
-    private static Optional<Unit> findUnitByCorrId(Repository repo, int tenantId, UUID corrId) {
-        return repo.getUnit(tenantId, corrId);
+    private static Optional<Unit> findUnitByCorrId(Repository repo, UUID corrId) {
+        return repo.getUnit(corrId);
     }
 
     private static ObjectNode buildFysiskPerson(JsonNode node) {

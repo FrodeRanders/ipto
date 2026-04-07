@@ -214,7 +214,7 @@ public class RuntimeService {
         }
 
         UUID corrId = DomainPayloadIndexer.extractCorrId(payloadObject);
-        Optional<Unit> existing = repo.getUnit(tenantId, corrId);
+        Optional<Unit> existing = repo.getUnit(corrId);
         DomainPayloadIndexer.validateVersion(existing, payloadObject, corrId);
 
         Long existingUnitId = existing.map(Unit::getUnitId).orElse(null);
@@ -254,8 +254,8 @@ public class RuntimeService {
      * @param corrId correlation identifier
      * @return boxed unit projection
      */
-    public Box loadUnitByCorrId(int tenantId, UUID corrId) {
-        return unitService.loadUnitByCorrId(tenantId, corrId);
+    public Box loadUnitByCorrId(UUID corrId) {
+        return unitService.loadUnitByCorrId(corrId);
     }
 
     /**
@@ -287,8 +287,8 @@ public class RuntimeService {
      * @param corrId correlation identifier
      * @return raw domain payload bytes
      */
-    public byte[] loadRawPayloadByCorrId(int tenantId, UUID corrId) {
-        return unitService.loadRawPayloadByCorrId(tenantId, corrId);
+    public byte[] loadRawPayloadByCorrId(UUID corrId) {
+        return unitService.loadRawPayloadByCorrId(corrId);
     }
 
     /**

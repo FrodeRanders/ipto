@@ -772,8 +772,8 @@ impl GraphqlRuntime {
             || operation == "unitbycorrid"
             || operation == "loadbycorrid"
         {
-            let (tenant_id, corrid) = required_tenant_corrid_var(&vars)?;
-            let unit = self.repo.get_unit_by_corrid_json(tenant_id, &corrid)?;
+            let corrid = required_corrid_var(&vars)?;
+            let unit = self.repo.get_unit_by_corrid_json(&corrid)?;
             let root_field = match operation {
                 "unitbycorrid" => "unitByCorrid",
                 "loadbycorrid" => "loadByCorrId",
@@ -827,10 +827,10 @@ impl GraphqlRuntime {
         }
 
         if operation == "unitrawbycorrid" || operation == "loadrawpayloadbycorrid" {
-            let (tenant_id, corrid) = required_tenant_corrid_var(&vars)?;
+            let corrid = required_corrid_var(&vars)?;
             let encoded = self
                 .repo
-                .get_unit_by_corrid_json(tenant_id, &corrid)?
+                .get_unit_by_corrid_json(&corrid)?
                 .map(|unit| encode_json_base64(&unit))
                 .transpose()?;
             let root_field = if operation == "loadrawpayloadbycorrid" {
@@ -1486,26 +1486,20 @@ fn required_unit_identification_var(
     ))
 }
 
-fn required_tenant_corrid_var(vars: &serde_json::Map<String, Value>) -> RepoResult<(i64, String)> {
-    if let (Some(tenant_id), Some(corrid)) = (
-        optional_i64_var(vars, &["tenantid", "tenantId"]),
-        optional_string_var(vars, &["corrid", "corrId"]),
-    ) {
-        return Ok((tenant_id, corrid));
+fn required_corrid_var(vars: &serde_json::Map<String, Value>) -> RepoResult<String> {
+    if let Some(corrid) = optional_string_var(vars, &["corrid", "corrId"]) {
+        return Ok(corrid);
     }
     if let Some(id) = nested_object_var(vars, &["id"]) {
-        if let (Some(tenant_id), Some(corrid)) = (
-            optional_i64_var(id, &["tenantid", "tenantId"]),
-            optional_string_var(id, &["corrid", "corrId"]),
-        ) {
-            return Ok((tenant_id, corrid));
+        if let Some(corrid) = optional_string_var(id, &["corrid", "corrId"]) {
+            return Ok(corrid);
         }
         return Err(RepoError::InvalidInput(
-            "graphql var 'id' must contain tenantId and corrId".to_string(),
+            "graphql var 'id' must contain corrId".to_string(),
         ));
     }
     Err(RepoError::InvalidInput(
-        "graphql missing required tenant corrid identification".to_string(),
+        "graphql missing required corrid identification".to_string(),
     ))
 }
 
@@ -1775,10 +1769,9 @@ mod tests {
 
         fn get_unit_by_corrid_json(
             &self,
-            tenant_id: i64,
             corrid: &str,
         ) -> RepoResult<Option<Value>> {
-            if tenant_id == 42 && corrid == "00000000-0000-0000-0000-000000000000" {
+            if corrid == "00000000-0000-0000-0000-000000000000" {
                 Ok(Some(
                     json!({"tenantid": 42, "unitid": 1001, "unitver": 1, "status": 30}),
                 ))
@@ -2410,7 +2403,6 @@ mod tests {
             .execute(
                 "query GetUnitByCorrid { getUnitByCorrid { unitid } }",
                 Some(json!({
-                    "tenantid": 42,
                     "corrid": "00000000-0000-0000-0000-000000000000"
                 })),
             )
@@ -2426,7 +2418,6 @@ mod tests {
                 "query GetUnitByCorrid { getUnitByCorrid { unitid } }",
                 Some(json!({
                     "id": {
-                        "tenantId": 42,
                         "corrId": "00000000-0000-0000-0000-000000000000"
                     }
                 })),
@@ -2443,7 +2434,6 @@ mod tests {
                 "query UnitByCorrid { unitByCorrid { unitid } }",
                 Some(json!({
                     "id": {
-                        "tenantId": 42,
                         "corrId": "00000000-0000-0000-0000-000000000000"
                     }
                 })),
@@ -2460,7 +2450,6 @@ mod tests {
                 "query LoadByCorrId { loadByCorrId { unitid } }",
                 Some(json!({
                     "id": {
-                        "tenantId": 42,
                         "corrId": "00000000-0000-0000-0000-000000000000"
                     }
                 })),
@@ -2478,7 +2467,6 @@ mod tests {
             .execute(
                 "query UnitRawByCorrid { unitRawByCorrid }",
                 Some(json!({
-                    "tenantid": 42,
                     "corrid": "00000000-0000-0000-0000-000000000000"
                 })),
             )
@@ -2502,7 +2490,6 @@ mod tests {
             .execute(
                 "query LoadRawPayloadByCorrId { loadRawPayloadByCorrId }",
                 Some(json!({
-                    "tenantid": 42,
                     "corrid": "00000000-0000-0000-0000-000000000000"
                 })),
             )

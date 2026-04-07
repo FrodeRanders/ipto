@@ -42,10 +42,9 @@ impl RepoService {
 
     pub fn get_unit_by_corrid_json(
         &self,
-        tenant_id: i64,
         corrid: &str,
     ) -> RepoResult<Option<Value>> {
-        self.backend.get_unit_by_corrid_json(tenant_id, corrid)
+        self.backend.get_unit_by_corrid_json(corrid)
     }
 
     pub fn unit_exists(&self, tenant_id: i64, unit_id: i64) -> RepoResult<bool> {
@@ -1132,7 +1131,6 @@ mod tests {
 
         fn get_unit_by_corrid_json(
             &self,
-            _tenant_id: i64,
             _corrid: &str,
         ) -> RepoResult<Option<serde_json::Value>> {
             Err(RepoError::Unsupported(
@@ -1459,7 +1457,6 @@ mod tests {
 
         fn get_unit_by_corrid_json(
             &self,
-            _tenant_id: i64,
             _corrid: &str,
         ) -> RepoResult<Option<serde_json::Value>> {
             Err(RepoError::Unsupported(

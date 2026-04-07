@@ -1,7 +1,7 @@
 \section{GraphQL SDL Configuration}
 \label{sec:GraphqlSDL}
 
-IPTO uses GraphQL SDL for two related but distinct purposes. First, SDL defines the executable GraphQL surface exposed at runtime. Second, the same SDL is used as a configuration source from which the system derives repository datatypes, attributes, records, templates and operation bindings.
+IPTO uses GraphQL SDL for two related but distinct purposes. First, SDL defines the executable GraphQL interface exposed at runtime. Second, the same SDL is used as a configuration source from which the system derives repository datatypes, attributes, records, templates and operation bindings.
 
 The central entry point is the Java class \literalbreak{org.gautelis.ipto.graphql.configuration.Configurator}. Its \texttt{load(...)} method parses SDL, derives a GraphQL-side model, loads the current catalog from the repository, reconciles the two views, and finally builds the executable GraphQL schema.
 
@@ -51,7 +51,7 @@ Repository attributes are derived from an enum annotated with \texttt{@attribute
 \item an optional human-readable description.
 \end{itemize}
 
-If the \texttt{name} argument is omitted, the enum value name is used. If the \texttt{uri} argument is omitted, the repository name is reused as fallback. The resulting attribute shapes are later compared with the rows in \texttt{repo\_attribute} and \texttt{repo\_attribute\_description}.
+If the \texttt{name} argument is omitted, the enum value name is used. If the \texttt{uri} argument is omitted, the repository name is reused as fallback. The resulting attribute shapes are later compared with the rows in the database tables \texttt{repo\_attribute} and \texttt{repo\_attribute\_description}.
 
 This is the bridge between the GraphQL schema vocabulary and the database catalog described in Section~\ref{sec:Database}.
 
@@ -69,7 +69,7 @@ For templates, the resulting metadata is persisted in \texttt{repo\_unit\_templa
 
 \subsection{Operation roots and runtime bindings}
 
-Operation roots are resolved from the GraphQL \texttt{schema \{ ... \}} declaration when present, otherwise the defaults \texttt{Query}, \texttt{Mutation} and \texttt{Subscription} are assumed. The loader derives one operation shape per field in those root types.
+Operation roots are resolved from the GraphQL \texttt{schema \{...\}} declaration when present, otherwise the defaults \texttt{Query}, \texttt{Mutation} and \texttt{Subscription} are assumed. The loader derives one operation shape per field in those root types.
 
 Each operation shape contains:
 \begin{itemize}
@@ -77,10 +77,175 @@ Each operation shape contains:
 \item the operation name,
 \item its input parameters,
 \item the result type,
-\item an optional runtime binding from \texttt{@ipto(operation: ...)}.
+\item an optional runtime binding from \texttt{@ipto(operation:...)}.
 \end{itemize}
 
 At present, subscriptions are recognized structurally, but runtime subscription support is not yet implemented. That means the SDL may describe subscription fields, but operational support remains incomplete.
+
+\subsection{How operation auto-wiring actually works}
+
+The important detail is that IPTO does not treat every query or mutation field as application-specific code that must be wired by hand. Instead, the Java GraphQL runtime tries to bind operation fields to a small set of built-in repository behaviors.
+
+That binding happens in two stages:
+\begin{enumerate}
+\item the SDL loader derives a \texttt{GqlOperationShape} for each field in the operation root types,
+\item the runtime wiring step decides whether that shape can be wired automatically, must be wired explicitly through \texttt{@ipto(operation:...)}, or must be supplied by custom Java code.
+\end{enumerate}
+
+The derived operation shape is intentionally small. It contains:
+\begin{itemize}
+\item the GraphQL root type where the field lives, for example \texttt{Query} or \texttt{Mutation},
+\item the field name,
+\item the category (\texttt{QUERY}, \texttt{MUTATION} or \texttt{SUBSCRIPTION}),
+\item the ordered parameter list with GraphQL type information,
+\item the declared output type,
+\item the optional \texttt{RuntimeOperation} value parsed from \texttt{@ipto(operation:...)}.
+\end{itemize}
+
+This means the auto-wiring logic is based on operation shape, not on the field name alone. A field called \texttt{yrkan} is not special because of its name. It is special because its arguments and result type make it compatible with one of the known runtime operations.
+
+\subsection{The runtime wiring lifecycle}
+
+The full lifecycle in the Java implementation is:
+\begin{enumerate}
+\item \texttt{Configurator.load(...)} parses SDL and determines which object types are operation roots.
+\item \texttt{Operations.derive(...)} creates one \texttt{GqlOperationShape} per query, mutation or subscription field.
+\item If the field carries \texttt{@ipto(operation:...)}, the directive argument is parsed into the enum \texttt{RuntimeOperation}.
+\item \texttt{OperationBindingValidator} checks whether an operation without an explicit binding is safe to infer.
+\item \texttt{RuntimeService.wire(...)} delegates operation wiring to \texttt{RuntimeOperators.wireOperations(...)}.
+\item For each operation:
+    \begin{itemize}
+    \item if the enum value is \texttt{CUSTOM} or \texttt{MANUAL}, auto-wiring is skipped,
+    \item otherwise a GraphQL \texttt{DataFetcher} is installed automatically,
+    \item at execution time that fetcher delegates to \texttt{RuntimeOperationInvoker.invokeOperation(...)}.
+    \end{itemize}
+\item \texttt{RuntimeOperationInvoker} then either:
+    \begin{itemize}
+    \item dispatches directly according to the explicit enum value, or
+    \item infers the built-in repository behavior from the operation shape when no enum value is present.
+    \end{itemize}
+\item After the built-in wiring is installed, the optional \texttt{operationsWireBlock} callback may add or override data fetchers programmatically.
+\end{enumerate}
+
+The enum in \texttt{org.gautelis.ipto.graphql.model.RuntimeOperation} is the explicit contract between SDL and the Java runtime dispatcher.
+
+\subsection{Inference when \texttt{@ipto(operation:...)} is omitted}
+
+If no explicit runtime operation is supplied, the runtime falls back to shape-based inference. This is intentionally narrow. The Java implementation only infers a built-in operation when the argument structure is sufficiently recognizable.
+
+The current inference rules are:
+\begin{description}
+\item[\texttt{Query} with one parameter named \texttt{id}] Internally, the runtime code has handlers for two different identification shapes:
+    \begin{itemize}
+    \item \texttt{UnitIdentification} with \texttt{tenantId} and \texttt{unitId}, or
+    \item a correlation-id carrier with \texttt{corrId}.
+    \end{itemize}
+    If execution ever reaches shape-based dispatch, the result type decides between typed loading and raw-payload loading. However, SDL operations with a single \texttt{id} parameter are considered ambiguous during configuration and should therefore not rely on omission of \texttt{@ipto(operation:...)}. In practice, \texttt{id}-based operations are expected to declare the intended runtime operation explicitly.
+\item[\texttt{Query} with one parameter named \texttt{filter}] The runtime interprets the argument as \texttt{Filter}. If the result type is \texttt{Bytes}, a raw search variant is used; otherwise the ordinary typed search variant is used.
+\item[\texttt{Mutation} with one parameter named \texttt{data} of type \texttt{Bytes}] The runtime interprets the field as raw unit storage.
+\end{description}
+
+If none of these patterns match, execution fails with an error saying that there is no automatic runtime mapping for the operation.
+
+This explains an important design tradeoff. Omitting \texttt{@ipto(operation:...)} can be convenient, but it is only safe when the field shape already implies one unambiguous built-in meaning.
+
+\subsection{Why some operations are rejected as ambiguous}
+
+The configuration layer does not wait until request execution to detect every ambiguity. Before the runtime is even built, \texttt{OperationBindingValidator} checks operations that have no explicit \texttt{@ipto(...)} binding.
+
+It rejects operations whose shape could reasonably mean more than one runtime behavior. The important cases are:
+\begin{itemize}
+\item a single parameter named \texttt{id}, because the runtime has support for both unit-id loading and correlation-id loading and the SDL should therefore state explicitly which one is intended,
+\item a single parameter named \texttt{filter} returning \texttt{Bytes}, because that could mean raw unit search or raw payload search,
+\item any other single-parameter operation whose shape is not one of the recognized safe defaults.
+\end{itemize}
+
+In those cases the manual intent is expected to be explicit: add \texttt{@ipto(operation:"...")} so the SDL states exactly which built-in behavior is wanted.
+
+The validator therefore serves two purposes:
+\begin{itemize}
+\item it prevents runtime surprises,
+\item it documents that operation fields are part of the repository configuration contract.
+\end{itemize}
+
+\subsection{The \texttt{RuntimeOperation} enum}
+
+The enum \texttt{org.gautelis.ipto.graphql.model.RuntimeOperation} names the built-in dispatch targets understood by the Java runtime. Each value selects a concrete method on the runtime service layer.
+
+\begin{description}
+\item[\texttt{LOAD\_UNIT}] Load one typed unit by \texttt{tenantId} and \texttt{unitId}. The GraphQL field is expected to accept an \texttt{id} argument that can be coerced to \texttt{UnitIdentification}. The result is then projected through the configured GraphQL template and record shapes.
+
+\item[\texttt{LOAD\_UNIT\_RAW}] Load one unit as raw repository payload bytes by \texttt{tenantId} and \texttt{unitId}. This bypasses typed field projection and exposes the stored generic payload.
+
+\item[\texttt{LOAD\_BY\_CORRID}] Load one typed unit by correlation id instead of by internal unit id. In the current Java implementation, the GraphQL \texttt{id} argument is modeled as carrying only \texttt{corrId}.
+
+\item[\texttt{LOAD\_RAW\_PAYLOAD\_BY\_CORRID}] Load raw payload bytes by correlation id. In the current Java implementation, the GraphQL \texttt{id} argument is likewise modeled as carrying only \texttt{corrId}. This is the correlation-id counterpart to \texttt{LOAD\_UNIT\_RAW}.
+
+\item[\texttt{SEARCH}] Execute a repository search using the \texttt{Filter} input object and return typed GraphQL units. The search expression in \texttt{filter.where} is delegated into the repository search subsystem, not implemented separately in GraphQL.
+
+\item[\texttt{SEARCH\_RAW}] Execute a search using \texttt{Filter} and return raw units as bytes. This is the raw counterpart to \texttt{SEARCH}.
+
+\item[\texttt{SEARCH\_RAW\_PAYLOAD}] Execute a search using \texttt{Filter} and return raw payloads rather than typed unit projections. This exists because there is more than one meaningful ``raw'' search surface, which is exactly why \texttt{filter -> Bytes} is considered ambiguous without an explicit binding.
+
+\item[\texttt{STORE\_RAW\_UNIT}] Store a raw unit supplied as \texttt{Bytes}. The GraphQL mutation is expected to accept a \texttt{data} argument containing the payload to persist.
+
+\item[\texttt{CUSTOM}] Declare that the SDL field is intentional, but that the built-in auto-wiring must not handle it. The field should be wired through the application-supplied \texttt{operationsWireBlock} or equivalent Java runtime code.
+
+\item[\texttt{MANUAL}] Semantically very close to \texttt{CUSTOM}: it tells the runtime to skip built-in auto-wiring and requires the embedding code to provide the data fetcher. In other words, both values act as ``do not auto-wire this field'' markers.
+\end{description}
+
+In the current implementation, \texttt{CUSTOM} and \texttt{MANUAL} are treated the same by the auto-wiring code. Both cause the operation to be skipped during automatic GraphQL wiring, and both cause the runtime invoker to reject accidental built-in dispatch if they somehow reach it. The distinction is therefore documentary rather than behavioral at present.
+
+\subsection{Explicit binding always wins}
+
+When \texttt{@ipto(operation:...)} is present, the runtime does not try to infer a meaning from the field shape. The explicit enum value takes precedence.
+
+This is an important rule because it makes the SDL resilient to future refactoring. For example, a field named \texttt{unitRaw(id: UnitIdentification!): Bytes} might currently be inferable from shape alone. But if the intent is part of the contract and should remain stable even if internal inference heuristics evolve, the explicit annotation is the safer choice:
+
+\begin{lstlisting}[style=GraphQL]
+type Query {
+    unitRaw(id: UnitIdentification!): Bytes  @ipto(operation: "LOAD_UNIT_RAW")
+}
+\end{lstlisting}
+
+The same applies to correlation-id based lookups and the two raw-search variants. Whenever the shape could be read in more than one way, the explicit enum value should be preferred.
+
+\subsection{Custom and manual wiring}
+
+Not every GraphQL field corresponds to a built-in repository primitive. Some fields need application-specific behavior, domain-specific validation, tenant-aware context handling, or orchestration that lives above the repository layer.
+
+That is why \texttt{Configurator.load(...)} accepts an optional \texttt{operationsWireBlock}. This callback receives:
+\begin{itemize}
+\item the GraphQL \texttt{RuntimeWiring.Builder},
+\item the \texttt{RuntimeService},
+\item the \texttt{Repository}.
+\end{itemize}
+
+The intended usage is:
+\begin{enumerate}
+\item declare the field in SDL,
+\item mark it with \texttt{@ipto(operation:"CUSTOM")} or \texttt{@ipto(operation:"MANUAL")} when you want to document that it is not a built-in operation,
+\item attach the real \texttt{DataFetcher} in Java through the wiring callback.
+\end{enumerate}
+
+This gives a clean split:
+\begin{itemize}
+\item SDL still defines the visible GraphQL contract,
+\item built-in operations remain declarative,
+\item genuinely custom behavior is kept in code where it belongs.
+\end{itemize}
+
+\subsection{What auto-wiring does and does not cover}
+
+It is also useful to separate operation auto-wiring from the rest of the GraphQL runtime wiring:
+\begin{itemize}
+\item record-field wiring is automatic and maps projected GraphQL fields back to repository attributes,
+\item union wiring is automatic and resolves which concrete record type a stored value represents,
+\item operation-field wiring is automatic only for the built-in operation shapes and enum values described above,
+\item subscription fields are recognized, but operational runtime support is still scaffold-only.
+\end{itemize}
+
+So ``auto-wiring'' in IPTO does not mean that arbitrary application logic is inferred from SDL. It means that a deliberately small repository-oriented set of query and mutation patterns can be connected automatically to the Java runtime service layer.
 
 \subsection{Reconciliation with the repository catalog}
 

@@ -35,13 +35,13 @@ The central unit lifecycle is represented by two tables:
 \item[\texttt{repo\_unit\_version}] Holds version-specific state for the same unit. Each row is keyed by \texttt{(tenantid, unitid, unitver)} and contains a version-local name and modification timestamp.
 \end{description}
 
-This split is important. It allows the system to keep a durable identity and current status in the kernel while storing historical changes in the version table. The latest version is found by following \texttt{repo\_unit\_kernel.lastver} to the matching row in \texttt{repo\_unit\_version}. Java repository queries use this directly when loading either a specific version or the latest one.
+This split is important. It allows the system to keep a durable identity and current status in the kernel while storing historical changes in the version table. The latest version is found by following \literalbreak{repo\_unit\_kernel.lastver} to the matching row in \texttt{repo\_unit\_version}. Java repository queries use this directly when loading either a specific version or the latest one.
 
 Tenant separation is explicit throughout the schema. Most tables that store unit-related information include \texttt{tenantid} as part of the key. This keeps multi-tenant isolation visible and queryable in the relational model rather than leaving it implicit in application code.
 
 \subsection{Attribute catalog}
 
-The database distinguishes between \emph{what an attribute means} and \emph{where an attribute value occurs}.
+The database distinguishes between \emph{what an attribute means} and \emph{where an attribute value occurs}, analogous to, but simpler than, ISO/IEC 11179.
 
 The catalog side consists primarily of the following tables:
 \begin{description}
@@ -167,7 +167,7 @@ The typical storage round-trip in the current design looks like this:
 \item the unit header is written into \texttt{repo\_unit\_kernel} and \texttt{repo\_unit\_version},
 \item each attribute occurrence becomes a \texttt{repo\_attribute\_value} row,
 \item primitive values are placed in the matching vector table,
-\item record-valued attributes recursively create child attribute values and parent-child links in \texttt{repo\_record\_vector},
+\item record-valued attributes recursively create child attribute values and parent-child links in \\ \texttt{repo\_record\_vector},
 \item later retrieval reconstructs the unit by walking the same structures in reverse.
 \end{enumerate}
 

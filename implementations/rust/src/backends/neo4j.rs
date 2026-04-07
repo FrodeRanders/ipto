@@ -263,7 +263,7 @@ impl Backend for Neo4jBackend {
             )));
         }
 
-        let tenant = extract_i64(row.first()).unwrap_or(tenant_id);
+        let tenant = extract_i64(row.first()).unwrap_or_default();
         let unit = extract_i64(row.get(1)).unwrap_or(unit_id);
         let unit_ver = extract_i64(row.get(2)).unwrap_or(1);
         let last_ver = extract_i64(row.get(3)).unwrap_or(unit_ver);
@@ -295,10 +295,10 @@ impl Backend for Neo4jBackend {
         Ok(Some(Value::Object(payload_obj)))
     }
 
-    fn get_unit_by_corrid_json(&self, tenant_id: i64, corrid: &str) -> RepoResult<Option<Value>> {
+    fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>> {
         let rows = self.query(
-            "MATCH (k:UnitKernel {tenantid: $tenantid, corrid: $corrid}) MATCH (v:UnitVersion {tenantid: k.tenantid, unitid: k.unitid, unitver: k.lastver}) RETURN k.tenantid, k.unitid, v.unitver, k.lastver, k.corrid, k.status, k.created, v.modified, v.unitname, v.payload",
-            json!({"tenantid": tenant_id, "corrid": corrid}),
+            "MATCH (k:UnitKernel {corrid: $corrid}) MATCH (v:UnitVersion {tenantid: k.tenantid, unitid: k.unitid, unitver: k.lastver}) RETURN k.tenantid, k.unitid, v.unitver, k.lastver, k.corrid, k.status, k.created, v.modified, v.unitname, v.payload",
+            json!({"corrid": corrid}),
         )?;
 
         if rows.is_empty() {
@@ -313,7 +313,7 @@ impl Backend for Neo4jBackend {
             )));
         }
 
-        let tenant = extract_i64(row.first()).unwrap_or(tenant_id);
+        let tenant = extract_i64(row.first()).unwrap_or_default();
         let unit = extract_i64(row.get(1)).unwrap_or_default();
         let unit_ver = extract_i64(row.get(2)).unwrap_or(1);
         let last_ver = extract_i64(row.get(3)).unwrap_or(unit_ver);
