@@ -165,19 +165,12 @@ CREATE TABLE repo_attribute_value (
         PRIMARY KEY (tenantid, unitid, attrid, valueid, unitverfrom),
     CONSTRAINT repo_attribute_value_id_unique
         UNIQUE (valueid),
-    --CONSTRAINT repo_attribute_value_unitver_no_overlap
-    --    EXCLUDE USING gist (
-    --        tenantid WITH =,
-    --        unitid   WITH =,
-    --        attrid   WITH =,
-    --        unitver  WITH &&
-    --    ),
+    CONSTRAINT repo_attribute_value_unitver_range
+        CHECK (unitverfrom <= unitverto),
     CONSTRAINT repo_attribute_value_attr_ex
         FOREIGN KEY (attrid) REFERENCES repo_attribute (attrid),
     CONSTRAINT repo_attribute_value_unit_ex1
-        FOREIGN KEY (tenantid, unitid, unitverfrom) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE,
-    CONSTRAINT repo_attribute_value_unit_ex2
-        FOREIGN KEY (tenantid, unitid, unitverto) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE
+        FOREIGN KEY (tenantid, unitid, unitverfrom) REFERENCES repo_unit_version (tenantid, unitid, unitver) ON DELETE CASCADE
 );
 
 -- covers attribute search, like "find all units where x = ... or y = ...
