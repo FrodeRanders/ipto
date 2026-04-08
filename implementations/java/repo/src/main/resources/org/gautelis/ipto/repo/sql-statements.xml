@@ -124,12 +124,34 @@
         INSERT INTO repo_attribute (attrtype, scalar, attrname, qualname, alias) VALUES (?,?,?,?,?)
     </entry>
 
+    <!--
+      Update attribute
+      Call with: (attrType, scalar, attrName, qualName, alias, attrId)
+    -->
+    <entry key="sql.attribute.update">
+        UPDATE repo_attribute
+           SET attrtype = ?,
+               scalar = ?,
+               attrname = ?,
+               qualname = ?,
+               alias = ?
+         WHERE attrid = ?
+    </entry>
 
     <!--
       Attribute is in use
     -->
     <entry key="sql.attribute.in_use">
         SELECT 1 FROM repo_attribute_value WHERE attrid = ? FETCH FIRST 1 ROWS ONLY
+    </entry>
+
+    <!--
+      Store attribute description.
+      Call with: (attrId, lang, alias, description)
+    -->
+    <entry key="sql.attribute_description.store">
+        INSERT INTO repo_attribute_description (attrid, lang, alias, description)
+        VALUES (?,?,?,?)
     </entry>
 
     <!--
@@ -173,6 +195,80 @@
     -->
     <entry key="sql.log.delete_entries">
         DELETE FROM repo_log WHERE (tenantid=? AND unitid=?)
+    </entry>
+
+    <!--
+      Store log entry.
+      Call with: (tenantId, unitId, unitVersion, event, logEntry)
+    -->
+    <entry key="sql.log.store_entry">
+        INSERT INTO repo_log (tenantid,unitid,unitver,event,logentry) VALUES (?,?,?,?,?)
+    </entry>
+
+    <!--
+      Get all record templates with fields.
+    -->
+    <entry key="sql.record.get_all">
+        SELECT rte.recordid AS record_id, recrd.name AS record_name,
+               rte.idx, rte.attrid AS field_attrid,
+               child.qualname AS field_qualname, child.attrname AS field_attrname,
+               child.attrtype AS field_attrtype, child.scalar AS field_scalar,
+               rte.alias AS field_alias
+        FROM repo_record_template_elements AS rte
+        JOIN repo_record_template AS recrd ON recrd.recordid = rte.recordid
+        JOIN repo_attribute AS parent ON parent.attrid = rte.recordid
+        JOIN repo_attribute AS child ON child.attrid = rte.attrid
+        ORDER BY rte.recordid, rte.idx ASC
+    </entry>
+
+    <!--
+      Store record template.
+      Call with: (recordId, name)
+    -->
+    <entry key="sql.record.store">
+        INSERT INTO repo_record_template (recordid, name)
+        VALUES (?,?)
+    </entry>
+
+    <!--
+      Store record template element.
+      Call with: (recordId, attrId, idx, alias)
+    -->
+    <entry key="sql.record.element.store">
+        INSERT INTO repo_record_template_elements (recordid, attrid, idx, alias)
+        VALUES (?,?,?,?)
+    </entry>
+
+    <!--
+      Get all unit templates with fields.
+    -->
+    <entry key="sql.template.get_all">
+        SELECT ute.templateid, ut.name,
+               ute.idx, ute.attrid, ute.alias, a.attrname, a.qualname, a.attrtype, a.scalar
+        FROM repo_unit_template AS ut
+        LEFT JOIN repo_unit_template_elements ute
+            ON ut.templateid = ute.templateid
+        LEFT JOIN repo_attribute a
+            ON ute.attrid = a.attrid
+        ORDER BY ute.templateid, ute.idx
+    </entry>
+
+    <!--
+      Store unit template.
+      Call with: (name)
+    -->
+    <entry key="sql.template.store">
+        INSERT INTO repo_unit_template (name)
+        VALUES (?)
+    </entry>
+
+    <!--
+      Store unit template element.
+      Call with: (templateId, attrId, idx, alias)
+    -->
+    <entry key="sql.template.element.store">
+        INSERT INTO repo_unit_template_elements (templateid, attrid, idx, alias)
+        VALUES (?,?,?,?)
     </entry>
 
     <!--
@@ -319,4 +415,3 @@
         INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES (?, ?, ?, ?, ?)
     </entry>
 </properties>
-

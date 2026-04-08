@@ -17,6 +17,7 @@
 package org.gautelis.ipto.repo.listeners;
 
 import org.gautelis.ipto.repo.model.ActionEvent;
+import org.gautelis.ipto.repo.model.Statements;
 
 import javax.sql.DataSource;
 import java.util.EventListener;
@@ -29,6 +30,10 @@ import java.util.EventListener;
 public interface ActionListener extends EventListener {
 
     default void initialize(DataSource ds) {
+    }
+
+    default void initialize(DataSource ds, Statements stmts) {
+        initialize(ds);
     }
 
     /**

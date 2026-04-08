@@ -352,9 +352,34 @@ public class GraphQLIT {
     @Order(4)
     public void retrieveRawByCorrelationId(GraphQL graphQL) {
         final String beslutsfattare = Generators.timeBasedEpochGenerator().generate().toString();
+        final String largePayloadText = "x".repeat(256);
 
         final int tenantId = 1;
-        final Unit unit = createAndStoreUnit(tenantId, beslutsfattare, Instant.now());
+        final Repository repo = RepositoryFactory.getRepository();
+        final UUID corrId = Generators.timeBasedEpochGenerator().generate();
+        final byte[] rawPayload;
+        try {
+            rawPayload = MAPPER.writeValueAsBytes(Map.of(
+                    "id", corrId.toString(),
+                    "beslutsfattare", beslutsfattare,
+                    "payload", largePayloadText
+            ));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to build raw payload for correlation-id test", e);
+        }
+
+        tools.jackson.databind.node.ObjectNode root = MAPPER.createObjectNode();
+        root.put("tenantid", tenantId);
+        root.put("corrid", corrId.toString());
+        tools.jackson.databind.node.ArrayNode attributes = root.putArray("attributes");
+        tools.jackson.databind.node.ObjectNode rawPayloadAttribute = attributes.addObject();
+        rawPayloadAttribute.put("@type", "ipto:data-scalar");
+        rawPayloadAttribute.put("alias", "raw_payload");
+        rawPayloadAttribute.put("attrtype", "DATA");
+        rawPayloadAttribute.put("attrname", "ffa:raw_payload");
+        rawPayloadAttribute.putArray("value").add(Base64.getEncoder().encodeToString(rawPayload));
+
+        final Unit unit = repo.storeUnit(root);
 
         String query = """
             query Unit($id: YrkanIdentification!) {
@@ -387,8 +412,10 @@ public class GraphQLIT {
                 log.info("Result (base64 encoded): {}", b64);
                 log.info("Result (String/JSON): {}", json);
 
-                JsonNode root = MAPPER.readTree(json);
-                Assertions.assertEquals(unit.getCorrId().toString(), root.path("id").asText());
+                JsonNode payloadRoot = MAPPER.readTree(json);
+                Assertions.assertEquals(unit.getCorrId().toString(), payloadRoot.path("id").asText());
+                Assertions.assertEquals(beslutsfattare, payloadRoot.path("beslutsfattare").asText());
+                Assertions.assertEquals(largePayloadText, payloadRoot.path("payload").asText());
             } else {
                 fail("No raw payload found for correlation-id lookup");
             }

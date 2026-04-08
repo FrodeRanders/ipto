@@ -30,6 +30,7 @@ import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.KnownAttributes;
 import org.gautelis.ipto.repo.model.Repository;
+import org.gautelis.ipto.repo.model.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,6 +109,7 @@ final class CatalogApplier {
         }
 
         final int attrId = existing.attrId();
+        Statements statements = repo.getStatements();
         try {
             if (!repo.canChangeAttribute(attrId)) {
                 String message = "Attribute '" + existing.attrName() + "' is in use and cannot be updated";
@@ -123,19 +125,9 @@ final class CatalogApplier {
             return Optional.empty();
         }
 
-        String sql = """
-                UPDATE repo_attribute
-                   SET attrtype = ?,
-                       scalar = ?,
-                       attrname = ?,
-                       qualname = ?,
-                       alias = ?
-                 WHERE attrid = ?
-                """;
-
         try {
             repo.withConnection(conn ->
-                    Database.usePreparedStatement(conn, sql, pStmt -> {
+                    Database.usePreparedStatement(conn, statements.attributeUpdate(), pStmt -> {
                         int i = 0;
                         pStmt.setInt(++i, desiredType.getType());
                         pStmt.setBoolean(++i, !desired.isArray());
@@ -192,23 +184,14 @@ final class CatalogApplier {
         final int recordAttributeId = recordAttribute.attrId();
         List<CatalogAttribute> storedFields = new java.util.ArrayList<>();
         CatalogRecord catalogRecord = new CatalogRecord(recordAttributeId, recordName, List.of());
-
-        String recordSql = """
-                        INSERT INTO repo_record_template (recordid, name)
-                        VALUES (?,?)
-                        """;
-
-        String elementsSql = """
-                        INSERT INTO repo_record_template_elements (recordid, attrid, idx, alias)
-                        VALUES (?,?,?,?)
-                        """;
+        Statements statements = repo.getStatements();
 
         try {
             repo.withConnection(conn -> {
                 try {
                     conn.setAutoCommit(false);
 
-                    Database.usePreparedStatement(conn, recordSql, pStmt -> {
+                    Database.usePreparedStatement(conn, statements.recordStore(), pStmt -> {
                         try {
                             int i = 0;
                             pStmt.setInt(++i, recordAttributeId);
@@ -228,7 +211,7 @@ final class CatalogApplier {
                         }
                     });
 
-                    Database.usePreparedStatement(conn, elementsSql, pStmt -> {
+                    Database.usePreparedStatement(conn, statements.recordElementStore(), pStmt -> {
                         int idx = 0;
                         for (GqlFieldShape field : fields) {
                             Optional<CatalogAttribute> attribute = FieldAliasResolver.resolveCatalogAttribute(
@@ -290,16 +273,7 @@ final class CatalogApplier {
         final String templateName = gqlUnitTemplate.typeName();
         List<CatalogAttribute> storedFields = new java.util.ArrayList<>();
         final int[] generatedTemplateId = {-1};
-
-        String templateSql = """
-                        INSERT INTO repo_unit_template (name)
-                        VALUES (?)
-                        """;
-
-        String elementsSql = """
-                        INSERT INTO repo_unit_template_elements (templateid, attrid, idx, alias)
-                        VALUES (?,?,?,?)
-                        """;
+        Statements statements = repo.getStatements();
 
         try {
             repo.withConnection(conn -> {
@@ -307,7 +281,7 @@ final class CatalogApplier {
                     conn.setAutoCommit(false);
 
                     String[] generatedColumns = { "templateid" };
-                    try (PreparedStatement pStmt = conn.prepareStatement(templateSql, generatedColumns)) {
+                    try (PreparedStatement pStmt = conn.prepareStatement(statements.templateStore(), generatedColumns)) {
                         int i = 0;
                         pStmt.setString(++i, templateName);
 
@@ -324,7 +298,7 @@ final class CatalogApplier {
                         }
                     }
 
-                    Database.usePreparedStatement(conn, elementsSql, pStmt -> {
+                    Database.usePreparedStatement(conn, statements.templateElementStore(), pStmt -> {
                         int idx = 0;
                         for (GqlFieldShape field : gqlUnitTemplate.fields()) {
                             Optional<CatalogAttribute> attribute = FieldAliasResolver.resolveCatalogAttribute(
@@ -397,15 +371,11 @@ final class CatalogApplier {
         if (alias == null || alias.isBlank()) {
             return;
         }
-
-        String sql = """
-                INSERT INTO repo_attribute_description (attrid, lang, alias, description)
-                VALUES (?,?,?,?)
-                """;
+        Statements statements = repo.getStatements();
 
         try {
             repo.withConnection(conn -> {
-                Database.usePreparedStatement(conn, sql, pStmt -> {
+                Database.usePreparedStatement(conn, statements.attributeDescriptionStore(), pStmt -> {
                     try {
                         int i = 0;
                         pStmt.setInt(++i, attrId);

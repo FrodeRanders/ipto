@@ -89,7 +89,9 @@ final class DataValue extends Value<Object> {
     }
 
     private void inflate(ArrayNode node) {
-        node.forEach(value -> values.add( Base64.getDecoder().decode(value.asString())));
+        // PostgreSQL can wrap base64 output from encode(..., 'base64') with line breaks.
+        Base64.Decoder decoder = Base64.getMimeDecoder();
+        node.forEach(value -> values.add(decoder.decode(value.asString())));
     }
 
     @Override

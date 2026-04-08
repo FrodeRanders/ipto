@@ -23,6 +23,7 @@ import org.gautelis.ipto.repo.exceptions.ConfigurationException;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
+import org.gautelis.ipto.repo.model.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -105,43 +106,10 @@ public final class Records {
 
     static Map<String, CatalogRecord> read(Repository repository) {
         Map<String, CatalogRecord> records = new HashMap<>();
-
-        // repo_attribute (
-        //    attrid      INT       NOT NULL,  -- id of attribute (serial)
-        //    qualname    TEXT      NOT NULL,  -- qualified name of attribute
-        //    attrname    TEXT      NOT NULL,  -- name of attribute
-        //    attrtype    INT       NOT NULL,  -- defined in org.gautelis.repo.model.attributes.Type
-        //    scalar      BOOLEAN   NOT NULL DEFAULT FALSE,
-        //    created     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        // )
-        //
-        // repo_record_template (
-        //    recordid  INT NOT NULL,
-        //    name      TEXT NOT NULL, -- type name
-        // )
-        //
-        // repo_record_template_elements (
-        //    recordid       INT  NOT NULL,      -- attribute id of record attribute
-        //    attrid         INT  NOT NULL,      -- sub-attribute
-        //    idx            INT  NOT NULL,
-        //    alias          TEXT NULL,
-        // )
-        //
-        String sql = """
-            SELECT rte.recordid AS record_id, recrd.name AS record_name,
-                   rte.idx, rte.attrid AS field_attrid,
-                   child.qualname AS field_qualname, child.attrname AS field_attrname,
-                   child.attrtype AS field_attrtype, child.scalar AS field_scalar,
-                   rte.alias AS field_alias
-            FROM repo_record_template_elements AS rte
-            JOIN repo_record_template AS recrd ON recrd.recordid = rte.recordid
-            JOIN repo_attribute AS parent ON parent.attrid = rte.recordid
-            JOIN repo_attribute AS child ON child.attrid = rte.attrid
-            ORDER BY rte.recordid, rte.idx ASC
-        """;
+        Statements statements = repository.getStatements();
 
         try {
-            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, statements.recordGetAll(), pStmt -> {
                 try (ResultSet rs = pStmt.executeQuery()) {
                     List<CatalogRecord> catalogRecords = new ArrayList<>();
 

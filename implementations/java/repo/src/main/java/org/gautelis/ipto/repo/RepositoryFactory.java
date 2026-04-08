@@ -158,7 +158,7 @@ public class RepositoryFactory {
             Optional<ActionListener> listener = PluginsHelper.getPlugin(eventListener, ActionListener.class);
             if (listener.isPresent()) {
                 ActionListener actionListener = listener.get();
-                actionListener.initialize(dataSource);
+                actionListener.initialize(dataSource, statements);
                 actionListeners.put(eventListener, actionListener);
                 log.info("Initiated listener: {}", actionListener.getClass().getCanonicalName());
             } else {

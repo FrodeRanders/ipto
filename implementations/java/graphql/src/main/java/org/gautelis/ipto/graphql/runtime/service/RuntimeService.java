@@ -250,7 +250,6 @@ public class RuntimeService {
     /**
      * Loads a typed unit projection by correlation id.
      *
-     * @param tenantId tenant identifier
      * @param corrId correlation identifier
      * @return boxed unit projection
      */
@@ -283,7 +282,6 @@ public class RuntimeService {
     /**
      * Loads a raw domain payload by correlation id.
      *
-     * @param tenantId tenant identifier
      * @param corrId correlation identifier
      * @return raw domain payload bytes
      */

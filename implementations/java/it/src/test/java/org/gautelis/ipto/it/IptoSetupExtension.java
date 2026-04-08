@@ -40,7 +40,7 @@ public class IptoSetupExtension implements BeforeAllCallback, ParameterResolver 
             ExtensionContext.Namespace.create("org.gautelis.ipto", "it");
 
     private static final String KEY = "GLOBAL_IPTO_ENV";
-    private static final String CONFIG = "schema2.graphqls";
+    private static final String CONFIG = "schema.graphqls";
 
     @Override
     public void beforeAll(ExtensionContext context) {

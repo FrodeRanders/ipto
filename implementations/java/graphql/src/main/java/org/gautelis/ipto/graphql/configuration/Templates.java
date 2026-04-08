@@ -22,6 +22,7 @@ import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.graphql.model.*;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
+import org.gautelis.ipto.repo.model.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,32 +98,10 @@ public final class Templates {
             Repository repository
     ) {
         Map<String, CatalogTemplate> templates = new HashMap<>();
-
-        // repo_unit_template (
-        //    templateid INT,   --
-        //    name       TEXT   -- type name
-        // )
-        //
-        // repo_template_elements (
-        //    templateid INT,   --
-        //    attrid     INT,   -- global attribute id
-        //    idx        INT,   -- order / display position
-        //    alias      TEXT   -- field name inside unit (template)
-        // )
-        //
-        String sql = """
-            SELECT ute.templateid, ut.name,
-                   ute.idx, ute.attrid, ute.alias, a.attrname, a.qualname, a.attrtype, a.scalar
-            FROM repo_unit_template AS ut
-            LEFT JOIN repo_unit_template_elements ute
-                ON ut.templateid = ute.templateid
-            LEFT JOIN repo_attribute a
-                ON ute.attrid = a.attrid
-            ORDER BY ute.templateid, ute.idx;
-        """;
+        Statements statements = repository.getStatements();
 
         try {
-            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, statements.templateGetAll(), pStmt -> {
                 try (ResultSet rs = pStmt.executeQuery()) {
                     List<CatalogTemplate> catalogTemplates = new ArrayList<>();
 

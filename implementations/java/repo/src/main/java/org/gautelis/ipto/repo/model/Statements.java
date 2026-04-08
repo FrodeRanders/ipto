@@ -58,8 +58,14 @@ public interface Statements {
     @Configurable(property = "sql.attribute.create")
     String attributeCreate();
 
+    @Configurable(property = "sql.attribute.update")
+    String attributeUpdate();
+
     @Configurable(property = "sql.attribute.in_use")
     String attributeInUse();
+
+    @Configurable(property = "sql.attribute_description.store")
+    String attributeDescriptionStore();
 
     @Configurable(property = "sql.lock.delete_all")
     String lockDeleteAll();
@@ -75,6 +81,27 @@ public interface Statements {
 
     @Configurable(property = "sql.log.delete_entries")
     String logDeleteEntries();
+
+    @Configurable(property = "sql.log.store_entry")
+    String logStoreEntry();
+
+    @Configurable(property = "sql.record.get_all")
+    String recordGetAll();
+
+    @Configurable(property = "sql.record.store")
+    String recordStore();
+
+    @Configurable(property = "sql.record.element.store")
+    String recordElementStore();
+
+    @Configurable(property = "sql.template.get_all")
+    String templateGetAll();
+
+    @Configurable(property = "sql.template.store")
+    String templateStore();
+
+    @Configurable(property = "sql.template.element.store")
+    String templateElementStore();
 
     @Configurable(property = "sql.assoc.count_left_external_assocs")
     String countLeftExternalAssocs();

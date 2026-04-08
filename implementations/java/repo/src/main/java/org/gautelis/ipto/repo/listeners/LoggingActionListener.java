@@ -18,6 +18,7 @@ package org.gautelis.ipto.repo.listeners;
 
 import org.gautelis.ipto.repo.db.Database;
 import org.gautelis.ipto.repo.model.ActionEvent;
+import org.gautelis.ipto.repo.model.Statements;
 import org.gautelis.ipto.repo.model.Unit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +28,8 @@ import javax.sql.DataSource;
 
 public final class LoggingActionListener implements ActionListener {
     private static final Logger log = LoggerFactory.getLogger(LoggingActionListener.class);
-    private static final String LOG_STATEMENT = "INSERT INTO repo_log (tenantid,unitid,unitver,event,logentry) VALUES (?,?,?,?,?)";
     private DataSource ds;
+    private Statements stmts;
 
     public LoggingActionListener() {
     }
@@ -37,12 +38,18 @@ public final class LoggingActionListener implements ActionListener {
         this.ds = ds;
     }
 
+    @Override
+    public void initialize(DataSource ds, Statements stmts) {
+        this.ds = ds;
+        this.stmts = stmts;
+    }
+
     public void actionPerformed(ActionEvent e) {
 
         Object o = e.getSource();
         if (o instanceof final Unit unit) {
             try {
-                Database.usePreparedStatement(ds, LOG_STATEMENT, pStmt -> {
+                Database.usePreparedStatement(ds, stmts.logStoreEntry(), pStmt -> {
                     int i = 0;
                     pStmt.setInt(++i, unit.getTenantId());
                     pStmt.setLong(++i, unit.getUnitId());
@@ -58,4 +65,3 @@ public final class LoggingActionListener implements ActionListener {
         }
     }
 }
-

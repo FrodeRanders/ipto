@@ -24,6 +24,7 @@ import org.gautelis.ipto.graphql.model.GqlAttributeShape;
 import org.gautelis.ipto.graphql.model.GqlDatatypeShape;
 import org.gautelis.ipto.repo.model.AttributeType;
 import org.gautelis.ipto.repo.model.Repository;
+import org.gautelis.ipto.repo.model.Statements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -149,14 +150,10 @@ public final class Attributes {
 
     static Map<String, CatalogAttribute> read(Repository repository) {
         Map<String, CatalogAttribute> attributes = new HashMap<>();
-
-        String sql = """
-                SELECT attrid, alias, attrname, qualname, attrtype, scalar
-                FROM repo_attribute
-                """;
+        Statements statements = repository.getStatements();
 
         try {
-            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, sql, pStmt -> {
+            repository.withConnection(conn -> Database.useReadonlyPreparedStatement(conn, statements.attributeGetAll(), pStmt -> {
                 try (ResultSet rs = pStmt.executeQuery()) {
                     while (rs.next()) {
                         int attributeId = rs.getInt("attrid");

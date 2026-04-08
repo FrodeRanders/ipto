@@ -32,7 +32,8 @@ public final class BytesScalar {
     private static final Logger log = LoggerFactory.getLogger(BytesScalar.class);
 
     private static final Base64.Encoder ENC = Base64.getEncoder();
-    private static final Base64.Decoder DEC = Base64.getDecoder();
+    // PostgreSQL can wrap base64 output from encode(..., 'base64') with line breaks.
+    private static final Base64.Decoder DEC = Base64.getMimeDecoder();
 
     static String headHex(byte[] bytes, int n) {
         int len = Math.min(bytes.length, n);

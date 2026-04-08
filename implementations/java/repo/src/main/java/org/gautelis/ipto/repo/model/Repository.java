@@ -84,6 +84,15 @@ public class Repository {
         return context.getDatabaseAdapter();
     }
 
+    /**
+     * Gives access to configured SQL statements shared by repository consumers.
+     *
+     * @return configured statement bundle
+     */
+    public Statements getStatements() {
+        return context.getStatements();
+    }
+
 
     /**
      * Creates a unit for specified tenant with the specified name.
@@ -478,7 +487,8 @@ public class Repository {
             case DOUBLE -> storeValue(writer, attrName, Double.class, attribute, JsonNode::asDouble);
             case BOOLEAN -> storeValue(writer, attrName, Boolean.class, attribute, JsonNode::asBoolean);
             case DATA -> {
-                Base64.Decoder decoder = Base64.getDecoder();
+                // PostgreSQL can wrap base64 output from encode(..., 'base64') with line breaks.
+                Base64.Decoder decoder = Base64.getMimeDecoder();
                 storeValue(writer, attrName, Object.class, attribute, node -> decoder.decode(node.asString()));
             }
             case RECORD -> storeRecord(writer, attrName, attribute);
