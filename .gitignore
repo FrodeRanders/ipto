@@ -1,5 +1,6 @@
 target/
 data/
+__pycache__/
 .idea/
 *.log
 .DS_Store

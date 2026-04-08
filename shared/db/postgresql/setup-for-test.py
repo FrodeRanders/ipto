@@ -27,6 +27,7 @@ import pexpect
 import sys
 import argparse
 import socket
+import re
 
 import os
 
@@ -74,7 +75,9 @@ def start_postgres_container(container_name: str, postgres_password: str, host_p
         "-p", f"{host_port}:5432",
         "-v", f"{script_dir}:/tmp",
         "-d",
-        "postgres"
+        "postgres",
+        "-c", "shared_preload_libraries=pg_stat_statements",
+        "-c", "pg_stat_statements.track=all"
     ], check=False, capture_output=True, text=True)
 
     if result.returncode != 0:
@@ -118,26 +121,28 @@ def run_psql_commands_in_container(
         postgres_password: str,
         commands: list,
         psql_user: str = "postgres",
-        psql_host: str = "localhost"
+        psql_host: str = "localhost",
+        psql_database: str = "postgres"
 ):
     """
     Spawns a docker run psql session (interactive) and executes SQL commands using pexpect.
     """
     print("Running psql commands in container...")
+    prompt_pattern = re.compile(r"[^\r\n=]+=[#>]")
 
     # Spawn the psql session
-    shell_cmd = f"docker exec -it {container_name} psql -h {psql_host} -U {psql_user}"
+    shell_cmd = f"docker exec -it {container_name} psql -h {psql_host} -U {psql_user} -d {psql_database}"
     child = pexpect.spawn(shell_cmd, encoding="utf-8", timeout=5)
     # child.logfile = sys.stdout
 
-    child.expect("postgres=#", timeout=5)
+    child.expect(prompt_pattern, timeout=5)
 
     # Execute each command
     for cmd in commands:
         child.sendline(cmd)
         # Wait for psql prompt or an ERROR
-        # Some psql prompts end in "postgres=#" or similar.
-        idx = child.expect(["postgres=#", "ERROR", pexpect.TIMEOUT, pexpect.EOF], timeout=5)
+        # psql prompts end in "<database>=#" or "<database>=>".
+        idx = child.expect([prompt_pattern, "ERROR", pexpect.TIMEOUT, pexpect.EOF], timeout=5)
         if idx == 1:
             # If we matched "ERROR"
             print(f"Error running command: {cmd}\nDetail: {child.before}")
@@ -159,13 +164,14 @@ def run_sql_commands_in_container(container_name, repo_password, sql_files, repo
     child = pexpect.spawn(shell_cmd, encoding="utf-8", timeout=10)
     # child.logfile = sys.stdout
 
-    child.expect(repo_user + "=>", timeout=5)
+    prompt_pattern = re.compile(r"[^\r\n=]+=[#>]")
+    child.expect(prompt_pattern, timeout=5)
 
     # For each SQL file, run the psql command "\i <file>"
     for sql_file in sql_files:
         cmd = f"\\i /tmp/{sql_file}"
         child.sendline(cmd)
-        idx = child.expect([repo_user + "=>", "ERROR", pexpect.TIMEOUT, pexpect.EOF], timeout=10)
+        idx = child.expect([prompt_pattern, "ERROR", pexpect.TIMEOUT, pexpect.EOF], timeout=10)
         if idx == 1:
             print(f"Error running command: {cmd}\nDetail: {child.before}")
         elif idx in (2, 3):
@@ -244,7 +250,7 @@ def main():
 
     # Commands to run as superuser
     commands = [
-        "CREATE USER repo WITH PASSWORD '" + repo_password + "';",
+        "CREATE USER repo WITH SUPERUSER PASSWORD '" + repo_password + "';",
         "CREATE DATABASE repo OWNER repo;"
     ]
 
@@ -253,6 +259,14 @@ def main():
         container_name=container_name,
         postgres_password=postgres_password,
         commands=commands
+    )
+
+    # Enable statement statistics in the test database.
+    run_psql_commands_in_container(
+        container_name=container_name,
+        postgres_password=postgres_password,
+        commands=["CREATE EXTENSION IF NOT EXISTS pg_stat_statements;"],
+        psql_database="repo"
     )
 
     # Run commands in the container as user 'repo'
