@@ -25,6 +25,7 @@ import org.gautelis.ipto.repo.model.attributes.Attribute;
 import org.gautelis.ipto.repo.model.attributes.RecordAttribute;
 import org.gautelis.ipto.repo.model.utils.RunningStatistics;
 import org.gautelis.ipto.repo.search.UnitSearch;
+import org.gautelis.ipto.repo.search.query.adapters.PostgresAdapter;
 import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
 import org.gautelis.vopn.lang.TimeDelta;
@@ -52,6 +53,8 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.gautelis.ipto.it.Statistics.dumpStatistics;
+import static org.gautelis.ipto.it.Statistics.dumpPostgresStatementStats;
+import static org.gautelis.ipto.it.Statistics.resetPostgresStats;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -270,6 +273,8 @@ public class PerformanceIT {
         final int timeoutMinutes = getIntProperty("ipto.performance.timeoutMinutes", 240);
 
         try {
+            resetPostgresStats(repo);
+
             AtomicReference<Instant> firstParentCreatedRef = new AtomicReference<>();
             AtomicReference<Instant> someInstantRef = new AtomicReference<>();
             String someSpecificString = Generators.timeBasedEpochGenerator().generate().toString();

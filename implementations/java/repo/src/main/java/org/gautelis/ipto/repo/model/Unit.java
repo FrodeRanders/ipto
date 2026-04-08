@@ -801,7 +801,7 @@ public class Unit implements Cloneable {
         attributes = new HashMap<>();
 
         try (PreparedStatement pStmt = conn.prepareStatement(ctx.getStatements().unitGetAttributes(),
-                ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY
+                ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY
         )) {
             int i = 0;
             pStmt.setInt(++i, tenantId);
@@ -885,8 +885,7 @@ public class Unit implements Cloneable {
                         log.trace("Fetched {}", attribute);
                     }
 
-                    dontAdvanceResultsetPointer =
-                            !rs.isAfterLast() && rs.getLong("valueid") != currentValueId;
+                    dontAdvanceResultsetPointer = attribute.getValue().cursorPositionedOnNextValue();
                 }
                 valueIdToAttribute.clear();
             }

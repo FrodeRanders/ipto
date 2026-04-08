@@ -112,7 +112,7 @@
 
     <profiles>
         <profile>
-            <id>massive-performance</id>
+            <id>massive-performance</id> <!-- mvn -Pmassive-performance -->
             <properties>
                 <ipto.massive.enabled>true</ipto.massive.enabled>
                 <ipto.performance.parents>1000</ipto.performance.parents>

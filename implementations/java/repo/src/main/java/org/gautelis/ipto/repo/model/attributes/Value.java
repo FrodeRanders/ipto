@@ -38,6 +38,7 @@ public abstract class Value<T> {
     protected final ArrayList<T> values = new ArrayList<>();
     private int initialHashCode;
     private boolean isNew;
+    private boolean cursorPositionedOnNextValue;
 
     /**
      * Creates a <I>new</I> attribute value.
@@ -46,6 +47,7 @@ public abstract class Value<T> {
      */
     protected Value() {
         isNew = true;
+        cursorPositionedOnNextValue = false;
 
         // Mark current status, so we can detect changes later...
         initialHashCode = values.hashCode();
@@ -58,6 +60,7 @@ public abstract class Value<T> {
      */
     protected Value(ArrayNode node) {
         isNew = false;
+        cursorPositionedOnNextValue = false;
 
         // Mark current status, so we can detect changes later...
         initialHashCode = values.hashCode();
@@ -70,6 +73,7 @@ public abstract class Value<T> {
      */
     protected Value(ResultSet rs) throws DatabaseReadException {
         isNew = false;
+        cursorPositionedOnNextValue = false;
 
         try {
             // We will only pick the value vector elements associated with
@@ -91,6 +95,7 @@ public abstract class Value<T> {
                         /* same valueid */ valueId == nextValueId) {
                         continue;
                     }
+                    cursorPositionedOnNextValue = true;
                 }
                 break;
             }
@@ -101,6 +106,14 @@ public abstract class Value<T> {
         } catch (SQLException sqle) {
             throw new DatabaseReadException(sqle);
         }
+    }
+
+    /**
+     * Indicates whether inflating this value advanced the cursor to the first
+     * row of the next attribute value group.
+     */
+    public boolean cursorPositionedOnNextValue() {
+        return cursorPositionedOnNextValue;
     }
 
     /**
