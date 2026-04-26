@@ -287,7 +287,7 @@
     \huge\textsc{\@thesubtitle{}}
     \end{center}
     
-    \vspace*{12cm}
+    \vspace*{7cm}
     
     \begin{center}
     \today

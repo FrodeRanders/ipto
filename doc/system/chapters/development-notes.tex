@@ -8,10 +8,15 @@ This chapter summarizes the practical build, test and setup workflow that ties t
 Development work is split across several implementation roots:
 \begin{description}
 \item[\texttt{implementations/java}] Reference implementation and GraphQL runtime.
+\vspace{.2cm}
 \item[\texttt{implementations/erlang}] OTP-based alternative implementation with PostgreSQL, Neo4j, GraphQL and HTTP support.
+\vspace{.2cm}
 \item[\texttt{implementations/rust}] Rust implementation with PostgreSQL and Neo4j backends plus a Python bridge via PyO3.
+\vspace{.2cm}
 \item[\texttt{apps/admin-web}] SvelteKit-based administration web client.
+\vspace{.2cm}
 \item[\texttt{shared/db}] Shared schema, procedures and setup scripts for PostgreSQL and DB2.
+\vspace{.2cm}
 \item[\texttt{doc/system}] The system manual itself.
 \end{description}
 

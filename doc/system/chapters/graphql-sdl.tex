@@ -23,20 +23,27 @@ This makes the SDL the authoritative description of the intended logical model, 
 The shipped schema file \filepath{implementations/java/quarkus-app/src/main/resources/ipto.graphqls} defines a small directive vocabulary used by the loader:
 \begin{description}
 \item[\texttt{@datatypeRegistry}] Marks an enum whose values define basic datatypes.
-\item[\texttt{@datatype(id: Int)}] Assigns the numeric repository datatype id used internally by IPTO.
+\vspace{.2cm}
+\item[\texttt{@datatype(id:Int)}] Assigns the numeric repository datatype id used internally by IPTO.
+\vspace{.2cm}
 \item[\texttt{@attributeRegistry}] Marks an enum whose values define repository attributes.
+\vspace{.2cm}
 \item[\texttt{@attribute(...)}] Declares the datatype, cardinality, repository name, URI and description of an attribute.
-\item[\texttt{@template(name: String)}] Marks an object type as a top-level unit template.
-\item[\texttt{@record(attribute: Attributes!)}] Marks an object type as a nested record bound to a record attribute.
-\item[\texttt{@use(attribute: Attributes!)}] Binds a field in a template or record to a declared repository attribute.
-\item[\texttt{@ipto(operation: String!)}] Binds a GraphQL operation field to a known runtime operation.
+\vspace{.2cm}
+\item[\texttt{@template(name:String)}] Marks an object type as a top-level unit template.
+\vspace{.2cm}
+\item[\texttt{@record(attribute:Attributes!)}] Marks an object type as a nested record bound to a record attribute.
+\vspace{.2cm}
+\item[\texttt{@use(attribute:Attributes!)}] Binds a field in a template or record to a declared repository attribute.
+\vspace{.2cm}
+\item[\texttt{@ipto(operation:String!)}] Binds a GraphQL operation field to a known runtime operation.
 \end{description}
 
 The SDL layer is therefore not generic GraphQL schema usage. It is GraphQL plus a repository-specific annotation vocabulary that drives catalog synthesis.
 
 \subsection{Datatype registry}
 
-Basic datatypes are derived from an enum annotated with \texttt{@datatypeRegistry}. In the current schema this is the \texttt{DataTypes} enum. Values such as \texttt{STRING}, \texttt{TIME}, \texttt{INTEGER}, \texttt{LONG}, \texttt{DOUBLE}, \texttt{BOOLEAN}, \texttt{DATA} and \texttt{RECORD} are each annotated with a numeric id via \texttt{@datatype(id: ...)}.
+Basic datatypes are derived from an enum annotated with \texttt{@datatypeRegistry}. In the current schema this is the \texttt{DataTypes} enum. Values such as \texttt{STRING}, \texttt{TIME}, \texttt{INTEGER}, \texttt{LONG}, \texttt{DOUBLE}, \texttt{BOOLEAN}, \texttt{DATA} and \texttt{RECORD} are each annotated with a numeric id via \texttt{@datatype(id:...)}.
 
 The loader validates these ids against the internal Java enum \texttt{AttributeType}. This is an important constraint: SDL cannot invent arbitrary numeric datatypes. It can only refer to the officially supported storage types already known to the repository implementation.
 
@@ -60,12 +67,13 @@ This is the bridge between the GraphQL schema vocabulary and the database catalo
 Top-level domain objects are represented as GraphQL object types. The loader distinguishes operation root types from ordinary domain types, and then interprets the remaining object types in one of two ways:
 \begin{description}
 \item[\texttt{@template}] Declares that an object type describes a top-level unit template.
+\vspace{.2cm}
 \item[\texttt{@record}] Declares that an object type describes a reusable nested record.
 \end{description}
 
-For both templates and records, the actual field structure is derived from fields annotated with \texttt{@use(attribute: ...)}. That directive allows the field name used in SDL to differ from the underlying repository attribute name. If \texttt{@use} is omitted, the loader attempts to resolve the field name directly against the attribute registry.
+For both templates and records, the actual field structure is derived from fields annotated with \literalbreak{@use(attribute:...)}. That directive allows the field name used in SDL to differ from the underlying repository attribute name. If \texttt{@use} is omitted, the loader attempts to resolve the field name directly against the attribute registry.
 
-For templates, the resulting metadata is persisted in \texttt{repo\_unit\_template} and \texttt{repo\_unit\_template\_elements}. For records, the corresponding metadata is persisted in \texttt{repo\_record\_template} and \texttt{repo\_record\_template\_elements}.
+For templates, the resulting metadata is persisted in \texttt{repo\_unit\_template} and \literalbreak{repo\_unit\_template\_elements}. For records, the corresponding metadata is persisted in \texttt{repo\_record\_template} and \literalbreak{repo\_record\_template\_elements}.
 
 \subsection{Operation roots and runtime bindings}
 
@@ -112,7 +120,7 @@ The full lifecycle in the Java implementation is:
 \item \texttt{Operations.derive(...)} creates one \texttt{GqlOperationShape} per query, mutation or subscription field.
 \item If the field carries \texttt{@ipto(operation:...)}, the directive argument is parsed into the enum \texttt{RuntimeOperation}.
 \item \texttt{OperationBindingValidator} checks whether an operation without an explicit binding is safe to infer.
-\item \texttt{RuntimeService.wire(...)} delegates operation wiring to \texttt{RuntimeOperators.wireOperations(...)}.
+\item \texttt{RuntimeService.wire(...)} delegates operation wiring to \\ \literalbreak{RuntimeOperators.wireOperations(...)}.
 \item For each operation:
     \begin{itemize}
     \item if the enum value is \texttt{CUSTOM} or \texttt{MANUAL}, auto-wiring is skipped,
@@ -141,7 +149,13 @@ The current inference rules are:
     \item a correlation-id carrier with \texttt{corrId}.
     \end{itemize}
     If execution ever reaches shape-based dispatch, the result type decides between typed loading and raw-payload loading. However, SDL operations with a single \texttt{id} parameter are considered ambiguous during configuration and should therefore not rely on omission of \texttt{@ipto(operation:...)}. In practice, \texttt{id}-based operations are expected to declare the intended runtime operation explicitly.
+
+\vspace{.2cm}
+
 \item[\texttt{Query} with one parameter named \texttt{filter}] The runtime interprets the argument as \texttt{Filter}. If the result type is \texttt{Bytes}, a raw search variant is used; otherwise the ordinary typed search variant is used.
+
+\vspace{.2cm}
+
 \item[\texttt{Mutation} with one parameter named \texttt{data} of type \texttt{Bytes}] The runtime interprets the field as raw unit storage.
 \end{description}
 
@@ -175,21 +189,39 @@ The enum \texttt{org.gautelis.ipto.graphql.model.RuntimeOperation} names the bui
 \begin{description}
 \item[\texttt{LOAD\_UNIT}] Load one typed unit by \texttt{tenantId} and \texttt{unitId}. The GraphQL field is expected to accept an \texttt{id} argument that can be coerced to \texttt{UnitIdentification}. The result is then projected through the configured GraphQL template and record shapes.
 
+\vspace{.2cm}
+
 \item[\texttt{LOAD\_UNIT\_RAW}] Load one unit as raw repository payload bytes by \texttt{tenantId} and \texttt{unitId}. This bypasses typed field projection and exposes the stored generic payload.
+
+\vspace{.2cm}
 
 \item[\texttt{LOAD\_BY\_CORRID}] Load one typed unit by correlation id instead of by internal unit id. In the current Java implementation, the GraphQL \texttt{id} argument is modeled as carrying only \texttt{corrId}.
 
+\vspace{.2cm}
+
 \item[\texttt{LOAD\_RAW\_PAYLOAD\_BY\_CORRID}] Load raw payload bytes by correlation id. In the current Java implementation, the GraphQL \texttt{id} argument is likewise modeled as carrying only \texttt{corrId}. This is the correlation-id counterpart to \texttt{LOAD\_UNIT\_RAW}.
+
+\vspace{.2cm}
 
 \item[\texttt{SEARCH}] Execute a repository search using the \texttt{Filter} input object and return typed GraphQL units. The search expression in \texttt{filter.where} is delegated into the repository search subsystem, not implemented separately in GraphQL.
 
+\vspace{.2cm}
+
 \item[\texttt{SEARCH\_RAW}] Execute a search using \texttt{Filter} and return raw units as bytes. This is the raw counterpart to \texttt{SEARCH}.
+
+\vspace{.2cm}
 
 \item[\texttt{SEARCH\_RAW\_PAYLOAD}] Execute a search using \texttt{Filter} and return raw payloads rather than typed unit projections. This exists because there is more than one meaningful ``raw'' search surface, which is exactly why \texttt{filter -> Bytes} is considered ambiguous without an explicit binding.
 
+\vspace{.2cm}
+
 \item[\texttt{STORE\_RAW\_UNIT}] Store a raw unit supplied as \texttt{Bytes}. The GraphQL mutation is expected to accept a \texttt{data} argument containing the payload to persist.
 
+\vspace{.2cm}
+
 \item[\texttt{CUSTOM}] Declare that the SDL field is intentional, but that the built-in auto-wiring must not handle it. The field should be wired through the application-supplied \texttt{operationsWireBlock} or equivalent Java runtime code.
+
+\vspace{.2cm}
 
 \item[\texttt{MANUAL}] Semantically very close to \texttt{CUSTOM}: it tells the runtime to skip built-in auto-wiring and requires the embedding code to provide the data fetcher. In other words, both values act as ``do not auto-wire this field'' markers.
 \end{description}

@@ -32,6 +32,7 @@ Figure~\ref{fig:RepositorySchemaOverview} shows the full relational layout at sc
 The central unit lifecycle is represented by two tables:
 \begin{description}
 \item[\texttt{repo\_unit\_kernel}] Holds the stable identity of a unit. The row contains the tenant id, the unit id, a correlation id, the current status, the latest version number and the original creation timestamp.
+\vspace{.2cm}
 \item[\texttt{repo\_unit\_version}] Holds version-specific state for the same unit. Each row is keyed by \texttt{(tenantid, unitid, unitver)} and contains a version-local name and modification timestamp.
 \end{description}
 
@@ -46,7 +47,9 @@ The database distinguishes between \emph{what an attribute means} and \emph{wher
 The catalog side consists primarily of the following tables:
 \begin{description}
 \item[\texttt{repo\_namespace}] Maps namespace aliases to full namespace URIs. The boot script preloads commonly used vocabularies such as Dublin Core, FOAF, DCAT and related namespaces.
+\vspace{.2cm}
 \item[\texttt{repo\_attribute}] Stores one row per known attribute. The row contains a qualified name, a local attribute name, an optional alias, the logical attribute type and whether the attribute is scalar or vector-valued.
+\vspace{.2cm}
 \item[\texttt{repo\_attribute\_description}] Stores human-readable descriptions per language.
 \end{description}
 
@@ -110,6 +113,7 @@ The special case is \texttt{repo\_record\_vector}. It does not store scalar payl
 Two metadata table groups describe reusable structural shapes:
 \begin{description}
 \item[\texttt{repo\_unit\_template} and \texttt{repo\_unit\_template\_elements}] Describe the ordered set of attributes that make up a top-level unit template.
+\vspace{.2cm}
 \item[\texttt{repo\_record\_template} and \texttt{repo\_record\_template\_elements}] Describe nested record types and the ordered attributes that belong to each record.
 \end{description}
 
@@ -120,8 +124,11 @@ These tables are not populated by ad hoc SQL in day-to-day use. They are synthes
 Besides metadata content itself, the schema contains supporting tables for operational behavior:
 \begin{description}
 \item[\texttt{repo\_internal\_relation}] Stores typed relations between two units in the repository.
+\vspace{.2cm}
 \item[\texttt{repo\_external\_assoc}] Stores typed associations from a unit to an identifier in an external system.
+\vspace{.2cm}
 \item[\texttt{repo\_lock}] Stores repository locks with a purpose, a lock type and an optional expiry timestamp.
+\vspace{.2cm}
 \item[\texttt{repo\_log}] Stores audit-like event information per unit version.
 \end{description}
 
@@ -132,7 +139,9 @@ These tables keep relationship management and coordination close to the unit mod
 Both database variants are provisioned from a small set of scripts:
 \begin{description}
 \item[\texttt{schema.sql}] Creates the schema, tables, constraints and indexes.
+\vspace{.2cm}
 \item[\texttt{procedures.sql}] Installs the ingest and extract routines.
+\vspace{.2cm}
 \item[\texttt{boot.sql}] Loads initial tenants, root units and namespace mappings.
 \end{description}
 
@@ -145,6 +154,7 @@ The DB2 setup follows the same logical sequence, but with one additional deploym
 On PostgreSQL, unit persistence is intentionally centered on database procedures rather than distributing all persistence logic into application code. The main procedure pair is:
 \begin{description}
 \item[\texttt{ingest\_new\_unit\_json}] Creates a new kernel row, creates the first version row, and recursively ingests the attribute tree.
+\vspace{.2cm}
 \item[\texttt{ingest\_new\_version\_json}] Advances the kernel version, inserts the new version row, and applies delta-based attribute ingestion.
 \end{description}
 

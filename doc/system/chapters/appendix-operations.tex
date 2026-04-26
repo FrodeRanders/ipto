@@ -10,13 +10,13 @@ This appendix gathers the most frequently used commands and configuration variab
 \hline
 \textbf{Area} & \textbf{Typical command} \\
 \hline
-Java unit tests & \shellcmd{mvn -f implementations/java/pom.xml -q test} \\
+PostgreSQL test DB setup & \texttt{python shared/db/postgresql/setup-for-test.py} \\
 \hline
-Java integration tests & \shellcmd{mvn -f implementations/java/pom.xml -pl it verify} \\
+DB2 test DB setup & \texttt{python shared/db/db2/setup-for-test.py} \\
 \hline
-PostgreSQL test DB setup & \shellcmd{python3 shared/db/postgresql/setup-for-test.py} \\
+Java unit tests & \texttt{mvn -f implementations/java/pom.xml -q test} \\
 \hline
-DB2 test DB setup & \shellcmd{python3 shared/db/db2/setup-for-test.py} \\
+Java integration tests & \texttt{mvn -f implementations/java/pom.xml -pl it verify} \\
 \hline
 Erlang compile & \texttt{rebar3 compile} \\
 \hline
@@ -24,9 +24,9 @@ Erlang tests & \texttt{rebar3 eunit} \\
 \hline
 Rust tests & \texttt{cargo test} \\
 \hline
-Rust Python extension & \texttt{maturin develop} \\
+Rust Python tests & \texttt{python -m pytest -q python\_tests/test\_ipto.py} \\
 \hline
-Rust Python tests & \shellcmd{python3 -m pytest -q python_tests/test_ipto.py} \\
+Rust Python extension & \texttt{maturin develop} \\
 \hline
 \end{tabular}
 \end{center}

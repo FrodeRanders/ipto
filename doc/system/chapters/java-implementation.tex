@@ -8,8 +8,11 @@ The Java implementation is currently the primary and most complete implementatio
 The Java code is split across several Maven modules under \texttt{implementations/java}:
 \begin{description}
 \item[\texttt{repo}] The core repository implementation, including the model, persistence code, search query generation and database interaction.
+\vspace{.2cm}
 \item[\texttt{graphql}] The GraphQL configuration and runtime layer.
+\vspace{.2cm}
 \item[\texttt{it}] Integration tests that exercise the repository and GraphQL layers against a real database.
+\vspace{.2cm}
 \item[\texttt{quarkus-app}] An application packaging of the runtime with a concrete GraphQL schema resource.
 \end{description}
 
@@ -63,7 +66,9 @@ The Java implementation contains a dedicated search subsystem under \literalbrea
 The shape of the tree is deliberately small:
 \begin{description}
 \item[\texttt{LeafExpression}] A single search predicate backed by one \texttt{SearchItem}.
+\vspace{.2cm}
 \item[\texttt{AndExpression} and \texttt{OrExpression}] Binary nodes that combine two child expressions.
+\vspace{.2cm}
 \item[\texttt{NotExpression}] Unary negation around another expression.
 \end{description}
 
@@ -247,8 +252,11 @@ When a unit is stored from JSON, the repository reads the incoming JSON tree, up
 So although the Java API surface looks object-oriented, the actual execution path is layered:
 \begin{description}
 \item[Repository API] Owns unit-oriented behavior.
+\vspace{.2cm}
 \item[Search adapter] Owns database-specific SQL for dynamic search.
+\vspace{.2cm}
 \item[Unit factory and cache] Own reconstruction and reuse of persisted units.
+\vspace{.2cm}
 \item[Database procedures and schema] Own the durable representation.
 \end{description}
 

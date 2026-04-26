@@ -8,10 +8,15 @@ IPTO includes both a Rust implementation area and Python-facing entry points, an
 The Rust code under \texttt{implementations/rust} is another implementation surface for the same conceptual model. It contains:
 \begin{description}
 \item[\texttt{src/repo.rs}] Backend-agnostic repository orchestration.
+\vspace{.2cm}
 \item[\texttt{src/backend.rs}] The backend trait that defines the implementation contract.
+\vspace{.2cm}
 \item[\texttt{src/backends/postgres.rs}] The PostgreSQL backend.
+\vspace{.2cm}
 \item[\texttt{src/backends/neo4j.rs}] The Neo4j backend.
+\vspace{.2cm}
 \item[\texttt{src/graphql.rs} and \texttt{src/graphql\_sdl.rs}] A Rust-side GraphQL runtime and SDL handling layer.
+\vspace{.2cm}
 \item[\texttt{src/lib.rs}] The Python module entry point when the \texttt{python} feature is enabled.
 \end{description}
 
@@ -90,6 +95,7 @@ This is a compatibility-oriented runtime surface rather than a full clone of the
 Python serves two different roles:
 \begin{description}
 \item[Embedded consumer of Rust] Through the \texttt{PyIpto} module exported by Rust via PyO3.
+\vspace{.2cm}
 \item[Operational tooling] Through scripts that provision test environments, run integration tests, or execute backend benchmarks.
 \end{description}
 

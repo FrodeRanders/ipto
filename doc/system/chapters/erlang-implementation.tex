@@ -8,11 +8,17 @@ The repository also contains an Erlang implementation area under \texttt{impleme
 The Erlang implementation is organized around a layered module structure:
 \begin{description}
 \item[\texttt{ipto}] Public facade API. This module exposes the main repository-facing functions and wraps calls in timing collection.
+\vspace{.2cm}
 \item[\texttt{ipto\_repo}] Central orchestration layer. This module coordinates unit helpers, persistence dispatch, search, relation and association helpers, lock handling and SDL-based GraphQL setup.
+\vspace{.2cm}
 \item[\texttt{ipto\_backend}] Behaviour definition for persistence backends.
+\vspace{.2cm}
 \item[\texttt{ipto\_db}] Backend dispatch point selecting the active implementation from application configuration.
+\vspace{.2cm}
 \item[\texttt{ipto\_db\_memory}, \texttt{ipto\_db\_pg}, \texttt{ipto\_db\_neo4j}] Concrete backend implementations.
+\vspace{.2cm}
 \item[\texttt{ipto\_graphql} and related modules] GraphQL facade, SDL handling, resolver mapping and schema support.
+\vspace{.2cm}
 \item[\texttt{ipto\_http} and related modules] HTTP server and request handlers for GraphQL and health endpoints.
 \end{description}
 
@@ -56,7 +62,9 @@ This is an architectural choice. Instead of scattering backend checks throughout
 The codebase currently defines three backend modes:
 \begin{description}
 \item[\texttt{memory}] In-memory behavior for tests and lightweight runs.
+\vspace{.2cm}
 \item[\texttt{pg}] PostgreSQL-backed behavior.
+\vspace{.2cm}
 \item[\texttt{neo4j}] Neo4j-backed behavior.
 \end{description}
 
@@ -69,9 +77,13 @@ This makes the Erlang implementation notable in one respect: compared to the Jav
 The Erlang implementation includes its own GraphQL subsystem:
 \begin{description}
 \item[\texttt{ipto\_graphql}] Public GraphQL facade.
+\vspace{.2cm}
 \item[\texttt{ipto\_graphql\_adapter}] Adapter layer for \texttt{graphql\_erl}.
+\vspace{.2cm}
 \item[\texttt{ipto\_graphql\_sdl}] SDL inspection and validation support.
+\vspace{.2cm}
 \item[\texttt{ipto\_graphql\_schema}] Schema definition for repository primitives.
+\vspace{.2cm}
 \item[\texttt{ipto\_graphql\_resolvers} and resource modules] Resolver and operation mapping.
 \end{description}
 
