@@ -1,3 +1,26 @@
+//! Rust implementation of the IPTO repository and GraphQL runtime.
+//!
+//! The crate mirrors the repository concepts used by the Java and Erlang
+//! implementations: versioned units, relations, associations, lifecycle state,
+//! SDL-driven metadata, and a compact GraphQL facade. The public entry points
+//! are intentionally small:
+//!
+//! - [`repo::RepoService`] is the high-level service API. It applies IPTO
+//!   semantics such as versioning, lifecycle transitions, SDL validation, and
+//!   fallback evaluation for composite searches.
+//! - [`backend::Backend`] is the storage contract implemented by concrete
+//!   backends.
+//! - [`backends::postgres::PostgresBackend`] and [`backends::neo4j::Neo4jBackend`]
+//!   provide the bundled persistence adapters.
+//! - [`graphql::GraphqlRuntime`] exposes the service through the project's
+//!   constrained GraphQL operation model.
+//!
+//! Most data crossing the service/backend boundary is represented as
+//! [`serde_json::Value`] because the repository stores dynamic unit payloads and
+//! because compatibility with the other implementations is part of the design.
+//! Stronger Rust structs in [`model`] are used for stable references and search
+//! results.
+
 pub mod backend;
 pub mod backends;
 pub mod graphql;
@@ -115,7 +138,7 @@ mod pybindings {
                 other => {
                     return Err(PyValueError::new_err(format!(
                         "unsupported backend '{other}', expected postgres|pg|neo4j"
-                    )))
+                    )));
                 }
             };
 
@@ -269,10 +292,7 @@ mod pybindings {
             })
         }
 
-        fn get_unit_by_corrid_json(
-            &self,
-            corrid: &str,
-        ) -> PyResult<Option<String>> {
+        fn get_unit_by_corrid_json(&self, corrid: &str) -> PyResult<Option<String>> {
             self.timed("get_unit_by_corrid_json", || {
                 let result = self
                     .repo

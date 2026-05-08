@@ -1,4 +1,21 @@
-use serde_json::{json, Value};
+//! Parser for the text search-query language.
+//!
+//! The service accepts both structured JSON search expressions and a compact
+//! user-facing query syntax. This module tokenizes the textual syntax, builds a
+//! small AST with SQL-like precedence (`NOT` before `AND` before `OR`), and
+//! lowers it to the same JSON expression format used by backends.
+//!
+//! The language understands unit fields (`tenantid`, `unitid`, `status`, etc.),
+//! dynamic attributes (`attr:<name>` in strict mode), relation/association
+//! fields, comparison operators, `LIKE`, `BETWEEN`, `IN`, and `NOT IN`.
+//!
+//! Relation field prefixes can include a side, such as `relation:right:parent`
+//! or `relation:left:parent`. The side is from the perspective of the matching
+//! unit. In a parent/child relation, `right` means "the matching unit is the
+//! parent; find children to the right", while `left` means "the matching unit is
+//! the child; find parents to the left".
+
+use serde_json::{Value, json};
 
 use crate::backend::{RepoError, RepoResult};
 
@@ -534,7 +551,7 @@ fn parse_prefixed_field(
         (Some(a), Some(b)) if a != b => {
             return Err(RepoError::InvalidInput(
                 "conflicting relation/association side qualifiers".to_string(),
-            ))
+            ));
         }
         (Some(a), _) => Some(a),
         (_, Some(b)) => Some(b),

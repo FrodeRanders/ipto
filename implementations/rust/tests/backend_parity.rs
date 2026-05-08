@@ -6,7 +6,7 @@ use ipto_rust::backends::postgres::PostgresBackend;
 use ipto_rust::model::{SearchOrder, SearchPaging, UnitRef, VersionSelector};
 use ipto_rust::repo::RepoService;
 use postgres::{Client, Config, NoTls};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use uuid::Uuid;
 
 fn pg_integration_enabled() -> bool {
@@ -125,14 +125,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("predicate search");
-    assert!(predicate_search
-        .results
-        .iter()
-        .any(|u| u.unit_id == unit_a_id));
-    assert!(!predicate_search
-        .results
-        .iter()
-        .any(|u| u.unit_id == unit_b_id));
+    assert!(
+        predicate_search
+            .results
+            .iter()
+            .any(|u| u.unit_id == unit_a_id)
+    );
+    assert!(
+        !predicate_search
+            .results
+            .iter()
+            .any(|u| u.unit_id == unit_b_id)
+    );
 
     repo.add_relation(a_ref.clone(), 11, b_ref.clone())
         .expect("add relation");
@@ -245,10 +249,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by status name in leaf expression");
-    assert!(status_name_leaf_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        status_name_leaf_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     assert_eq!(
         repo.count_right_relations(a_ref.clone(), 11)
@@ -292,10 +298,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by relation");
-    assert!(relation_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        relation_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let relation_alias_search = repo
         .search_units(
@@ -315,10 +323,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by relation aliases");
-    assert!(relation_alias_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        relation_alias_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let relation_right_side_search = repo
         .search_units(
@@ -340,10 +350,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by relation right side object");
-    assert!(relation_right_side_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        relation_right_side_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let association_ref = format!("{prefix}-external");
     let association_search = repo
@@ -363,10 +375,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by association");
-    assert!(association_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        association_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let association_object_search = repo
         .search_units(
@@ -387,14 +401,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by association object");
-    assert!(association_object_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        association_object_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let relation_symbolic_query = repo
         .search_units_query(
-            &format!("tenantid = {tenant_id} and relation:right-parent-child = '{tenant_id}.{unit_a_id}'"),
+            &format!(
+                "tenantid = {tenant_id} and relation:right-parent-child = '{tenant_id}.{unit_a_id}'"
+            ),
             SearchOrder {
                 field: "created".to_string(),
                 descending: true,
@@ -405,10 +423,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by symbolic relation query");
-    assert!(relation_symbolic_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        relation_symbolic_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let relation_symbolic_synonym_query = repo
         .search_units_query(
@@ -425,10 +445,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by symbolic relation synonym query");
-    assert!(relation_symbolic_synonym_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        relation_symbolic_synonym_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let association_symbolic_query = repo
         .search_units_query(
@@ -443,10 +465,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by symbolic association query");
-    assert!(association_symbolic_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        association_symbolic_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let and_search = repo
         .search_units(
@@ -466,10 +490,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units with and");
-    assert!(and_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        and_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let or_search = repo
         .search_units(
@@ -489,14 +515,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units with or");
-    assert!(or_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(or_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        or_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        or_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let not_search = repo
         .search_units(
@@ -514,14 +544,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units with not");
-    assert!(!not_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(not_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        !not_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        not_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let nested_not_search = repo
         .search_units(
@@ -541,14 +575,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units with nested not");
-    assert!(!nested_not_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(nested_not_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        !nested_not_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        nested_not_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     repo.lock_unit(a_ref.clone(), 30, "parity-test")
         .expect("lock unit");
@@ -693,10 +731,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by unit_ver alias query");
-    assert!(unitver_alias_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        unitver_alias_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let unitver_leaf_search = repo
         .search_units(
@@ -711,10 +751,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by unit_ver in leaf expression");
-    assert!(unitver_leaf_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id && unit.unit_ver >= 2));
+    assert!(
+        unitver_leaf_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id && unit.unit_ver >= 2)
+    );
 
     let status_name_query = repo
         .search_units_query(
@@ -729,10 +771,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by status name query");
-    assert!(status_name_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        status_name_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let in_list_query = repo
         .search_units_query(
@@ -747,14 +791,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by IN-list query");
-    assert!(in_list_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(in_list_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        in_list_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        in_list_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let not_in_list_query = repo
         .search_units_query(
@@ -769,14 +817,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by NOT IN-list query");
-    assert!(!not_in_list_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(not_in_list_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        !not_in_list_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        not_in_list_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let neq_angle_query = repo
         .search_units_query(
@@ -791,14 +843,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by <> neq operator");
-    assert!(!neq_angle_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(neq_angle_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        !neq_angle_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        neq_angle_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let (min_id, max_id) = if unit_a_id <= unit_b_id {
         (unit_a_id, unit_b_id)
@@ -818,14 +874,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by BETWEEN operator");
-    assert!(between_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
-    assert!(between_query
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_b_id));
+    assert!(
+        between_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
+    assert!(
+        between_query
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_b_id)
+    );
 
     let search = repo
         .search_units(
@@ -855,10 +915,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search units by wildcard name leaf");
-    assert!(wildcard_name_leaf_search
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == unit_a_id));
+    assert!(
+        wildcard_name_leaf_search
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == unit_a_id)
+    );
 
     let attr_suffix = Uuid::now_v7().simple().to_string();
     let attr_name = format!("{prefix}_attr_{attr_suffix}");
@@ -880,16 +942,19 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
         .as_str()
         .expect("attribute qualname")
         .to_string();
-    assert!(repo
-        .instantiate_attribute(&attr_name)
-        .expect("instantiate_attribute")
-        .is_some());
-    assert!(repo
-        .can_change_attribute(&attr_name)
-        .expect("can_change_attribute by name"));
-    assert!(repo
-        .can_change_attribute(&attr_id.to_string())
-        .expect("can_change_attribute by id"));
+    assert!(
+        repo.instantiate_attribute(&attr_name)
+            .expect("instantiate_attribute")
+            .is_some()
+    );
+    assert!(
+        repo.can_change_attribute(&attr_name)
+            .expect("can_change_attribute by name")
+    );
+    assert!(
+        repo.can_change_attribute(&attr_id.to_string())
+            .expect("can_change_attribute by id")
+    );
 
     let attr_value = format!("{prefix}-Attr-Value");
     let attr_value_lower = attr_value.to_ascii_lowercase();
@@ -930,10 +995,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_eq id");
-    assert!(attr_search_by_id
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_search_by_id
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let attr_search_by_name = repo
         .search_units(
@@ -954,10 +1021,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_eq name");
-    assert!(attr_search_by_name
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_search_by_name
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let attr_search_by_alias = repo
         .search_units(
@@ -978,10 +1047,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_eq alias");
-    assert!(attr_search_by_alias
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_search_by_alias
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let attr_search_by_qualname = repo
         .search_units(
@@ -1002,10 +1073,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_eq qualname");
-    assert!(attr_search_by_qualname
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_search_by_qualname
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let attr_search_wildcard = repo
         .search_units(
@@ -1026,10 +1099,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_eq wildcard");
-    assert!(attr_search_wildcard
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_search_wildcard
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let attr_cmp_like = repo
         .search_units(
@@ -1052,10 +1127,12 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_cmp like");
-    assert!(attr_cmp_like
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == attr_unit_id));
+    assert!(
+        attr_cmp_like
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == attr_unit_id)
+    );
 
     let numeric_attr_name = format!("{prefix}_numeric_attr_{attr_suffix}");
     let numeric_attr = repo
@@ -1126,14 +1203,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_cmp gt");
-    assert!(cmp_gt
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == high_unit_id));
-    assert!(!cmp_gt
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == low_unit_id));
+    assert!(
+        cmp_gt
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == high_unit_id)
+    );
+    assert!(
+        !cmp_gt
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == low_unit_id)
+    );
 
     let cmp_gt_string_number = repo
         .search_units(
@@ -1156,14 +1237,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_cmp gt with numeric string input");
-    assert!(cmp_gt_string_number
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == high_unit_id));
-    assert!(!cmp_gt_string_number
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == low_unit_id));
+    assert!(
+        cmp_gt_string_number
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == high_unit_id)
+    );
+    assert!(
+        !cmp_gt_string_number
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == low_unit_id)
+    );
 
     let cmp_neq_number = repo
         .search_units(
@@ -1186,14 +1271,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_cmp neq");
-    assert!(cmp_neq_number
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == high_unit_id));
-    assert!(!cmp_neq_number
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == low_unit_id));
+    assert!(
+        cmp_neq_number
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == high_unit_id)
+    );
+    assert!(
+        !cmp_neq_number
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == low_unit_id)
+    );
 
     let invalid_boolean_op = repo.search_units(
         json!({
@@ -1312,14 +1401,18 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
             },
         )
         .expect("search by attribute_cmp gt with millis-string time input");
-    assert!(cmp_time_gt_millis_string
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == time_high_id));
-    assert!(!cmp_time_gt_millis_string
-        .results
-        .iter()
-        .any(|unit| unit.unit_id == time_low_id));
+    assert!(
+        cmp_time_gt_millis_string
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == time_high_id)
+    );
+    assert!(
+        !cmp_time_gt_millis_string
+            .results
+            .iter()
+            .any(|unit| unit.unit_id == time_low_id)
+    );
 
     let invalid_time_millis = repo.search_units(
         json!({
@@ -1345,12 +1438,16 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
         Err(RepoError::InvalidInput(_))
     ));
 
-    assert!(!repo
-        .can_change_attribute(&attr_name)
-        .expect("can_change_attribute false after usage by name"));
-    assert!(!repo
-        .can_change_attribute(&attr_id.to_string())
-        .expect("can_change_attribute false after usage by id"));
+    assert!(
+        !repo
+            .can_change_attribute(&attr_name)
+            .expect("can_change_attribute false after usage by name")
+    );
+    assert!(
+        !repo
+            .can_change_attribute(&attr_id.to_string())
+            .expect("can_change_attribute false after usage by id")
+    );
 
     repo.flush_cache().expect("flush cache post-flight");
 }

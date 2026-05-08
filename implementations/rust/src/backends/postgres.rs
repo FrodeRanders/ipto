@@ -1,7 +1,19 @@
+//! PostgreSQL backend for the IPTO repository contract.
+//!
+//! This adapter speaks to the schema and stored procedures under
+//! `shared/db/postgresql`. It keeps the Rust service compatible with the
+//! database behavior used by the Java implementation: new-unit ingestion,
+//! version append, relation/association tables, attribute metadata, and search
+//! over latest unit versions.
+//!
+//! Connection settings are read from environment variables:
+//! `IPTO_PG_HOST`, `IPTO_PG_PORT`, `IPTO_PG_USER`, `IPTO_PG_PASSWORD`, and
+//! `IPTO_PG_DATABASE`.
+
 use chrono::{DateTime, NaiveDateTime, Utc};
 use postgres::types::ToSql;
 use postgres::{Client, Config, NoTls, Row};
-use serde_json::{json, Map, Number, Value};
+use serde_json::{Map, Number, Value, json};
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
 use uuid::Uuid;
@@ -10,13 +22,18 @@ use crate::backend::{Backend, RepoError, RepoResult};
 use crate::model::{
     Association, Relation, SearchOrder, SearchPaging, SearchResult, Unit, UnitRef, VersionSelector,
 };
-use crate::search_expr::{parse_bool_expression, BoolExpr};
+use crate::search_expr::{BoolExpr, parse_bool_expression};
 use crate::search_filters::{
-    extract_association_constraint, extract_attribute_constraint, extract_relation_constraint,
-    extract_unit_predicates, AssociationConstraint, AttributeCmpConstraint, RelationConstraint,
-    RelationSide, UnitField, UnitOp, UnitPredicate, UnitValue,
+    AssociationConstraint, AttributeCmpConstraint, RelationConstraint, RelationSide, UnitField,
+    UnitOp, UnitPredicate, UnitValue, extract_association_constraint, extract_attribute_constraint,
+    extract_relation_constraint, extract_unit_predicates,
 };
 
+/// Backend implementation backed by PostgreSQL.
+///
+/// The backend owns a lazily opened synchronous PostgreSQL client protected by
+/// a mutex. That keeps the public backend type cheap to construct while still
+/// satisfying the `Send + Sync` service contract.
 pub struct PostgresBackend {
     cfg: PostgresConfig,
     client: Mutex<Option<Client>>,
@@ -81,6 +98,7 @@ impl PostgresConfig {
 }
 
 impl PostgresBackend {
+    /// Create a backend using `IPTO_PG_*` environment variables or local defaults.
     pub fn new() -> Self {
         Self {
             cfg: PostgresConfig::from_env(),
@@ -1176,7 +1194,7 @@ fn compile_unit_predicate(
         _ => {
             return Err(RepoError::InvalidInput(
                 "invalid predicates field/value combination".to_string(),
-            ))
+            ));
         }
     };
     Ok(sql)
@@ -1234,7 +1252,7 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported string comparison operator: {other}"
-                    )))
+                    )));
                 }
             }
         }
@@ -1265,7 +1283,7 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported number comparison operator: {other}"
-                    )))
+                    )));
                 }
             }
         }
@@ -1303,14 +1321,14 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported time comparison operator: {other}"
-                    )))
+                    )));
                 }
             }
         }
         other => {
             return Err(RepoError::InvalidInput(format!(
                 "unsupported attribute value_type: {other}"
-            )))
+            )));
         }
     };
     where_parts.push(cmp);

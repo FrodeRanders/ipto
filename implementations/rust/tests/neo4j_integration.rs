@@ -49,9 +49,10 @@ fn neo4j_mvp_metadata_and_health() {
         .instantiate_attribute(&attr_name)
         .expect("instantiate_attribute by name");
     assert!(instantiated.is_some());
-    assert!(repo
-        .can_change_attribute(&attr_name)
-        .expect("can_change_attribute by name"));
+    assert!(
+        repo.can_change_attribute(&attr_name)
+            .expect("can_change_attribute by name")
+    );
     let attr_id = by_name["id"].as_i64().expect("attribute id");
     assert_eq!(
         repo.attribute_name_to_id(&attr_name)
@@ -120,10 +121,14 @@ fn neo4j_mvp_metadata_and_health() {
         .expect("search units");
     assert!(found.total_hits >= 1);
 
-    assert!(!repo
-        .can_change_attribute(&attr_name)
-        .expect("can_change_attribute false after usage"));
-    assert!(!repo
-        .can_change_attribute(&attr_id.to_string())
-        .expect("can_change_attribute false by id after usage"));
+    assert!(
+        !repo
+            .can_change_attribute(&attr_name)
+            .expect("can_change_attribute false after usage")
+    );
+    assert!(
+        !repo
+            .can_change_attribute(&attr_id.to_string())
+            .expect("can_change_attribute false by id after usage")
+    );
 }

@@ -1,22 +1,39 @@
+//! Neo4j backend for the IPTO repository contract.
+//!
+//! The adapter stores the repository's unit kernel/version model as graph
+//! nodes, with explicit relationships for relations, associations, locks, and
+//! attribute usage. It is built to preserve the service-level behavior of the
+//! PostgreSQL/Java stack while allowing graph-native deployments and backend
+//! parity tests.
+//!
+//! Connection settings are read from `IPTO_NEO4J_URL`, `IPTO_NEO4J_DATABASE`,
+//! `IPTO_NEO4J_USER`, and `IPTO_NEO4J_PASSWORD`. On first use it can create the
+//! constraints and indexes it needs; set `IPTO_NEO4J_BOOTSTRAP=false` to disable
+//! that bootstrap step.
+
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use chrono::{DateTime, SecondsFormat, Utc};
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use uuid::Uuid;
 
 use crate::backend::{Backend, RepoError, RepoResult};
 use crate::model::{
     Association, Relation, SearchOrder, SearchPaging, SearchResult, Unit, UnitRef, VersionSelector,
 };
-use crate::search_expr::{parse_bool_expression, BoolExpr};
+use crate::search_expr::{BoolExpr, parse_bool_expression};
 use crate::search_filters::{
-    extract_association_constraint, extract_attribute_constraint, extract_relation_constraint,
-    extract_unit_predicates, parse_time_millis, AssociationConstraint, AttributeCmpConstraint,
-    RelationConstraint, RelationSide, UnitField, UnitOp, UnitPredicate, UnitValue,
+    AssociationConstraint, AttributeCmpConstraint, RelationConstraint, RelationSide, UnitField,
+    UnitOp, UnitPredicate, UnitValue, extract_association_constraint, extract_attribute_constraint,
+    extract_relation_constraint, extract_unit_predicates, parse_time_millis,
 };
 
+/// Backend implementation backed by Neo4j's HTTP transaction endpoint.
+///
+/// The implementation intentionally uses plain Cypher over HTTP rather than a
+/// heavier driver so it can remain small and easy to run in parity tests.
 pub struct Neo4jBackend {
     url: String,
     database: String,
@@ -26,6 +43,7 @@ pub struct Neo4jBackend {
 
 static NEO4J_BOOTSTRAPPED: AtomicBool = AtomicBool::new(false);
 impl Neo4jBackend {
+    /// Create a backend using `IPTO_NEO4J_*` environment variables or local defaults.
     pub fn new() -> Self {
         Self {
             url: std::env::var("IPTO_NEO4J_URL")
@@ -64,13 +82,14 @@ impl Neo4jBackend {
         };
 
         let response = ureq::post(&self.endpoint())
-            .set("Authorization", &basic)
-            .set("Content-Type", "application/json")
+            .header("Authorization", &basic)
+            .header("Content-Type", "application/json")
             .send_json(payload)
             .map_err(|e| RepoError::Backend(format!("neo4j request failed: {e}")))?;
 
         let body: Value = response
-            .into_json()
+            .into_body()
+            .read_json()
             .map_err(|e| RepoError::Backend(format!("neo4j response decode failed: {e}")))?;
 
         if let Some(errors) = body.get("errors").and_then(Value::as_array) {
@@ -1356,7 +1375,7 @@ fn compile_unit_predicate(
         _ => {
             return Err(RepoError::InvalidInput(
                 "invalid predicates field/value combination".to_string(),
-            ))
+            ));
         }
     };
     Ok(sql)
@@ -1421,7 +1440,7 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported string comparison operator: {other}"
-                    )))
+                    )));
                 }
             };
             format!("coalesce(toInteger(av.attrtype), -1) = 1 AND {cmp}")
@@ -1441,7 +1460,7 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported number comparison operator: {other}"
-                    )))
+                    )));
                 }
             };
             format!("coalesce(toInteger(av.attrtype), -1) IN [3,4,5] AND {cmp}")
@@ -1480,7 +1499,7 @@ fn compile_attribute_constraint(
                 other => {
                     return Err(RepoError::InvalidInput(format!(
                         "unsupported time comparison operator: {other}"
-                    )))
+                    )));
                 }
             };
             format!("coalesce(toInteger(av.attrtype), -1) = 2 AND {cmp}")
@@ -1488,7 +1507,7 @@ fn compile_attribute_constraint(
         other => {
             return Err(RepoError::InvalidInput(format!(
                 "unsupported attribute value_type: {other}"
-            )))
+            )));
         }
     };
 

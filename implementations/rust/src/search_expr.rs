@@ -1,17 +1,38 @@
+//! Backend-neutral boolean expression parser for structured search JSON.
+//!
+//! Backends use this helper to convert the service's JSON search expression into
+//! a typed boolean tree whose leaves are backend-specific constraints. The
+//! generic shape lets PostgreSQL compile leaves to SQL predicates while Neo4j
+//! compiles them to Cypher predicates, without duplicating `and`/`or`/`not`
+//! validation and normalization rules.
+
 use serde_json::{Map, Value};
 
 use crate::backend::{RepoError, RepoResult};
 
+/// Normalized boolean expression with backend-specific leaves.
 #[derive(Clone)]
 pub enum BoolExpr<L> {
+    /// Expression that matches everything in scope.
     True,
+    /// Expression that matches nothing.
     False,
+    /// Backend-specific primitive predicate.
     Leaf(Box<L>),
+    /// Conjunction of child expressions.
     And(Vec<BoolExpr<L>>),
+    /// Disjunction of child expressions.
     Or(Vec<BoolExpr<L>>),
+    /// Negated child expression.
     Not(Box<BoolExpr<L>>),
 }
 
+/// Parse structured search JSON into a normalized boolean expression.
+///
+/// `parse_leaf` extracts backend-specific constraints from non-logical keys.
+/// `infer_tenant` and `tenant_scope_leaf` are used for `not` expressions because
+/// a pure negation needs an explicit tenant scope to remain finite and safe for
+/// backend execution.
 pub fn parse_bool_expression<L, FL, FT, FM>(
     expression: &Value,
     parse_leaf: FL,

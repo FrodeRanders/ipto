@@ -76,9 +76,10 @@ fn postgres_mvp_crud_and_links() {
     let unit1_id = unit1["unitid"].as_i64().expect("unit1 id");
     let unit2_id = unit2["unitid"].as_i64().expect("unit2 id");
 
-    assert!(repo
-        .unit_exists(i64::from(tenant_id), unit1_id)
-        .expect("unit_exists"));
+    assert!(
+        repo.unit_exists(i64::from(tenant_id), unit1_id)
+            .expect("unit_exists")
+    );
 
     let loaded = repo
         .get_unit_json(i64::from(tenant_id), unit1_id, VersionSelector::Latest)
@@ -192,12 +193,14 @@ fn postgres_mvp_crud_and_links() {
         .instantiate_attribute(&attr_name)
         .expect("instantiate_attribute by name");
     assert!(instantiated.is_some());
-    assert!(repo
-        .can_change_attribute(&attr_name)
-        .expect("can_change_attribute by name"));
-    assert!(repo
-        .can_change_attribute(&attr_id.to_string())
-        .expect("can_change_attribute by id"));
+    assert!(
+        repo.can_change_attribute(&attr_name)
+            .expect("can_change_attribute by name")
+    );
+    assert!(
+        repo.can_change_attribute(&attr_id.to_string())
+            .expect("can_change_attribute by id")
+    );
     assert_eq!(
         repo.attribute_name_to_id(&attr_name)
             .expect("attribute_name_to_id"),

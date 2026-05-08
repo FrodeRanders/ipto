@@ -1,7 +1,20 @@
+//! High-level IPTO repository service.
+//!
+//! [`RepoService`] is the semantic layer between API callers and storage
+//! backends. It delegates raw persistence to [`crate::backend::Backend`] while
+//! keeping cross-backend behavior centralized: unit update/version rules,
+//! lifecycle transitions, SDL configuration validation, search-query parsing,
+//! and fallback evaluation for boolean set expressions.
+//!
+//! Relation APIs use a fixed direction: `left -> right`. In a parent/child
+//! relation, the parent directory is left and the child file or directory is
+//! right. Listing a directory is a right-side lookup from the parent. Locating a
+//! file's containing directory is a left-side lookup from the child.
+
 use std::sync::Arc;
 use std::{cmp::Ordering, collections::HashMap};
 
-use serde_json::{json, Map, Number, Value};
+use serde_json::{Map, Number, Value, json};
 
 use crate::backend::{Backend, RepoError, RepoResult};
 use crate::graphql_sdl::{
@@ -13,24 +26,34 @@ use crate::model::{
 };
 use crate::search_query::{parse_search_query, parse_search_query_strict};
 
-/// High-level service layer that enforces IPTO semantics and delegates persistence
-/// to the selected backend implementation.
+/// High-level service layer for repository operations.
+///
+/// The service is cheap to clone by constructing another instance over the same
+/// `Arc<dyn Backend>`. It does not own transactions; each backend method is
+/// responsible for its own consistency boundary.
 pub struct RepoService {
     backend: Arc<dyn Backend>,
 }
 
+/// Unit is waiting for disposition.
 pub const STATUS_PENDING_DISPOSITION: i32 = 1;
+/// Unit has been marked for deletion.
 pub const STATUS_PENDING_DELETION: i32 = 10;
+/// Unit has been obliterated.
 pub const STATUS_OBLITERATED: i32 = 20;
+/// Unit is active/effective.
 pub const STATUS_EFFECTIVE: i32 = 30;
+/// Unit is archived and no longer mutable through normal lifecycle paths.
 pub const STATUS_ARCHIVED: i32 = 40;
 const SEARCH_FETCH_CHUNK: i64 = 500;
 
 impl RepoService {
+    /// Create a service over a backend implementation.
     pub fn new(backend: Arc<dyn Backend>) -> Self {
         Self { backend }
     }
 
+    /// Load a unit JSON payload by tenant/id and version selector.
     pub fn get_unit_json(
         &self,
         tenant_id: i64,
@@ -40,17 +63,22 @@ impl RepoService {
         self.backend.get_unit_json(tenant_id, unit_id, selector)
     }
 
-    pub fn get_unit_by_corrid_json(
-        &self,
-        corrid: &str,
-    ) -> RepoResult<Option<Value>> {
+    /// Load the latest unit JSON payload by correlation id.
+    pub fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>> {
         self.backend.get_unit_by_corrid_json(corrid)
     }
 
+    /// Return whether a unit kernel exists.
     pub fn unit_exists(&self, tenant_id: i64, unit_id: i64) -> RepoResult<bool> {
         self.backend.unit_exists(tenant_id, unit_id)
     }
 
+    /// Store a new unit or update an existing unit.
+    ///
+    /// Missing `unitid` means create a new unit. Existing-unit writes are checked
+    /// for read-only versions, locks, status validity, and whether the change
+    /// requires a new version. Status-only updates go through the Java-compatible
+    /// lifecycle transition policy and do not append a new unit version.
     pub fn store_unit_json(&self, unit: Value) -> RepoResult<Value> {
         let incoming = unit
             .as_object()
@@ -158,6 +186,11 @@ impl RepoService {
         self.backend.store_unit_json(Value::Object(merged))
     }
 
+    /// Search units using the normalized JSON expression format.
+    ///
+    /// Backends get the first chance to execute the full expression. If a backend
+    /// reports set-expression support as unsupported, the service composes leaf
+    /// searches to evaluate `and`, `or`, and scoped `not` consistently.
     pub fn search_units(
         &self,
         expression: Value,
@@ -196,6 +229,7 @@ impl RepoService {
         })
     }
 
+    /// Parse and run the user-friendly search query language.
     pub fn search_units_query(
         &self,
         query: &str,
@@ -206,6 +240,10 @@ impl RepoService {
         self.search_units(expression, order, paging)
     }
 
+    /// Parse and run the search query language in strict field mode.
+    ///
+    /// Strict mode requires dynamic attributes to use the `attr:<name>` spelling,
+    /// which helps catch typos in unit field names.
     pub fn search_units_query_strict(
         &self,
         query: &str,
@@ -216,10 +254,15 @@ impl RepoService {
         self.search_units(expression, order, paging)
     }
 
+    /// Set a unit status directly.
     pub fn set_status(&self, unit: UnitRef, status: i32) -> RepoResult<()> {
         self.backend.set_status(unit, status)
     }
 
+    /// Add a directed relation from `left` to `right`.
+    ///
+    /// For a parent/child relation, pass the parent directory as `left` and the
+    /// child file or directory as `right`.
     pub fn add_relation(
         &self,
         left: UnitRef,
@@ -229,6 +272,10 @@ impl RepoService {
         self.backend.add_relation(left, relation_type, right)
     }
 
+    /// Remove a directed relation from `left` to `right`.
+    ///
+    /// The arguments must use the same orientation as insertion: parent on the
+    /// left, child on the right for parent/child links.
     pub fn remove_relation(
         &self,
         left: UnitRef,
@@ -238,6 +285,9 @@ impl RepoService {
         self.backend.remove_relation(left, relation_type, right)
     }
 
+    /// Return one outgoing/right-side relation for a unit and relation type.
+    ///
+    /// For parent/child, call this on a parent directory to get one child entry.
     pub fn get_right_relation(
         &self,
         unit: UnitRef,
@@ -246,6 +296,10 @@ impl RepoService {
         self.backend.get_right_relation(unit, relation_type)
     }
 
+    /// Return all outgoing/right-side relations for a unit and relation type.
+    ///
+    /// For parent/child, this is the directory-contents view: call it on a
+    /// parent directory to list its child files and directories.
     pub fn get_right_relations(
         &self,
         unit: UnitRef,
@@ -254,6 +308,10 @@ impl RepoService {
         self.backend.get_right_relations(unit, relation_type)
     }
 
+    /// Return all incoming/left-side relations pointing at a unit for a relation type.
+    ///
+    /// For parent/child, this is the location view: call it on a file or child
+    /// directory to find the parent directories that contain it.
     pub fn get_left_relations(
         &self,
         unit: UnitRef,
@@ -262,14 +320,25 @@ impl RepoService {
         self.backend.get_left_relations(unit, relation_type)
     }
 
+    /// Count outgoing/right-side relations for a unit and relation type.
+    ///
+    /// For parent/child, this counts the entries in a directory.
     pub fn count_right_relations(&self, unit: UnitRef, relation_type: i32) -> RepoResult<i64> {
         self.backend.count_right_relations(unit, relation_type)
     }
 
+    /// Count incoming/left-side relations pointing at a unit for a relation type.
+    ///
+    /// For parent/child, this counts the parent directories that contain the
+    /// file or child directory.
     pub fn count_left_relations(&self, unit: UnitRef, relation_type: i32) -> RepoResult<i64> {
         self.backend.count_left_relations(unit, relation_type)
     }
 
+    /// Add an association from a left-side unit to a right-side external reference.
+    ///
+    /// Associations are directed like relations, but the right side is a string
+    /// reference instead of another unit.
     pub fn add_association(
         &self,
         unit: UnitRef,
@@ -280,6 +349,7 @@ impl RepoService {
             .add_association(unit, association_type, reference)
     }
 
+    /// Remove an association from a left-side unit to a right-side external reference.
     pub fn remove_association(
         &self,
         unit: UnitRef,
@@ -290,6 +360,7 @@ impl RepoService {
             .remove_association(unit, association_type, reference)
     }
 
+    /// Return one right-side external reference from a unit for an association type.
     pub fn get_right_association(
         &self,
         unit: UnitRef,
@@ -298,6 +369,7 @@ impl RepoService {
         self.backend.get_right_association(unit, association_type)
     }
 
+    /// Return all right-side external references from a unit for an association type.
     pub fn get_right_associations(
         &self,
         unit: UnitRef,
@@ -306,6 +378,10 @@ impl RepoService {
         self.backend.get_right_associations(unit, association_type)
     }
 
+    /// Return all left-side units associated with an external reference for a type.
+    ///
+    /// This is the reverse association lookup: start with the right-side string
+    /// reference and find the units that point to it.
     pub fn get_left_associations(
         &self,
         association_type: i32,
@@ -315,6 +391,7 @@ impl RepoService {
             .get_left_associations(association_type, reference)
     }
 
+    /// Count right-side external references from a unit for an association type.
     pub fn count_right_associations(
         &self,
         unit: UnitRef,
@@ -324,6 +401,7 @@ impl RepoService {
             .count_right_associations(unit, association_type)
     }
 
+    /// Count left-side units associated with an external reference for a type.
     pub fn count_left_associations(
         &self,
         association_type: i32,
@@ -333,18 +411,22 @@ impl RepoService {
             .count_left_associations(association_type, reference)
     }
 
+    /// Lock a unit with a type and purpose.
     pub fn lock_unit(&self, unit: UnitRef, lock_type: i32, purpose: &str) -> RepoResult<()> {
         self.backend.lock_unit(unit, lock_type, purpose)
     }
 
+    /// Remove a unit lock.
     pub fn unlock_unit(&self, unit: UnitRef) -> RepoResult<()> {
         self.backend.unlock_unit(unit)
     }
 
+    /// Return whether a unit is locked.
     pub fn is_unit_locked(&self, unit: UnitRef) -> RepoResult<bool> {
         self.backend.is_unit_locked(unit)
     }
 
+    /// Reactivate a unit from pending deletion or obliterated state.
     pub fn activate_unit(&self, unit: UnitRef) -> RepoResult<()> {
         let status = self.current_status(unit.clone())?;
         // Policy: lifecycle helpers are convenience operations and may perform
@@ -355,6 +437,9 @@ impl RepoService {
         Ok(())
     }
 
+    /// Mark an effective unit as pending deletion.
+    ///
+    /// Locked units cannot be inactivated.
     pub fn inactivate_unit(&self, unit: UnitRef) -> RepoResult<()> {
         let status = self.current_status(unit.clone())?;
         if status == STATUS_EFFECTIVE {
@@ -366,6 +451,10 @@ impl RepoService {
         Ok(())
     }
 
+    /// Apply the strict Java-compatible lifecycle transition matrix.
+    ///
+    /// Unsupported transitions are no-ops that return the current status. Unknown
+    /// requested statuses are rejected as invalid input.
     pub fn request_status_transition(
         &self,
         unit: UnitRef,
@@ -399,6 +488,7 @@ impl RepoService {
         Ok(requested_status)
     }
 
+    /// Create repository attribute metadata.
     pub fn create_attribute(
         &self,
         alias: &str,
@@ -411,6 +501,7 @@ impl RepoService {
             .create_attribute(alias, name, qualname, attribute_type, is_array)
     }
 
+    /// Parse and validate GraphQL SDL without persisting changes.
     pub fn inspect_graphql_sdl(&self, sdl: &str) -> RepoResult<Value> {
         let catalog = parse_graphql_sdl(sdl)?;
         validate_catalog_references(&catalog)?;
@@ -424,6 +515,12 @@ impl RepoService {
         }))
     }
 
+    /// Parse, validate, and persist GraphQL SDL configuration.
+    ///
+    /// Existing attributes must match the SDL definition exactly. Record and
+    /// template definitions are persisted only by backends that support those
+    /// metadata tables; unsupported persistence is reported in the returned
+    /// summary while validation still succeeds.
     pub fn configure_graphql_sdl(&self, sdl: &str) -> RepoResult<Value> {
         let catalog = parse_graphql_sdl(sdl)?;
         validate_catalog_references(&catalog)?;
@@ -559,46 +656,56 @@ impl RepoService {
         }))
     }
 
+    /// Instantiate an attribute by name or id.
     pub fn instantiate_attribute(&self, name_or_id: &str) -> RepoResult<Option<Value>> {
         self.backend.instantiate_attribute(name_or_id)
     }
 
+    /// Return whether an attribute can still be changed.
     pub fn can_change_attribute(&self, name_or_id: &str) -> RepoResult<bool> {
         self.backend.can_change_attribute(name_or_id)
     }
 
+    /// Look up attribute metadata by name, alias, qualified name, or id.
     pub fn get_attribute_info(&self, name_or_id: &str) -> RepoResult<Option<Value>> {
         self.backend.get_attribute_info(name_or_id)
     }
 
+    /// Look up tenant metadata by name or id.
     pub fn get_tenant_info(&self, name_or_id: &str) -> RepoResult<Option<Value>> {
         self.backend.get_tenant_info(name_or_id)
     }
 
+    /// Resolve an attribute name to its numeric id.
     pub fn attribute_name_to_id(&self, attribute_name: &str) -> RepoResult<Option<i64>> {
         let info = self.get_attribute_info(attribute_name)?;
         Ok(info.and_then(|v| get_id(&v)))
     }
 
+    /// Resolve an attribute id to its name.
     pub fn attribute_id_to_name(&self, attribute_id: i64) -> RepoResult<Option<String>> {
         let info = self.get_attribute_info(&attribute_id.to_string())?;
         Ok(info.and_then(|v| get_name(&v)))
     }
 
+    /// Resolve a tenant name to its numeric id.
     pub fn tenant_name_to_id(&self, tenant_name: &str) -> RepoResult<Option<i64>> {
         let info = self.get_tenant_info(tenant_name)?;
         Ok(info.and_then(|v| get_id(&v)))
     }
 
+    /// Resolve a tenant id to its name.
     pub fn tenant_id_to_name(&self, tenant_id: i64) -> RepoResult<Option<String>> {
         let info = self.get_tenant_info(&tenant_id.to_string())?;
         Ok(info.and_then(|v| get_name(&v)))
     }
 
+    /// Return backend health information.
     pub fn health(&self) -> RepoResult<Value> {
         self.backend.health()
     }
 
+    /// Clear backend-local caches.
     pub fn flush_cache(&self) -> RepoResult<()> {
         self.backend.flush_cache()
     }
@@ -1129,10 +1236,7 @@ mod tests {
             Err(RepoError::Unsupported("probe.get_unit_json".to_string()))
         }
 
-        fn get_unit_by_corrid_json(
-            &self,
-            _corrid: &str,
-        ) -> RepoResult<Option<serde_json::Value>> {
+        fn get_unit_by_corrid_json(&self, _corrid: &str) -> RepoResult<Option<serde_json::Value>> {
             Err(RepoError::Unsupported(
                 "probe.get_unit_by_corrid_json".to_string(),
             ))
@@ -1455,10 +1559,7 @@ mod tests {
             }
         }
 
-        fn get_unit_by_corrid_json(
-            &self,
-            _corrid: &str,
-        ) -> RepoResult<Option<serde_json::Value>> {
+        fn get_unit_by_corrid_json(&self, _corrid: &str) -> RepoResult<Option<serde_json::Value>> {
             Err(RepoError::Unsupported(
                 "store_probe.get_unit_by_corrid_json".to_string(),
             ))

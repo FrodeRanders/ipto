@@ -1,3 +1,19 @@
+//! Shared search-expression decoding and value normalization.
+//!
+//! The PostgreSQL and Neo4j backends compile search expressions to different
+//! query languages, but they must agree on what an IPTO search means. This
+//! module extracts typed constraints from the service-level JSON format and
+//! normalizes edge cases such as status names, timestamp inputs, relation sides,
+//! and string wildcard handling.
+//!
+//! Relation and association sides are interpreted from the perspective of the
+//! current/search result unit. `Right` means the result unit is on the left side
+//! of a stored link and the constraint follows outgoing links to the right. In a
+//! parent/child relation, that finds children of a parent directory. `Left`
+//! means the result unit is on the right side of a stored link and the
+//! constraint follows incoming links back to the left. In a parent/child
+//! relation, that finds the parent directory for a child file.
+
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value};
 use uuid::Uuid;
@@ -56,7 +72,13 @@ pub(crate) struct AttributeCmpConstraint {
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RelationSide {
+    /// Incoming lookup: stored links whose right/target side is the current unit.
+    ///
+    /// For parent/child, this is the "where is this file located?" direction.
     Left,
+    /// Outgoing lookup: stored links whose left/source side is the current unit.
+    ///
+    /// For parent/child, this is the "list this directory's contents" direction.
     Right,
 }
 
@@ -170,7 +192,7 @@ pub(crate) fn extract_attribute_constraint(
         _ => {
             return Err(RepoError::InvalidInput(
                 "attribute_eq/attribute_cmp.value must be string/number/boolean".to_string(),
-            ))
+            ));
         }
     };
     let value_type = extract_obj_string(obj, "value_type")
@@ -417,7 +439,7 @@ fn parse_unit_predicate(
         other => {
             return Err(RepoError::InvalidInput(format!(
                 "unsupported predicates.field '{other}'"
-            )))
+            )));
         }
     };
 
@@ -747,7 +769,7 @@ fn merge_side(
 mod tests {
     use serde_json::json;
 
-    use crate::search_filters::{extract_unit_predicates, UnitField, UnitPredicate, UnitValue};
+    use crate::search_filters::{UnitField, UnitPredicate, UnitValue, extract_unit_predicates};
 
     fn single_predicate(expr: serde_json::Value) -> UnitPredicate {
         let obj = expr.as_object().expect("object expression");

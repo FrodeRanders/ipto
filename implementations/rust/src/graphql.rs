@@ -1,3 +1,17 @@
+//! Constrained GraphQL runtime for IPTO repository operations.
+//!
+//! This module is deliberately not a full GraphQL execution engine. It parses
+//! enough query text to identify the root operation, validates that operation
+//! against an optional allowlist, extracts variables, and dispatches to
+//! [`crate::repo::RepoService`]. The returned value follows GraphQL's familiar
+//! `{ "data": ... }` / `{ "errors": ... }` response envelope so callers can use
+//! it behind lightweight GraphQL adapters without pulling storage concerns into
+//! the transport layer.
+//!
+//! Several operation names are compatibility aliases for the same repository
+//! call. The static operation registry below is the single source of truth for
+//! dispatch and for `registeredOperations` introspection.
+
 use std::collections::HashSet;
 
 use serde_json::Value;
@@ -343,12 +357,18 @@ const SUPPORTED_OPERATION_SPECS: &[OperationSpec] = &[
     },
 ];
 
+/// Runtime that dispatches a supported GraphQL root field to a repository service.
+///
+/// A runtime owns a [`RepoService`] and a set of allowed canonical operations.
+/// Use [`GraphqlRuntime::new`] for the full built-in operation set, or
+/// [`GraphqlRuntime::with_operation_allowlist`] to expose a restricted subset.
 pub struct GraphqlRuntime {
     repo: RepoService,
     allowed_operations: HashSet<&'static str>,
 }
 
 impl GraphqlRuntime {
+    /// Create a runtime with every built-in query and mutation enabled.
     pub fn new(repo: RepoService) -> Self {
         Self {
             repo,
@@ -359,6 +379,11 @@ impl GraphqlRuntime {
         }
     }
 
+    /// Create a runtime limited to the supplied operation names or aliases.
+    ///
+    /// The allowlist is normalized through the same alias table used by
+    /// execution. Unknown names fail fast so misconfigured API surfaces do not
+    /// silently expose nothing.
     pub fn with_operation_allowlist(repo: RepoService, allowlist: &[&str]) -> RepoResult<Self> {
         let mut allowed_operations = HashSet::new();
         for operation in allowlist {
@@ -375,6 +400,10 @@ impl GraphqlRuntime {
         })
     }
 
+    /// Return the enabled operation names grouped by query and mutation.
+    ///
+    /// Names are returned in their display form, not the internal canonical
+    /// lower-case representation.
     pub fn registered_operations(&self) -> Value {
         serde_json::json!({
             "queries": self.allowed_operations_for_kind(OperationKind::Query),
@@ -382,6 +411,12 @@ impl GraphqlRuntime {
         })
     }
 
+    /// Execute one supported GraphQL operation.
+    ///
+    /// Errors are converted to a GraphQL-style response object instead of being
+    /// returned as `Err`, matching the behavior expected by the Python binding
+    /// and integration tests. Transport/setup failures before execution are the
+    /// main cases that should surface through the outer [`RepoResult`].
     pub fn execute(&self, query: &str, variables: Option<Value>) -> RepoResult<Value> {
         match self.execute_impl(query, variables) {
             Ok(response) => Ok(response),
@@ -1737,7 +1772,7 @@ fn optional_i64_var(vars: &serde_json::Map<String, Value>, keys: &[&str]) -> Opt
 mod tests {
     use std::sync::Arc;
 
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use uuid::Uuid;
 
     use crate::backend::{Backend, RepoResult};
@@ -1767,10 +1802,7 @@ mod tests {
             }
         }
 
-        fn get_unit_by_corrid_json(
-            &self,
-            corrid: &str,
-        ) -> RepoResult<Option<Value>> {
+        fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>> {
             if corrid == "00000000-0000-0000-0000-000000000000" {
                 Ok(Some(
                     json!({"tenantid": 42, "unitid": 1001, "unitver": 1, "status": 30}),
@@ -2216,9 +2248,11 @@ mod tests {
         assert_eq!(result["errors"][0]["extensions"]["code"], "UNSUPPORTED");
         assert_eq!(result["errors"][0]["extensions"]["operationType"], "query");
         assert_eq!(result["errors"][0]["extensions"]["operation"], "frobnicate");
-        assert!(result["errors"][0]["extensions"]["supportedOperations"]
-            .as_array()
-            .is_some_and(|ops| ops.iter().any(|op| op == "searchUnits")));
+        assert!(
+            result["errors"][0]["extensions"]["supportedOperations"]
+                .as_array()
+                .is_some_and(|ops| ops.iter().any(|op| op == "searchUnits"))
+        );
     }
 
     #[test]
@@ -2956,12 +2990,16 @@ mod tests {
                 None,
             )
             .expect("graphql registeredOperations should succeed");
-        assert!(result["data"]["registeredOperations"]["queries"]
-            .as_array()
-            .is_some_and(|ops| ops.iter().any(|op| op == "searchUnits")));
-        assert!(result["data"]["registeredOperations"]["mutations"]
-            .as_array()
-            .is_some_and(|ops| ops.iter().any(|op| op == "setStatus")));
+        assert!(
+            result["data"]["registeredOperations"]["queries"]
+                .as_array()
+                .is_some_and(|ops| ops.iter().any(|op| op == "searchUnits"))
+        );
+        assert!(
+            result["data"]["registeredOperations"]["mutations"]
+                .as_array()
+                .is_some_and(|ops| ops.iter().any(|op| op == "setStatus"))
+        );
     }
 
     #[test]

@@ -1,53 +1,92 @@
+//! Parser and validator for the repository's GraphQL SDL configuration subset.
+//!
+//! The systems manual describes SDL as the configuration language for attribute
+//! registries, record types, and unit templates. This module extracts only that
+//! configuration subset; it is not a general-purpose GraphQL parser and does
+//! not try to execute queries or validate arbitrary schema semantics.
+//!
+//! Supported constructs:
+//!
+//! - `enum ... @attributeRegistry` entries with `@attribute(...)` directives.
+//! - `type ... @record(attribute: ...)` declarations with `@use(...)` fields.
+//! - `type ... @template(name: ...)` declarations with `@use(...)` fields.
+//!
+//! The parser is intentionally small and dependency-free. It still handles the
+//! practical cases that matter for SDL files in this repository: comments,
+//! quoted strings, block strings, nested directive arguments, and brace matching
+//! outside string literals.
+
 use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 use crate::backend::{RepoError, RepoResult};
 
-// Lightweight SDL parser used for configuration/setup flows.
-// It intentionally extracts only the subset we need:
-// - attribute registry entries
-// - record/template declarations and @use mappings
-// It does not attempt full GraphQL validation/execution semantics.
-
+/// Attribute definition extracted from an SDL `@attribute` directive.
 #[derive(Debug, Clone, Serialize)]
 pub struct SdlAttributeSpec {
+    /// Alias used by SDL record/template references.
     pub alias: String,
+    /// Repository attribute name.
     pub name: String,
+    /// Qualified attribute name or URI.
     pub qualname: String,
+    /// Normalized attribute type (`string`, `int`, `record`, etc.).
     pub attribute_type: String,
+    /// Whether the attribute stores multiple values.
     pub is_array: bool,
+    /// Optional human-facing description from SDL.
     pub description: Option<String>,
 }
 
+/// Field-to-attribute binding extracted from `@use(attribute: ...)`.
 #[derive(Debug, Clone, Serialize)]
 pub struct SdlRecordFieldSpec {
+    /// GraphQL field name in the record/template type.
     pub field_name: String,
+    /// Attribute alias referenced by the field.
     pub attribute_alias: String,
 }
 
+/// Record type declaration backed by a record attribute.
 #[derive(Debug, Clone, Serialize)]
 pub struct SdlRecordSpec {
+    /// GraphQL record type name.
     pub type_name: String,
+    /// Attribute alias whose type must be `record`.
     pub attribute_alias: String,
+    /// Fields included in the record.
     pub fields: Vec<SdlRecordFieldSpec>,
 }
 
+/// Unit-template declaration extracted from SDL.
 #[derive(Debug, Clone, Serialize)]
 pub struct SdlTemplateSpec {
+    /// GraphQL type name carrying the `@template` directive.
     pub type_name: String,
+    /// Repository template name.
     pub template_name: String,
+    /// Fields included in the template.
     pub fields: Vec<SdlRecordFieldSpec>,
 }
 
+/// Parsed SDL catalog used by service configuration flows.
 #[derive(Debug, Clone, Serialize)]
 pub struct SdlCatalog {
+    /// Attribute registry entries.
     pub attributes: Vec<SdlAttributeSpec>,
+    /// Record declarations.
     pub records: Vec<SdlRecordSpec>,
+    /// Unit-template declarations.
     pub templates: Vec<SdlTemplateSpec>,
 }
 
+/// Parse an SDL document into the repository configuration catalog.
+///
+/// The result is syntactic only. Call [`validate_catalog_references`] before
+/// persisting configuration to ensure record/template references point at known
+/// attribute aliases.
 pub fn parse_graphql_sdl(sdl: &str) -> RepoResult<SdlCatalog> {
     // Strip line comments first to keep block scanning deterministic.
     let cleaned = strip_hash_comments(sdl);
@@ -99,6 +138,7 @@ pub fn parse_graphql_sdl(sdl: &str) -> RepoResult<SdlCatalog> {
     })
 }
 
+/// Convert a parsed catalog into the JSON shape returned by service APIs.
 pub fn catalog_as_json(catalog: &SdlCatalog) -> Value {
     json!({
         "attributes": catalog.attributes,
@@ -107,6 +147,11 @@ pub fn catalog_as_json(catalog: &SdlCatalog) -> Value {
     })
 }
 
+/// Normalize GraphQL/SDL datatype spellings to repository attribute types.
+///
+/// Numeric strings are preserved to support schema constants from existing
+/// deployments. Textual aliases such as `INTEGER`, `datetime`, and `BOOLEAN`
+/// are folded to the canonical lower-case names used by Rust backends.
 pub fn normalize_attribute_type(input: &str) -> String {
     if input.trim().parse::<i32>().is_ok() {
         return input.trim().to_string();
@@ -124,11 +169,16 @@ pub fn normalize_attribute_type(input: &str) -> String {
     }
 }
 
+/// Return whether an attribute type denotes a record payload.
 pub fn attribute_type_is_record(input: &str) -> bool {
     let normalized = normalize_attribute_type(input);
     normalized == "record" || normalized == "99"
 }
 
+/// Validate references between parsed attributes, records, and templates.
+///
+/// This does not query a backend. It only ensures that every SDL alias used by
+/// `@record` and `@use` exists in the same parsed attribute registry.
 pub fn validate_catalog_references(catalog: &SdlCatalog) -> RepoResult<()> {
     let known_aliases: HashSet<&str> = catalog
         .attributes
