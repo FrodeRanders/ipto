@@ -50,7 +50,7 @@
 
         <!-- db related -->
         <hikari.version>7.0.2</hikari.version>
-        <postgresql.version>42.7.10</postgresql.version>
+        <postgresql.version>42.7.11</postgresql.version>
         <db2.version>12.1.4.0</db2.version>
     </properties>
 
