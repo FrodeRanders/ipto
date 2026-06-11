@@ -56,7 +56,8 @@ pub(crate) fn parse_search_query(query: &str) -> RepoResult<Value> {
     parse_search_query_with_mode(query, false)
 }
 
-pub(crate) fn parse_search_query_strict(query: &str) -> RepoResult<Value> {
+#[cfg(test)] /* verify */
+fn parse_search_query_strict(query: &str) -> RepoResult<Value> {
     parse_search_query_with_mode(query, true)
 }
 
