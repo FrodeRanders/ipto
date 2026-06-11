@@ -20,6 +20,8 @@
 
 -include("ipto.hrl").
 
+-import(ipto_db_utils, [normalize_ref/1, normalize_string/1]).
+
 -export([
     get_unit_json/3,
     unit_exists/2,
@@ -104,7 +106,9 @@ store_unit_json(UnitMap) when is_map(UnitMap) ->
             store_new_version(UnitMap)
     end.
 
--spec search_units(search_expression() | map(), search_order(), search_paging()) -> ipto_result(search_result()).
+-spec search_units(term(), search_order(), search_paging()) -> ipto_result(search_result()).
+search_units(Expression, Order, PagingOrLimit) when is_tuple(Expression) ->
+    search_units_ast_cypher(Expression, Order, PagingOrLimit);
 search_units(Expression0, Order, PagingOrLimit) ->
     case normalize_search_expression(Expression0) of
         {ok, Expression} ->
@@ -1557,14 +1561,6 @@ to_atom_key(Key) when is_binary(Key) ->
 to_atom_key(Key) ->
     Key.
 
--spec normalize_string(term()) -> binary().
-normalize_string(Value) when is_binary(Value) ->
-    Value;
-normalize_string(Value) when is_list(Value) ->
-    unicode:characters_to_binary(Value);
-normalize_string(Value) ->
-    unicode:characters_to_binary(io_lib:format("~p", [Value])).
-
 -spec normalize_nullable_string(term()) -> null | binary().
 normalize_nullable_string(undefined) ->
     null;
@@ -1580,6 +1576,105 @@ to_binary(V) when is_list(V) ->
     unicode:characters_to_binary(V);
 to_binary(V) ->
     unicode:characters_to_binary(io_lib:format("~p", [V])).
+
+-spec search_units_ast_cypher(ipto_search_ast:search_expr(), search_order(), search_paging()) -> ipto_result(search_result()).
+search_units_ast_cypher(Expr, Order, Paging) ->
+    {UnitLeaves, AttrLeaves} = split_ne4j_leaves(Expr),
+    AttrMatch = build_attr_cypher(AttrLeaves),
+    Where = build_unit_cypher_where(UnitLeaves),
+    {OrderCypher, OrderParams} = build_order(Order),
+    {PageCypher, PageParams} = build_paging(Paging),
+    Params = maps:merge(maps:merge(Where#{}),
+                        maps:merge(OrderParams, PageParams)),
+    Match = "MATCH (k:UnitKernel) "
+            "MATCH (k)-[:HAS_VERSION]->(v:UnitVersion) "
+            "WHERE v.unitver = k.lastver" ++ AttrMatch,
+    CountCypher = Match ++ Where ++ " RETURN count(*)",
+    DataCypher = Match ++ Where ++
+        " RETURN k.tenantid, k.unitid, v.unitver, k.lastver, k.corrid, k.status, k.created, v.modified, v.unitname, v.payload" ++
+        OrderCypher ++ PageCypher,
+    case neo4j_query(CountCypher, Params) of
+        {ok, [[Count] | _]} when is_integer(Count) ->
+            case neo4j_query(DataCypher, Params) of
+                {ok, Rows} ->
+                    Results = [row_to_unit_map(Row) || Row <- Rows],
+                    {ok, #{results => Results, total => Count}};
+                Error -> Error
+            end;
+        Error -> Error
+    end.
+
+-spec split_ne4j_leaves(ipto_search_ast:search_expr()) -> {[ipto_search_ast:search_item()], [ipto_search_ast:search_item()]}.
+split_ne4j_leaves(Expr) ->
+    Leaves = ipto_search_ast:collect_leaves(Expr),
+    UnitLike = [L || L <- Leaves, ipto_search_ast:is_unit_item(L) orelse ipto_search_ast:is_rel_item(L) orelse ipto_search_ast:is_assoc_item(L)],
+    AttrOnly = [L || L <- Leaves, ipto_search_ast:is_attr_item(L)],
+    {UnitLike, AttrOnly}.
+
+-spec build_attr_cypher([ipto_search_ast:search_item()]) -> string().
+build_attr_cypher([]) -> "";
+build_attr_cypher(AttrItems) ->
+    Patterns = [attr_item_to_cypher(Item) || Item <- AttrItems],
+    string:join(Patterns, "").
+
+-spec attr_item_to_cypher(ipto_search_ast:search_item()) -> string().
+attr_item_to_cypher({attr, _Name, AttrId, _Type, Op, Value}) ->
+    Var = "av" ++ integer_to_list(erlang:unique_integer([positive]) rem 1000),
+    AttrIdStr = integer_to_list(AttrId),
+    ValueStr = case is_binary(Value) of
+        true -> "\"" ++ binary_to_list(Value) ++ "\"";
+        false -> io_lib:format("~p", [Value])
+    end,
+    OpStr = case Op of
+        eq -> " = ";
+        ne -> " <> ";
+        gt -> " > ";
+        gte -> " >= ";
+        lt -> " < ";
+        lte -> " <= ";
+        like -> " =~ "
+    end,
+    OptMatch = "OPTIONAL MATCH (v)-[:HAS_ATTR_VALUE]->(" ++ Var ++ ":AttributeValue {attrid: " ++ AttrIdStr ++ "}) ",
+    Where = "AND " ++ Var ++ ".attrvalue " ++ OpStr ++ " " ++ ValueStr ++ " ",
+    OptMatch ++ Where.
+
+-spec build_unit_cypher_where([ipto_search_ast:search_item()]) -> string().
+build_unit_cypher_where([]) -> "";
+build_unit_cypher_where(Items) ->
+    Clauses = [unit_item_to_cypher(Item) || Item <- Items],
+    " AND " ++ string:join(Clauses, " AND ").
+
+-spec unit_item_to_cypher(ipto_search_ast:search_item()) -> string().
+unit_item_to_cypher({unit, tenantid, Op, Val}) -> "k.tenantid" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({unit, unitid, Op, Val}) -> "k.unitid" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({unit, status, Op, Val}) -> "k.status" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({unit, corrid, Op, Val}) -> "k.corrid" ++ cypher_op(Op) ++ cypher_string(Val);
+unit_item_to_cypher({unit, unitname, Op, Val}) -> "v.unitname" ++ cypher_op(Op) ++ cypher_string(Val);
+unit_item_to_cypher({unit, created, Op, Val}) -> "k.created" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({unit, modified, Op, Val}) -> "v.modified" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({rel, left, RelType, {TenantId, UnitId}}) ->
+    io_lib:format("EXISTS { MATCH (k)-[:RELATED_TO {reltype: ~p}]->(r:UnitKernel {tenantid: ~p, unitid: ~p}) }", [RelType, TenantId, UnitId]);
+unit_item_to_cypher({rel, right, RelType, {TenantId, UnitId}}) ->
+    io_lib:format("EXISTS { MATCH (k)<-[:RELATED_TO {reltype: ~p}]-(r:UnitKernel {tenantid: ~p, unitid: ~p}) }", [RelType, TenantId, UnitId]);
+unit_item_to_cypher({assoc, left, AssocType, RefString}) ->
+    io_lib:format("EXISTS { MATCH (k)-[:HAS_ASSOC {assoctype: ~p, assocstring: \"~s\"}]->(:ExternalRef) }", [AssocType, binary_to_list(RefString)]);
+unit_item_to_cypher({assoc, right, AssocType, RefString}) ->
+    io_lib:format("EXISTS { MATCH (k)<-[:HAS_ASSOC {assoctype: ~p, assocstring: \"~s\"}]-(:ExternalRef) }", [AssocType, binary_to_list(RefString)]);
+unit_item_to_cypher(_) -> "TRUE".
+
+-spec cypher_op(ipto_search_ast:operator()) -> string().
+cypher_op(eq) -> " = ";
+cypher_op(ne) -> " <> ";
+cypher_op(gt) -> " > ";
+cypher_op(gte) -> " >= ";
+cypher_op(lt) -> " < ";
+cypher_op(lte) -> " <= ";
+cypher_op(like) -> " =~ ".
+
+-spec cypher_string(term()) -> string().
+cypher_string(Val) when is_binary(Val) -> "\"" ++ binary_to_list(Val) ++ "\"";
+cypher_string(Val) when is_list(Val) -> "\"" ++ Val ++ "\"";
+cypher_string(Val) -> io_lib:format("~p", [Val]).
 
 -spec normalize_search_expression(search_expression() | map() | list() | undefined) ->
     {ok, map()} | {error, ipto_reason()}.
@@ -1924,16 +2019,6 @@ regex_char(C) ->
 -spec tenant_name(tenantid()) -> binary().
 tenant_name(TenantId) ->
     iolist_to_binary(io_lib:format("tenant-~p", [TenantId])).
-
--spec normalize_ref(unit_ref_value() | unit_ref_tuple() | unit_ref_map() | term()) -> unit_ref_tuple() | invalid_ref.
-normalize_ref(#unit_ref{tenantid = TenantId, unitid = UnitId}) ->
-    {TenantId, UnitId};
-normalize_ref(#{tenantid := TenantId, unitid := UnitId}) ->
-    {TenantId, UnitId};
-normalize_ref({TenantId, UnitId}) ->
-    {TenantId, UnitId};
-normalize_ref(_) ->
-    invalid_ref.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").

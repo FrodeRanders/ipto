@@ -245,7 +245,7 @@ connect_one() ->
 
 -spec safe_close(term()) -> ok.
 safe_close(Conn) ->
-    _ = catch epgsql:close(Conn),
+    try epgsql:close(Conn) catch _:_ -> ok end,
     ok.
 
 -spec fresh_telemetry() -> telemetry().

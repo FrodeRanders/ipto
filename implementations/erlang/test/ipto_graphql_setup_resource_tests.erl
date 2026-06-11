@@ -19,43 +19,53 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-%% Confirms the query resource exposes SDL inspection without going through the
-%% full GraphQL text parser.
-inspect_graphql_sdl_query_resource_test() ->
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  a @attribute(datatype: STRING, name: \"demo:a\")\n"
-        "}\n"
-    >>,
-    {ok, JsonBin} = ipto_graphql_query_resource:execute(
-        #{},
-        undefined,
-        <<"inspectGraphqlSdl">>,
-        #{<<"sdl">> => Sdl}
-    ),
-    true = is_map(JsonBin),
-    true = maps:is_key(attribute_registry, JsonBin).
+inspect_graphql_sdl_query_resource_test_() ->
+    require_graphql("inspect_graphql_sdl_query_resource", fun() ->
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  a @attribute(datatype: STRING, name: \"demo:a\")\n"
+            "}\n"
+        >>,
+        {ok, JsonBin} = ipto_graphql_query_resource:execute(
+            #{},
+            undefined,
+            <<"inspectGraphqlSdl">>,
+            #{<<"sdl">> => Sdl}
+        ),
+        true = is_map(JsonBin),
+        true = maps:is_key(attribute_registry, JsonBin)
+    end).
 
-%% Confirms the mutation resource can apply SDL and return the setup summary.
-configure_graphql_sdl_mutation_resource_test() ->
-    application:set_env(ipto, backend, memory),
-    {ok, _} = ipto:start_link(),
-    Suffix = integer_to_list(erlang:system_time(microsecond) rem 1000000000),
-    AttrName = list_to_binary("demo:gql:attr:" ++ Suffix),
-    Sdl = iolist_to_binary(io_lib:format(
-        "enum Attributes @attributeRegistry {\n"
-        "  a_~s @attribute(datatype: STRING, name: \"~s\")\n"
-        "}\n",
-        [Suffix, AttrName]
-    )),
-    {ok, JsonBin} = ipto_graphql_mutation_resource:execute(
-        #{},
-        undefined,
-        <<"configureGraphqlSdl">>,
-        #{<<"sdl">> => Sdl}
-    ),
-    true = is_map(JsonBin),
-    true = maps:is_key(attributes, JsonBin).
+configure_graphql_sdl_mutation_resource_test_() ->
+    require_graphql("configure_graphql_sdl_mutation_resource", fun() ->
+        application:set_env(ipto, backend, memory),
+        {ok, _} = ipto:start_link(),
+        Suffix = integer_to_list(erlang:system_time(microsecond) rem 1000000000),
+        AttrName = list_to_binary("demo:gql:attr:" ++ Suffix),
+        Sdl = iolist_to_binary(io_lib:format(
+            "enum Attributes @attributeRegistry {\n"
+            "  a_~s @attribute(datatype: STRING, name: \"~s\")\n"
+            "}\n",
+            [Suffix, AttrName]
+        )),
+        {ok, JsonBin} = ipto_graphql_mutation_resource:execute(
+            #{},
+            undefined,
+            <<"configureGraphqlSdl">>,
+            #{<<"sdl">> => Sdl}
+        ),
+        true = is_map(JsonBin),
+        true = maps:is_key(attributes, JsonBin)
+    end).
+
+-spec require_graphql(string(), fun(() -> term())) -> term().
+require_graphql(Name, Fun) ->
+    case code:ensure_loaded(graphql) of
+        {module, graphql} ->
+            {Name, Fun};
+        _ ->
+            {Name ++ " (graphql_erl not loaded)", ?_test(ok)}
+    end.
 
 %% Missing SDL files should be surfaced as resource-level configuration errors.
 configure_graphql_sdl_file_mutation_resource_error_test() ->

@@ -28,10 +28,24 @@
 -spec inspect(binary() | string()) -> map().
 inspect(Sdl0) ->
     Sdl = to_binary(Sdl0),
-    AttributesInfo = parse_attribute_registry(Sdl),
-    TypesInfo = parse_record_template_types(Sdl),
-    Errors = validate(AttributesInfo, TypesInfo),
-    build_catalog(AttributesInfo, TypesInfo, Errors).
+    case parse_sdl_ast(Sdl) of
+        {ok, Defs} ->
+            AttributesInfo = extract_attribute_registry(Defs),
+            TypesInfo = extract_record_template_types(Defs),
+            Errors = validate(AttributesInfo, TypesInfo),
+            build_catalog(AttributesInfo, TypesInfo, Errors);
+        {error, Reason} ->
+            Error = #{
+                code => parse_error,
+                message => iolist_to_binary(io_lib:format("SDL parse failed: ~p", [Reason])),
+                context => #{}
+            },
+            build_catalog(
+                #{found => false, enum_name => undefined, attributes => [], attribute_defs => []},
+                [],
+                [Error]
+            )
+    end.
 
 -spec parse(binary() | string()) -> {ok, map()} | {error, {invalid_sdl, [validation_error()], map()}}.
 parse(Sdl0) ->
@@ -44,40 +58,79 @@ parse(Sdl0) ->
             {error, {invalid_sdl, Errors, Catalog}}
     end.
 
--spec parse_attribute_registry(binary()) -> map().
-parse_attribute_registry(Sdl) ->
-    Pattern = "enum\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+@attributeRegistry\\s*\\{([\\s\\S]*?)\\}",
-    case match_first(Sdl, Pattern) of
-        nomatch ->
-            #{
-                found => false,
-                enum_name => undefined,
-                attributes => [],
-                attribute_defs => []
-            };
-        {ok, [EnumName, Body]} ->
-            AttrDefs = parse_attribute_definitions(Body),
+%% SDL AST parsing via graphql-erlang
+
+-spec parse_sdl_ast(binary()) -> {ok, list()} | {error, term()}.
+parse_sdl_ast(Sdl) ->
+    case code:ensure_loaded(graphql) of
+        {module, graphql} ->
+            case graphql:parse(Sdl) of
+                {ok, Document} ->
+                    {ok, element(2, Document)};
+                {error, Reason} ->
+                    {error, Reason}
+            end;
+        _ ->
+            {error, graphql_not_loaded}
+    end.
+
+%% Attribute registry extraction
+
+-spec extract_attribute_registry([term()]) -> map().
+extract_attribute_registry(Defs) ->
+    case find_attribute_registry_enum(Defs) of
+        {ok, Enum} ->
+            AttrDefs = extract_attribute_values(element(5, Enum)),
             AttrNames = [maps:get(symbol, Def) || Def <- AttrDefs],
+            EnumId = element(2, Enum),
+            EnumName = case EnumId of
+                {name, _, N} -> N;
+                N when is_binary(N) -> N;
+                _ -> <<>>
+            end,
             #{
                 found => true,
                 enum_name => EnumName,
                 attributes => AttrNames,
                 attribute_defs => AttrDefs
-            }
+            };
+        undefined ->
+            #{found => false, enum_name => undefined, attributes => [], attribute_defs => []}
     end.
 
--spec parse_attribute_definitions(binary()) -> [map()].
-parse_attribute_definitions(Body) ->
-    Pattern = "(?:^|\\n)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s+@attribute\\s*\\(([^\\)]*)\\)",
-    [parse_attribute_definition(Name, Args) || [Name, Args] <- match_all(Body, Pattern)].
+-spec find_attribute_registry_enum([term()]) -> {ok, term()} | undefined.
+find_attribute_registry_enum([]) ->
+    undefined;
+find_attribute_registry_enum([Def | Rest]) ->
+    case is_record_def(Def, p_enum) of
+        true ->
+            Dirs = element(4, Def),
+            case has_directive_named(Dirs, <<"attributeRegistry">>) of
+                true -> {ok, Def};
+                false -> find_attribute_registry_enum(Rest)
+            end;
+        false ->
+            find_attribute_registry_enum(Rest)
+    end.
 
--spec parse_attribute_definition(binary(), binary()) -> map().
-parse_attribute_definition(Symbol, Args) ->
-    Datatype = parse_arg_token(Args, "datatype"),
-    Name = parse_arg_string(Args, "name"),
-    Uri = parse_arg_string(Args, "uri"),
-    Description = parse_arg_string(Args, "description"),
-    IsArray = parse_arg_boolean(Args, "array", true),
+-spec extract_attribute_values([term()]) -> [map()].
+extract_attribute_values(Variants) ->
+    [attribute_value_def(V) || V <- Variants, has_directive_named(element(4, V), <<"attribute">>)].
+
+-spec attribute_value_def(term()) -> map().
+attribute_value_def(EnumValue) ->
+    Symbol = element(2, EnumValue),
+    Dirs = element(4, EnumValue),
+    AttrDir = find_directive_named(Dirs, <<"attribute">>),
+    Args = case AttrDir of
+        {ok, D} -> element(3, D);
+        undefined -> #{}
+    end,
+    Datatype = parse_value_token(get_arg(Args, <<"datatype">>)),
+    Name = parse_value_string(get_arg(Args, <<"name">>)),
+    Uri = parse_value_string(get_arg(Args, <<"uri">>)),
+    Description = parse_value_string(get_arg(Args, <<"description">>)),
+    IsArray = parse_value_boolean(get_arg(Args, <<"array">>), true),
     #{
         symbol => Symbol,
         datatype => Datatype,
@@ -88,68 +141,152 @@ parse_attribute_definition(Symbol, Args) ->
         description => Description
     }.
 
--spec parse_record_template_types(binary()) -> [map()].
-parse_record_template_types(Sdl) ->
-    Pattern = "type\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+([^\\{]*?)\\{([\\s\\S]*?)\\}",
+%% Object type extraction (records and templates)
+
+-spec extract_record_template_types([term()]) -> [map()].
+extract_record_template_types(Defs) ->
     lists:foldl(
-        fun([TypeName, Header, Body], Acc) ->
-            case parse_record_template_type(TypeName, Header, Body) of
-                undefined -> Acc;
-                TypeInfo -> [TypeInfo | Acc]
+        fun(Def, Acc) ->
+            case is_record_def(Def, p_object) of
+                true ->
+                    case extract_object_type_info(Def) of
+                        undefined -> Acc;
+                        TypeInfo -> [TypeInfo | Acc]
+                    end;
+                false ->
+                    Acc
             end
         end,
         [],
-        match_all(Sdl, Pattern)
+        Defs
     ).
 
--spec parse_record_template_type(binary(), binary(), binary()) -> map() | undefined.
-parse_record_template_type(TypeName, Header, Body) ->
-    RecordAttr = parse_record_directive_attribute(Header),
-    TemplateName = parse_template_directive_name(Header),
+-spec extract_object_type_info(term()) -> map() | undefined.
+extract_object_type_info(Object) ->
+    Id = element(2, Object),
+    TypeName = case Id of
+        {name, _, N} -> N;
+        N when is_binary(N) -> N
+    end,
+    Dirs = element(5, Object),
+    RecordAttr = case find_directive_named(Dirs, <<"record">>) of
+        {ok, RecDir} ->
+            parse_value_token(get_arg(element(3, RecDir), <<"attribute">>));
+        undefined ->
+            undefined
+    end,
+    TemplateName = case find_directive_named(Dirs, <<"template">>) of
+        {ok, TplDir} ->
+            case get_arg(element(3, TplDir), <<"name">>) of
+                undefined -> <<>>;
+                V -> parse_value_string(V)
+            end;
+        undefined ->
+            undefined
+    end,
     case {RecordAttr, TemplateName} of
         {undefined, undefined} ->
             undefined;
         _ ->
+            Fields = element(4, Object),
+            Uses = extract_use_references(Fields),
             #{
                 type_name => TypeName,
                 record_attribute => RecordAttr,
                 template_name => TemplateName,
-                uses => parse_use_references(Body)
+                uses => Uses
             }
     end.
 
--spec parse_record_directive_attribute(binary()) -> binary() | undefined.
-parse_record_directive_attribute(Header) ->
-    Pattern = "@record\\s*\\(\\s*attribute\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\)",
-    case match_first(Header, Pattern) of
-        {ok, [Attr]} -> Attr;
-        nomatch -> undefined
-    end.
-
--spec parse_template_directive_name(binary()) -> binary() | undefined.
-parse_template_directive_name(Header) ->
-    PatternWithName = "@template\\s*\\(\\s*name\\s*:\\s*\"([^\"]+)\"\\s*\\)",
-    case match_first(Header, PatternWithName) of
-        {ok, [Name]} ->
-            Name;
-        nomatch ->
-            PatternWithoutName = "@template\\b",
-            case match_first(Header, PatternWithoutName) of
-                {ok, _} -> <<>>;
-                nomatch -> undefined
-            end
-    end.
-
--spec parse_use_references(binary()) -> [map()].
-parse_use_references(Body) ->
-    Pattern = "(?:^|\\n)\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*:[^\\n]*?@use\\s*\\(\\s*attribute\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*\\)",
+-spec extract_use_references([term()]) -> [map()].
+extract_use_references(Fields) ->
     [
-        #{
-            field_name => FieldName,
-            attribute => AttrName
-        }
-        || [FieldName, AttrName] <- match_all(Body, Pattern)
+        use_field_def(F)
+        || F <- Fields,
+           is_record_def(F, p_field_def),
+           has_directive_named(element(6, F), <<"use">>)
     ].
+
+-spec use_field_def(term()) -> map().
+use_field_def(Field) ->
+    Id = element(2, Field),
+    FieldName = case Id of
+        {name, _, N} -> N;
+        N when is_binary(N) -> N
+    end,
+    Dirs = element(6, Field),
+    Attr = case find_directive_named(Dirs, <<"use">>) of
+        {ok, UseDir} ->
+            parse_value_token(get_arg(element(3, UseDir), <<"attribute">>));
+        undefined ->
+            undefined
+    end,
+    #{field_name => FieldName, attribute => Attr}.
+
+%% Directive helpers
+
+-spec is_record_def(term(), atom()) -> boolean().
+is_record_def(Term, RecName) ->
+    is_tuple(Term) andalso tuple_size(Term) > 0 andalso element(1, Term) =:= RecName.
+
+-spec has_directive_named([term()], binary()) -> boolean().
+has_directive_named(Dirs, Name) ->
+    find_directive_named(Dirs, Name) =/= undefined.
+
+-spec find_directive_named([term()], binary()) -> {ok, term()} | undefined.
+find_directive_named(Dirs, Name) ->
+    case [D || D <- Dirs, is_directive_named(D, Name)] of
+        [Found | _] -> {ok, Found};
+        [] -> undefined
+    end.
+
+-spec is_directive_named(term(), binary()) -> boolean().
+is_directive_named(Dir, Name) when is_tuple(Dir), element(1, Dir) =:= directive ->
+    DirId = element(2, Dir),
+    case DirId of
+        {name, _, N} -> N =:= Name;
+        N when is_binary(N) -> N =:= Name;
+        N when is_atom(N) -> atom_to_binary(N, utf8) =:= Name
+    end;
+is_directive_named(_, _) ->
+    false.
+
+%% Directive arg access
+
+-spec get_arg(term(), binary()) -> term().
+get_arg(Args, Key) when is_list(Args) ->
+    case lists:keyfind(Key, 1, [{Kname, V} || {{name, _, Kname}, V} <- Args]) of
+        false -> undefined;
+        {_, V} -> V
+    end;
+get_arg(Args, Key) when is_map(Args) ->
+    maps:get(Key, Args, undefined);
+get_arg(_, _) ->
+    undefined.
+
+%% Value extraction from graphql-erlang's value() type
+
+-spec parse_value_string(term()) -> binary() | undefined.
+parse_value_string({string, Bin, _}) -> Bin;
+parse_value_string(Bin) when is_binary(Bin) -> Bin;
+parse_value_string(_) -> undefined.
+
+-spec parse_value_token(term()) -> binary() | undefined.
+parse_value_token({enum, Bin}) -> Bin;
+parse_value_token({string, Bin, _}) -> Bin;
+parse_value_token({name, _, Bin}) -> Bin;
+parse_value_token(Bin) when is_binary(Bin) -> Bin;
+parse_value_token(undefined) -> undefined;
+parse_value_token(Atom) when is_atom(Atom) -> atom_to_binary(Atom, utf8);
+parse_value_token(_) -> undefined.
+
+-spec parse_value_boolean(term(), boolean()) -> boolean().
+parse_value_boolean({bool, Val, _}, _Default) -> Val;
+parse_value_boolean(true, _Default) -> true;
+parse_value_boolean(false, _Default) -> false;
+parse_value_boolean(_, Default) -> Default.
+
+%% Validation
 
 -spec validate(map(), [map()]) -> [validation_error()].
 validate(AttributesInfo, TypesInfo) ->
@@ -286,45 +423,6 @@ build_catalog(AttributesInfo, TypesInfo, Errors) ->
         },
         errors => Errors
     }.
-
--spec parse_arg_string(binary(), string()) -> binary() | undefined.
-parse_arg_string(Args, Key) ->
-    Pattern = Key ++ "\\s*:\\s*\"([^\"]+)\"",
-    case match_first(Args, Pattern) of
-        {ok, [Value]} -> Value;
-        nomatch -> undefined
-    end.
-
--spec parse_arg_token(binary(), string()) -> binary() | undefined.
-parse_arg_token(Args, Key) ->
-    Pattern = Key ++ "\\s*:\\s*([A-Za-z_][A-Za-z0-9_]*)",
-    case match_first(Args, Pattern) of
-        {ok, [Value]} -> Value;
-        nomatch -> undefined
-    end.
-
--spec parse_arg_boolean(binary(), string(), boolean()) -> boolean().
-parse_arg_boolean(Args, Key, Default) ->
-    Pattern = Key ++ "\\s*:\\s*(true|false)",
-    case match_first(Args, Pattern) of
-        {ok, [<<"true">>]} -> true;
-        {ok, [<<"false">>]} -> false;
-        nomatch -> Default
-    end.
-
--spec match_first(binary(), string()) -> {ok, [binary()]} | nomatch.
-match_first(Text, Pattern) ->
-    case re:run(Text, Pattern, [{capture, all_but_first, binary}, unicode]) of
-        {match, Captures} -> {ok, Captures};
-        nomatch -> nomatch
-    end.
-
--spec match_all(binary(), string()) -> [[binary()]].
-match_all(Text, Pattern) ->
-    case re:run(Text, Pattern, [global, {capture, all_but_first, binary}, unicode]) of
-        {match, Captures} -> Captures;
-        nomatch -> []
-    end.
 
 -spec to_binary(term()) -> binary().
 to_binary(Value) when is_binary(Value) -> Value;

@@ -21,19 +21,15 @@
 
 -export([search/3]).
 
-%% --------------------------------------------------------------------
-%% search/3
-%%
-%% Accepts a map expression or a textual query parsed into expression form.
-%% --------------------------------------------------------------------
--spec search(search_expression() | map(), search_order(), search_paging()) -> ipto_result(search_result()).
+search(Expression, Order, PagingOrLimit) when is_tuple(Expression) ->
+    ipto_db:search_units(Expression, Order, PagingOrLimit);
+search(Expression, Order, PagingOrLimit) when is_binary(Expression); is_list(Expression) ->
+    case ipto_search_parser:parse_ast(Expression) of
+        {ok, Expr} -> ipto_db:search_units(Expr, Order, PagingOrLimit);
+        Error -> Error
+    end;
+search(Expression, Order, PagingOrLimit) when is_map(Expression) ->
+    Expr = ipto_search_parser:map_to_ast(Expression),
+    ipto_db:search_units(Expr, Order, PagingOrLimit);
 search(Expression, Order, PagingOrLimit) ->
-    case Expression of
-        Query when is_binary(Query); is_list(Query) ->
-            case ipto_search_parser:parse(Query) of
-                {ok, Parsed} -> ipto_db:search_units(Parsed, Order, PagingOrLimit);
-                Error -> Error
-            end;
-        _ ->
-            ipto_db:search_units(Expression, Order, PagingOrLimit)
-    end.
+    ipto_db:search_units(Expression, Order, PagingOrLimit).

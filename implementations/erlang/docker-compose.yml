@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ipto-erlang-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: repo
+      POSTGRES_PASSWORD: repo
+      POSTGRES_DB: repo
+    ports:
+      - "${IPTO_PG_PORT:-5432}:5432"
+    volumes:
+      - ../../shared/db/postgresql/schema.sql:/docker-entrypoint-initdb.d/00_schema.sql:ro
+      - ../../shared/db/postgresql/procedures.sql:/docker-entrypoint-initdb.d/01_procedures.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repo -d repo"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  neo4j:
+    image: neo4j:5
+    container_name: ipto-erlang-neo4j
+    restart: unless-stopped
+    environment:
+      NEO4J_AUTH: "${IPTO_NEO4J_AUTH:-neo4j/neo4jtest}"
+    ports:
+      - "${IPTO_NEO4J_HTTP_PORT:-7474}:7474"
+      - "${IPTO_NEO4J_BOLT_PORT:-7687}:7687"
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p neo4jtest 'RETURN 1'"]
+      interval: 3s
+      timeout: 10s
+      retries: 20
+      start_period: 30s

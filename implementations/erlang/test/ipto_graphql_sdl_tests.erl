@@ -19,137 +19,150 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
-%% Parses a valid SDL snippet and checks that the catalog counts line up with
-%% the declared registry, record, and template definitions.
-parse_valid_sdl_catalog_test() ->
-    Sdl = <<
-        "directive @attributeRegistry on ENUM\n"
-        "directive @attribute(datatype: String) on ENUM_VALUE\n"
-        "directive @record(attribute: Attributes!) on OBJECT\n"
-        "directive @template(name: String) on OBJECT\n"
-        "directive @use(attribute: Attributes!) on FIELD_DEFINITION\n"
-        "enum Attributes @attributeRegistry {\n"
-        "  person @attribute(datatype: \"RECORD\")\n"
-        "  name @attribute(datatype: \"STRING\")\n"
-        "  age @attribute(datatype: \"INTEGER\")\n"
-        "}\n"
-        "type Person @record(attribute: person) @template(name: \"person-template\") {\n"
-        "  fullName: String @use(attribute: name)\n"
-        "  years: Int @use(attribute: age)\n"
-        "}\n"
-    >>,
-    {ok, Catalog} = ipto_graphql_sdl:parse(Sdl),
-    ?assertEqual(3, maps:get(attributes, maps:get(counts, Catalog))),
-    ?assertEqual(1, maps:get(records, maps:get(counts, Catalog))),
-    ?assertEqual(1, maps:get(templates, maps:get(counts, Catalog))),
-    ?assertEqual([], maps:get(errors, Catalog)).
+parse_valid_sdl_catalog_test_() ->
+    require_graphql("parse_valid_sdl_catalog", fun() ->
+        Sdl = <<
+            "directive @attributeRegistry on ENUM\n"
+            "directive @attribute(datatype: String) on ENUM_VALUE\n"
+            "directive @record(attribute: Attributes!) on OBJECT\n"
+            "directive @template(name: String) on OBJECT\n"
+            "directive @use(attribute: Attributes!) on FIELD_DEFINITION\n"
+            "enum Attributes @attributeRegistry {\n"
+            "  person @attribute(datatype: \"RECORD\")\n"
+            "  name @attribute(datatype: \"STRING\")\n"
+            "  age @attribute(datatype: \"INTEGER\")\n"
+            "}\n"
+            "type Person @record(attribute: person) @template(name: \"person-template\") {\n"
+            "  fullName: String @use(attribute: name)\n"
+            "  years: Int @use(attribute: age)\n"
+            "}\n"
+        >>,
+        {ok, Catalog} = ipto_graphql_sdl:parse(Sdl),
+        ?assertEqual(3, maps:get(attributes, maps:get(counts, Catalog))),
+        ?assertEqual(1, maps:get(records, maps:get(counts, Catalog))),
+        ?assertEqual(1, maps:get(templates, maps:get(counts, Catalog))),
+        ?assertEqual([], maps:get(errors, Catalog))
+    end).
 
-%% Duplicate attribute symbols should be rejected during SDL parsing.
-parse_duplicate_attribute_fails_test() ->
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  person @attribute(datatype: \"RECORD\")\n"
-        "  person @attribute(datatype: \"RECORD\")\n"
-        "}\n"
-    >>,
-    {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
-    true = has_error_code(Errors, duplicate_attribute).
+parse_duplicate_attribute_fails_test_() ->
+    require_graphql("parse_duplicate_attribute_fails", fun() ->
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  person @attribute(datatype: \"RECORD\")\n"
+            "  person @attribute(datatype: \"RECORD\")\n"
+            "}\n"
+        >>,
+        {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
+        true = has_error_code(Errors, duplicate_attribute)
+    end).
 
-%% A record directive must reference an attribute that exists in the registry.
-parse_unresolved_record_attribute_fails_test() ->
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  name @attribute(datatype: \"STRING\")\n"
-        "}\n"
-        "type Person @record(attribute: person) {\n"
-        "  fullName: String @use(attribute: name)\n"
-        "}\n"
-    >>,
-    {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
-    true = has_error_code(Errors, unresolved_record_attribute).
+parse_unresolved_record_attribute_fails_test_() ->
+    require_graphql("parse_unresolved_record_attribute_fails", fun() ->
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  name @attribute(datatype: \"STRING\")\n"
+            "}\n"
+            "type Person @record(attribute: person) {\n"
+            "  fullName: String @use(attribute: name)\n"
+            "}\n"
+        >>,
+        {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
+        true = has_error_code(Errors, unresolved_record_attribute)
+    end).
 
-%% Field-level `@use` directives must resolve to declared attributes.
-parse_unresolved_use_attribute_fails_test() ->
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  person @attribute(datatype: \"RECORD\")\n"
-        "}\n"
-        "type Person @record(attribute: person) {\n"
-        "  fullName: String @use(attribute: name)\n"
-        "}\n"
-    >>,
-    {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
-    true = has_error_code(Errors, unresolved_use_attribute).
+parse_unresolved_use_attribute_fails_test_() ->
+    require_graphql("parse_unresolved_use_attribute_fails", fun() ->
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  person @attribute(datatype: \"RECORD\")\n"
+            "}\n"
+            "type Person @record(attribute: person) {\n"
+            "  fullName: String @use(attribute: name)\n"
+            "}\n"
+        >>,
+        {error, {invalid_sdl, Errors, _Catalog}} = ipto_graphql_sdl:parse(Sdl),
+        true = has_error_code(Errors, unresolved_use_attribute)
+    end).
 
-%% `inspect/1` is intentionally lossy: it should return the partial catalog even
-%% when validation fails.
-inspect_returns_catalog_even_when_invalid_test() ->
-    Sdl = <<"type Person @record(attribute: person) { fullName: String @use(attribute: name) }">>,
-    Catalog = ipto_graphql_sdl:inspect(Sdl),
-    Errors = maps:get(errors, Catalog),
-    true = has_error_code(Errors, missing_attribute_registry),
-    ?assertEqual(0, maps:get(attributes, maps:get(counts, Catalog))).
+inspect_returns_catalog_even_when_invalid_test_() ->
+    require_graphql("inspect_returns_catalog_even_when_invalid", fun() ->
+        Sdl = <<"type Person @record(attribute: person) { fullName: String @use(attribute: name) }">>,
+        Catalog = ipto_graphql_sdl:inspect(Sdl),
+        Errors = maps:get(errors, Catalog),
+        true = has_error_code(Errors, missing_attribute_registry),
+        ?assertEqual(0, maps:get(attributes, maps:get(counts, Catalog)))
+    end).
 
-%% Applying the same SDL twice should create attributes on the first pass and
-%% reuse them on the second.
-configure_graphql_sdl_creates_and_reuses_attributes_test() ->
-    application:set_env(ipto, backend, memory),
-    {ok, _} = ipto:start_link(),
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  person @attribute(datatype: RECORD, array: false, name: \"demo:person\")\n"
-        "  name @attribute(datatype: STRING, array: false, name: \"demo:name\")\n"
-        "}\n"
-        "type Person @record(attribute: person) @template(name: \"person-template\") {\n"
-        "  fullName: String @use(attribute: name)\n"
-        "}\n"
-    >>,
-    {ok, First} = ipto:configure_graphql_sdl(Sdl),
-    AttrSummary1 = maps:get(attributes, First),
-    ?assertEqual(2, maps:get(created, AttrSummary1)),
-    ?assertEqual(0, maps:get(existing, AttrSummary1)),
-    {ok, _NameAttr} = ipto:get_attribute_info(<<"demo:name">>),
+configure_graphql_sdl_creates_and_reuses_attributes_test_() ->
+    require_graphql("configure_graphql_sdl_creates_and_reuses_attributes", fun() ->
+        application:set_env(ipto, backend, memory),
+        {ok, _} = ipto:start_link(),
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  person @attribute(datatype: RECORD, array: false, name: \"demo:person\")\n"
+            "  name @attribute(datatype: STRING, array: false, name: \"demo:name\")\n"
+            "}\n"
+            "type Person @record(attribute: person) @template(name: \"person-template\") {\n"
+            "  fullName: String @use(attribute: name)\n"
+            "}\n"
+        >>,
+        {ok, First} = ipto:configure_graphql_sdl(Sdl),
+        AttrSummary1 = maps:get(attributes, First),
+        ?assertEqual(2, maps:get(created, AttrSummary1)),
+        ?assertEqual(0, maps:get(existing, AttrSummary1)),
+        {ok, _NameAttr} = ipto:get_attribute_info(<<"demo:name">>),
 
-    {ok, Second} = ipto:configure_graphql_sdl(Sdl),
-    AttrSummary2 = maps:get(attributes, Second),
-    ?assertEqual(0, maps:get(created, AttrSummary2)),
-    ?assertEqual(2, maps:get(existing, AttrSummary2)),
-    ?assertEqual(false, maps:get(supported, maps:get(records, Second))),
-    ?assertEqual(false, maps:get(supported, maps:get(templates, Second))).
+        {ok, Second} = ipto:configure_graphql_sdl(Sdl),
+        AttrSummary2 = maps:get(attributes, Second),
+        ?assertEqual(0, maps:get(created, AttrSummary2)),
+        ?assertEqual(2, maps:get(existing, AttrSummary2)),
+        ?assertEqual(false, maps:get(supported, maps:get(records, Second))),
+        ?assertEqual(false, maps:get(supported, maps:get(templates, Second)))
+    end).
 
-%% Configuration should surface SDL validation failures instead of partially
-%% applying an invalid catalog.
-configure_graphql_sdl_invalid_returns_error_test() ->
-    application:set_env(ipto, backend, memory),
-    {ok, _} = ipto:start_link(),
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  person @attribute(datatype: RECORD, array: false, name: \"demo:person\")\n"
-        "}\n"
-        "type Person @record(attribute: person) {\n"
-        "  fullName: String @use(attribute: missing)\n"
-        "}\n"
-    >>,
-    {error, {invalid_sdl, Errors}} = ipto:configure_graphql_sdl(Sdl),
-    true = has_error_code(Errors, unresolved_use_attribute).
+configure_graphql_sdl_invalid_returns_error_test_() ->
+    require_graphql("configure_graphql_sdl_invalid_returns_error", fun() ->
+        application:set_env(ipto, backend, memory),
+        {ok, _} = ipto:start_link(),
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  person @attribute(datatype: RECORD, array: false, name: \"demo:person\")\n"
+            "}\n"
+            "type Person @record(attribute: person) {\n"
+            "  fullName: String @use(attribute: missing)\n"
+            "}\n"
+        >>,
+        {error, {invalid_sdl, Errors}} = ipto:configure_graphql_sdl(Sdl),
+        true = has_error_code(Errors, unresolved_use_attribute)
+    end).
 
-%% File-based SDL configuration is a thin wrapper over the same setup pipeline.
-configure_graphql_sdl_file_test() ->
-    application:set_env(ipto, backend, memory),
-    {ok, _} = ipto:start_link(),
-    Tmp = filename:join([os:getenv("TMPDIR", "/tmp"), "ipto-configure-sdl.graphql"]),
-    Sdl = <<
-        "enum Attributes @attributeRegistry {\n"
-        "  thing @attribute(datatype: STRING, array: false, name: \"demo:file:thing\")\n"
-        "}\n"
-    >>,
-    ok = file:write_file(Tmp, Sdl),
-    try
-        {ok, Summary} = ipto:configure_graphql_sdl_file(Tmp),
-        AttrSummary = maps:get(attributes, Summary),
-        ?assertEqual(1, maps:get(created, AttrSummary))
-    after
-        _ = file:delete(Tmp)
+configure_graphql_sdl_file_test_() ->
+    require_graphql("configure_graphql_sdl_file", fun() ->
+        application:set_env(ipto, backend, memory),
+        {ok, _} = ipto:start_link(),
+        Tmp = filename:join([os:getenv("TMPDIR", "/tmp"), "ipto-configure-sdl.graphql"]),
+        Sdl = <<
+            "enum Attributes @attributeRegistry {\n"
+            "  thing @attribute(datatype: STRING, array: false, name: \"demo:file:thing\")\n"
+            "}\n"
+        >>,
+        ok = file:write_file(Tmp, Sdl),
+        try
+            {ok, Summary} = ipto:configure_graphql_sdl_file(Tmp),
+            AttrSummary = maps:get(attributes, Summary),
+            ?assertEqual(1, maps:get(created, AttrSummary))
+        after
+            _ = file:delete(Tmp)
+        end
+    end).
+
+-spec require_graphql(string(), fun(() -> term())) -> term().
+require_graphql(Name, Fun) ->
+    case code:ensure_loaded(graphql) of
+        {module, graphql} ->
+            {Name, Fun};
+        _ ->
+            {Name ++ " (graphql_erl dependency not loaded in this profile)", ?_test(ok)}
     end.
 
 -spec has_error_code([map()], atom()) -> boolean().

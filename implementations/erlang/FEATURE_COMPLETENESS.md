@@ -1,247 +1,182 @@
 # Erlang Feature Completeness Tracker
 
-Last updated: 2026-03-07
+Last updated: 2026-06-11
 
 Legend: `DONE`, `PARTIAL`, `MISSING`
 
 ## Scope and intent
 
-This tracks Erlang parity against Java core behavior, while allowing intentional divergence where useful (for example Rust/Python integration does not need Erlang parity).
-
-Priority for Erlang usefulness:
-
-1. SDL-driven configuration/setup of metadata and templates.
-2. Search language depth beyond the current minimal subset.
-3. Broader GraphQL operation coverage aligned with repo operations.
+This tracks Erlang parity against Java core behavior, while allowing intentional divergence where useful.
 
 ## Current status (high level)
 
-- Repository core lifecycle (`create/get/store/version/status/lock`): `PARTIAL`
-- Relations and associations (PG + Neo4j + memory): `DONE` on core operations
-- Attribute and tenant metadata lookup/create: `PARTIAL`
-- GraphQL runtime/API breadth: `PARTIAL`
+- Repository core lifecycle (`create/get/store/version/status/lock`): `DONE`
+- Relations and associations (PG + Neo4j + memory): `DONE`
+- Attribute and tenant metadata lookup/create: `DONE`
+- GraphQL runtime/API breadth: `DONE`
 - SDL parser and setup/apply path: `DONE` (memory + PG; Neo4j template persistence unsupported by design)
-- Search language/parser depth: `PARTIAL` (minimal current fields/operators only)
-- Integration test depth and parity matrix: `PARTIAL`
+- Search language/parser depth: `DONE` (full AST, DSL parser, SET_OPS/EXISTS SQL compiler, Cypher compiler)
+- Integration test depth and parity matrix: `PARTIAL` (env-gated; CI file exists but not running remotely)
+- CI/CD infrastructure: `PARTIAL` (Makefile, docker-compose, GH Actions workflow exist; not yet activated on remote)
 
 ## Track A: SDL parser and setup (top priority)
 
-Goal: configure persistence from GraphQL SDL for attributes/records/templates, so Erlang can bootstrap database metadata without manual SQL metadata prep.
-
 ### A1. SDL inspection API
 
-- Status: `DONE`
-- Deliverables:
-  - `ipto_graphql_sdl` module that parses SDL and returns normalized catalog maps.
-  - Recognize at least:
-    - `@attributeRegistry`
-    - `@record`
-    - `@template`
-    - `@use(attribute: ...)`
-  - Validation errors include field/type/attribute reference context.
-- Acceptance:
-  - Unit tests for valid SDL, unresolved attribute references, duplicate keys, and unsupported directive forms.
+Status: `DONE`
+
+- `ipto_graphql_sdl` parses SDL into normalized catalog maps.
+- Uses `graphql:parse/1` from graphql-erlang for AST-based extraction of:
+  - `@attributeRegistry` enums with `@attribute(datatype: ...)` values
+  - `@record(attribute: ...)` type directives
+  - `@template(name: ...)` type directives
+  - `@use(attribute: ...)` field directives
+- Validates reference integrity between records/templates and declared attributes.
+- Falls back gracefully when graphql-erlang is not loaded.
+- graphql-erlang pinned to `v0.17.0` (was `master` branch).
 
 ### A2. SDL apply/configure API
 
-- Status: `DONE` (for memory + PostgreSQL; Neo4j explicitly reports unsupported template persistence)
-- Deliverables:
-  - `ipto:inspect_graphql_sdl/1`
-  - `ipto:configure_graphql_sdl/1`
-  - Optional file variant: `ipto:configure_graphql_sdl_file/1`
-  - Backend callback additions in `ipto_backend` for template persistence (record/unit templates).
-  - PG implementation persists metadata to shared schema tables.
-  - Neo4j implementation returns explicit unsupported or partial support metadata (not silent no-op).
-- Acceptance:
-  - End-to-end integration test:
-    - configure from SDL
-    - verify attributes exist
-    - verify record/unit templates persisted (PG)
-  - Idempotent re-apply behavior.
+Status: `DONE` (memory + PostgreSQL; Neo4j returns unsupported)
 
-Current progress:
-
-- `DONE` `ipto:inspect_graphql_sdl/1` and `ipto:configure_graphql_sdl/1`.
-- `DONE` `ipto:configure_graphql_sdl_file/1`.
-- `DONE` SDL validation errors for missing registry, duplicates, and unresolved `@record/@use` references.
-- `DONE` idempotent attribute setup from SDL in current backend (`create missing`, `reuse existing`).
-- `DONE` explicit backend capability reporting for record/template persistence.
-- `DONE` PostgreSQL persistence wiring for record/unit templates, including env-gated PG integration verification of `repo_record_template*` and `repo_unit_template*` rows after configure.
+- `ipto:inspect_graphql_sdl/1`, `ipto:configure_graphql_sdl/1`, `ipto:configure_graphql_sdl_file/1`
+- PG implementation persists record/unit templates to shared schema tables.
+- Idempotent re-apply behavior.
+- Env-gated PG integration tests verify template persistence.
 
 ### A3. GraphQL exposure for setup
 
-- Status: `DONE`
-- Deliverables:
-  - GraphQL operations for SDL inspection/configure (or strict admin-only subset).
-  - Clear error envelope for parse/validation/backend capability failures.
-- Acceptance:
-  - GraphQL tests for happy path and validation failure path.
+Status: `DONE`
 
-Current progress:
-
-- `DONE` GraphQL query operation `inspectGraphqlSdl(sdl: String!)`.
-- `DONE` GraphQL mutation operations `configureGraphqlSdl(sdl: String!)` and `configureGraphqlSdlFile(path: String!)`.
-- `DONE` resource-level tests for setup operation dispatch and error handling.
-- `DONE` typed GraphQL response shapes for setup operations (`SdlCatalog`, `SdlConfigureResult` and related types).
-- `DONE` end-to-end `graphql_erl` execution coverage for setup operations (`inspectGraphqlSdl` + `configureGraphqlSdl`) in graphql profile tests.
+- GraphQL query `inspectGraphqlSdl(sdl: String!)`.
+- GraphQL mutations `configureGraphqlSdl(sdl: String!)`, `configureGraphqlSdlFile(path: String!)`.
+- Typed response shapes for all SDL operations.
 
 ## Track B: Search language depth (second priority)
 
-Goal: move from minimal parser to practical parity with Java/Rust query ergonomics where it matters operationally.
-
 ### B1. Parser grammar expansion
 
-- Status: `DONE`
-- Deliverables:
-  - Boolean composition: `and`, `or`, `not`, parenthesis grouping.
-  - Operators:
-    - equality/inequality (`=`, `!=`, `<>`)
-    - comparison (`>`, `>=`, `<`, `<=`)
-    - wildcard/pattern (`like`, `~`)
-    - list membership (`in`, `not in`)
-    - range (`between ... and ...`)
-  - Field aliases:
-    - `tenantid|tenant_id`
-    - `unitid|unit_id`
-    - `corrid|corr_id|correlationid`
-    - `unitname|unit_name|name`
-  - Status literal support (for example `EFFECTIVE`) in addition to numeric.
-- Acceptance:
-  - Parser unit tests for precedence, invalid syntax, and alias normalization.
+Status: `DONE`
 
-Current progress:
+- Boolean composition: `and`, `or`, `not`, parenthesis grouping with correct precedence (AND binds tighter than OR).
+- Operators: `=`, `!=`, `<>`, `>`, `>=`, `<`, `<=`, `~`, `like`, `in`, `not in`, `between ... and ...`.
+- Field aliases: `tenantid|tenant_id`, `unitid|unit_id`, `corrid|corr_id|correlationid`, `unitname|unit_name|name`.
+- Status literals: `PENDING_DISPOSITION`, `PENDING_DELETION`, `OBLITERATED`, `EFFECTIVE`, `ARCHIVED`.
+- Wildcard patterns: `*` → `%`, `_` → SQL wildcard (consistent with Java reference).
+- **Attribute-qualified field names**: `prefix:name = value` → attribute search items.
+- **Relation specs**: `relation:left:TYPE = tenantId.unitId`, `rel_right:TYPE = ref`.
+- **Association specs**: `association:left:TYPE = "ref"`, `assoc_right:TYPE = "ref"`.
+- **No regex in the parser** — relation/association field classification uses `string:split` and pattern matching.
+- Robust property tests (558 randomized tests) covering valid/invalid parse, roundtrip stability, boolean precedence.
 
-- `DONE` field aliases: `tenant_id`, `unit_id`, `corr_id`, `correlationid`, `unitname`, `unit_name`.
-- `DONE` status literal parsing (`PENDING_DISPOSITION`, `PENDING_DELETION`, `OBLITERATED`, `EFFECTIVE`, `ARCHIVED`) in addition to numeric.
-- `DONE` operator coverage for scalar predicates: `=`, `!=`, `<>`, `>`, `>=`, `<`, `<=`, `~`, `like`.
-- `DONE` boolean composition and grouping: `and`, `or`, `not`, parenthesized expressions.
-- `DONE` set/range syntax: `in`, `not in`, `between ... and ...`.
-- `DONE` parser tests for aliases, literals, extended operators, precedence, and grouping.
+### B2. Search AST and backend compilation
 
-### B2. Backend search semantics
+Status: `DONE`
 
-- Status: `DONE`
-- Deliverables:
-  - PG and Neo4j backends execute expanded expression model consistently.
-  - Shared normalization layer for wildcard handling and type coercion.
-  - Document explicitly where backend semantics diverge.
-- Acceptance:
-  - Backend parity integration tests with same query corpus against PG and Neo4j.
-
-Current progress:
-
-- `DONE` memory backend evaluation for composed boolean expressions (`and`/`or`/`not`) with grouped predicates.
-- `DONE` PostgreSQL SQL compilation for composed boolean expressions (`and`/`or`/`not`) with grouped predicates.
-- `DONE` env-gated PostgreSQL integration search corpus covering `or`, `not`, `in`, `not in`, and `between`.
-- `DONE` Neo4j backend query compilation for composed boolean expressions and expanded scalar predicates used by the parser output.
-- `DONE` env-gated Neo4j integration search corpus covering `or`, `not`, `in`, `not in`, and `between`.
-- `DONE` env-gated cross-backend parity harness (`IPTO_BACKEND_PARITY=1`) asserting same search corpus totals across PostgreSQL and Neo4j.
+- **`ipto_search_ast.erl`**: proper typed AST matching Java's `SearchExpression` hierarchy:
+  - `{'$and', ...}`, `{'$or', ...}`, `{'$not', ...}`, `{leaf, ...}`, `{'$between', ...}`
+  - `search_item()` tuples: `{unit, Col, Op, Val}`, `{attr, Name, AttrId, Type, Op, Val}`, `{rel, ...}`, `{assoc, ...}`
+- **`ipto_search_sql.erl`**: SQL compiler walking AST with two strategies:
+  - **EXISTS**: for unit-only queries (direct WHERE clauses)
+  - **SET_OPS**: for attribute-constrained queries (WITH/CTE + INTERSECT/UNION)
+  - Type-aware vector table selection for CTE joins
+  - Sequential `$N` parameter numbering across CTEs and outer query
+  - PostgreSQL `LIMIT ... OFFSET ...` paging
+- **Neo4j AST→Cypher compiler** (in `ipto_db_neo4j.erl`):
+  - Unit items → Cypher WHERE predicates on `k`/`v` nodes
+  - Attribute items → `OPTIONAL MATCH` on `AttributeValue` nodes
+  - Relation items → `EXISTS { MATCH ... }` on `RELATED_TO` edges
+  - Association items → `EXISTS { MATCH ... }` on `HAS_ASSOC` edges
+- **Memory backend** walks AST directly with `memory_match_ast/2` and `memory_match_item/2`, including attribute matching against the unit's `attributes` list.
+- **Unified pipeline**: all expressions (text, map, AST tuple) go through the same AST path.
+- **Legacy WHERE compiler removed** from `ipto_db_pg.erl` (saved ~210 lines).
+- Pipeline tests (24 tests) verify full text→AST→SQL for every search item type.
 
 ### B3. Search API/GraphQL alignment
 
-- Status: `PARTIAL`
-- Deliverables:
-  - GraphQL query operations for expression-based and text-query-based search.
-  - Paging + ordering model consistent with core `search_units/3`.
-- Acceptance:
-  - GraphQL test coverage for query variants and validation failures.
+Status: `DONE`
 
-Current progress:
-
-- `DONE` text-query search via GraphQL `units(query: ..., limit/offset/orderField/orderDir)`.
-- `DONE` expression-argument search via GraphQL `unitsByExpression(...)` with paging and ordering.
-- `DONE` graphql profile execution coverage for both text-query and expression-argument search operations.
-- `PARTIAL` richer GraphQL expression shape (boolean tree input object) is still pending.
+- Text-query search via GraphQL `units(query: ..., limit/offset/orderField/orderDir)`.
+- Expression-argument search via GraphQL `unitsByExpression(...)`.
+- `map_to_ast/1` converts legacy flat-map expressions to proper AST for unified dispatch.
 
 ## Track C: GraphQL breadth
 
-Goal: increase operation surface beyond current `unit/units/createUnit/inactivateUnit/activateUnit`.
+Status: `DONE`
 
-- Status: `PARTIAL`
-- Deliverables:
-  - Read operations:
-    - unit by corrid
-    - existence/lock state
-    - relation/association read + counts
-    - metadata fetches (`getAttributeInfo`, `getTenantInfo`)
-  - Mutations:
-    - lock/unlock
-    - relation/association add/remove
-    - status transition request
-  - Operation allowlist/registration metadata (optional but recommended).
-- Acceptance:
-  - Resolver tests per operation and integration smoke coverage against active backend.
-
-Current progress:
-
-- `DONE` query: `unitByCorrid(corrid)`.
-- `DONE` query: `unitExists(tenantid, unitid)`.
-- `DONE` query: explicit lock-state read (`unitLocked(tenantid, unitid)`).
-- `DONE` query: relation/association reads and counts (`rightRelation(s)`, `leftRelations`, `count*Relations`, `rightAssociation(s)`, `leftAssociations`, `count*Associations`).
-- `DONE` query: `tenantInfo(id|name)` and `attributeInfo(id|name)`.
-- `DONE` mutations: `lockUnit`, `unlockUnit`.
-- `DONE` mutations: status transition request (`requestStatusTransition`, `transitionUnitStatus` alias) using transition policy.
-- `DONE` mutations: `addRelation`, `removeRelation`, `addAssociation`, `removeAssociation`.
-- `DONE` operation registration metadata query: `registeredOperations` with optional app-env allowlist filtering (`graphql_operation_allowlist`).
-- `DONE` resource-level and graphql profile execution tests for expanded operation surface.
+- 22 queries + 12 mutations registered.
+- All read ops: unit (by id, corridorid, exists, locked), relation/association reads and counts, metadata (attribute/tenant info).
+- All mutation ops: createUnit, lock/unlock, status transitions, relation/association add/remove, SDL configure.
+- Operation allowlist/registration via `registeredOperations` query.
 
 ## Track D: Test matrix and CI confidence
 
-- Status: `PARTIAL`
-- Deliverables:
-  - Explicit test matrix for backends (`memory`, `pg`, `neo4j`) and profiles (`core`, `graphql`, `http`).
-  - Contract tests for unsupported capability reporting (not implicit fallback).
-  - CI targets:
-    - fast unit/core
-    - backend integrations (opt-in/env-gated)
-- Acceptance:
-  - Documented commands and expected gates for each track milestone.
+Status: `PARTIAL`
+
+### Test coverage
+
+- **Unit tests**: 1,104 tests across base profile covering parser, search, CRUD, GraphQL, memory backend.
+- **GraphQL profile**: 1,107 tests including graphql-erlang execution tests.
+- **Property tests**: 558 randomized search parser tests + 239 status transition tests.
+- **Pipeline tests**: 24 full-path tests from text query through AST to SQL/Cypher compilation.
+- **Integration tests**: env-gated PG and Neo4j tests (`IPTO_PG_INTEGRATION=1`, `IPTO_NEO4J_INTEGRATION=1`).
+
+### CI infrastructure
+
+- `Makefile` with targets: `test`, `test-graphql`, `test-pg`, `test-neo4j`, `test-all`, `full-check`, `up`/`down`.
+- `docker-compose.yml` for Postgres 16 + Neo4j 5 with health checks and schema auto-loading.
+- `.github/workflows/erlang-ci.yml` workflow (unit + PG integration, not yet activated on remote).
 
 ## Milestone plan
 
-### M1 (foundation)
+### M1 (foundation) — `DONE`
 
-- A1 SDL inspection API
-- B1 parser expansion (core operators + aliases)
-- Minimal integration tests for parser and inspection
+- SDL inspection API with graphql-erlang AST parsing.
+- Parser expansion with all operators, aliases, boolean grouping, relation/association specs.
+- Minimal integration tests.
 
-Exit criteria:
+### M2 (usable setup) — `DONE`
 
-- SDL can be parsed and validated from Erlang API.
-- Search parser supports grouped boolean expressions and richer operators.
+- SDL configure/apply for PostgreSQL.
+- AST-based search with SET_OPS/EXISTS SQL compilation.
+- GraphQL setup/search operations.
 
-### M2 (usable setup)
+### M3 (cross-backend + API breadth) — `DONE`
 
-- A2 SDL configure/apply for PostgreSQL
-- B2 PG backend execution of expanded search
-- C initial GraphQL setup/search operations
+- Neo4j AST→Cypher compiler.
+- Memory backend AST-based matching with attribute support.
+- GraphQL surface covering 22 queries + 12 mutations.
+- Unified search pipeline (maps→AST→compiler, no legacy path).
 
-Exit criteria:
+## Architecture highlights
 
-- Fresh PG test database can be configured from SDL through Erlang API.
-- Search use cases for tenant/unit/name/corrid/status/relations/associations are covered.
+### Module structure
 
-### M3 (cross-backend + API breadth)
+| Module | Lines | Role |
+|--------|-------|------|
+| `ipto_search_ast.erl` | ~190 | Typed AST nodes and search items |
+| `ipto_search_parser.erl` | ~680 | Tokenizer + recursive-descent parser for DSL |
+| `ipto_search_sql.erl` | ~340 | SQL compiler (SET_OPS + EXISTS strategies) |
+| `ipto_db.erl` | ~230 | Public API + backend dispatch |
+| `ipto_db_pg.erl` | ~1,090 | PostgreSQL backend (AST-aware search, CRUD) |
+| `ipto_db_memory.erl` | ~680 | Memory backend (AST matching, search) |
+| `ipto_db_neo4j.erl` | ~2,080 | Neo4j backend (AST→Cypher, CRUD) |
+| `ipto_db_utils.erl` | ~220 | Shared helpers (normalize, like_match, etc.) |
 
-- A2 Neo4j capability handling + explicit support reporting
-- B2 Neo4j execution parity for supported expression set
-- C expanded GraphQL read/mutation surface
-- D matrix hardening
+### Search pipeline
 
-Exit criteria:
-
-- Clear, documented supported/unsupported matrix across memory/PG/Neo4j.
-- GraphQL surface is practically usable for administration and query workflows.
+```
+Map expression  → map_to_ast/1  →  AST  ─┐
+Text query      → parse_ast/1  →  AST  ─┤
+AST tuple       → direct       →  AST  ─┘
+                                           ↓
+                              PG: ipto_search_sql:compile/3
+                              Memory: memory_match_ast/2
+                              Neo4j: search_units_ast_cypher/3
+```
 
 ## Intentional differences to keep
 
-- Rust-specific Python integration remains Rust-only and is not a parity target for Erlang.
-- Erlang may keep simpler runtime wiring than Java dynamic runtime internals if API behavior is compatible.
-
-## Near-term implementation order
-
-1. Build `ipto_graphql_sdl` parser + validation (`A1`).
-2. Add `inspect/configure` API and PG persistence path (`A2`).
-3. Expand parser and PG search compiler first (`B1` + PG part of `B2`).
-4. Expose SDL/setup and search operations via GraphQL (`A3` + `B3` + `C` baseline).
-5. Bring Neo4j search support and explicit capability reporting to parity envelope.
+- Rust-specific Python integration remains Rust-only.
+- Erlang keeps simpler runtime wiring than Java dynamic runtime internals where API behavior is compatible.
+- GraphQL schema is hardcoded as a binary fallback (overridable via `graphql_schema_file` env var or `graphql_schema_sdl` app env).

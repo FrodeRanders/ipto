@@ -60,7 +60,8 @@
     inspect_graphql_sdl/1,
     configure_graphql_sdl/1,
     configure_graphql_sdl_file/1,
-    sync/0
+    sync/0,
+    allowed_transition/2
 ]).
 
 %% --------------------------------------------------------------------
