@@ -300,8 +300,8 @@ classify_field_ast(Field) ->
 classify_relation_spec(Field) ->
     case split_spec_field(Field) of
         [Prefix, Direction, TypeStr | _] when Prefix =:= "relation"; Prefix =:= "rel" ->
-            case {resolve_direction(Direction), string:to_integer(TypeStr)} of
-                {{ok, Dir}, {RT, []}} ->
+            case {resolve_direction(Direction), resolve_relation_type(TypeStr)} of
+                {{ok, Dir}, {ok, RT}} ->
                     {ok, fun(_F, eq, RefString) ->
                         case parse_unit_ref(RefString) of
                             {ok, Ref} -> {ok, ipto_search_ast:rel_item(Dir, RT, Ref)};
@@ -318,8 +318,8 @@ classify_relation_spec(Field) ->
 classify_association_spec(Field) ->
     case split_spec_field(Field) of
         [Prefix, Direction, TypeStr | _] when Prefix =:= "association"; Prefix =:= "assoc" ->
-            case {resolve_direction(Direction), string:to_integer(TypeStr)} of
-                {{ok, Dir}, {AT, []}} ->
+            case {resolve_direction(Direction), resolve_association_type(TypeStr)} of
+                {{ok, Dir}, {ok, AT}} ->
                     {ok, fun(_F, eq, RefString) ->
                         {ok, ipto_search_ast:assoc_item(Dir, AT, to_binary(RefString))};
                         (_F, _Op, _V) -> {error, {unsupported_operator_for_association, _Op}}
@@ -327,6 +327,48 @@ classify_association_spec(Field) ->
                 _ -> undefined
             end;
         _ -> undefined
+    end.
+
+-spec resolve_relation_type(string()) -> {ok, pos_integer()} | error.
+resolve_relation_type(TypeStr) ->
+    case string:to_integer(TypeStr) of
+        {N, []} -> {ok, N};
+        _ ->
+            Normalized = normalize_type_token(TypeStr, "_RELATION"),
+            case Normalized of
+                "PARENT_CHILD_RELATION" -> {ok, 1};
+                "PARENTCHILD_RELATION" -> {ok, 1};
+                "PARENT_RELATION" -> {ok, 1};
+                "CHILD_RELATION" -> {ok, 1};
+                "REPLACEMENT_RELATION" -> {ok, 3};
+                "REPLACE_RELATION" -> {ok, 3};
+                _ -> error
+            end
+    end.
+
+-spec resolve_association_type(string()) -> {ok, pos_integer()} | error.
+resolve_association_type(TypeStr) ->
+    case string:to_integer(TypeStr) of
+        {N, []} -> {ok, N};
+        _ ->
+            Normalized = normalize_type_token(TypeStr, "_ASSOCIATION"),
+            case Normalized of
+                "CASE_ASSOCIATION" -> {ok, 2};
+                "CASEASSOC_ASSOCIATION" -> {ok, 2};
+                "CASE_ASSOC_ASSOCIATION" -> {ok, 2};
+                _ -> error
+            end
+    end.
+
+-spec normalize_type_token(string(), string()) -> string().
+normalize_type_token(Raw, Suffix) ->
+    S0 = string:trim(Raw),
+    S1 = string:replace(S0, "-", "_", all),
+    S2 = string:replace(S1, " ", "_", all),
+    S3 = string:uppercase(S2),
+    case string:find(S3, Suffix, trailing) of
+        nomatch -> S3 ++ Suffix;
+        _ -> S3
     end.
 
 -spec split_spec_field(string()) -> [string()].

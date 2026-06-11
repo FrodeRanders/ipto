@@ -155,6 +155,16 @@ parse_invalid_field_returns_error_test() ->
 parse_invalid_operator_for_rel_test() ->
     {error, _} = ipto_search_parser:parse_ast("relation:left:5 > 1.42").
 
+parse_symbolic_rel_type_test() ->
+    {ok, Expr} = ipto_search_parser:parse_ast("relation:left:parent-child = 1.42"),
+    [Item] = ipto_search_ast:collect_leaves(Expr),
+    ?assertEqual(1, ipto_search_ast:item_rel_type(Item)).
+
+parse_symbolic_assoc_type_test() ->
+    {ok, Expr} = ipto_search_parser:parse_ast("association:right:case = \"ref-123\""),
+    [Item] = ipto_search_ast:collect_leaves(Expr),
+    ?assertEqual(2, ipto_search_ast:item_assoc_type(Item)).
+
 sql_set_ops_produces_sequential_params_test() ->
     {ok, Expr} = ipto_search_parser:parse_ast("tenantid = 1 and demo:color = \"red\""),
     Compiled = ipto_search_sql:compile(Expr, {created, desc}, #{limit => 5}),
