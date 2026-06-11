@@ -1,0 +1,67 @@
+name: Java CI
+
+on:
+  push:
+    paths:
+      - 'implementations/java/**'
+      - 'shared/db/postgresql/**'
+  pull_request:
+    paths:
+      - 'implementations/java/**'
+      - 'shared/db/postgresql/**'
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Compile
+        working-directory: implementations/java
+        run: mvn -q compile
+      - name: Unit tests (repo)
+        working-directory: implementations/java
+        run: mvn -q -pl repo test
+      - name: Unit tests (graphql)
+        working-directory: implementations/java
+        run: mvn -q -pl graphql test
+
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: repo
+          POSTGRES_PASSWORD: repo
+          POSTGRES_DB: repo
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+      - name: Load PG schema
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+            -f shared/db/postgresql/schema.sql
+          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+            -f shared/db/postgresql/procedures.sql
+      - name: Integration tests
+        working-directory: implementations/java
+        run: mvn -q -pl it verify
