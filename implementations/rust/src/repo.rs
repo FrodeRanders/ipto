@@ -24,7 +24,7 @@ use crate::graphql_sdl::{
 use crate::model::{
     Association, Relation, SearchOrder, SearchPaging, SearchResult, UnitRef, VersionSelector,
 };
-use crate::search_query::{parse_search_query, parse_search_query_strict};
+use crate::search_query::{parse_search_query, parse_search_query_ast, parse_search_query_ast_strict};
 
 /// High-level service layer for repository operations.
 ///
@@ -236,8 +236,15 @@ impl RepoService {
         order: SearchOrder,
         paging: SearchPaging,
     ) -> RepoResult<SearchResult> {
-        let expression = parse_search_query(query)?;
-        self.search_units(expression, order, paging)
+        let expr = parse_search_query_ast(query)?;
+        match self.backend.search_units_ast(&expr, order.clone(), paging.clone()) {
+            Ok(result) => Ok(result),
+            Err(RepoError::Unsupported(_)) => {
+                let expression = parse_search_query(query)?;
+                self.search_units(expression, order, paging)
+            }
+            Err(e) => Err(e),
+        }
     }
 
     /// Parse and run the search query language in strict field mode.
@@ -250,8 +257,8 @@ impl RepoService {
         order: SearchOrder,
         paging: SearchPaging,
     ) -> RepoResult<SearchResult> {
-        let expression = parse_search_query_strict(query)?;
-        self.search_units(expression, order, paging)
+        let expr = parse_search_query_ast_strict(query)?;
+        self.backend.search_units_ast(&expr, order, paging)
     }
 
     /// Set a unit status directly.

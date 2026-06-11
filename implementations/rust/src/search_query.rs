@@ -18,6 +18,7 @@
 use serde_json::{Value, json};
 
 use crate::backend::{RepoError, RepoResult};
+use crate::search_ast::{Direction, Operator, SearchExpr, SearchItem};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum LogicalOp {
@@ -77,6 +78,256 @@ fn parse_search_query_with_mode(query: &str, strict_fields: bool) -> RepoResult<
         ));
     }
     Ok(to_json_expr(expr))
+}
+
+pub(crate) fn parse_search_query_ast(query: &str) -> RepoResult<SearchExpr> {
+    parse_search_query_ast_with_mode(query, false)
+}
+
+pub(crate) fn parse_search_query_ast_strict(query: &str) -> RepoResult<SearchExpr> {
+    parse_search_query_ast_with_mode(query, true)
+}
+
+fn parse_search_query_ast_with_mode(query: &str, strict_fields: bool) -> RepoResult<SearchExpr> {
+    let tokens = tokenize(query)?;
+    let mut parser = Parser {
+        tokens,
+        index: 0,
+        strict_fields,
+    };
+    let expr = parser.parse_expression()?;
+    if parser.peek().is_some() {
+        return Err(RepoError::InvalidInput(
+            "unexpected token after query expression".to_string(),
+        ));
+    }
+    expr_node_to_search_expr(expr)
+}
+
+fn expr_node_to_search_expr(node: ExprNode) -> RepoResult<SearchExpr> {
+    match node {
+        ExprNode::And(l, r) => Ok(SearchExpr::And(
+            Box::new(expr_node_to_search_expr(*l)?),
+            Box::new(expr_node_to_search_expr(*r)?),
+        )),
+        ExprNode::Or(l, r) => Ok(SearchExpr::Or(
+            Box::new(expr_node_to_search_expr(*l)?),
+            Box::new(expr_node_to_search_expr(*r)?),
+        )),
+        ExprNode::Not(inner) => Ok(SearchExpr::Not(Box::new(expr_node_to_search_expr(*inner)?))),
+        ExprNode::Leaf(val) => json_leaf_to_search_item(&val).map(SearchExpr::Leaf),
+    }
+}
+
+fn json_leaf_to_search_item(leaf: &Value) -> RepoResult<SearchItem> {
+    if let Some(obj) = leaf.as_object() {
+        if let Some(v) = obj.get("predicates") {
+            if let Some(arr) = v.as_array() {
+                if let Some(first) = arr.first() {
+                    return predicate_json_to_search_item(first);
+                }
+            }
+        }
+        if let Some(v) = obj.get("relation") {
+            return relation_json_to_search_item(v);
+        }
+        if let Some(v) = obj.get("association") {
+            return association_json_to_search_item(v);
+        }
+        if let Some(v) = obj.get("attribute_cmp") {
+            return attr_json_to_search_item(v);
+        }
+    }
+    Ok(SearchItem::Unit {
+        column: "tenantid".to_string(),
+        operator: Operator::Eq,
+        value: json!(1),
+    })
+}
+
+fn predicate_json_to_search_item(pred: &Value) -> RepoResult<SearchItem> {
+    let field = pred["field"].as_str().unwrap_or("");
+    let op = parse_operator(pred["op"].as_str().unwrap_or("="));
+    let value = pred.get("value").cloned().unwrap_or(Value::Null);
+
+    let column = match field.to_ascii_lowercase().as_str() {
+        "tenantid" | "tenant_id" => "tenantid",
+        "unitid" | "unit_id" => "unitid",
+        "unitver" | "unit_ver" => "unitver",
+        "status" => "status",
+        "name" | "unitname" | "unit_name" => "unitname",
+        "corrid" | "correlationid" | "corr_id" => "corrid",
+        "created" => "created",
+        "modified" => "modified",
+        _ => field,
+    };
+
+    Ok(SearchItem::Unit {
+        column: column.to_string(),
+        operator: op,
+        value,
+    })
+}
+
+fn relation_json_to_search_item(rel: &Value) -> RepoResult<SearchItem> {
+    let rel_type: i64 = rel["type"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let side = match rel["side"].as_str().unwrap_or("right") {
+        "left" => Direction::Left,
+        _ => Direction::Right,
+    };
+    let unit_ref = rel["unit"].as_str().unwrap_or("1.0");
+    let (tenant_id, unit_id) = parse_unit_ref(unit_ref);
+
+    Ok(SearchItem::Rel {
+        direction: side,
+        rel_type,
+        tenant_id,
+        unit_id,
+    })
+}
+
+fn association_json_to_search_item(assoc: &Value) -> RepoResult<SearchItem> {
+    let assoc_type: i64 = assoc["type"]
+        .as_str()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
+    let side = match assoc["side"].as_str().unwrap_or("right") {
+        "left" => Direction::Left,
+        _ => Direction::Right,
+    };
+    let ref_string = assoc["reference"].as_str().unwrap_or("").to_string();
+
+    Ok(SearchItem::Assoc {
+        direction: side,
+        assoc_type,
+        ref_string,
+    })
+}
+
+fn attr_json_to_search_item(attr: &Value) -> RepoResult<SearchItem> {
+    let name = attr["name_or_id"]
+        .as_str()
+        .or_else(|| attr["attrid"].as_str())
+        .or_else(|| attr["name"].as_str())
+        .unwrap_or("")
+        .to_string();
+    let op = parse_operator(attr["op"].as_str().unwrap_or("eq"));
+    let value = attr.get("value").cloned().unwrap_or(Value::Null);
+
+    Ok(SearchItem::Attr {
+        name,
+        attr_id: None,
+        attr_type: crate::search_ast::AttrType::String,
+        operator: op,
+        value,
+    })
+}
+
+fn parse_operator(op: &str) -> Operator {
+    match op.to_ascii_lowercase().as_str() {
+        "eq" | "=" => Operator::Eq,
+        "neq" | "!=" | "<>" => Operator::Ne,
+        "gt" | ">" => Operator::Gt,
+        "gte" | ">=" => Operator::Gte,
+        "lt" | "<" => Operator::Lt,
+        "lte" | "<=" => Operator::Lte,
+        "like" | "ilike" | "~" => Operator::Like,
+        _ => Operator::Eq,
+    }
+}
+
+fn parse_unit_ref(unit_ref: &str) -> (i64, i64) {
+    if let Some((tenant_str, unit_str)) = unit_ref.split_once('.') {
+        let tid = tenant_str.parse().unwrap_or(1);
+        let uid = unit_str.parse().unwrap_or(0);
+        (tid, uid)
+    } else {
+        let uid = unit_ref.parse().unwrap_or(0);
+        (1, uid)
+    }
+}
+
+pub(crate) fn search_expr_to_json(expr: &SearchExpr) -> Value {
+    match expr {
+        SearchExpr::And(l, r) => json!({
+            "and": [
+                search_expr_to_json(l),
+                search_expr_to_json(r),
+            ]
+        }),
+        SearchExpr::Or(l, r) => json!({
+            "or": [
+                search_expr_to_json(l),
+                search_expr_to_json(r),
+            ]
+        }),
+        SearchExpr::Not(inner) => json!({
+            "not": search_expr_to_json(inner),
+        }),
+        SearchExpr::Between(lower, upper) => json!({
+            "and": [
+                search_item_to_predicate_json(lower),
+                search_item_to_predicate_json(upper),
+            ]
+        }),
+        SearchExpr::Leaf(item) => search_item_to_predicate_json(item),
+    }
+}
+
+fn search_item_to_predicate_json(item: &SearchItem) -> Value {
+    match item {
+        SearchItem::Unit { column, operator, value } => {
+            let col = match column.as_str() {
+                "unitname" | "name" => "name",
+                other => other,
+            };
+            json!({
+                "predicates": [{
+                    "field": col,
+                    "op": operator.to_string(),
+                    "value": value,
+                }]
+            })
+        }
+        SearchItem::Attr { name, operator, value, .. } => {
+            json!({
+                "attribute_cmp": {
+                    "name_or_id": name,
+                    "op": operator.to_string(),
+                    "value": value,
+                }
+            })
+        }
+        SearchItem::Rel { direction, rel_type, tenant_id, unit_id } => {
+            let side = match direction {
+                Direction::Left => "left",
+                Direction::Right => "right",
+            };
+            json!({
+                "relation": {
+                    "type": rel_type.to_string(),
+                    "side": side,
+                    "unit": format!("{}.{}", tenant_id, unit_id),
+                }
+            })
+        }
+        SearchItem::Assoc { direction, assoc_type, ref_string } => {
+            let side = match direction {
+                Direction::Left => "left",
+                Direction::Right => "right",
+            };
+            json!({
+                "association": {
+                    "type": assoc_type.to_string(),
+                    "side": side,
+                    "reference": ref_string,
+                }
+            })
+        }
+    }
 }
 
 struct Parser {

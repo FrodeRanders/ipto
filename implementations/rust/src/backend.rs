@@ -9,6 +9,7 @@
 use crate::model::{
     Association, Relation, SearchOrder, SearchPaging, SearchResult, Unit, UnitRef, VersionSelector,
 };
+use crate::search_ast::SearchExpr;
 use serde_json::Value;
 use thiserror::Error;
 
@@ -192,6 +193,21 @@ pub trait Backend: Send + Sync {
     /// Clear backend-local caches.
     fn flush_cache(&self) -> RepoResult<()> {
         Ok(())
+    }
+
+    /// Search latest unit versions using a typed search AST.
+    ///
+    /// Default implementation converts the AST to the legacy JSON format and
+    /// delegates to [`Backend::search_units`]. Backends with native AST
+    /// support override this for better type safety and SQL generation.
+    fn search_units_ast(
+        &self,
+        expr: &SearchExpr,
+        order: SearchOrder,
+        paging: SearchPaging,
+    ) -> RepoResult<SearchResult> {
+        let expression = crate::search_query::search_expr_to_json(expr);
+        self.search_units(expression, order, paging)
     }
 
     /// Return a lightweight health payload.

@@ -521,6 +521,34 @@ impl Backend for Neo4jBackend {
         })
     }
 
+    fn search_units_ast(
+        &self,
+        expr: &crate::search_ast::SearchExpr,
+        order: SearchOrder,
+        paging: SearchPaging,
+    ) -> RepoResult<SearchResult> {
+        let limit = if paging.limit > 0 { Some(paging.limit) } else { None };
+        let offset = if paging.offset >= 0 { Some(paging.offset) } else { None };
+        let order_pair = (order.field.clone(), if order.descending { "DESC".to_string() } else { "ASC".to_string() });
+
+        let compiled = crate::search_cypher::compile(expr, &order_pair, limit, offset);
+        let params_json = serde_json::Value::Object(compiled.params);
+
+        let count_rows = self.query(&compiled.count_query, params_json.clone())?;
+        let total_hits = extract_i64(count_rows.first().and_then(|r| r.first())).unwrap_or(0);
+
+        let data_rows = self.query(&compiled.query, params_json)?;
+        let results = data_rows
+            .iter()
+            .map(|row| row_to_unit(row.as_slice()))
+            .collect::<RepoResult<Vec<Unit>>>()?;
+
+        Ok(SearchResult {
+            total_hits,
+            results,
+        })
+    }
+
     fn add_relation(&self, left: UnitRef, relation_type: i32, right: UnitRef) -> RepoResult<()> {
         let rows = self.query(
             "MATCH (a:UnitKernel {tenantid: $tenantid, unitid: $unitid}) MATCH (b:UnitKernel {tenantid: $reltenantid, unitid: $relunitid}) MERGE (a)-[:RELATED_TO {reltype: $reltype, reltenantid: $reltenantid, relunitid: $relunitid}]->(b) RETURN 1",

@@ -1,6 +1,6 @@
 # Rust Feature Completeness Tracker (vs Java `implementations/java/repo`)
 
-Last updated: 2026-03-07
+Last updated: 2026-06-11
 
 Legend: `DONE`, `PARTIAL`, `MISSING`
 
@@ -18,8 +18,12 @@ It focuses on externally meaningful repository behavior (not Java-internal liste
 
 ## Search
 - `DONE` attribute-driven search entrypoint with paging + ordering
-- `PARTIAL` query language parity (Rust currently supports a practical subset of expression filters)
-- `MISSING` exact Java search strategy/behavior parity (set-op strategy and all expression types)
+- `DONE` query language parity — full DSL parser with boolean composition, all operators, field aliases, attribute-qualified names, relation/association specs, BETWEEN, IN/NOT IN
+- `DONE` typed search AST (`src/search_ast.rs`) matching Java's `SearchExpression` hierarchy (And/Or/Not/Between/Leaf with typed SearchItem variants for Unit/Attr/Rel/Assoc)
+- `DONE` SQL compiler (`src/search_sql.rs`) with SET_OPS (WITH/CTE + INTERSECT/UNION) and EXISTS strategies — matches Java's dual-strategy approach
+- `DONE` PostgresBackend overrides `search_units_ast` to use `search_sql::compile` directly, generating proper boolean-tree-aware WHERE clauses
+- `DONE` JSON→AST and AST→JSON conversion for backward compatibility with existing Python bindings and Neo4j backend
+- `PARTIAL` Neo4j backend currently uses default JSON-fallback (AST→JSON→Cypher); direct AST→Cypher compiler pending
 
 ## Relations and Associations
 - `DONE` add/remove relation
@@ -465,3 +469,21 @@ It focuses on externally meaningful repository behavior (not Java-internal liste
 1. Continue payload-shape parity hardening (remaining edge cases).
 2. Extend GraphQL schema/operation breadth further toward Java module parity (remaining tenant/attribute admin and lifecycle edges).
 3. Continue Java search-query parity nuances (status alias breadth, remaining expression aliases/operators, and strict-mode consistency checks).
+
+## Latest step (2026-06-11) — Typed search AST + SQL compiler
+
+- Created `src/search_ast.rs` with typed AST matching Java hierarchy:
+  - `SearchExpr`: And/Or/Not/Between/Leaf
+  - `SearchItem`: Unit/Attr/Rel/Assoc with typed operators and direction enums
+  - `AttrType`, `Operator`, `Direction` enums
+- Created `src/search_sql.rs` with dual-strategy SQL compiler:
+  - EXISTS: walks boolean tree producing proper WHERE clauses with AND/OR/NOT grouping
+  - SET_OPS: WITH/CTE + INTERSECT/UNION for attribute-constrained queries
+  - Sequential `$N` parameter numbering across CTEs and outer query
+- Added `parse_search_query_ast` to parser for direct AST production
+- Added `search_expr_to_json` for backward-compatible AST→JSON conversion
+- Added `search_units_ast` to Backend trait with default JSON-fallback
+- PostgresBackend overrides `search_units_ast` using `search_sql::compile` directly
+- `RepoService::search_units_query` routes through AST path, falls back to JSON on Unsupported
+- 10 new SQL compiler unit tests validating EXISTS, SET_OPS, paging, NOT, OR, BETWEEN, rel/assoc
+- All 94 unit tests pass
