@@ -12,6 +12,9 @@ on:
       - 'shared/db/postgresql/**'
       - '.github/workflows/erlang-ci.yml'
 
+permissions:
+  contents: read
+
 jobs:
   unit:
     runs-on: ubuntu-latest

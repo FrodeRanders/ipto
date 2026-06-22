@@ -10,6 +10,9 @@ on:
       - 'implementations/java/**'
       - 'shared/db/postgresql/**'
 
+permissions:
+  contents: read
+
 jobs:
   unit:
     runs-on: ubuntu-latest
