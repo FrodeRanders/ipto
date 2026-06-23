@@ -16,11 +16,11 @@
     <!--<name>${project.groupId}:${project.artifactId}:${project.version}</name>-->
 
     <properties>
-        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
-        <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.36.1</quarkus.platform.version>
-        <smallrye-config.version>3.17.2</smallrye-config.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
+        <quarkus.platform.group-id>io.quarkus</quarkus.platform.group-id>
+        <quarkus.platform.version>3.37.0</quarkus.platform.version>
+        <smallrye-config.version>3.17.2</smallrye-config.version>
     </properties>
 
     <dependencyManagement>

@@ -29,8 +29,8 @@
         <guid-gen.version>5.2.0</guid-gen.version>
 
         <!-- JSON related -->
-        <jackson.version>3.1.4</jackson.version>
-        <networknt.version>3.0.3</networknt.version>
+        <jackson.version>3.2.0</jackson.version>
+        <networknt.version>3.0.5</networknt.version>
 
         <!-- GraphQL related -->
         <graphql-java.version>26.0</graphql-java.version>
@@ -49,7 +49,7 @@
         <antlr.version>4.13.2</antlr.version>
 
         <!-- db related -->
-        <hikari.version>7.0.2</hikari.version>
+        <hikari.version>7.1.0</hikari.version>
         <postgresql.version>42.7.11</postgresql.version>
         <db2.version>12.1.4.0</db2.version>
     </properties>

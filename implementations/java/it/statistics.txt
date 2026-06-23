@@ -1726,3 +1726,96 @@ repo_record_template_elements |               3 |                 0 |           
             repo_unit_version |               7 |         2,028,427 |          3,210 |         360 kB
 
 
+2026-06-23 23:47:05.540:
+===================================================================================================
+OS: Mac OS X 26.5.1 (aarch64) with 8 cores (physical and/or hyperthreaded)
+Phys memory: total=24 GiB free=107 MiB
+JVM: vm=OpenJDK 64-Bit Server VM (21.0.8+9-LTS) mem-total=68 MiB mem-free=14 MiB
+DB: PostgreSQL 18.4 (Debian 18.4-1.pgdg13+1) on aarch64-unknown-linux-gnu, compiled by gcc (Debian 14.2.0-19) 14.2.0, 64-bit
+
+Units: total=4037 locks=0 vectors=16331
+Values: string=14239 time=2034 integer=0 long=0 double=10 boolean=0 data=4 record=6220
+Assocs: internal=2020 external=0
+
+2026-06-23 23:47:05.543: 
+----------------+--------+-------+--------+-------+---------+-------------+----------
+    Measurement |  Count |   Min |    Max |  Mean |   CV(%) |  Total time    i.e.
+----------------+--------+-------+--------+-------+---------+-------------+----------
+create relation |   1010 |  0,31 |  18,44 |  0,76 |   81,13 |         890 |    890ms
+  custom search |      1 |  3,91 |   3,91 |  3,91 |     NaN |           4 |      4ms
+   event action |   1020 |  0,00 |   0,00 |  0,00 |  129,50 |           0 |         
+ resurrect unit |      2 |  1,88 |   1,91 |  1,90 |    1,35 |           4 |      4ms
+     store unit |   1020 |  0,54 |  18,38 |  1,18 |   54,15 |        1163 | 1s 163ms
+
+
+2026-06-23 23:47:05.546: Index behaviour: 
+------------------------------+-----------------+-------------------+----------------+----------------
+                    Tablename |  Total seq scan |  Total index scan |  Rows in table |  Size of table
+------------------------------+-----------------+-------------------+----------------+----------------
+               repo_attribute |               0 |             3,210 |              0 |          16 kB
+   repo_attribute_description |               0 |                 0 |              0 |     8192 bytes
+         repo_attribute_value |               0 |             8,079 |          3,208 |        1104 kB
+          repo_boolean_vector |               0 |                 0 |              0 |        0 bytes
+             repo_data_vector |               0 |                 0 |              0 |     8192 bytes
+           repo_double_vector |               0 |                 0 |              0 |     8192 bytes
+          repo_external_assoc |               0 |                 0 |              0 |        0 bytes
+          repo_integer_vector |               0 |                 0 |              0 |        0 bytes
+       repo_internal_relation |               0 |                 0 |            292 |         152 kB
+                    repo_lock |               0 |                 5 |              0 |     8192 bytes
+                     repo_log |               0 |                 0 |              0 |        0 bytes
+             repo_long_vector |               0 |                 0 |              0 |        0 bytes
+               repo_namespace |               0 |                 0 |              0 |     8192 bytes
+         repo_record_template |               0 |                 0 |              0 |     8192 bytes
+repo_record_template_elements |               0 |                 0 |              0 |     8192 bytes
+           repo_record_vector |               0 |                 0 |            864 |         336 kB
+           repo_string_vector |               0 |             2,231 |          3,821 |         824 kB
+                  repo_tenant |               0 |             1,026 |              0 |     8192 bytes
+             repo_time_vector |               0 |                 0 |            288 |         120 kB
+             repo_unit_kernel |               0 |             3,108 |          1,026 |         312 kB
+           repo_unit_template |               0 |                 0 |              0 |     8192 bytes
+  repo_unit_template_elements |               0 |                 0 |              0 |     8192 bytes
+            repo_unit_version |               0 |             4,698 |          1,030 |         360 kB
+
+
+2026-06-23 23:47:05.550: PostgreSQL statement stats:
+Top PostgreSQL statements by total time
+-------+----------+---------+--------+----------------------------------------------------------------------------------------------------------------------------------------------
+ Calls |  Total s |  Avg ms |   Rows |                                                                                                                                        Query
+-------+----------+---------+--------+----------------------------------------------------------------------------------------------------------------------------------------------
+ 1,010 |    0.319 |   0.316 |  1,010 | SELECT repo_ingest_attributes( v_tenantid, p_unitid, p_unitver, p_unit -> 'attributes', -- top-level attributes array NULL -- no parent (rec
+ 2,000 |    0.308 |   0.154 |  2,000 | SELECT repo_ingest_attributes( p_tenantid, p_unitid, p_unitver, v_children, v_valueid -- this record is now the parent )                    
+ 6,020 |    0.134 |   0.022 |  6,020 | INSERT INTO repo_attribute_value( tenantid, unitid, attrid, unitverfrom, unitverto ) VALUES ( p_tenantid, p_unitid, v_attrid, p_unitver, p_u
+ 3,000 |    0.044 |   0.015 |  3,000 | INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid) VALUES (p_parent_record_valueid, v_idx, v_attrid, v_valueid)          
+ 3,020 |    0.037 |   0.012 |  3,041 | INSERT INTO repo_string_vector(valueid, idx, value) SELECT v_valueid, ord - 1, elem FROM jsonb_array_elements_text(v_value) WITH ORDINALITY 
+ 1,010 |    0.032 |   0.032 |  1,010 | INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES ($1, $2, $3, $4, $5)                          
+ 1,010 |    0.030 |   0.030 |  1,010 | INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (v_tenantid, v_corrid, v_status) RETURNING lastver, unitid, created          
+ 1,010 |    0.024 |   0.024 |  1,010 | INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname) VALUES (v_tenantid, p_unitid, p_unitver, v_unitname) RETURNING modified 
+ 7,040 |    0.018 |   0.003 |  7,040 | SELECT 1 FROM ONLY "repo"."repo_tenant" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                                     
+10,051 |    0.016 |   0.002 | 10,051 | SELECT 1 FROM ONLY "repo"."repo_attribute_value" x WHERE "valueid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                             
+ 1,000 |    0.014 |   0.014 |  1,000 | INSERT INTO repo_time_vector(valueid, idx, value) SELECT v_valueid, ord - $13, (elem)::timestamp FROM jsonb_array_elements_text(v_value) WIT
+ 6,030 |    0.011 |   0.002 |  6,030 | SELECT 1 FROM ONLY "repo"."repo_unit_version" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 AND "unitv
+ 3,040 |    0.010 |   0.003 |  3,040 | SELECT 1 FROM ONLY "repo"."repo_unit_kernel" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 FOR KEY SHA
+    10 |    0.006 |   0.600 |     10 | SELECT repo_ingest_attributes_delta( v_tenantid, v_unitid, p_unitver, p_unit -> $9, -- top-level attributes array $10, -- no *new* parent re
+    10 |    0.001 |   0.136 |     10 | UPDATE repo_attribute_value av SET unitverto = p_unitver WHERE av.valueid = v_old_valueid AND av.tenantid = p_tenantid AND av.unitid = p_uni
+
+Top PostgreSQL statements by calls
+-------+----------+---------+--------+----------------------------------------------------------------------------------------------------------------------------------------------
+ Calls |  Total s |  Avg ms |   Rows |                                                                                                                                        Query
+-------+----------+---------+--------+----------------------------------------------------------------------------------------------------------------------------------------------
+ 7,040 |    0.018 |   0.003 |  7,040 | SELECT 1 FROM ONLY "repo"."repo_tenant" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                                     
+ 6,030 |    0.011 |   0.002 |  6,030 | SELECT 1 FROM ONLY "repo"."repo_unit_version" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 AND "unitv
+ 6,020 |    0.134 |   0.022 |  6,020 | INSERT INTO repo_attribute_value( tenantid, unitid, attrid, unitverfrom, unitverto ) VALUES ( p_tenantid, p_unitid, v_attrid, p_unitver, p_u
+ 3,040 |    0.010 |   0.003 |  3,040 | SELECT 1 FROM ONLY "repo"."repo_unit_kernel" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 FOR KEY SHA
+ 3,020 |    0.037 |   0.012 |  3,041 | INSERT INTO repo_string_vector(valueid, idx, value) SELECT v_valueid, ord - 1, elem FROM jsonb_array_elements_text(v_value) WITH ORDINALITY 
+ 3,000 |    0.044 |   0.015 |  3,000 | INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid) VALUES (p_parent_record_valueid, v_idx, v_attrid, v_valueid)          
+ 2,000 |    0.308 |   0.154 |  2,000 | SELECT repo_ingest_attributes( p_tenantid, p_unitid, p_unitver, v_children, v_valueid -- this record is now the parent )                    
+    20 |    0.000 |   0.013 |     20 | SELECT av.valueid FROM repo_attribute_value av WHERE av.tenantid = p_tenantid AND av.unitid = p_unitid AND av.attrid = v_attrid AND v_oldver
+     2 |    0.000 |   0.103 |      2 | WITH unit_hdr AS ( SELECT uk.tenantid, uk.unitid, uv.unitver, uk.lastver, uk.corrid, uk.status, uk.created, uv.modified, uv.unitname FROM re
+ 1,010 |    0.319 |   0.316 |  1,010 | SELECT repo_ingest_attributes( v_tenantid, p_unitid, p_unitver, p_unit -> 'attributes', -- top-level attributes array NULL -- no parent (rec
+ 1,010 |    0.032 |   0.032 |  1,010 | INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES ($1, $2, $3, $4, $5)                          
+ 1,010 |    0.030 |   0.030 |  1,010 | INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (v_tenantid, v_corrid, v_status) RETURNING lastver, unitid, created          
+ 1,010 |    0.024 |   0.024 |  1,010 | INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname) VALUES (v_tenantid, p_unitid, p_unitver, v_unitname) RETURNING modified 
+10,051 |    0.016 |   0.002 | 10,051 | SELECT 1 FROM ONLY "repo"."repo_attribute_value" x WHERE "valueid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                             
+ 1,000 |    0.014 |   0.014 |  1,000 | INSERT INTO repo_time_vector(valueid, idx, value) SELECT v_valueid, ord - $13, (elem)::timestamp FROM jsonb_array_elements_text(v_value) WIT
+
+
