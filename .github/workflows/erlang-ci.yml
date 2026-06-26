@@ -81,7 +81,7 @@ jobs:
       - name: Run PG integration tests
         working-directory: implementations/erlang
         run: |
-          IPTO_PG_INTEGRATION=1 rebar3 as pg,test eunit \
+          IPTO_PG_INTEGRATION=1 rebar3 as pg,graphql,test eunit \
             --module=ipto_pg_integration_tests
       - name: Run Neo4j integration tests
         working-directory: implementations/erlang

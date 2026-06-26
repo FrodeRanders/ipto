@@ -35,7 +35,7 @@ down:
 	docker compose down -v
 
 test-pg: pg-up
-	IPTO_PG_INTEGRATION=1 rebar3 as pg,test eunit --module=ipto_pg_integration_tests
+	IPTO_PG_INTEGRATION=1 rebar3 as pg,graphql,test eunit --module=ipto_pg_integration_tests
 	$(MAKE) pg-down
 
 test-neo4j: neo4j-up
@@ -43,7 +43,7 @@ test-neo4j: neo4j-up
 	$(MAKE) neo4j-down
 
 test-all: up
-	IPTO_PG_INTEGRATION=1 IPTO_NEO4J_INTEGRATION=1 rebar3 as pg,test eunit
+	IPTO_PG_INTEGRATION=1 IPTO_NEO4J_INTEGRATION=1 rebar3 as pg,graphql,test eunit
 	$(MAKE) down
 
 full-check:
@@ -53,7 +53,7 @@ full-check:
 	$(MAKE) test-graphql
 	@echo "=== Integration tests ==="
 	$(MAKE) up
-	IPTO_PG_INTEGRATION=1 IPTO_NEO4J_INTEGRATION=1 rebar3 as pg,test eunit \
+	IPTO_PG_INTEGRATION=1 IPTO_NEO4J_INTEGRATION=1 rebar3 as pg,graphql,test eunit \
 		--module=ipto_pg_integration_tests \
 		--module=ipto_neo4j_integration_tests
 	$(MAKE) down
