@@ -1,40 +1,44 @@
-name: Erlang CI
+name: Rust CI
 
 on:
   push:
     paths:
-      - 'implementations/erlang/**'
+      - 'implementations/rust/**'
       - 'shared/db/postgresql/**'
-      - '.github/workflows/erlang-ci.yml'
+      - '.github/workflows/rust-ci.yml'
   pull_request:
     paths:
-      - 'implementations/erlang/**'
+      - 'implementations/rust/**'
       - 'shared/db/postgresql/**'
-      - '.github/workflows/erlang-ci.yml'
+      - '.github/workflows/rust-ci.yml'
 
 permissions:
   contents: read
 
+env:
+  CARGO_TERM_COLOR: always
+
 jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Compile check
+        working-directory: implementations/rust
+        run: cargo check
+      - name: Lint (report only, non-blocking)
+        working-directory: implementations/rust
+        run: cargo clippy
+
   unit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '27'
-          rebar3-version: '3'
-      - name: Compile
-        working-directory: implementations/erlang
-        run: rebar3 compile
-      - name: Unit tests (base profile)
-        working-directory: implementations/erlang
-        run: rebar3 as test eunit
-      - name: GraphQL tests
-        working-directory: implementations/erlang
-        run: |
-          rebar3 as graphql get-deps
-          rebar3 as graphql,test eunit
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Unit tests
+        working-directory: implementations/rust
+        run: cargo test --lib
 
   integration:
     runs-on: ubuntu-latest
@@ -66,11 +70,8 @@ jobs:
           - 7474:7474
           - 7687:7687
     steps:
-      - uses: actions/checkout@v4
-      - uses: erlef/setup-beam@v1
-        with:
-          otp-version: '27'
-          rebar3-version: '3'
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
       - name: Load PG schema
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
@@ -78,16 +79,10 @@ jobs:
             -f shared/db/postgresql/schema.sql
           PGPASSWORD=repo psql -h localhost -U repo -d repo \
             -f shared/db/postgresql/procedures.sql
-      - name: Run PG integration tests
-        working-directory: implementations/erlang
-        run: |
-          IPTO_PG_INTEGRATION=1 rebar3 as pg,test eunit \
-            --module=ipto_pg_integration_tests
-      - name: Run Neo4j integration tests
-        working-directory: implementations/erlang
+      - name: Run integration tests
+        working-directory: implementations/rust
         env:
+          IPTO_PG_INTEGRATION: 1
           IPTO_NEO4J_INTEGRATION: 1
           IPTO_NEO4J_PASSWORD: neo4jtest
-        run: |
-          rebar3 as test eunit \
-            --module=ipto_neo4j_integration_tests
+        run: cargo test --test postgres_integration --test neo4j_integration -- --nocapture
