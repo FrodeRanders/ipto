@@ -1584,8 +1584,7 @@ search_units_ast_cypher(Expr, Order, Paging) ->
     Where = build_unit_cypher_where(UnitLeaves),
     {OrderCypher, OrderParams} = build_order(Order),
     {PageCypher, PageParams} = build_paging(Paging),
-    Params = maps:merge(maps:merge(Where#{}),
-                        maps:merge(OrderParams, PageParams)),
+    Params = maps:merge(OrderParams, PageParams),
     Match = "MATCH (k:UnitKernel) "
             "MATCH (k)-[:HAS_VERSION]->(v:UnitVersion) "
             "WHERE v.unitver = k.lastver" ++ AttrMatch,
