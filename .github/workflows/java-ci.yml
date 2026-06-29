@@ -30,9 +30,9 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/FrodeRanders/java-vopn.git "$RUNNER_TEMP/java-vopn"
           mvn -q -DskipTests -f "$RUNNER_TEMP/java-vopn/pom.xml" install
-      - name: Compile
+      - name: Build & install modules (skip tests)
         working-directory: implementations/java
-        run: mvn -q compile
+        run: mvn -q -DskipTests -pl graphql -am install
       - name: Unit tests (repo)
         working-directory: implementations/java
         run: mvn -q -pl repo test
@@ -75,6 +75,9 @@ jobs:
             -f shared/db/postgresql/schema.sql
           PGPASSWORD=repo psql -h localhost -U repo -d repo \
             -f shared/db/postgresql/procedures.sql
+      - name: Build & install modules (skip tests)
+        working-directory: implementations/java
+        run: mvn -q -DskipTests -pl it -am install
       - name: Integration tests
         working-directory: implementations/java
         run: mvn -q -pl it verify
