@@ -79,6 +79,21 @@ jobs:
             -f shared/db/postgresql/schema.sql
           PGPASSWORD=repo psql -h localhost -U repo -d repo \
             -f shared/db/postgresql/procedures.sql
+      - name: Wait for Neo4j HTTP endpoint
+        run: |
+          for i in $(seq 1 30); do
+            body=$(curl -s -u neo4j:neo4jtest -H 'Content-Type: application/json' \
+              -d '{"statements":[{"statement":"RETURN 1"}]}' \
+              http://localhost:7474/db/neo4j/tx/commit 2>/dev/null || true)
+            if echo "$body" | grep -q '"errors":[[:space:]]*\[\]'; then
+              echo "Neo4j HTTP ready"
+              exit 0
+            fi
+            echo "waiting for Neo4j HTTP endpoint... ($i/30)"
+            sleep 2
+          done
+          echo "Neo4j HTTP endpoint did not become ready"
+          exit 1
       - name: Run integration tests
         working-directory: implementations/rust
         env:
