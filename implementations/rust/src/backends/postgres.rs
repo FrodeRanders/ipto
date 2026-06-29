@@ -644,8 +644,8 @@ impl Backend for PostgresBackend {
     }
 
     fn can_change_attribute(&self, name_or_id: &str) -> RepoResult<bool> {
-        let mut client = self.client()?;
-
+        // Resolve name to id first — get_attribute_info acquires the lock
+        // internally, so we must not hold the lock ourselves during this call.
         let attr_id = if let Ok(id) = name_or_id.parse::<i32>() {
             Some(id)
         } else {
@@ -658,6 +658,7 @@ impl Backend for PostgresBackend {
             return Ok(true);
         };
 
+        let mut client = self.client()?;
         let row = client
             .query_opt(
                 "SELECT 1 FROM repo.repo_attribute_value WHERE attrid = $1 LIMIT 1",
