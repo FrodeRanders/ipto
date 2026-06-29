@@ -1579,9 +1579,13 @@ to_binary(V) ->
 
 -spec search_units_ast_cypher(ipto_search_ast:search_expr(), search_order(), search_paging()) -> ipto_result(search_result()).
 search_units_ast_cypher(Expr, Order, Paging) ->
-    {UnitLeaves, AttrLeaves} = split_ne4j_leaves(Expr),
+    {_UnitLeaves, AttrLeaves} = split_ne4j_leaves(Expr),
     AttrMatch = build_attr_cypher(AttrLeaves),
-    Where = build_unit_cypher_where(UnitLeaves),
+    WhereExpr = build_unit_cypher_where_from_ast(Expr),
+    Where = case WhereExpr of
+        "TRUE" -> "";
+        _ -> " AND " ++ WhereExpr
+    end,
     {OrderCypher, OrderParams} = build_order(Order),
     {PageCypher, PageParams} = build_paging(Paging),
     Params = maps:merge(OrderParams, PageParams),
@@ -1617,6 +1621,13 @@ build_attr_cypher(AttrItems) ->
     string:join(Patterns, "").
 
 -spec attr_item_to_cypher(ipto_search_ast:search_item()) -> string().
+attr_item_to_cypher({attr, _Name, AttrId, _Type, like, Value}) ->
+    Var = "av" ++ integer_to_list(erlang:unique_integer([positive]) rem 1000),
+    AttrIdStr = integer_to_list(AttrId),
+    ValueStr = "\"" ++ like_to_regex(Value) ++ "\"",
+    OptMatch = "OPTIONAL MATCH (v)-[:HAS_ATTR_VALUE]->(" ++ Var ++ ":AttributeValue {attrid: " ++ AttrIdStr ++ "}) ",
+    Where = "AND " ++ Var ++ ".attrvalue =~ " ++ ValueStr ++ " ",
+    OptMatch ++ Where;
 attr_item_to_cypher({attr, _Name, AttrId, _Type, Op, Value}) ->
     Var = "av" ++ integer_to_list(erlang:unique_integer([positive]) rem 1000),
     AttrIdStr = integer_to_list(AttrId),
@@ -1637,16 +1648,33 @@ attr_item_to_cypher({attr, _Name, AttrId, _Type, Op, Value}) ->
     Where = "AND " ++ Var ++ ".attrvalue " ++ OpStr ++ " " ++ ValueStr ++ " ",
     OptMatch ++ Where.
 
--spec build_unit_cypher_where([ipto_search_ast:search_item()]) -> string().
-build_unit_cypher_where([]) -> "";
-build_unit_cypher_where(Items) ->
-    Clauses = [unit_item_to_cypher(Item) || Item <- Items],
-    " AND " ++ string:join(Clauses, " AND ").
+-spec build_unit_cypher_where_from_ast(ipto_search_ast:search_expr()) -> string().
+build_unit_cypher_where_from_ast({'$and', Left, Right}) ->
+    L = build_unit_cypher_where_from_ast(Left),
+    R = build_unit_cypher_where_from_ast(Right),
+    case {L, R} of
+        {"TRUE", "TRUE"} -> "TRUE";
+        {"TRUE", _} -> R;
+        {_, "TRUE"} -> L;
+        _ -> "(" ++ L ++ " AND " ++ R ++ ")"
+    end;
+build_unit_cypher_where_from_ast({'$or', Left, Right}) ->
+    "(" ++ build_unit_cypher_where_from_ast(Left) ++ " OR " ++ build_unit_cypher_where_from_ast(Right) ++ ")";
+build_unit_cypher_where_from_ast({'$not', Inner}) ->
+    "NOT (" ++ build_unit_cypher_where_from_ast(Inner) ++ ")";
+build_unit_cypher_where_from_ast({'$between', Item1, Item2}) ->
+    "(" ++ unit_item_to_cypher(Item1) ++ " AND " ++ unit_item_to_cypher(Item2) ++ ")";
+build_unit_cypher_where_from_ast({leaf, {attr, _, _, _, _, _}}) ->
+    "TRUE";
+build_unit_cypher_where_from_ast({leaf, Item}) ->
+    unit_item_to_cypher(Item).
 
 -spec unit_item_to_cypher(ipto_search_ast:search_item()) -> string().
 unit_item_to_cypher({unit, tenantid, Op, Val}) -> "k.tenantid" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
 unit_item_to_cypher({unit, unitid, Op, Val}) -> "k.unitid" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
 unit_item_to_cypher({unit, status, Op, Val}) -> "k.status" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
+unit_item_to_cypher({unit, corrid, like, Val}) -> "k.corrid =~ \"" ++ like_to_regex(Val) ++ "\"";
+unit_item_to_cypher({unit, unitname, like, Val}) -> "v.unitname =~ \"" ++ like_to_regex(Val) ++ "\"";
 unit_item_to_cypher({unit, corrid, Op, Val}) -> "k.corrid" ++ cypher_op(Op) ++ cypher_string(Val);
 unit_item_to_cypher({unit, unitname, Op, Val}) -> "v.unitname" ++ cypher_op(Op) ++ cypher_string(Val);
 unit_item_to_cypher({unit, created, Op, Val}) -> "k.created" ++ cypher_op(Op) ++ io_lib:format("~p", [Val]);
