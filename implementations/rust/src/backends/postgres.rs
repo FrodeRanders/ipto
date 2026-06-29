@@ -16,6 +16,7 @@ use postgres::{Client, Config, NoTls, Row};
 use serde_json::{Map, Number, Value, json};
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
+use std::time::Duration;
 use uuid::Uuid;
 
 use crate::backend::{Backend, RepoError, RepoResult};
@@ -90,7 +91,8 @@ impl PostgresConfig {
             .port(self.port)
             .user(&self.user)
             .password(&self.password)
-            .dbname(&self.database);
+            .dbname(&self.database)
+            .connect_timeout(Duration::from_secs(10));
 
         cfg.connect(NoTls)
             .map_err(|e| RepoError::Backend(format!("postgres connect failed: {e}")))

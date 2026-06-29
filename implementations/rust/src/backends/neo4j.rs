@@ -39,18 +39,24 @@ pub struct Neo4jBackend {
     database: String,
     user: String,
     password: String,
+    agent: ureq::Agent,
 }
 
 static NEO4J_BOOTSTRAPPED: AtomicBool = AtomicBool::new(false);
 impl Neo4jBackend {
     /// Create a backend using `IPTO_NEO4J_*` environment variables or local defaults.
     pub fn new() -> Self {
+        let agent = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(30)))
+            .build()
+            .into();
         Self {
             url: std::env::var("IPTO_NEO4J_URL")
                 .unwrap_or_else(|_| "http://localhost:7474".to_string()),
             database: std::env::var("IPTO_NEO4J_DATABASE").unwrap_or_else(|_| "neo4j".to_string()),
             user: std::env::var("IPTO_NEO4J_USER").unwrap_or_else(|_| "neo4j".to_string()),
             password: std::env::var("IPTO_NEO4J_PASSWORD").unwrap_or_else(|_| "neo4j".to_string()),
+            agent,
         }
     }
 
@@ -81,7 +87,7 @@ impl Neo4jBackend {
             )
         };
 
-        let response = ureq::post(&self.endpoint())
+        let response = self.agent.post(&self.endpoint())
             .header("Authorization", &basic)
             .header("Content-Type", "application/json")
             .send_json(payload)
