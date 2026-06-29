@@ -1,5 +1,11 @@
 # IPTO - An auto-configured data management platform
 
+[![Java CI](https://github.com/FrodeRanders/ipto/actions/workflows/java-ci.yml/badge.svg)](https://github.com/FrodeRanders/ipto/actions/workflows/java-ci.yml)
+[![Erlang CI](https://github.com/FrodeRanders/ipto/actions/workflows/erlang-ci.yml/badge.svg)](https://github.com/FrodeRanders/ipto/actions/workflows/erlang-ci.yml)
+[![Rust CI](https://github.com/FrodeRanders/ipto/actions/workflows/rust-ci.yml/badge.svg)](https://github.com/FrodeRanders/ipto/actions/workflows/rust-ci.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
+[![Version](https://img.shields.io/badge/version-1.0--SNAPSHOT-yellow.svg)](implementations/java/pom.xml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/FrodeRanders/ipto)
 
 ## Why IPTO?
