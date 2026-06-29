@@ -25,6 +25,8 @@ fn pg_client() -> Result<Client, postgres::Error> {
     let password = std::env::var("IPTO_PG_PASSWORD").unwrap_or_else(|_| "repo".to_string());
     let database = std::env::var("IPTO_PG_DATABASE").unwrap_or_else(|_| "repo".to_string());
 
+    eprintln!("[trace] pg_client connecting to {host}:{port}/{database} as {user}");
+
     let mut cfg = Config::new();
     cfg.host(&host)
         .port(port)
@@ -35,11 +37,15 @@ fn pg_client() -> Result<Client, postgres::Error> {
         .tcp_user_timeout(std::time::Duration::from_secs(30))
         .keepalives(true)
         .keepalives_idle(std::time::Duration::from_secs(30));
-    cfg.connect(NoTls)
+    let client = cfg.connect(NoTls)?;
+    eprintln!("[trace] pg_client connected");
+    Ok(client)
 }
 
 fn ensure_tenant(tenant_id: i32) {
+    eprintln!("[trace] ensure_tenant: connecting pg_client...");
     let mut client = pg_client().expect("postgres connection for tenant bootstrap");
+    eprintln!("[trace] ensure_tenant: connected, inserting tenant...");
     let name = format!("rust_it_{tenant_id}");
     let _ = client
         .execute(
@@ -47,6 +53,7 @@ fn ensure_tenant(tenant_id: i32) {
             &[&tenant_id, &name, &"rust integration tenant"],
         )
         .expect("insert tenant");
+    eprintln!("[trace] ensure_tenant: done");
 }
 
 fn make_unit(tenant_id: i32, name: &str) -> serde_json::Value {
@@ -59,6 +66,17 @@ fn make_unit(tenant_id: i32, name: &str) -> serde_json::Value {
     })
 }
 
+macro_rules! trace {
+    ($step:expr) => {
+        eprintln!("[trace] postgres_mvp_crud_and_links: step {} ({})", $step, line!());
+    };
+}
+macro_rules! trace_done {
+    ($step:expr) => {
+        eprintln!("[trace] postgres_mvp_crud_and_links: step {} done", $step);
+    };
+}
+
 #[test]
 fn postgres_mvp_crud_and_links() {
     if !pg_integration_enabled() {
@@ -66,29 +84,42 @@ fn postgres_mvp_crud_and_links() {
     }
 
     let tenant_id = 991_i32;
+    trace!("ensure_tenant");
     ensure_tenant(tenant_id);
+    trace_done!("ensure_tenant");
 
+    trace!("create repo");
     let repo = RepoService::new(Arc::new(PostgresBackend::new()));
+    trace_done!("create repo");
 
+    trace!("store unit 1");
     let unit1 = repo
         .store_unit_json(make_unit(tenant_id, "rust-it-unit-1"))
         .expect("store unit 1");
+    trace_done!("store unit 1");
+
+    trace!("store unit 2");
     let unit2 = repo
         .store_unit_json(make_unit(tenant_id, "rust-it-unit-2"))
         .expect("store unit 2");
+    trace_done!("store unit 2");
 
     let unit1_id = unit1["unitid"].as_i64().expect("unit1 id");
     let unit2_id = unit2["unitid"].as_i64().expect("unit2 id");
 
+    trace!("unit_exists");
     assert!(
         repo.unit_exists(i64::from(tenant_id), unit1_id)
             .expect("unit_exists")
     );
+    trace_done!("unit_exists");
 
+    trace!("get_unit_json");
     let loaded = repo
         .get_unit_json(i64::from(tenant_id), unit1_id, VersionSelector::Latest)
         .expect("get_unit_json");
     assert!(loaded.is_some());
+    trace_done!("get_unit_json");
 
     let left = UnitRef {
         tenant_id: i64::from(tenant_id),
@@ -101,66 +132,115 @@ fn postgres_mvp_crud_and_links() {
         version: None,
     };
 
+    trace!("add_relation");
     repo.add_relation(left.clone(), 10, right.clone())
         .expect("add relation");
+    trace_done!("add_relation");
+
+    trace!("get_right_relation");
     let right_rel = repo
         .get_right_relation(left.clone(), 10)
         .expect("get right relation");
     assert!(right_rel.is_some());
+    trace_done!("get_right_relation");
+
+    trace!("get_right_relations");
     let right_rels = repo
         .get_right_relations(left.clone(), 10)
         .expect("get right relations");
     assert!(!right_rels.is_empty());
+    trace_done!("get_right_relations");
+
+    trace!("get_left_relations");
     let left_rels = repo
         .get_left_relations(right.clone(), 10)
         .expect("get left relations");
     assert!(!left_rels.is_empty());
+    trace_done!("get_left_relations");
+
+    trace!("count_right_relations");
     assert_eq!(
         repo.count_right_relations(left.clone(), 10)
             .expect("count right relations"),
         1
     );
+    trace_done!("count_right_relations");
+
+    trace!("count_left_relations");
     assert_eq!(
         repo.count_left_relations(right.clone(), 10)
             .expect("count left relations"),
         1
     );
+    trace_done!("count_left_relations");
+
+    trace!("remove_relation");
     repo.remove_relation(left.clone(), 10, right.clone())
         .expect("remove relation");
+    trace_done!("remove_relation");
 
+    trace!("add_association");
     repo.add_association(left.clone(), 20, "external-ref-123")
         .expect("add association");
+    trace_done!("add_association");
+
+    trace!("get_right_association");
     let right_assoc = repo
         .get_right_association(left.clone(), 20)
         .expect("get right association");
     assert!(right_assoc.is_some());
+    trace_done!("get_right_association");
+
+    trace!("get_right_associations");
     let right_assocs = repo
         .get_right_associations(left.clone(), 20)
         .expect("get right associations");
     assert!(!right_assocs.is_empty());
+    trace_done!("get_right_associations");
+
+    trace!("get_left_associations");
     let left_assocs = repo
         .get_left_associations(20, "external-ref-123")
         .expect("get left associations");
     assert!(!left_assocs.is_empty());
+    trace_done!("get_left_associations");
+
+    trace!("count_right_associations");
     assert_eq!(
         repo.count_right_associations(left.clone(), 20)
             .expect("count right associations"),
         1
     );
+    trace_done!("count_right_associations");
+
+    trace!("count_left_associations");
     assert_eq!(
         repo.count_left_associations(20, "external-ref-123")
             .expect("count left associations"),
         1
     );
+    trace_done!("count_left_associations");
+
+    trace!("remove_association");
     repo.remove_association(left.clone(), 20, "external-ref-123")
         .expect("remove association");
+    trace_done!("remove_association");
 
+    trace!("lock_unit");
     repo.lock_unit(left.clone(), 30, "rust-it-test")
         .expect("lock unit");
+    trace_done!("lock_unit");
+
+    trace!("lock_unit (already locked)");
     let lock_again = repo.lock_unit(left.clone(), 30, "rust-it-test-2");
     assert!(matches!(lock_again, Err(RepoError::AlreadyLocked)));
-    repo.unlock_unit(left.clone()).expect("unlock unit");
+    trace_done!("lock_unit (already locked)");
 
+    trace!("unlock_unit");
+    repo.unlock_unit(left.clone()).expect("unlock unit");
+    trace_done!("unlock_unit");
+
+    trace!("search_units");
     let search = repo
         .search_units(
             json!({"tenantid": tenant_id, "name_ilike": "rust-it-unit-%"}),
@@ -175,61 +255,96 @@ fn postgres_mvp_crud_and_links() {
         )
         .expect("search units");
     assert!(search.total_hits >= 2);
+    trace_done!("search_units");
 
     let attr_suffix = Uuid::now_v7().simple().to_string();
     let attr_alias = format!("rust_it_attr_alias_{attr_suffix}");
     let attr_name = format!("rust_it_attr_name_{attr_suffix}");
     let attr_qualname = format!("rust.it.attr.qualname.{attr_suffix}");
 
+    trace!("create_attribute");
     let created_attr = repo
         .create_attribute(&attr_alias, &attr_name, &attr_qualname, "string", false)
         .expect("create attribute");
+    trace_done!("create_attribute");
+
     let attr_id = created_attr["id"].as_i64().expect("attribute id");
+
+    trace!("get_attribute_info (by id)");
     let attr_by_id = repo
         .get_attribute_info(&attr_id.to_string())
         .expect("get attr by id");
     assert!(attr_by_id.is_some());
+    trace_done!("get_attribute_info (by id)");
+
+    trace!("get_attribute_info (by name)");
     let attr_by_name = repo
         .get_attribute_info(&attr_name)
         .expect("get attr by name");
     assert!(attr_by_name.is_some());
+    trace_done!("get_attribute_info (by name)");
+
+    trace!("instantiate_attribute");
     let instantiated = repo
         .instantiate_attribute(&attr_name)
         .expect("instantiate_attribute by name");
     assert!(instantiated.is_some());
+    trace_done!("instantiate_attribute");
+
+    trace!("can_change_attribute (by name)");
     assert!(
         repo.can_change_attribute(&attr_name)
             .expect("can_change_attribute by name")
     );
+    trace_done!("can_change_attribute (by name)");
+
+    trace!("can_change_attribute (by id)");
     assert!(
         repo.can_change_attribute(&attr_id.to_string())
             .expect("can_change_attribute by id")
     );
+    trace_done!("can_change_attribute (by id)");
+
+    trace!("attribute_name_to_id");
     assert_eq!(
         repo.attribute_name_to_id(&attr_name)
             .expect("attribute_name_to_id"),
         Some(attr_id)
     );
+    trace_done!("attribute_name_to_id");
+
+    trace!("attribute_id_to_name");
     assert_eq!(
         repo.attribute_id_to_name(attr_id)
             .expect("attribute_id_to_name"),
         Some(attr_name)
     );
+    trace_done!("attribute_id_to_name");
 
+    trace!("get_tenant_info");
     let tenant_info = repo
         .get_tenant_info(&tenant_id.to_string())
         .expect("tenant info by id");
     assert!(tenant_info.is_some());
+    trace_done!("get_tenant_info");
+
+    trace!("tenant_name_to_id");
     assert_eq!(
         repo.tenant_name_to_id(&format!("rust_it_{tenant_id}"))
             .expect("tenant_name_to_id"),
         Some(i64::from(tenant_id))
     );
+    trace_done!("tenant_name_to_id");
+
+    trace!("tenant_id_to_name");
     assert_eq!(
         repo.tenant_id_to_name(i64::from(tenant_id))
             .expect("tenant_id_to_name"),
         Some(format!("rust_it_{tenant_id}"))
     );
+    trace_done!("tenant_id_to_name");
+
+    eprintln!("[trace] postgres_mvp_crud_and_links: ALL DONE");
 }
 
 #[test]

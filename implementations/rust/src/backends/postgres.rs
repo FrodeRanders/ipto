@@ -86,6 +86,10 @@ impl PostgresConfig {
     }
 
     fn connect(&self) -> RepoResult<Client> {
+        eprintln!(
+            "[trace] PostgresBackend::connect host={} port={} db={}",
+            self.host, self.port, self.database
+        );
         let mut cfg = Config::new();
         cfg.host(&self.host)
             .port(self.port)
@@ -98,8 +102,12 @@ impl PostgresConfig {
             .keepalives_idle(Duration::from_secs(30))
             .options("-c statement_timeout=30000");
 
-        cfg.connect(NoTls)
-            .map_err(|e| RepoError::Backend(format!("postgres connect failed: {e}")))
+        eprintln!("[trace] PostgresBackend::connect calling cfg.connect...");
+        let client = cfg
+            .connect(NoTls)
+            .map_err(|e| RepoError::Backend(format!("postgres connect failed: {e}")))?;
+        eprintln!("[trace] PostgresBackend::connect done");
+        Ok(client)
     }
 }
 
@@ -113,10 +121,12 @@ impl PostgresBackend {
     }
 
     fn client(&self) -> RepoResult<PostgresClientGuard<'_>> {
+        eprintln!("[trace] PostgresBackend::client acquiring lock...");
         let mut guard = self
             .client
             .lock()
             .map_err(|_| RepoError::Backend("postgres client lock poisoned".to_string()))?;
+        eprintln!("[trace] PostgresBackend::client lock acquired");
         // Keep a single lazily-initialized client and reconnect if the server
         // closes the connection between calls.
         let reconnect = guard
@@ -124,8 +134,10 @@ impl PostgresBackend {
             .map(|client| client.is_closed())
             .unwrap_or(true);
         if reconnect {
+            eprintln!("[trace] PostgresBackend::client reconnecting...");
             *guard = Some(self.cfg.connect()?);
         }
+        eprintln!("[trace] PostgresBackend::client returning guard");
         Ok(PostgresClientGuard { inner: guard })
     }
 }
