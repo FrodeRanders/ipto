@@ -23,7 +23,7 @@
 neo4j_backend_roundtrip_test_() ->
     case os:getenv("IPTO_NEO4J_INTEGRATION") of
         "1" ->
-            fun neo4j_backend_roundtrip/0;
+            {timeout, 120, fun neo4j_backend_roundtrip/0};
         _ ->
             {"neo4j integration disabled (set IPTO_NEO4J_INTEGRATION=1)", fun() -> ok end}
     end.

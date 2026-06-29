@@ -23,7 +23,7 @@
 pg_backend_roundtrip_test_() ->
     case os:getenv("IPTO_PG_INTEGRATION") of
         "1" ->
-            fun pg_backend_roundtrip/0;
+            {timeout, 120, fun pg_backend_roundtrip/0};
         _ ->
             {"pg integration disabled (set IPTO_PG_INTEGRATION=1)", fun() -> ok end}
     end.
