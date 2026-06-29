@@ -114,7 +114,11 @@ fn item_to_cypher_predicate(
                 "modified" => "v.modified",
                 _ => return String::new(),
             };
-            let pname = cypher_param(idx, params, value);
+            let val = match operator {
+                Operator::Like => serde_json::Value::String(like_to_regex(value.as_str().unwrap_or(""))),
+                _ => value.clone(),
+            };
+            let pname = cypher_param(idx, params, &val);
             let op_str = match operator {
                 Operator::Like => "=~",
                 _ => operator.to_cypher(),
@@ -181,7 +185,11 @@ fn compile_attr_match(
             let var = format!("av{}", i);
             let id = attr_id.unwrap_or(0);
             let p_id = cypher_param(idx, params, &serde_json::json!(id));
-            let p_val = cypher_param(idx, params, value);
+            let val = match operator {
+                Operator::Like => serde_json::Value::String(like_to_regex(value.as_str().unwrap_or(""))),
+                _ => value.clone(),
+            };
+            let p_val = cypher_param(idx, params, &val);
             let op_str = match operator {
                 Operator::Like => "=~",
                 _ => operator.to_cypher(),
@@ -240,4 +248,20 @@ fn cypher_paging(limit: Option<i64>, offset: Option<i64>) -> (String, Vec<String
         params.push(lim.to_string());
     }
     (clauses.join("\n"), params)
+}
+
+fn like_to_regex(pattern: &str) -> String {
+    let mut out = String::from("(?i)");
+    for ch in pattern.chars() {
+        match ch {
+            '%' => out.push_str(".*"),
+            '_' => out.push('.'),
+            '.' | '+' | '*' | '?' | '^' | '$' | '(' | ')' | '[' | ']' | '{' | '}' | '|' | '\\' => {
+                out.push('\\');
+                out.push(ch);
+            }
+            _ => out.push(ch),
+        }
+    }
+    out
 }
