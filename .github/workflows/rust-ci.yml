@@ -72,13 +72,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
-      - name: Load PG schema
+      - name: Load PG schema & seed data
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
             -f shared/db/postgresql/schema.sql
-          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
             -f shared/db/postgresql/procedures.sql
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
+            -f shared/db/postgresql/boot.sql
       - name: Wait for Neo4j HTTP endpoint
         run: |
           for i in $(seq 1 30); do

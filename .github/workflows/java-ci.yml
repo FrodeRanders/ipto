@@ -68,13 +68,15 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/FrodeRanders/java-vopn.git "$RUNNER_TEMP/java-vopn"
           mvn -q -DskipTests -f "$RUNNER_TEMP/java-vopn/pom.xml" install
-      - name: Load PG schema
+      - name: Load PG schema & seed data
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
-          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
             -f shared/db/postgresql/schema.sql
-          PGPASSWORD=repo psql -h localhost -U repo -d repo \
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
             -f shared/db/postgresql/procedures.sql
+          PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
+            -f shared/db/postgresql/boot.sql
       - name: Build & install modules (skip tests)
         working-directory: implementations/java
         run: mvn -q -DskipTests -pl it -am install
