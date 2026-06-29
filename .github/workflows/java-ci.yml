@@ -5,10 +5,12 @@ on:
     paths:
       - 'implementations/java/**'
       - 'shared/db/postgresql/**'
+      - '.github/workflows/java-ci.yml'
   pull_request:
     paths:
       - 'implementations/java/**'
       - 'shared/db/postgresql/**'
+      - '.github/workflows/java-ci.yml'
 
 permissions:
   contents: read
