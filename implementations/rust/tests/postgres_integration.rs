@@ -30,7 +30,11 @@ fn pg_client() -> Result<Client, postgres::Error> {
         .port(port)
         .user(&user)
         .password(&password)
-        .dbname(&database);
+        .dbname(&database)
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .tcp_user_timeout(std::time::Duration::from_secs(30))
+        .keepalives(true)
+        .keepalives_idle(std::time::Duration::from_secs(30));
     cfg.connect(NoTls)
 }
 
