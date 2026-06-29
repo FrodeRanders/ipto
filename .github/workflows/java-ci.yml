@@ -26,6 +26,10 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+      - name: Build & install vopn (3.0-SNAPSHOT)
+        run: |
+          git clone --depth 1 https://github.com/FrodeRanders/java-vopn.git "$RUNNER_TEMP/java-vopn"
+          mvn -q -DskipTests -f "$RUNNER_TEMP/java-vopn/pom.xml" install
       - name: Compile
         working-directory: implementations/java
         run: mvn -q compile
@@ -60,6 +64,10 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: maven
+      - name: Build & install vopn (3.0-SNAPSHOT)
+        run: |
+          git clone --depth 1 https://github.com/FrodeRanders/java-vopn.git "$RUNNER_TEMP/java-vopn"
+          mvn -q -DskipTests -f "$RUNNER_TEMP/java-vopn/pom.xml" install
       - name: Load PG schema
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
