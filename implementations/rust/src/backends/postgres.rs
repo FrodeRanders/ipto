@@ -92,7 +92,11 @@ impl PostgresConfig {
             .user(&self.user)
             .password(&self.password)
             .dbname(&self.database)
-            .connect_timeout(Duration::from_secs(10));
+            .connect_timeout(Duration::from_secs(10))
+            .tcp_user_timeout(Duration::from_secs(30))
+            .keepalives(true)
+            .keepalives_idle(Duration::from_secs(30))
+            .options("-c statement_timeout=30000");
 
         cfg.connect(NoTls)
             .map_err(|e| RepoError::Backend(format!("postgres connect failed: {e}")))
