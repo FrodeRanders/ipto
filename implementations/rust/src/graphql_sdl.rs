@@ -153,8 +153,19 @@ pub fn catalog_as_json(catalog: &SdlCatalog) -> Value {
 /// deployments. Textual aliases such as `INTEGER`, `datetime`, and `BOOLEAN`
 /// are folded to the canonical lower-case names used by Rust backends.
 pub fn normalize_attribute_type(input: &str) -> String {
-    if input.trim().parse::<i32>().is_ok() {
-        return input.trim().to_string();
+    if let Ok(n) = input.trim().parse::<i32>() {
+        return match n {
+            1 => "string",
+            2 => "time",
+            3 => "int",
+            4 => "long",
+            5 => "double",
+            6 => "bool",
+            7 => "data",
+            99 => "record",
+            other => return other.to_string(),
+        }
+        .to_string();
     }
     match input.trim().to_ascii_lowercase().as_str() {
         "string" => "string".to_string(),
