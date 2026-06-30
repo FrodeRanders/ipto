@@ -44,10 +44,7 @@ pub fn compile(
         match_clause, where_sql, "", order_clause, page_clause,
     );
 
-    let count_query = format!(
-        "{}{}{}\nRETURN count(*)",
-        match_clause, where_sql, ""
-    );
+    let count_query = format!("{}{}{}\nRETURN count(*)", match_clause, where_sql, "");
 
     CompiledCypher {
         query: data_query,
@@ -65,20 +62,30 @@ fn compile_cypher_where(
         SearchExpr::And(l, r) => {
             let left = compile_cypher_where(l, idx, params);
             let right = compile_cypher_where(r, idx, params);
-            if left.is_empty() { return right; }
-            if right.is_empty() { return left; }
+            if left.is_empty() {
+                return right;
+            }
+            if right.is_empty() {
+                return left;
+            }
             format!("({} AND {})", left, right)
         }
         SearchExpr::Or(l, r) => {
             let left = compile_cypher_where(l, idx, params);
             let right = compile_cypher_where(r, idx, params);
-            if left.is_empty() { return right; }
-            if right.is_empty() { return left; }
+            if left.is_empty() {
+                return right;
+            }
+            if right.is_empty() {
+                return left;
+            }
             format!("({} OR {})", left, right)
         }
         SearchExpr::Not(inner) => {
             let inner_sql = compile_cypher_where(inner, idx, params);
-            if inner_sql.is_empty() { return String::new(); }
+            if inner_sql.is_empty() {
+                return String::new();
+            }
             format!("NOT ({})", inner_sql)
         }
         SearchExpr::Between(lower, upper) => {
@@ -90,9 +97,7 @@ fn compile_cypher_where(
                 format!("({} AND {})", lower_sql, upper_sql)
             }
         }
-        SearchExpr::Leaf(item) => {
-            item_to_cypher_predicate(item, idx, params)
-        }
+        SearchExpr::Leaf(item) => item_to_cypher_predicate(item, idx, params),
     }
 }
 
@@ -102,7 +107,11 @@ fn item_to_cypher_predicate(
     params: &mut serde_json::Map<String, serde_json::Value>,
 ) -> String {
     match item {
-        SearchItem::Unit { column, operator, value } => {
+        SearchItem::Unit {
+            column,
+            operator,
+            value,
+        } => {
             let col = match column.as_str() {
                 "tenantid" => "k.tenantid",
                 "unitid" => "k.unitid",
@@ -115,7 +124,9 @@ fn item_to_cypher_predicate(
                 _ => return String::new(),
             };
             let val = match operator {
-                Operator::Like => serde_json::Value::String(like_to_regex(value.as_str().unwrap_or(""))),
+                Operator::Like => {
+                    serde_json::Value::String(like_to_regex(value.as_str().unwrap_or("")))
+                }
                 _ => value.clone(),
             };
             let pname = cypher_param(idx, params, &val);
@@ -125,7 +136,12 @@ fn item_to_cypher_predicate(
             };
             format!("{} {} {}", col, op_str, pname)
         }
-        SearchItem::Rel { direction, rel_type, tenant_id, unit_id } => {
+        SearchItem::Rel {
+            direction,
+            rel_type,
+            tenant_id,
+            unit_id,
+        } => {
             let p_rel = cypher_param(idx, params, &serde_json::json!(rel_type));
             let p_tid = cypher_param(idx, params, &serde_json::json!(tenant_id));
             let p_uid = cypher_param(idx, params, &serde_json::json!(unit_id));
@@ -144,7 +160,11 @@ fn item_to_cypher_predicate(
                 }
             }
         }
-        SearchItem::Assoc { direction, assoc_type, ref_string } => {
+        SearchItem::Assoc {
+            direction,
+            assoc_type,
+            ref_string,
+        } => {
             let p_type = cypher_param(idx, params, &serde_json::json!(assoc_type));
             let p_ref = cypher_param(idx, params, &serde_json::json!(ref_string));
             match direction {
@@ -162,9 +182,7 @@ fn item_to_cypher_predicate(
                 }
             }
         }
-        SearchItem::Attr { .. } => {
-            String::new()
-        }
+        SearchItem::Attr { .. } => String::new(),
     }
 }
 
@@ -174,19 +192,30 @@ fn compile_attr_match(
     params: &mut serde_json::Map<String, serde_json::Value>,
 ) -> String {
     let leaves = expr.collect_leaves();
-    let attrs: Vec<&&SearchItem> = leaves.iter().filter(|l| SearchExpr::is_attr_item(l)).collect();
+    let attrs: Vec<&&SearchItem> = leaves
+        .iter()
+        .filter(|l| SearchExpr::is_attr_item(l))
+        .collect();
     if attrs.is_empty() {
         return String::new();
     }
 
     let mut clauses = Vec::new();
     for (i, item) in attrs.iter().enumerate() {
-        if let SearchItem::Attr { attr_id, operator, value, .. } = item {
+        if let SearchItem::Attr {
+            attr_id,
+            operator,
+            value,
+            ..
+        } = item
+        {
             let var = format!("av{}", i);
             let id = attr_id.unwrap_or(0);
             let p_id = cypher_param(idx, params, &serde_json::json!(id));
             let val = match operator {
-                Operator::Like => serde_json::Value::String(like_to_regex(value.as_str().unwrap_or(""))),
+                Operator::Like => {
+                    serde_json::Value::String(like_to_regex(value.as_str().unwrap_or("")))
+                }
                 _ => value.clone(),
             };
             let p_val = cypher_param(idx, params, &val);
@@ -198,7 +227,10 @@ fn compile_attr_match(
                 "OPTIONAL MATCH (v)-[:HAS_ATTR_VALUE]->({}:AttributeValue {{attrid: {}}})",
                 var, p_id
             );
-            let where_line = format!("{} IS NOT NULL AND {}.attrvalue {} {}", var, var, op_str, p_val);
+            let where_line = format!(
+                "{} IS NOT NULL AND {}.attrvalue {} {}",
+                var, var, op_str, p_val
+            );
             clauses.push(format!("{}\nAND {}", match_line, where_line));
         }
     }

@@ -312,18 +312,41 @@ impl Backend for PostgresBackend {
         paging: SearchPaging,
     ) -> RepoResult<SearchResult> {
         let mut client = self.client()?;
-        let limit = if paging.limit > 0 { Some(paging.limit) } else { None };
-        let offset = if paging.offset >= 0 { Some(paging.offset) } else { None };
-        let order_pair = (order.field.clone(), if order.descending { "DESC".to_string() } else { "ASC".to_string() });
+        let limit = if paging.limit > 0 {
+            Some(paging.limit)
+        } else {
+            None
+        };
+        let offset = if paging.offset >= 0 {
+            Some(paging.offset)
+        } else {
+            None
+        };
+        let order_pair = (
+            order.field.clone(),
+            if order.descending {
+                "DESC".to_string()
+            } else {
+                "ASC".to_string()
+            },
+        );
 
         let compiled = crate::search_sql::compile(expr, &order_pair, limit, offset);
-        let count_refs: Vec<&(dyn ToSql + Sync)> = compiled.count_params.iter().map(|s| s as &(dyn ToSql + Sync)).collect();
+        let count_refs: Vec<&(dyn ToSql + Sync)> = compiled
+            .count_params
+            .iter()
+            .map(|s| s as &(dyn ToSql + Sync))
+            .collect();
         let count_row = client
             .query_one(&compiled.count_sql, &count_refs)
             .map_err(|e| RepoError::Backend(format!("search count query failed: {e}")))?;
         let total_hits: i64 = count_row.get(0);
 
-        let select_refs: Vec<&(dyn ToSql + Sync)> = compiled.params.iter().map(|s| s as &(dyn ToSql + Sync)).collect();
+        let select_refs: Vec<&(dyn ToSql + Sync)> = compiled
+            .params
+            .iter()
+            .map(|s| s as &(dyn ToSql + Sync))
+            .collect();
         let rows = client
             .query(&compiled.sql, &select_refs)
             .map_err(|e| RepoError::Backend(format!("search select query failed: {e}")))?;

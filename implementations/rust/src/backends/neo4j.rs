@@ -87,7 +87,9 @@ impl Neo4jBackend {
             )
         };
 
-        let response = self.agent.post(&self.endpoint())
+        let response = self
+            .agent
+            .post(&self.endpoint())
             .header("Authorization", &basic)
             .header("Content-Type", "application/json")
             .send_json(payload)
@@ -533,9 +535,24 @@ impl Backend for Neo4jBackend {
         order: SearchOrder,
         paging: SearchPaging,
     ) -> RepoResult<SearchResult> {
-        let limit = if paging.limit > 0 { Some(paging.limit) } else { None };
-        let offset = if paging.offset >= 0 { Some(paging.offset) } else { None };
-        let order_pair = (order.field.clone(), if order.descending { "DESC".to_string() } else { "ASC".to_string() });
+        let limit = if paging.limit > 0 {
+            Some(paging.limit)
+        } else {
+            None
+        };
+        let offset = if paging.offset >= 0 {
+            Some(paging.offset)
+        } else {
+            None
+        };
+        let order_pair = (
+            order.field.clone(),
+            if order.descending {
+                "DESC".to_string()
+            } else {
+                "ASC".to_string()
+            },
+        );
 
         let compiled = crate::search_cypher::compile(expr, &order_pair, limit, offset);
         let params_json = serde_json::Value::Object(compiled.params);

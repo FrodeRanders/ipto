@@ -280,7 +280,11 @@ pub(crate) fn search_expr_to_json(expr: &SearchExpr) -> Value {
 
 fn search_item_to_predicate_json(item: &SearchItem) -> Value {
     match item {
-        SearchItem::Unit { column, operator, value } => {
+        SearchItem::Unit {
+            column,
+            operator,
+            value,
+        } => {
             let col = match column.as_str() {
                 "unitname" | "name" => "name",
                 other => other,
@@ -293,7 +297,12 @@ fn search_item_to_predicate_json(item: &SearchItem) -> Value {
                 }]
             })
         }
-        SearchItem::Attr { name, operator, value, .. } => {
+        SearchItem::Attr {
+            name,
+            operator,
+            value,
+            ..
+        } => {
             json!({
                 "attribute_cmp": {
                     "name_or_id": name,
@@ -302,7 +311,12 @@ fn search_item_to_predicate_json(item: &SearchItem) -> Value {
                 }
             })
         }
-        SearchItem::Rel { direction, rel_type, tenant_id, unit_id } => {
+        SearchItem::Rel {
+            direction,
+            rel_type,
+            tenant_id,
+            unit_id,
+        } => {
             let side = match direction {
                 Direction::Left => "left",
                 Direction::Right => "right",
@@ -315,7 +329,11 @@ fn search_item_to_predicate_json(item: &SearchItem) -> Value {
                 }
             })
         }
-        SearchItem::Assoc { direction, assoc_type, ref_string } => {
+        SearchItem::Assoc {
+            direction,
+            assoc_type,
+            ref_string,
+        } => {
             let side = match direction {
                 Direction::Left => "left",
                 Direction::Right => "right",

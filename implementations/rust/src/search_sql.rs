@@ -84,29 +84,35 @@ fn compile_exists(
     }
 }
 
-fn compile_exists_where(
-    expr: &SearchExpr,
-    idx: &mut i64,
-    params: &mut Vec<String>,
-) -> String {
+fn compile_exists_where(expr: &SearchExpr, idx: &mut i64, params: &mut Vec<String>) -> String {
     match expr {
         SearchExpr::And(l, r) => {
             let left = compile_exists_where(l, idx, params);
             let right = compile_exists_where(r, idx, params);
-            if left.is_empty() { return right; }
-            if right.is_empty() { return left; }
+            if left.is_empty() {
+                return right;
+            }
+            if right.is_empty() {
+                return left;
+            }
             format!("({} AND {})", left, right)
         }
         SearchExpr::Or(l, r) => {
             let left = compile_exists_where(l, idx, params);
             let right = compile_exists_where(r, idx, params);
-            if left.is_empty() { return right; }
-            if right.is_empty() { return left; }
+            if left.is_empty() {
+                return right;
+            }
+            if right.is_empty() {
+                return left;
+            }
             format!("({} OR {})", left, right)
         }
         SearchExpr::Not(inner) => {
             let inner_sql = compile_exists_where(inner, idx, params);
-            if inner_sql.is_empty() { return String::new(); }
+            if inner_sql.is_empty() {
+                return String::new();
+            }
             format!("NOT ({})", inner_sql)
         }
         SearchExpr::Between(lower, upper) => {
@@ -135,8 +141,10 @@ fn compile_set_ops(
     offset: Option<i64>,
 ) -> CompiledQuery {
     let leaves = expr.collect_leaves();
-    let attr_leaves: Vec<&&SearchItem> =
-        leaves.iter().filter(|l| SearchExpr::is_attr_item(l)).collect();
+    let attr_leaves: Vec<&&SearchItem> = leaves
+        .iter()
+        .filter(|l| SearchExpr::is_attr_item(l))
+        .collect();
 
     let mut param_idx = 1;
 
@@ -178,11 +186,7 @@ fn compile_set_ops(
          JOIN repo.repo_unit_version uv ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver)\n\
          JOIN final f ON (uk.tenantid = f.tenantid AND uk.unitid = f.unitid)\n\
          WHERE 1=1{}{}{}",
-        cte_block,
-        attr_logic,
-        unit_where_sql,
-        order_sql,
-        page_sql,
+        cte_block, attr_logic, unit_where_sql, order_sql, page_sql,
     );
 
     let count_sql = format!(
@@ -192,9 +196,7 @@ fn compile_set_ops(
          JOIN repo.repo_unit_version uv ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver)\n\
          JOIN final f ON (uk.tenantid = f.tenantid AND uk.unitid = f.unitid)\n\
          WHERE 1=1{}",
-        cte_block,
-        attr_logic,
-        unit_where_sql,
+        cte_block, attr_logic, unit_where_sql,
     );
 
     let mut count_params: Vec<String> = Vec::new();
@@ -315,11 +317,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
     }
 }
 
-fn attr_item_to_cte(
-    item: &SearchItem,
-    cte_name: &str,
-    idx: &mut i64,
-) -> (String, Vec<String>) {
+fn attr_item_to_cte(item: &SearchItem, cte_name: &str, idx: &mut i64) -> (String, Vec<String>) {
     if let SearchItem::Attr {
         attr_id,
         attr_type,
@@ -342,7 +340,12 @@ fn attr_item_to_cte(
 
         let sql = format!(
             "{} AS (\n    SELECT av.tenantid, av.unitid\n    FROM repo.repo_attribute_value av\n    JOIN {} vv ON av.valueid = vv.valueid\n    WHERE av.attrid = ${} AND {} {} ${}\n)",
-            cte_name, table, i1, col, operator.to_sql(), i2
+            cte_name,
+            table,
+            i1,
+            col,
+            operator.to_sql(),
+            i2
         );
         (sql, vec![attr_id.to_string(), value_to_string(value)])
     } else {
@@ -350,10 +353,7 @@ fn attr_item_to_cte(
     }
 }
 
-fn build_set_ops_logic(
-    expr: &SearchExpr,
-    cte_names: &[(String, &&SearchItem)],
-) -> String {
+fn build_set_ops_logic(expr: &SearchExpr, cte_names: &[(String, &&SearchItem)]) -> String {
     match expr {
         SearchExpr::And(l, r) => {
             format!(
@@ -382,7 +382,10 @@ fn build_set_ops_logic(
             );
             match (lower_cte, upper_cte) {
                 (Some(l), Some(u)) => {
-                    format!("(SELECT tenantid, unitid FROM {}) INTERSECT (SELECT tenantid, unitid FROM {})", l, u)
+                    format!(
+                        "(SELECT tenantid, unitid FROM {}) INTERSECT (SELECT tenantid, unitid FROM {})",
+                        l, u
+                    )
                 }
                 _ => "(SELECT tenantid, unitid FROM repo.repo_unit_kernel)".to_string(),
             }
@@ -399,10 +402,7 @@ fn build_set_ops_logic(
     }
 }
 
-fn cte_name_for<'a>(
-    cte_names: &'a [(String, &&SearchItem)],
-    item: &SearchItem,
-) -> Option<&'a str> {
+fn cte_name_for<'a>(cte_names: &'a [(String, &&SearchItem)], item: &SearchItem) -> Option<&'a str> {
     cte_names
         .iter()
         .find(|(_, i)| ***i == *item)
@@ -425,11 +425,7 @@ fn build_order_sql(order: &(String, String)) -> String {
     format!(" ORDER BY {} {}", field, dir)
 }
 
-fn build_paging(
-    limit: Option<i64>,
-    offset: Option<i64>,
-    idx: &mut i64,
-) -> (String, Vec<String>) {
+fn build_paging(limit: Option<i64>, offset: Option<i64>, idx: &mut i64) -> (String, Vec<String>) {
     let mut sql = String::new();
     let mut params = Vec::new();
     if let Some(lim) = limit {
@@ -501,7 +497,10 @@ mod tests {
         let compiled = compile(&expr, &order, Some(5), Some(10));
         assert!(compiled.sql.contains("LIMIT $2"));
         assert!(compiled.sql.contains("OFFSET $3"));
-        assert_eq!(compiled.params, vec!["30".to_string(), "5".to_string(), "10".to_string()]);
+        assert_eq!(
+            compiled.params,
+            vec!["30".to_string(), "5".to_string(), "10".to_string()]
+        );
     }
 
     #[test]
@@ -575,8 +574,16 @@ mod tests {
     #[test]
     fn compile_between_unit() {
         let expr = SearchExpr::Between(
-            SearchItem::Unit { column: "unitid".to_string(), operator: Operator::Gte, value: json!(100) },
-            SearchItem::Unit { column: "unitid".to_string(), operator: Operator::Lte, value: json!(200) },
+            SearchItem::Unit {
+                column: "unitid".to_string(),
+                operator: Operator::Gte,
+                value: json!(100),
+            },
+            SearchItem::Unit {
+                column: "unitid".to_string(),
+                operator: Operator::Lte,
+                value: json!(200),
+            },
         );
         let order = ("unitid".to_string(), "ASC".to_string());
         let compiled = compile(&expr, &order, Some(50), None);

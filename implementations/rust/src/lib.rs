@@ -28,11 +28,11 @@ pub mod graphql_sdl;
 pub mod model;
 pub mod repo;
 pub mod search_ast;
+mod search_cypher;
 mod search_expr;
 mod search_filters;
 mod search_query;
 mod search_sql;
-mod search_cypher;
 
 #[cfg(feature = "python")]
 mod pybindings {

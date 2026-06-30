@@ -1,0 +1,240 @@
+
+Top PostgreSQL statements by total time
+-----------+----------+---------+------------+----------------------------------------------------------------------------------------------------------------------------------------------
+     Calls |  Total s |  Avg ms |       Rows |                                                                                                                                        Query
+-----------+----------+---------+------------+----------------------------------------------------------------------------------------------------------------------------------------------
+ 1,001,000 |  262.926 |   0.263 |  1,001,000 | SELECT repo_ingest_attributes( v_tenantid, p_unitid, p_unitver, p_unit -> 'attributes', -- top-level attributes array NULL -- no parent (rec
+ 2,000,000 |  253.604 |   0.127 |  2,000,000 | SELECT repo_ingest_attributes( p_tenantid, p_unitid, p_unitver, v_children, v_valueid -- this record is now the parent )                    
+ 6,002,000 |  120.555 |   0.020 |  6,002,000 | INSERT INTO repo_attribute_value( tenantid, unitid, attrid, unitverfrom, unitverto ) VALUES ( p_tenantid, p_unitid, v_attrid, p_unitver, p_u
+ 3,000,000 |   34.921 |   0.012 |  3,000,000 | INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid) VALUES (p_parent_record_valueid, v_idx, v_attrid, v_valueid)          
+ 3,002,000 |   30.609 |   0.010 |  3,004,001 | INSERT INTO repo_string_vector(valueid, idx, value) SELECT v_valueid, ord - 1, elem FROM jsonb_array_elements_text(v_value) WITH ORDINALITY 
+ 1,001,000 |   20.090 |   0.020 |  1,001,000 | INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES ($1, $2, $3, $4, $5)                          
+12,007,000 |   19.451 |   0.002 | 12,007,000 | SELECT 1 FROM ONLY "repo"."repo_unit_version" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 AND "unitv
+ 1,001,000 |   18.668 |   0.019 |  1,001,000 | INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname) VALUES (v_tenantid, p_unitid, p_unitver, v_unitname) RETURNING modified 
+ 1,001,000 |   17.083 |   0.017 |  1,001,000 | INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (v_tenantid, v_corrid, v_status) RETURNING lastver, unitid, created          
+10,005,001 |   15.213 |   0.002 | 10,005,001 | SELECT 1 FROM ONLY "repo"."repo_attribute_value" x WHERE "valueid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                             
+ 7,004,000 |   13.356 |   0.002 |  7,004,000 | SELECT 1 FROM ONLY "repo"."repo_tenant" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                                     
+ 1,000,000 |    9.751 |   0.010 |  1,000,000 | INSERT INTO repo_time_vector(valueid, idx, value) SELECT v_valueid, ord - $13, (elem)::timestamp FROM jsonb_array_elements_text(v_value) WIT
+ 3,004,000 |    7.753 |   0.003 |  3,004,000 | SELECT 1 FROM ONLY "repo"."repo_unit_kernel" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 FOR KEY SHA
+         1 |    0.497 | 496.725 |          1 | WITH c1 AS (SELECT av.tenantid, av.unitid FROM repo_attribute_value av JOIN repo_time_vector vv ON av.valueid = vv.valueid WHERE av.attrid =
+     1,000 |    0.138 |   0.138 |      1,000 | SELECT repo_ingest_attributes_delta( v_tenantid, v_unitid, p_unitver, p_unit -> $9, -- top-level attributes array $10, -- no *new* parent re
+
+Top PostgreSQL statements by calls
+-----------+----------+---------+------------+----------------------------------------------------------------------------------------------------------------------------------------------
+     Calls |  Total s |  Avg ms |       Rows |                                                                                                                                        Query
+-----------+----------+---------+------------+----------------------------------------------------------------------------------------------------------------------------------------------
+ 7,004,000 |   13.356 |   0.002 |  7,004,000 | SELECT 1 FROM ONLY "repo"."repo_tenant" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                                     
+ 6,002,000 |  120.555 |   0.020 |  6,002,000 | INSERT INTO repo_attribute_value( tenantid, unitid, attrid, unitverfrom, unitverto ) VALUES ( p_tenantid, p_unitid, v_attrid, p_unitver, p_u
+ 3,004,000 |    7.753 |   0.003 |  3,004,000 | SELECT 1 FROM ONLY "repo"."repo_unit_kernel" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 FOR KEY SHA
+ 3,002,000 |   30.609 |   0.010 |  3,004,001 | INSERT INTO repo_string_vector(valueid, idx, value) SELECT v_valueid, ord - 1, elem FROM jsonb_array_elements_text(v_value) WITH ORDINALITY 
+ 3,000,000 |   34.921 |   0.012 |  3,000,000 | INSERT INTO repo_record_vector(valueid, idx, ref_attrid, ref_valueid) VALUES (p_parent_record_valueid, v_idx, v_attrid, v_valueid)          
+ 2,000,000 |  253.604 |   0.127 |  2,000,000 | SELECT repo_ingest_attributes( p_tenantid, p_unitid, p_unitver, v_children, v_valueid -- this record is now the parent )                    
+     2,000 |    0.019 |   0.009 |      2,000 | SELECT av.valueid FROM repo_attribute_value av WHERE av.tenantid = p_tenantid AND av.unitid = p_unitid AND av.attrid = v_attrid AND v_oldver
+         2 |    0.000 |   0.109 |          2 | WITH unit_hdr AS ( SELECT uk.tenantid, uk.unitid, uv.unitver, uk.lastver, uk.corrid, uk.status, uk.created, uv.modified, uv.unitname FROM re
+12,007,000 |   19.451 |   0.002 | 12,007,000 | SELECT 1 FROM ONLY "repo"."repo_unit_version" x WHERE "tenantid" OPERATOR(pg_catalog.=) $1 AND "unitid" OPERATOR(pg_catalog.=) $2 AND "unitv
+ 1,001,000 |  262.926 |   0.263 |  1,001,000 | SELECT repo_ingest_attributes( v_tenantid, p_unitid, p_unitver, p_unit -> 'attributes', -- top-level attributes array NULL -- no parent (rec
+ 1,001,000 |   20.090 |   0.020 |  1,001,000 | INSERT INTO repo_internal_relation (tenantid, unitid, reltype, reltenantid, relunitid) VALUES ($1, $2, $3, $4, $5)                          
+ 1,001,000 |   18.668 |   0.019 |  1,001,000 | INSERT INTO repo_unit_version (tenantid, unitid, unitver, unitname) VALUES (v_tenantid, p_unitid, p_unitver, v_unitname) RETURNING modified 
+ 1,001,000 |   17.083 |   0.017 |  1,001,000 | INSERT INTO repo_unit_kernel (tenantid, corrid, status) VALUES (v_tenantid, v_corrid, v_status) RETURNING lastver, unitid, created          
+10,005,001 |   15.213 |   0.002 | 10,005,001 | SELECT 1 FROM ONLY "repo"."repo_attribute_value" x WHERE "valueid" OPERATOR(pg_catalog.=) $1 FOR KEY SHARE OF x                             
+ 1,000,000 |    9.751 |   0.010 |  1,000,000 | INSERT INTO repo_time_vector(valueid, idx, value) SELECT v_valueid, ord - $13, (elem)::timestamp FROM jsonb_array_elements_text(v_value) WIT
+
+
+
+• This says the system is spending most of its time on write-side ingestion, not on search.
+
+  The biggest signals:
+
+  - repo_ingest_attributes(...) dominates total time:
+      - 262.9 s top-level
+      - 253.6 s nested/recursive
+  - The raw inserts themselves are relatively cheap:
+      - repo_attribute_value inserts: 120.6 s across 6,002,000 calls
+      - repo_record_vector inserts: 34.9 s
+      - repo_string_vector inserts: 30.6 s
+      - repo_unit_kernel / repo_unit_version inserts: around 17-19 s each
+  - Search is basically irrelevant in this run:
+      - the large WITH c1 AS ... search query ran once and took 0.497 s
+
+  What that means structurally:
+
+  1. The bottleneck is procedural overhead in repo_ingest_attributes, not table insert cost alone.
+     Each call is still fast, but you execute it millions of times. The recursion / JSON walking / per-attribute procedural logic is where the bulk
+     time accumulates.
+  2. You have a very chatty FK / key-check workload.
+     These are the suspicious “death by a million cuts” entries:
+
+  - SELECT 1 FROM ONLY repo_unit_version ... FOR KEY SHARE: 12,007,000 calls
+  - SELECT 1 FROM ONLY repo_attribute_value ... FOR KEY SHARE: 10,005,001 calls
+  - SELECT 1 FROM ONLY repo_tenant ... FOR KEY SHARE: 7,004,000 calls
+  - SELECT 1 FROM ONLY repo_unit_kernel ... FOR KEY SHARE: 3,004,000 calls
+
+  These are usually constraint-triggered lookups from foreign keys. They are individually cheap, but the call counts are enormous.
+
+  3. Your schema design is normalized enough that one logical unit write expands into many physical writes.
+     That is expected here:
+
+  - 1,001,000 unit kernel rows
+  - 1,001,000 unit version rows
+  - 6,002,000 attribute-value rows
+  - 3,002,000 string-vector rows
+  - 3,000,000 record-vector rows
+  - 1,000,000 time-vector rows
+  - 1,001,000 relations
+
+  So the stats are internally consistent. Nothing looks “mysteriously wrong”.
+
+  What I would conclude:
+
+  - The system scales, but write amplification is high.
+  - The biggest optimization target is not search SQL.
+  - The biggest optimization targets are:
+      - reducing calls into repo_ingest_attributes
+      - reducing FK-related lookup count
+      - batching / set-based ingestion inside procedures where possible
+
+  What I would inspect next:
+
+  - In shared/db/postgresql/procedures.sql, focus on repo_ingest_attributes.
+    Look for:
+      - recursive per-child calls
+      - repeated attribute-id lookups
+      - repeated jsonb_array_elements* expansion
+      - row-by-row inserts that could become set-based inserts
+  - In the schema, review FKs on:
+      - repo_attribute_value
+      - repo_record_vector
+      - repo_unit_version
+      - repo_internal_relation
+        Those FOR KEY SHARE probes are likely generated by FK enforcement. Sometimes that is fine; sometimes it means too many immediate FK checks for
+        hot ingest paths.
+
+  How I’d summarize the current profile:
+
+  - Good news: search is not the bottleneck.
+  - Real bottleneck: write-side attribute ingestion.
+  - Hidden tax: massive FK validation traffic.
+  - Best optimization direction: make ingest more set-oriented and reduce recursive/plpgsql call count.
+
+• This is pretty informative. It narrows the hot path a lot.
+
+  What It Says
+
+  The dominant cost is the write pipeline in shared/db/postgresql/procedures.sql:40 and its recursive child calls, not the final search.
+
+  The big picture:
+
+  - One million units produces millions of tiny writes and FK checks.
+  - The expensive part is not any one insert being slow.
+  - The expensive part is:
+      - recursive PL/pgSQL call overhead
+      - row-by-row inserts into normalized tables
+      - foreign-key validation on every inserted row
+
+  Your one search query took only 0.497 s. The workload is overwhelmingly ingest-bound.
+
+  Main Findings
+
+  1. shared/db/postgresql/procedures.sql:40 is the main bottleneck.
+     It appears twice at the top:
+
+  - 1,001,000 top-level calls, 262.926 s
+  - 2,000,000 nested calls, 253.604 s
+
+  That means roughly half the runtime is procedural recursion / JSON walking, before even counting all child inserts. This function is doing a lot of
+  orchestration work.
+
+  2. The insert workload is large but individually cheap.
+     Examples:
+
+  - shared/db/postgresql/schema.sql:137 inserts: 6,002,000 calls, 120.555 s
+  - shared/db/postgresql/schema.sql:396 inserts: 3,000,000 calls, 34.921 s
+  - shared/db/postgresql/schema.sql:273 inserts: 3,002,000 calls, 30.609 s
+  - shared/db/postgresql/schema.sql:293 inserts: 1,000,000 calls, 9.751 s
+
+  So the raw insert cost is real, but not the worst offender.
+
+  3. The FK validation traffic is enormous.
+     These are the most telling lines:
+
+  - SELECT 1 FROM ONLY repo_unit_version ...: 12,007,000 calls
+  - SELECT 1 FROM ONLY repo_attribute_value ... FOR KEY SHARE: 10,005,001 calls
+  - SELECT 1 FROM ONLY repo_tenant ... FOR KEY SHARE: 7,004,000 calls
+  - SELECT 1 FROM ONLY repo_unit_kernel ... FOR KEY SHARE: 3,004,000 calls
+
+  These are almost certainly foreign-key enforcement reads caused by the schema in shared/db/postgresql/schema.sql.
+
+  Why Those FK Counts Make Sense
+
+  The counts line up with the schema surprisingly well.
+
+  - repo_attribute_value FK checks:
+      - Every insert into shared/db/postgresql/schema.sql:273, shared/db/postgresql/schema.sql:293, and shared/db/postgresql/schema.sql:396 validates
+        valueid.
+      - repo_record_vector validates both valueid and ref_valueid.
+      - That explains why repo_attribute_value gets hammered.
+  - repo_unit_version FK checks:
+      - Each shared/db/postgresql/schema.sql:137 row has two FKs:
+          - (tenantid, unitid, unitverfrom)
+          - (tenantid, unitid, unitverto)
+      - For 6,002,000 inserts, that yields about 12,004,000 validation probes.
+      - Your observed 12,007,000 is basically exactly that.
+  - repo_unit_kernel FK checks:
+      - Each shared/db/postgresql/schema.sql:66 insert validates (tenantid, unitid).
+      - Each shared/db/postgresql/schema.sql:482 insert validates both endpoints.
+      - That gets you right into the ~3,004,000 range you observed.
+
+  So this is not a planner mystery. It is structural write amplification.
+
+  Most Likely Hot Spots Inside repo_ingest_attributes
+
+  The costly patterns in shared/db/postgresql/procedures.sql:40 are:
+
+  - Per-attribute loop:
+      - FOR v_attr IN SELECT value FROM jsonb_array_elements(p_attrs)
+  - Per-attribute insert:
+      - INSERT INTO repo_attribute_value ... RETURNING valueid
+  - Per-record recursive call:
+      - PERFORM repo_ingest_attributes(...)
+  - Per-child record link:
+      - INSERT INTO repo_record_vector(...) VALUES (...)
+  - Per-primitive vector insert:
+      - separate INSERT ... SELECT jsonb_array_elements_text(...) for each attribute
+
+  That means every attribute occurrence crosses PL/pgSQL control flow, then hits SQL individually.
+
+  What I Would Optimize First
+
+  1. Reduce recursion / function-call count.
+     The two repo_ingest_attributes(...) entries alone are over 516 s.
+     That is your first optimization target.
+  2. Reduce repo_attribute_value row-by-row inserts.
+     This is the largest single insert family and also causes the repo_unit_version FK storm.
+  3. Reduce repo_record_vector row-by-row linking.
+     This is not just insert cost; it also doubles up FK checks into repo_attribute_value.
+  4. Revisit whether both unitverfrom and unitverto need immediate FK enforcement to repo_unit_version.
+     Those two FKs are very expensive operationally.
+     They may be correct semantically, but they are costly.
+
+  Concrete Options
+
+  - Keep the current schema, but make ingest more set-based:
+      - explode top-level JSON once into a temp table / CTE
+      - insert many repo_attribute_value rows in one statement
+      - join back to derive vector inserts in batches
+  - For record attributes:
+      - stage parent-child relationships first
+      - then insert repo_record_vector in bulk
+  - Consider whether some FKs can be:
+      - deferred
+      - reduced
+      - replaced by a narrower integrity strategy on hot paths
+
+  Bottom Line
+
+  This profile says:
+
+  - The system is bottlenecked by ingest orchestration and referential-integrity overhead.
+  - Search is not currently your problem.
+  - The biggest practical wins will come from making shared/db/postgresql/procedures.sql:40 less row-by-row and less recursive.
+
