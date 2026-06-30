@@ -926,6 +926,12 @@ fn resolve_association_type_token(token: &str) -> RepoResult<i64> {
         "CASE_ASSOCIATION" => Ok(2),
         "CASEASSOC_ASSOCIATION" => Ok(2),
         "CASE_ASSOC_ASSOCIATION" => Ok(2),
+        "REFERS_TO_ASSOCIATION" => Ok(10),
+        "SIGNED_BY_ASSOCIATION" => Ok(11),
+        "VERIFIED_BY_ASSOCIATION" => Ok(12),
+        "MIGRATED_FROM_ASSOCIATION" => Ok(13),
+        "DERIVED_FROM_ASSOCIATION" => Ok(14),
+        "PRODUCED_BY_ASSOCIATION" => Ok(15),
         _ => Err(RepoError::InvalidInput(format!(
             "unknown association type: {token}"
         ))),
