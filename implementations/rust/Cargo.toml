@@ -1,9 +1,10 @@
 [package]
-name = "ipto_rust"
+name = "ipto"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.93.0"
-description = "Rust implementation scaffold for IPTO Java repo/graphql with Python bindings"
+description = "Rust implementation scaffold for Ipto metadata management facilities with Python bindings"
+repository = "https://github.com/FrodeRanders/ipto"
 license = "Apache-2.0"
 
 [lib]
