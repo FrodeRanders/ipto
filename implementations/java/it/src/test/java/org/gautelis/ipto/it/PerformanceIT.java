@@ -30,6 +30,7 @@ import org.gautelis.ipto.repo.search.model.*;
 import org.gautelis.ipto.repo.search.query.*;
 import org.gautelis.vopn.lang.TimeDelta;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,6 +63,7 @@ import static org.junit.jupiter.api.Assertions.fail;
  *
  */
 @Tag("performance")
+@EnabledIfSystemProperty(named = "ipto.performance.enabled", matches = "true")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @IptoIT

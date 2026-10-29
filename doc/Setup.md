@@ -8,47 +8,15 @@ The details in how we interface with these database management systems differs a
 and test we use Docker. We have provided Python scripts that automates downloading the Docker images,
 starting and setting up a clean database with the relevant schema.
 
-```terminaloutput
-➜  python db/postgresql/setup-for-test.py
-Pulling the latest 'postgres' image from Docker Hub...
-Using default tag: latest
-latest: Pulling from library/postgres
-b89cf3ec7a3e: Pull complete 
-3d40ad1ee517: Pull complete 
-5e86690e08b4: Pull complete 
-36aea44977d6: Pull complete 
-af5b2941599b: Pull complete 
-e808f1e529cf: Pull complete 
-07c5a27f4144: Pull complete 
-d84932fbe51d: Pull complete 
-87e5f1d7b994: Pull complete 
-477d35ab7c57: Pull complete 
-c598951473cf: Pull complete 
-55bb4e0a9b60: Pull complete 
-4aee7b1337ee: Pull complete 
-Digest: sha256:5ec39c188013123927f30a006987c6b0e20f3ef2b54b140dfa96dac6844d883f
-Status: Downloaded newer image for postgres:latest
-docker.io/library/postgres:latest
-
-What's next:
-    View a summary of image vulnerabilities and recommendations → docker scout quickview postgres
-Image pulled successfully.
-
-Removing existing container named 'repo-postgres' (if any)...
-Removed old container 'repo-postgres'.
-
-Starting new container 'repo-postgres' on port 5432 ...
-da12447c2ef70594b16646988ae3efd6ed374c23e289be928c6a262426bd91ff
-Container started: da12447c2ef7
-
-Awaiting startup...
-Running psql commands in container...
-Commands executed. Exiting psql.
-
-All SQL files have been executed.
-
-Setup completed.
+```sh
+python3 shared/db/postgresql/setup-for-test.py
+# Use another supported major version on a separate port:
+python3 shared/db/postgresql/setup-for-test.py --image postgres:18 --container-name repo-pg18 --host-port 5433
 ```
+
+The default image is `postgres:16`, matching CI. The script recreates its named test
+container and exits nonzero if readiness or SQL setup fails. See the
+[PostgreSQL README](../shared/db/postgresql/README.md) for all options.
 
 ### The backing management system
 

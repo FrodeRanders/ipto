@@ -12,10 +12,26 @@ Requires Node.js 22.17 or newer; CI uses Node.js 24.
 - `src/lib/components/`: reusable UI widgets
 
 ## Local run
+
+Start PostgreSQL and the Quarkus app on port 8080 first. For example, from the repository root:
+
+```bash
+python3 shared/db/postgresql/setup-for-test.py
+mvn -f implementations/java/pom.xml -pl quarkus-app -am -DskipTests package
+java -jar implementations/java/quarkus-app/target/quarkus-app/quarkus-run.jar
+```
+
+In another terminal, from `apps/admin-web`:
+
 ```bash
 npm ci
 npm run dev
 ```
+
+Vite forwards `/api` to Quarkus, so reads and writes use the same browser origin.
+To use another backend, set `IPTO_API_URL`, for example
+`IPTO_API_URL=http://localhost:8082 npm run dev`.
+The Quarkus CORS configuration also permits `PUT` from the default development origin.
 
 ## Dependencies and configuration
 - SvelteKit 3 configuration lives in `vite.config.js`; library imports use the `#lib/*` package alias.

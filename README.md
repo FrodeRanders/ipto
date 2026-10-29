@@ -101,12 +101,22 @@ python3 shared/db/postgresql/setup-for-test.py
 ```
 
 The setup script recreates its named test container (default `repo-postgres`).
-Use `--container-name` and `--host-port` to select a separate test instance.
+It defaults to `postgres:16`, matching CI. Use `--image postgres:18` to select
+another version, and `--container-name` / `--host-port` for a separate instance.
+`--skip-pull` uses a cached image. Readiness and SQL errors return a failing exit status.
 
 Build and verify the PostgreSQL Java application and integration tests:
 
 ```sh
 mvn -f implementations/java/pom.xml -pl it,quarkus-app -am verify
+```
+
+Normal verification skips performance workloads. Enable them explicitly with
+`-Pperformance`; the existing `-Pmassive-performance` profile also enables them
+and defaults to 1,000 parents with 1,000 children each.
+
+```sh
+mvn -f implementations/java/pom.xml -pl it -am -Pperformance verify
 ```
 
 This requires `org.gautelis:vopn:3.0-SNAPSHOT` installed from

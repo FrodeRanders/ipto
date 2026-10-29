@@ -206,7 +206,31 @@ python generate_schema_mermaid.py --schema schema.sql --update-readme README.md
 
 The script includes its own embedded README at the top of `generate_schema_mermaid.py`.
 
-# Instructions for retrieving, running and preparing PostgreSQL
+# Automated test setup
+
+From the repository root:
+
+```sh
+python3 shared/db/postgresql/setup-for-test.py
+python3 shared/db/postgresql/setup-for-test.py --container-name repo-pg18 --host-port 5433 --image postgres:18
+```
+
+The script recreates the named test container, publishes it on the loopback interface,
+and loads `schema.sql`, `procedures.sql`, and `boot.sql`. The default image is
+`postgres:16`, matching CI; `IPTO_PG_IMAGE` or `--image` selects another version.
+Use `--skip-pull` with a cached image and `--startup-timeout` to change the readiness deadline.
+
+SQL runs with `ON_ERROR_STOP=1`. A pull, startup, or SQL error exits nonzero and
+does not print the success message. Failed containers remain available for `docker logs`.
+The script uses only the Python standard library and the Docker CLI.
+
+Run its CLI regressions without a Docker daemon:
+
+```sh
+python3 -m unittest discover -s shared/db/postgresql -p 'test_*.py'
+```
+
+# Manual setup
 
 The name of the database ('repo'), the user ('repo') and the password ('repo'), 
 matches the [configuration](../../../implementations/java/repo/src/main/resources/org/gautelis/ipto/repo/configuration_pg.xml) 

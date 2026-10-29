@@ -720,7 +720,7 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
 
     let unitver_alias_query = repo
         .search_units_query(
-            "unit_ver = 2",
+            &format!("tenantid = {tenant_id} and unit_ver = 2"),
             SearchOrder {
                 field: "created".to_string(),
                 descending: true,
@@ -760,7 +760,7 @@ fn run_parity_scenario(repo: RepoService, tenant_id: i64, prefix: &str) {
 
     let status_name_query = repo
         .search_units_query(
-            "status = EFFECTIVE",
+            &format!("tenantid = {tenant_id} and status = EFFECTIVE"),
             SearchOrder {
                 field: "created".to_string(),
                 descending: true,

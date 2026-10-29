@@ -4,7 +4,7 @@ quarkus:
       enabled: true
       origins: "http://localhost:5173"
       headers: "accept,authorization,content-type,x-requested-with"
-      methods: "GET,POST,OPTIONS"
+      methods: "GET,POST,PUT,OPTIONS"
   log:
     # Root level (applies unless overridden by category)
     level: INFO
