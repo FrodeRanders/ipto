@@ -230,6 +230,13 @@ Run its CLI regressions without a Docker daemon:
 python3 -m unittest discover -s shared/db/postgresql -p 'test_*.py'
 ```
 
+# Persistent database upgrades
+
+Use [schema migrations](migrations/README.md) to initialize an empty database or
+upgrade a populated one without recreating its container. Existing canonical
+schemas require explicit `--baseline-existing` adoption. The migrator checks
+SHA-256 history, serializes concurrent runs, and rolls back failed upgrades.
+
 # Manual setup
 
 The name of the database ('repo'), the user ('repo') and the password ('repo'), 
