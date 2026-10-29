@@ -104,11 +104,27 @@ The setup script recreates its named test container (default `repo-postgres`).
 It defaults to `postgres:16`, matching CI. Use `--image postgres:18` to select
 another version, and `--container-name` / `--host-port` for a separate instance.
 `--skip-pull` uses a cached image. Readiness and SQL errors return a failing exit status.
+For persistent databases, use the separate [schema migration command](shared/db/postgresql/migrations/README.md),
+which supports explicit adoption and data-preserving upgrades.
 
-Build and verify the PostgreSQL Java application and integration tests:
+Build the administration UI and Quarkus application together (Node.js 22.17+,
+JDK 21+, and Maven are required):
 
 ```sh
-mvn -f implementations/java/pom.xml -pl it,quarkus-app -am verify
+./build.sh
+# Package without running tests, if PostgreSQL is not available:
+./build.sh -DskipTests
+```
+
+The Maven `web` profile runs `npm ci` and `npm run build`, then packages the output
+from `apps/admin-web/build` into Quarkus. Generated UI files stay out of source
+control. Clean Maven builds without `-Pweb` build the API only. DB2 is not included.
+Configure [local accounts](doc/Local_accounts.md) to enable administrator writes.
+
+Build and verify all PostgreSQL Java modules and the UI:
+
+```sh
+mvn -f implementations/java/pom.xml -pl it,quarkus-app -am -Pweb clean verify
 ```
 
 Normal verification skips performance workloads. Enable them explicitly with
@@ -140,9 +156,11 @@ IPTO is a data management framework that treats GraphQL Schema Definition Langua
 configuration. Instead of writing code to define data models, schemas, and 
 persistence logic, developers declare their domain model using GraphQL SDL with custom 
 directives, and the system automatically generates a data management solution 
-with full versioning, multi-tenancy, and search capabilities... but no authorisation.
-Authorisation has to be implemented outside of this solution, preferably by a
-reverse-proxy configuration.
+with full versioning, multi-tenancy, and search capabilities. The core repository
+leaves authorization to its host application. The supplied Quarkus HTTP application
+provides local account authentication and administrator checks for writes; ordinary
+reads remain public. Applications requiring tenant-specific access rules must
+provide those rules at their API or deployment boundary.
 
 IPTO solves the problem of managing structured metadata in systems where the schema 
 evolves over time or varies across different use cases. Rather than creating database tables 

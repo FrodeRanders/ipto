@@ -1,5 +1,7 @@
 quarkus:
   http:
+    auth:
+      basic: true
     cors:
       enabled: true
       origins: "http://localhost:5173"
@@ -49,6 +51,12 @@ quarkus:
       max-size: 10
     username: repo
     password: repo
+
+ipto-accounts:
+  admin-name: ${IPTO_ADMIN_USERNAME:admin}
+  admin-password-hash: ${IPTO_ADMIN_PASSWORD_HASH:}
+  reader-name: ${IPTO_READER_USERNAME:reader}
+  reader-password-hash: ${IPTO_READER_PASSWORD_HASH:}
 
 ipto:
   repository:

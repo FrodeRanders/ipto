@@ -1,6 +1,7 @@
 package org.gautelis.ipto.api;
 
 import jakarta.inject.Inject;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.PUT;
@@ -221,6 +222,7 @@ public class RecordResource {
     }
 
     @POST
+    @RolesAllowed("administrator")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response create(Map<String, Object> payload) {
         log.debug("RecordResource::create()");
@@ -328,6 +330,7 @@ public class RecordResource {
     }
 
     @PUT
+    @RolesAllowed("administrator")
     @Path("/{recordId}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response update(@PathParam("recordId") int recordId, Map<String, Object> payload) {

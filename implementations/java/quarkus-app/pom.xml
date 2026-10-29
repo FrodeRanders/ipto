@@ -56,9 +56,18 @@
 
     <dependencies>
         <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-security</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.gautelis.ipto</groupId>
             <artifactId>ipto-repo-cdi</artifactId>
             <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-elytron-security-common</artifactId>
         </dependency>
 
         <dependency>
@@ -169,6 +178,43 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>web</id>
+            <build>
+                <resources>
+                    <resource><directory>src/main/resources</directory></resource>
+                    <resource>
+                        <directory>${project.basedir}/../../../apps/admin-web/build</directory>
+                        <targetPath>META-INF/resources</targetPath>
+                    </resource>
+                </resources>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <version>3.5.0</version>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../../../apps/admin-web</workingDirectory>
+                            <executable>npm</executable>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-web-dependencies</id>
+                                <phase>generate-resources</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration><arguments><argument>ci</argument></arguments></configuration>
+                            </execution>
+                            <execution>
+                                <id>build-web</id>
+                                <phase>generate-resources</phase>
+                                <goals><goal>exec</goal></goals>
+                                <configuration><arguments><argument>run</argument><argument>build</argument></arguments></configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>native</id>
             <activation>

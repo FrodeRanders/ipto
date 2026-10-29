@@ -1,3 +1,5 @@
+import { apiFetch } from './stores/session.js';
+
 //
 //
 //
@@ -112,7 +114,7 @@ export const mapUnitPayload = (payload) => {
  * /api/trees/roots
  */
 export const fetchTreeRoots = async () => {
-  const response = await fetch('/api/trees/roots');
+  const response = await apiFetch('/api/trees/roots');
   if (!response.ok) {
     throw new Error(`Tree root fetch failed (${response.status})`);
   }
@@ -128,7 +130,7 @@ export const fetchTreeChildren = async (tenantId, unitId, limit = 200) => {
     params.set('limit', limit);
   }
   const suffix = params.toString() ? `?${params.toString()}` : '';
-  const response = await fetch(`/api/trees/${tenantId}/${unitId}/children${suffix}`);
+  const response = await apiFetch(`/api/trees/${tenantId}/${unitId}/children${suffix}`);
   if (!response.ok) {
     throw new Error(`Tree children fetch failed (${response.status})`);
   }
@@ -140,7 +142,7 @@ export const fetchTreeChildren = async (tenantId, unitId, limit = 200) => {
  * /api/tenants
  */
 export const fetchTenants = async () => {
-  const response = await fetch('/api/tenants');
+  const response = await apiFetch('/api/tenants');
   if (!response.ok) {
     throw new Error(`Tenant fetch failed (${response.status})`);
   }
@@ -152,7 +154,7 @@ export const fetchTenants = async () => {
  */
 export const fetchUnitById = async (tenantId, unitId, unitver = null) => {
   const query = unitver === null || unitver === undefined ? '' : `?unitver=${unitver}`;
-  const response = await fetch(`/api/units/${tenantId}/${unitId}${query}`);
+  const response = await apiFetch(`/api/units/${tenantId}/${unitId}${query}`);
   if (!response.ok) {
     throw new Error(`Unit fetch failed (${response.status})`);
   }
@@ -172,7 +174,7 @@ export const fetchUnitsList = async (tenantId, limit = 50) => {
     params.set('limit', limit);
   }
   const suffix = params.toString() ? `?${params.toString()}` : '';
-  const response = await fetch(`/api/units${suffix}`);
+  const response = await apiFetch(`/api/units${suffix}`);
   if (!response.ok) {
     throw new Error(`Units fetch failed (${response.status})`);
   }
@@ -184,7 +186,7 @@ export const fetchUnitsList = async (tenantId, limit = 50) => {
  * /api/attributes
  */
 export const fetchAttributes = async () => {
-  const response = await fetch('/api/attributes');
+  const response = await apiFetch('/api/attributes');
   if (!response.ok) {
     throw new Error(`Attribute fetch failed (${response.status})`);
   }
@@ -195,7 +197,7 @@ export const fetchAttributes = async () => {
  * /api/attributes/metadata
  */
 export const fetchAttributeMetadata = async () => {
-  const response = await fetch('/api/attributes/metadata');
+  const response = await apiFetch('/api/attributes/metadata');
   if (!response.ok) {
     throw new Error(`Attribute metadata fetch failed (${response.status})`);
   }
@@ -206,7 +208,7 @@ export const fetchAttributeMetadata = async () => {
  * /api/attributes (create)
  */
 export const createAttribute = async ({ alias, attributeName, qualifiedName, type, isArray }) => {
-  const response = await fetch('/api/attributes', {
+  const response = await apiFetch('/api/attributes', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -231,7 +233,7 @@ export const createAttribute = async ({ alias, attributeName, qualifiedName, typ
  * /api/attributes/{attrId}/descriptions
  */
 export const fetchAttributeDescriptions = async (attrId) => {
-  const response = await fetch(`/api/attributes/${attrId}/descriptions`);
+  const response = await apiFetch(`/api/attributes/${attrId}/descriptions`);
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     const message = payload.error || `Attribute descriptions fetch failed (${response.status})`;
@@ -241,7 +243,7 @@ export const fetchAttributeDescriptions = async (attrId) => {
 };
 
 export const updateAttributeDescriptions = async (attrId, items) => {
-  const response = await fetch(`/api/attributes/${attrId}/descriptions`, {
+  const response = await apiFetch(`/api/attributes/${attrId}/descriptions`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
@@ -262,7 +264,7 @@ export const updateAttributeDescriptions = async (attrId, items) => {
  * /api/records
  */
 export const fetchRecords = async () => {
-  const response = await fetch('/api/records');
+  const response = await apiFetch('/api/records');
   if (!response.ok) {
     throw new Error(`Record fetch failed (${response.status})`);
   }
@@ -273,7 +275,7 @@ export const fetchRecords = async () => {
  * /api/records/{recordId}
  */
 export const fetchRecordTemplate = async (recordId) => {
-  const response = await fetch(`/api/records/${recordId}`);
+  const response = await apiFetch(`/api/records/${recordId}`);
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
     const message = payload.error || `Record template fetch failed (${response.status})`;
@@ -286,7 +288,7 @@ export const fetchRecordTemplate = async (recordId) => {
  * /api/records (create)
  */
 export const createRecordTemplate = async ({ recordId, name, fields }) => {
-  const response = await fetch('/api/records', {
+  const response = await apiFetch('/api/records', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -309,7 +311,7 @@ export const createRecordTemplate = async ({ recordId, name, fields }) => {
  * /api/records/{recordId} (update)
  */
 export const updateRecordTemplate = async ({ recordId, name, fields }) => {
-  const response = await fetch(`/api/records/${recordId}`, {
+  const response = await apiFetch(`/api/records/${recordId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json'
@@ -331,7 +333,7 @@ export const updateRecordTemplate = async ({ recordId, name, fields }) => {
  * /api/templates
  */
 export const fetchTemplates = async () => {
-  const response = await fetch('/api/templates');
+  const response = await apiFetch('/api/templates');
   if (!response.ok) {
     throw new Error(`Template fetch failed (${response.status})`);
   }
@@ -342,7 +344,7 @@ export const fetchTemplates = async () => {
  * /api/searches
  */
 export const fetchSearches = async () => {
-  const response = await fetch('/api/searches');
+  const response = await apiFetch('/api/searches');
   if (!response.ok) {
     throw new Error(`Searches fetch failed (${response.status})`);
   }
@@ -360,7 +362,7 @@ export const searchUnits = async ({
   orderBy = null,
   orderDirection = null
 }) => {
-  const response = await fetch('/api/searches/units', {
+  const response = await apiFetch('/api/searches/units', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

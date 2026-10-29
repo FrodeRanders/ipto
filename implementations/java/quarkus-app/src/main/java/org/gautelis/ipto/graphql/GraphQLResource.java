@@ -19,6 +19,10 @@ package org.gautelis.ipto.graphql;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
+import graphql.language.OperationDefinition;
+import graphql.parser.InvalidSyntaxException;
+import graphql.parser.Parser;
+import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.POST;
@@ -42,6 +46,9 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 public class GraphQLResource {
     private static final Logger log = LoggerFactory.getLogger(GraphQLResource.class);
+
+    @Inject
+    SecurityIdentity identity;
 
     private final GraphQL graphQL;
 
@@ -69,6 +76,25 @@ public class GraphQLResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Map.of("error", "Missing GraphQL query"))
                     .build();
+        }
+
+        // Inspect the selected operation, not a string prefix: comments, aliases,
+        // and documents containing both queries and mutations are valid GraphQL.
+        try {
+            var operations = Parser.parse(request.query()).getDefinitionsOfType(OperationDefinition.class);
+            var operation = operations.stream()
+                    .filter(candidate -> request.operationName() == null
+                            ? operations.size() == 1
+                            : request.operationName().equals(candidate.getName()))
+                    .findFirst().orElse(null);
+            if (operation != null && operation.getOperation() == OperationDefinition.Operation.MUTATION
+                    && !identity.hasRole("administrator")) {
+                return Response.status(identity.isAnonymous() ? 401 : 403)
+                        .entity(Map.of("error", "Administrator access is required for mutations"))
+                        .build();
+            }
+        } catch (InvalidSyntaxException ignored) {
+            // Let GraphQL return its standard syntax error response below.
         }
 
         Map<String, Object> variables = request.variables() == null

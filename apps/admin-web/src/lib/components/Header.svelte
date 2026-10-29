@@ -1,7 +1,6 @@
 <script>
   import { page } from '$app/state';
-  import { role } from '../stores/role.js';
-  import Badge from './Badge.svelte';
+  import SignIn from './SignIn.svelte';
 
   const tabs = [
     { label: 'Overview', href: '/' },
@@ -36,13 +35,7 @@
     {/each}
   </nav>
 
-  <div class="role">
-    <Badge label={$role} tone={$role === 'administrator' ? 'accent' : 'neutral'} />
-    <div class="role-switch">
-      <button type="button" class:active={$role === 'user'} onclick={() => role.set('user')}>User</button>
-      <button type="button" class:active={$role === 'administrator'} onclick={() => role.set('administrator')}>Administrator</button>
-    </div>
-  </div>
+  <SignIn />
 </header>
 
 <style>
@@ -110,38 +103,6 @@
     color: var(--text);
   }
 
-  .role {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 0.8rem;
-  }
-
-  .role-switch {
-    display: flex;
-    gap: 0.4rem;
-    background: rgba(255, 255, 255, 0.05);
-    padding: 0.3rem;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .role-switch button {
-    border: none;
-    padding: 0.3rem 0.7rem;
-    border-radius: 999px;
-    background: transparent;
-    color: var(--text-muted);
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-
-  .role-switch button.active {
-    background: var(--accent);
-    color: #0c0f19;
-    font-weight: 600;
-  }
-
   @media (max-width: 900px) {
     .header {
       grid-template-columns: 1fr;
@@ -152,8 +113,5 @@
       flex-wrap: wrap;
     }
 
-    .role {
-      justify-content: flex-start;
-    }
   }
 </style>

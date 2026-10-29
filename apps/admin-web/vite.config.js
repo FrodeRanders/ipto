@@ -14,8 +14,9 @@ export default defineConfig({
   plugins: [
     sveltekit({
       adapter: adapter({
-        pages: '../../implementations/java/quarkus-app/src/main/resources/META-INF/resources',
-        assets: '../../implementations/java/quarkus-app/src/main/resources/META-INF/resources'
+        pages: 'build',
+        assets: 'build',
+        fallback: '200.html'
       }),
       prerender: {
         handleUnseenRoutes: 'ignore'

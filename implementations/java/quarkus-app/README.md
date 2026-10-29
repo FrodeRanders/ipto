@@ -1,69 +1,54 @@
-# ipto-quarkus-app
+# IPTO Quarkus application
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+The application serves the repository REST API, GraphQL, and the optional admin UI.
+Run commands below from the repository root.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+## Build and run
 
-## Running the application in dev mode
-
-You can run your application in dev mode that enables live coding using:
-
-```shell script
-./mvnw quarkus:dev
+```sh
+python3 shared/db/postgresql/setup-for-test.py
+./build.sh
+java -jar implementations/java/quarkus-app/target/quarkus-app/quarkus-run.jar
 ```
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+`./build.sh` runs a clean Maven package with the `web` profile. It installs locked
+npm dependencies, builds the UI, and includes the generated resources in the
+application. Requires Node.js 22.17+, JDK 21+, Maven, and the local vopn dependency
+specified in the [root README](../../../README.md). CI uses Node 24 and JDK 25.
+Use `./build.sh -DskipTests` to package without a running test database.
+The default build excludes the Java 8 DB2 helper.
 
-## Packaging and running the application
+The fast-JAR application needs the entire `target/quarkus-app` directory, including
+its `lib` and `app` directories. The runner JAR alone is insufficient.
 
-The application can be packaged using:
+## Accounts and API access
 
-```shell script
-./mvnw package
+Configure bcrypt hashes in the environment to enable local administrator and
+optional reader accounts. There are no default passwords. See
+[local accounts](../../../doc/Local_accounts.md) for interactive hash generation,
+sign-in, HTTPS deployment, and authorization tests.
+
+Ordinary REST reads, searches, and GraphQL queries remain public. Administrator
+access is required for attribute and record writes and for GraphQL mutations.
+The server decides roles; the browser displays the authenticated identity.
+
+## Development and verification
+
+For an API-only build:
+
+```sh
+mvn -f implementations/java/pom.xml -pl quarkus-app -am clean package
 ```
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+For all Java tests and production UI packaging:
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
-
-If you want to build an _über-jar_, execute the following command:
-
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
+```sh
+mvn -f implementations/java/pom.xml -pl it,quarkus-app -am -Pweb clean verify
 ```
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+For UI development with Vite, see the [admin UI README](../../../apps/admin-web/README.md).
+For persistent PostgreSQL data, use [schema migrations](../../../shared/db/postgresql/migrations/README.md)
+instead of the disposable database setup command.
 
-## Creating a native executable
-
-You can create a native executable using:
-
-```shell script
-./mvnw package -Dnative
-```
-
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
-
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
-
-You can then execute your native executable with: `./target/ipto-quarkus-app-1.0.0-SNAPSHOT-runner`
-
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
-
-## Related Guides
-
-- REST ([guide](https://quarkus.io/guides/rest)): A Jakarta REST implementation utilizing build time processing and Vert.x. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it.
-- ArC ([guide](https://quarkus.io/guides/cdi-reference)): Build time CDI dependency injection
-- Agroal - DB connection pool ([guide](https://quarkus.io/guides/datasource)): JDBC Datasources and connection pooling
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
-
-## Provided Code
-
-### REST
-
-Easily start your REST Web Services
-
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+Known UI routes, including editor URLs, support direct navigation and reloads through
+the packaged SvelteKit shell. Unknown API and asset paths remain 404 responses.

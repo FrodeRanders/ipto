@@ -18,6 +18,17 @@ The default image is `postgres:16`, matching CI. The script recreates its named 
 container and exits nonzero if readiness or SQL setup fails. See the
 [PostgreSQL README](../shared/db/postgresql/README.md) for all options.
 
+For existing persistent PostgreSQL databases, use the separate
+[migration command](../shared/db/postgresql/migrations/README.md). It checks
+migration history and preserves data rather than recreating the container.
+
+### Application and accounts
+
+`./build.sh` builds the administration UI and packages Quarkus in one clean build.
+See [local accounts](Local_accounts.md) to configure administrator access using
+bcrypt hashes from the deployment environment. Reads remain public; writes require
+administrator authentication.
+
 ### The backing management system
 
 The system is configured by means of a properties configuration file used to point out the

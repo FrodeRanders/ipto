@@ -7,12 +7,14 @@ on:
       - 'apps/admin-web/**'
       - 'shared/db/postgresql/**'
       - '.github/workflows/java-ci.yml'
+      - 'build.sh'
   pull_request:
     paths:
       - 'implementations/java/**'
       - 'apps/admin-web/**'
       - 'shared/db/postgresql/**'
       - '.github/workflows/java-ci.yml'
+      - 'build.sh'
 
 permissions:
   contents: read
@@ -68,12 +70,6 @@ jobs:
           node-version: '24'
           cache: npm
           cache-dependency-path: apps/admin-web/package-lock.json
-      - name: Build administration UI
-        working-directory: apps/admin-web
-        run: |
-          npm ci
-          npm audit --audit-level=moderate
-          npm run build
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
@@ -93,9 +89,12 @@ jobs:
             -f shared/db/postgresql/procedures.sql
           PGPASSWORD=repo psql -v ON_ERROR_STOP=1 -h localhost -U repo -d repo \
             -f shared/db/postgresql/boot.sql
-      - name: Build & install modules (skip tests)
-        working-directory: implementations/java
-        run: mvn -q -DskipTests -pl it,quarkus-app -am install
-      - name: Integration and application tests
-        working-directory: implementations/java
-        run: mvn -q -pl it,quarkus-app verify
+      - name: PostgreSQL migration regressions
+        env:
+          IPTO_PG_MIGRATION_TEST_CONTAINER: ${{ job.services.postgres.id }}
+        run: python3 -m unittest discover -s shared/db/postgresql -p 'test_*.py'
+      - name: Build UI, package application, and verify Java modules
+        run: mvn -B -ntp -f implementations/java/pom.xml -pl it,quarkus-app -am -Pweb clean verify
+      - name: Audit administration UI dependencies
+        working-directory: apps/admin-web
+        run: npm audit --audit-level=moderate
