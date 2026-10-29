@@ -152,8 +152,8 @@
 
 <div class="filters">
   <div class="field">
-    <label>Template</label>
-    <select bind:value={selectedTemplateId} on:change={selectTemplate}>
+    <label for="search-template">Template</label>
+    <select id="search-template" bind:value={selectedTemplateId} on:change={selectTemplate}>
       <option value="">No template</option>
       {#each templates as template}
         <option value={String(template._id ?? template.id)}>
@@ -163,8 +163,8 @@
     </select>
   </div>
   <div class="field">
-    <label>Saved searches</label>
-    <select bind:value={selectedSearchId} on:change={selectSavedSearch}>
+    <label for="search-saved">Saved searches</label>
+    <select id="search-saved" bind:value={selectedSearchId} on:change={selectSavedSearch}>
       <option value="">Select saved search</option>
       {#each searches as search}
         <option value={search.id}>{search.name}</option>
@@ -172,23 +172,23 @@
     </select>
   </div>
   <div class="field">
-    <label>Sort by</label>
-    <select bind:value={orderBy} on:change={notifyOrderChange}>
+    <label for="search-order">Sort by</label>
+    <select id="search-order" bind:value={orderBy} on:change={notifyOrderChange}>
       <option value="unitId">Unit id</option>
       <option value="created">Created</option>
       <option value="modified">Modified</option>
     </select>
   </div>
   <div class="field">
-    <label>Direction</label>
-    <select bind:value={orderDirection} on:change={notifyOrderChange}>
+    <label for="search-direction">Direction</label>
+    <select id="search-direction" bind:value={orderDirection} on:change={notifyOrderChange}>
       <option value="asc">Ascending</option>
       <option value="desc">Descending</option>
     </select>
   </div>
   <div class="field wide">
     <div class="label-row">
-      <label>Search expression</label>
+      <label for="search-expression">Search expression</label>
       <details class="info" bind:this={infoPanel}>
         <summary aria-label="Search expression help">?</summary>
         <div class="info-panel">
@@ -224,6 +224,7 @@
       </details>
     </div>
     <textarea
+      id="search-expression"
       rows="3"
       bind:this={queryInput}
       bind:value={where}
@@ -472,13 +473,6 @@
     gap: 0.8rem;
   }
 
-  .chips span {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.4rem 0.7rem;
-    border-radius: 999px;
-    font-size: 0.85rem;
-  }
-
   .chip {
     font-size: 0.85rem;
     padding: 0.4rem 0.7rem;
@@ -602,7 +596,6 @@
     font-size: 0.85rem;
   }
 
-  .helper,
   .empty {
     margin-top: 0.4rem;
     color: var(--text-muted);

@@ -1,8 +1,8 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { goto } from '$app/navigation';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import { createAttribute, createRecordTemplate, fetchAttributeMetadata, updateAttributeDescriptions } from '$lib/api.js';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import { createAttribute, createRecordTemplate, fetchAttributeMetadata, updateAttributeDescriptions } from '#lib/api.js';
 
   const attributeTypes = [
     'STRING',
@@ -333,17 +333,22 @@
     recordFields = next;
   };
 
-  const handleRowKeydown = (event, index) => {
+  const handleRowKeydown = async (event, index) => {
     if (!(event.altKey || event.ctrlKey)) {
       return;
     }
+    const handle = event.currentTarget;
     if (event.key === 'ArrowUp') {
       event.preventDefault();
       moveFieldByIndex(index, index - 1);
+      await tick();
+      handle.focus();
     }
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       moveFieldByIndex(index, index + 1);
+      await tick();
+      handle.focus();
     }
   };
 
@@ -528,7 +533,7 @@
         {/each}
         <datalist id="lang-options">
           {#each ISO_LANG_OPTIONS as lang}
-            <option value={lang} />
+            <option value={lang}></option>
           {/each}
         </datalist>
       </div>
@@ -552,7 +557,7 @@
         <div class="error">{attributesError}</div>
       {:else}
         <div class="record-controls">
-          <select bind:value={selectedAttrId}>
+          <select aria-label="Attribute to add" bind:value={selectedAttrId}>
             <option value="">Select attribute</option>
             {#each attributes as attr}
               {#if attr._id !== createdAttribute?._id}
@@ -563,6 +568,7 @@
           <input
             type="text"
             placeholder="Field alias (optional)"
+            aria-label="Field alias (optional)"
             bind:value={fieldAlias}
           />
           <button type="button" on:click={addField}>Add field</button>
@@ -572,39 +578,46 @@
     {:else if fieldAliasIssue}
       <div class="field-error">{fieldAliasIssue}</div>
     {/if}
-        <div class="field-list">
+        <div class="field-list" role="list" aria-label="Record fields">
           {#if recordFields.length === 0}
             <div class="muted">No fields added yet.</div>
           {:else}
-            {#each recordFields as field, index}
+            {#each recordFields as field, index (field.attrId)}
               <div
                 class="field-row"
+                role="listitem"
                 class:drag-over={index === dragOverIndex}
                 class:drag-over-before={index === dragOverIndex && dragOverPosition === 'before'}
                 class:drag-over-after={index === dragOverIndex && dragOverPosition === 'after'}
-                tabindex="0"
-                on:keydown={(event) => handleRowKeydown(event, index)}
                 on:dragover={(event) => handleDragOver(event, index)}
                 on:dragenter={() => handleDragEnter(index)}
                 on:drop={() => handleDrop(index)}
               >
-                <span
+                <button
+                  type="button"
                   class="drag-handle"
                   draggable="true"
                   on:dragstart={() => handleDragStart(index)}
                   on:dragend={handleDragEnd}
-                  title="Drag to reorder"
+                  aria-label={`Reorder ${field.name}`}
+                  on:keydown={(event) => handleRowKeydown(event, index)}
+                  title="Drag or use Alt+Up/Down to reorder"
                 >
                   ::
-                </span>
+                </button>
                 <div class="field-name">{field.name}</div>
                 <input
                   type="text"
                   value={field.alias}
                   placeholder="Alias"
+                  aria-label={`Alias for ${field.name}`}
                   on:input={(event) => updateFieldAlias(index, event.target.value)}
                 />
                 <div class="field-actions">
+                  <button type="button" class="ghost" disabled={index === 0}
+                    aria-label={`Move ${field.name} up`} on:click={() => moveFieldByIndex(index, index - 1)}>↑</button>
+                  <button type="button" class="ghost" disabled={index === recordFields.length - 1}
+                    aria-label={`Move ${field.name} down`} on:click={() => moveFieldByIndex(index, index + 1)}>↓</button>
                   <button type="button" class="ghost" on:click={() => removeField(field.attrId)}>Remove</button>
                 </div>
               </div>
@@ -821,7 +834,7 @@
     background: rgba(255, 190, 92, 0.08);
   }
 
-  .field-row:focus-visible {
+  .field-row:focus-within {
     outline: 2px solid rgba(255, 190, 92, 0.7);
     outline-offset: 2px;
   }
@@ -851,6 +864,8 @@
   }
 
   .drag-handle {
+    border: 0;
+    font: inherit;
     font-weight: 600;
     color: var(--text-muted);
     cursor: grab;

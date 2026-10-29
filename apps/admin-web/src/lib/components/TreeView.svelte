@@ -1,4 +1,5 @@
 <script>
+  import TreeView from './TreeView.svelte';
   export let node;
   export let level = 0;
   export let selectedId;
@@ -19,26 +20,30 @@
 </script>
 
 <div class="node" style={`--level:${level}`}
-  class:selected={node.id === selectedId}
-  on:click={() => onSelect(node)}>
-  <button type="button" class="caret" on:click|stopPropagation={toggle}>
+  class:selected={node.id === selectedId}>
+  <button type="button" class="caret" on:click={toggle}
+    disabled={!canExpand} aria-expanded={canExpand ? isOpen : undefined}
+    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${node.name}`}>
     {#if canExpand}
       {isOpen ? '▼' : '▶'}
     {:else}
       •
     {/if}
   </button>
-  <span class="label">{node.name}</span>
-  {#if node.isLoading}
-    <span class="loading">loading...</span>
-  {/if}
+  <button type="button" class="select" on:click={() => onSelect(node)}
+    aria-pressed={node.id === selectedId}>
+    <span class="label">{node.name}</span>
+    {#if node.isLoading}
+      <span class="loading">loading...</span>
+    {/if}
+  </button>
 </div>
 
 {#if isOpen}
   {#if node.children && node.children.length}
     <div class="children">
       {#each node.children as child}
-        <svelte:self node={child} level={level + 1} {selectedId} {onSelect} {onToggle} />
+        <TreeView node={child} level={level + 1} {selectedId} {onSelect} {onToggle} />
       {/each}
     </div>
   {/if}
@@ -78,6 +83,24 @@
     color: var(--text);
   }
 
+  .select {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  button:focus-visible {
+    outline: 2px solid var(--accent, #ffbe5c);
+    outline-offset: 2px;
+  }
+
   .loading {
     font-size: 0.75rem;
     text-transform: uppercase;
@@ -89,10 +112,4 @@
     margin-top: 0.2rem;
   }
 
-  .children.empty {
-    margin-left: calc(1.6rem + var(--level) * 1.2rem);
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    padding: 0.3rem 0.2rem;
-  }
 </style>

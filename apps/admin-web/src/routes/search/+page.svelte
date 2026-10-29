@@ -1,11 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { fetchTenants, fetchTemplates, fetchSearches, fetchAttributeMetadata, searchUnits, fetchUnitById } from '$lib/api.js';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import SearchFilters from '$lib/components/SearchFilters.svelte';
-  import SearchResults from '$lib/components/SearchResults.svelte';
-  import UnitDetail from '$lib/components/UnitDetail.svelte';
-  import { tenantId } from '$lib/stores/tenant.js';
+  import { fetchTenants, fetchTemplates, fetchSearches, fetchAttributeMetadata, searchUnits, fetchUnitById } from '#lib/api.js';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import SearchFilters from '#lib/components/SearchFilters.svelte';
+  import SearchResults from '#lib/components/SearchResults.svelte';
+  import UnitDetail from '#lib/components/UnitDetail.svelte';
+  import { tenantId } from '#lib/stores/tenant.js';
 
   let units = [];
   let selected = null;

@@ -2,6 +2,8 @@
 
 Minimal SvelteKit UI for administration, tree browsing, and search.
 
+Requires Node.js 22.17 or newer; CI uses Node.js 24.
+
 ## Structure
 - `src/routes/+page.svelte`: overview
 - `src/routes/admin/+page.svelte`: attributes/records/templates admin
@@ -15,8 +17,11 @@ npm ci
 npm run dev
 ```
 
-## Dependency note
-- `cookie` is overridden to `^0.7.0` in `package.json` to address a security advisory while `@sveltejs/kit` still declares `^0.6.0`.
+## Dependencies and configuration
+- SvelteKit 3 configuration lives in `vite.config.js`; library imports use the `#lib/*` package alias.
+- SvelteKit manages its Cookie 2 dependency directly; the former Cookie 0.7 override has been removed.
+- `deepmerge@4.3.1`, used by the Svelte build plugin, has an unresolved [low-severity advisory](https://github.com/advisories/GHSA-gcqx-w48m-w2h4). npm also reports its dependent packages. No patched release is published; do not apply npm's suggested downgrade to pre-1.0 SvelteKit packages.
+- CI rejects moderate-or-higher npm advisories before building the UI.
 
 ## Production packaging (Quarkus static)
 This app can be built into the Quarkus static resources folder so it is served by the same HTTP server as the REST API.

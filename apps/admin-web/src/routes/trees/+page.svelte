@@ -1,10 +1,10 @@
 <script>
   import { onMount } from 'svelte';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import TreeView from '$lib/components/TreeView.svelte';
-  import UnitDetail from '$lib/components/UnitDetail.svelte';
-  import { fetchTreeRoots, fetchTreeChildren, fetchUnitById } from '$lib/api.js';
-  import { tenantId } from '$lib/stores/tenant.js';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import TreeView from '#lib/components/TreeView.svelte';
+  import UnitDetail from '#lib/components/UnitDetail.svelte';
+  import { fetchTreeRoots, fetchTreeChildren, fetchUnitById } from '#lib/api.js';
+  import { tenantId } from '#lib/stores/tenant.js';
 
   let tenants = [];
   let roots = [];
@@ -176,8 +176,8 @@
     </div>
   {:else}
     <div class="field">
-      <label>Tenant</label>
-      <select bind:value={$tenantId}>
+      <label for="tree-tenant">Tenant</label>
+      <select id="tree-tenant" bind:value={$tenantId}>
         {#each tenants as tenant}
           <option value={tenant.id}>{tenant.name}</option>
         {/each}

@@ -1,5 +1,5 @@
 <script>
-  import { snyggifyTime } from '$lib/api.js';
+  import { snyggifyTime } from '#lib/api.js';
   import AttributeItem from './AttributeItem.svelte';
 
   export let unit;

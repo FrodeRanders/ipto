@@ -1,9 +1,9 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { snyggifyTime, fetchTenants, fetchAttributeMetadata, fetchRecords, fetchTemplates } from '$lib/api.js';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import AdminList from '$lib/components/AdminList.svelte';
+  import { snyggifyTime, fetchTenants, fetchAttributeMetadata, fetchRecords, fetchTemplates } from '#lib/api.js';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import AdminList from '#lib/components/AdminList.svelte';
 
   let tenants = [];
   let attributes = [];

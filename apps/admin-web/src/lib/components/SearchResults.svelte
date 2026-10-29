@@ -1,5 +1,5 @@
 <script>
-  import { snyggifyTime } from '$lib/api.js';
+  import { snyggifyTime } from '#lib/api.js';
 
   export let units = [];
   export let selectedId;
@@ -20,13 +20,14 @@
   </div>
   <div class="list">
     {#each units as unit}
-      <div class="row" class:selected={unit.id === selectedId} on:click={() => onSelect(unit)}>
-        <div>
-          <div class="name">{unit.name}</div>
-          <div class="meta">{unit.id} · Tenant {unit.tenantId} · {unit.status}</div>
-        </div>
-        <div class="date">{snyggifyTime(unit.created)}</div>
-      </div>
+      <button type="button" class="row" class:selected={unit.id === selectedId}
+        aria-pressed={unit.id === selectedId} on:click={() => onSelect(unit)}>
+        <span>
+          <span class="name">{unit.name}</span>
+          <span class="meta">{unit.id} · Tenant {unit.tenantId} · {unit.status}</span>
+        </span>
+        <span class="date">{snyggifyTime(unit.created)}</span>
+      </button>
     {/each}
   </div>
   <div class="footer">
@@ -89,6 +90,10 @@
   }
 
   .row {
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: var(--text);
     display: flex;
     justify-content: space-between;
     gap: 0.8rem;
@@ -105,10 +110,13 @@
   }
 
   .name {
+    display: block;
+    color: var(--text);
     font-weight: 600;
   }
 
   .meta {
+    display: block;
     color: var(--text-muted);
     font-size: 0.85rem;
   }
@@ -116,6 +124,11 @@
   .date {
     color: var(--text-muted);
     font-size: 0.85rem;
+  }
+
+  .row:focus-visible {
+    outline: 2px solid var(--accent, #ffbe5c);
+    outline-offset: 2px;
   }
 
   .footer {

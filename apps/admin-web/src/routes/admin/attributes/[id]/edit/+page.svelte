@@ -1,9 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
-  import { page } from '$app/stores';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import { fetchAttributeMetadata, fetchAttributeDescriptions, updateAttributeDescriptions } from '$lib/api.js';
+  import { page } from '$app/state';
+  import { toStore } from 'svelte/store';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import { fetchAttributeMetadata, fetchAttributeDescriptions, updateAttributeDescriptions } from '#lib/api.js';
+
+  const routeId = toStore(() => page.params.id);
 
   let attrId;
   let attribute = null;
@@ -30,7 +33,7 @@
     'PT'
   ];
 
-  $: attrId = Number($page.params.id);
+  $: attrId = Number($routeId);
 
   const addDescriptionItem = () => {
     descriptionItems = [...descriptionItems, { lang: 'SE', alias: '', description: '' }];
@@ -185,7 +188,7 @@
   {/each}
   <datalist id="lang-options">
     {#each ISO_LANG_OPTIONS as lang}
-      <option value={lang} />
+      <option value={lang}></option>
     {/each}
   </datalist>
 

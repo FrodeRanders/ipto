@@ -1,9 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { fetchTenants, fetchAttributeMetadata, fetchRecords, fetchTemplates } from '$lib/api.js';
-  import StatCard from '$lib/components/StatCard.svelte';
-  import SectionTitle from '$lib/components/SectionTitle.svelte';
-  import { tenantId } from '$lib/stores/tenant.js';
+  import { fetchTenants, fetchAttributeMetadata, fetchRecords, fetchTemplates } from '#lib/api.js';
+  import StatCard from '#lib/components/StatCard.svelte';
+  import SectionTitle from '#lib/components/SectionTitle.svelte';
+  import { tenantId } from '#lib/stores/tenant.js';
 
   let tenants = [];
   let attributes = [];

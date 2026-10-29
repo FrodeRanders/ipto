@@ -1,5 +1,5 @@
 <script>
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import { role } from '../stores/role.js';
   import Badge from './Badge.svelte';
 
@@ -17,8 +17,8 @@
     '/search': 'Unit search'
   };
 
-  $: currentPath = $page.url.pathname;
-  $: context = contextByPath[currentPath] || 'Unit view';
+  let currentPath = $derived(page.url.pathname);
+  let context = $derived(contextByPath[currentPath] || 'Unit view');
 </script>
 
 <header class="header">
@@ -39,8 +39,8 @@
   <div class="role">
     <Badge label={$role} tone={$role === 'administrator' ? 'accent' : 'neutral'} />
     <div class="role-switch">
-      <button type="button" class:active={$role === 'user'} on:click={() => role.set('user')}>User</button>
-      <button type="button" class:active={$role === 'administrator'} on:click={() => role.set('administrator')}>Administrator</button>
+      <button type="button" class:active={$role === 'user'} onclick={() => role.set('user')}>User</button>
+      <button type="button" class:active={$role === 'administrator'} onclick={() => role.set('administrator')}>Administrator</button>
     </div>
   </div>
 </header>
