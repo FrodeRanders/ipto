@@ -165,8 +165,8 @@ impl AttrType {
         match self {
             AttrType::String => "repo_string_vector",
             AttrType::Integer => "repo_integer_vector",
-            AttrType::Long => "repo_integer_vector",
-            AttrType::Double => "repo_float_vector",
+            AttrType::Long => "repo_long_vector",
+            AttrType::Double => "repo_double_vector",
             AttrType::Bool => "repo_boolean_vector",
             AttrType::Time => "repo_time_vector",
             AttrType::Record => "repo_record_vector",
@@ -174,14 +174,6 @@ impl AttrType {
     }
 
     pub fn to_value_column(&self) -> &'static str {
-        match self {
-            AttrType::String => "vv.vecthvalue",
-            AttrType::Integer => "vv.vectivalue",
-            AttrType::Long => "vv.vectlvalue",
-            AttrType::Double => "vv.vectdvalue",
-            AttrType::Bool => "vv.vectbvalue",
-            AttrType::Time => "vv.vecttvalue",
-            AttrType::Record => "vv.vectrvalue",
-        }
+        "vv.value"
     }
 }

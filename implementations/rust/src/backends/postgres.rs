@@ -128,6 +128,65 @@ impl PostgresBackend {
         }
         Ok(PostgresClientGuard { inner: guard })
     }
+
+    fn resolve_search_attributes(
+        &self,
+        expr: &mut crate::search_ast::SearchExpr,
+    ) -> RepoResult<()> {
+        use crate::search_ast::{AttrType, Operator, SearchExpr, SearchItem};
+        let resolve_item = |item: &mut SearchItem| -> RepoResult<()> {
+            if let SearchItem::Attr {
+                name,
+                attr_id,
+                attr_type,
+                operator,
+                ..
+            } = item
+            {
+                let selector = attr_id
+                    .map(|id| id.to_string())
+                    .unwrap_or_else(|| name.clone());
+                let info = self.get_attribute_info(&selector)?.ok_or_else(|| {
+                    RepoError::InvalidInput(format!("unknown attribute '{selector}'"))
+                })?;
+                *attr_id = info["id"].as_i64();
+                *attr_type = match info["type"].as_i64() {
+                    Some(1) => AttrType::String,
+                    Some(2) => AttrType::Time,
+                    Some(3) => AttrType::Integer,
+                    Some(4) => AttrType::Long,
+                    Some(5) => AttrType::Double,
+                    Some(6) => AttrType::Bool,
+                    _ => {
+                        return Err(RepoError::Unsupported(
+                            "attribute type is not searchable".to_string(),
+                        ));
+                    }
+                };
+                if (*attr_type == AttrType::Bool
+                    && !matches!(operator, Operator::Eq | Operator::Ne))
+                    || (*operator == Operator::Like && *attr_type != AttrType::String)
+                {
+                    return Err(RepoError::InvalidInput(
+                        "operator is not supported for this attribute type".to_string(),
+                    ));
+                }
+            }
+            Ok(())
+        };
+        match expr {
+            SearchExpr::And(left, right) | SearchExpr::Or(left, right) => {
+                self.resolve_search_attributes(left)?;
+                self.resolve_search_attributes(right)
+            }
+            SearchExpr::Not(inner) => self.resolve_search_attributes(inner),
+            SearchExpr::Between(lower, upper) => {
+                resolve_item(lower)?;
+                resolve_item(upper)
+            }
+            SearchExpr::Leaf(item) => resolve_item(item),
+        }
+    }
 }
 
 impl Default for PostgresBackend {
@@ -164,16 +223,18 @@ impl Backend for PostgresBackend {
     }
 
     fn get_unit_by_corrid_json(&self, corrid: &str) -> RepoResult<Option<Value>> {
-        let mut client = self.client()?;
         let corrid = Uuid::parse_str(corrid)
             .map_err(|e| RepoError::InvalidInput(format!("invalid corrid '{corrid}': {e}")))?;
 
-        let row = client
-            .query_opt(
-                "SELECT tenantid, unitid FROM repo.repo_unit_kernel WHERE corrid = $1",
-                &[&corrid],
-            )
-            .map_err(|e| RepoError::Backend(format!("lookup by corrid failed: {e}")))?;
+        let row = {
+            let mut client = self.client()?;
+            client
+                .query_opt(
+                    "SELECT tenantid, unitid FROM repo.repo_unit_kernel WHERE corrid = $1",
+                    &[&corrid],
+                )
+                .map_err(|e| RepoError::Backend(format!("lookup by corrid failed: {e}")))?
+        }; // Release the client before get_unit_json acquires it again.
 
         match row {
             Some(row) => {
@@ -311,6 +372,9 @@ impl Backend for PostgresBackend {
         order: SearchOrder,
         paging: SearchPaging,
     ) -> RepoResult<SearchResult> {
+        // Metadata lookups acquire the same client mutex; resolve before locking.
+        let mut expr = expr.clone();
+        self.resolve_search_attributes(&mut expr)?;
         let mut client = self.client()?;
         let limit = if paging.limit > 0 {
             Some(paging.limit)
@@ -331,7 +395,7 @@ impl Backend for PostgresBackend {
             },
         );
 
-        let compiled = crate::search_sql::compile(expr, &order_pair, limit, offset);
+        let compiled = crate::search_sql::compile(&expr, &order_pair, limit, offset);
         let count_refs: Vec<&(dyn ToSql + Sync)> = compiled
             .count_params
             .iter()
@@ -635,14 +699,17 @@ impl Backend for PostgresBackend {
         attribute_type: &str,
         is_array: bool,
     ) -> RepoResult<Value> {
-        let mut client = self.client()?;
         let attr_type = parse_attr_type(attribute_type)?;
         let scalar = !is_array;
         let alias_param: Option<&str> = if alias.is_empty() { None } else { Some(alias) };
-        match client.query_one(
+        let inserted = {
+            let mut client = self.client()?;
+            client.query_one(
             "INSERT INTO repo.repo_attribute (attrtype, scalar, attrname, qualname, alias) VALUES ($1, $2, $3, $4, $5) RETURNING attrid, alias, attrname, qualname, attrtype, scalar",
             &[&attr_type, &scalar, &name, &qualname, &alias_param],
-        ) {
+            )
+        };
+        match inserted {
             Ok(row) => attribute_info_from_row(row),
             Err(_) => self
                 .get_attribute_info(name)?

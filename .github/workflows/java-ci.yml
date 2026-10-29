@@ -4,11 +4,13 @@ on:
   push:
     paths:
       - 'implementations/java/**'
+      - 'apps/admin-web/**'
       - 'shared/db/postgresql/**'
       - '.github/workflows/java-ci.yml'
   pull_request:
     paths:
       - 'implementations/java/**'
+      - 'apps/admin-web/**'
       - 'shared/db/postgresql/**'
       - '.github/workflows/java-ci.yml'
 
@@ -42,6 +44,7 @@ jobs:
 
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16
@@ -58,6 +61,16 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/admin-web/package-lock.json
+      - name: Build administration UI
+        working-directory: apps/admin-web
+        run: |
+          npm ci
+          npm run build
       - name: Set up JDK 25
         uses: actions/setup-java@v5
         with:
@@ -79,7 +92,7 @@ jobs:
             -f shared/db/postgresql/boot.sql
       - name: Build & install modules (skip tests)
         working-directory: implementations/java
-        run: mvn -q -DskipTests -pl it -am install
-      - name: Integration tests
+        run: mvn -q -DskipTests -pl it,quarkus-app -am install
+      - name: Integration and application tests
         working-directory: implementations/java
-        run: mvn -q -pl it verify
+        run: mvn -q -pl it,quarkus-app verify

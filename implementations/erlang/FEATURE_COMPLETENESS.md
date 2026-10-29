@@ -1,6 +1,6 @@
 # Erlang Feature Completeness Tracker
 
-Last updated: 2026-06-11
+Last updated: 2026-10-29
 
 Legend: `DONE`, `PARTIAL`, `MISSING`
 
@@ -16,8 +16,8 @@ This tracks Erlang parity against Java core behavior, while allowing intentional
 - GraphQL runtime/API breadth: `DONE`
 - SDL parser and setup/apply path: `DONE` (memory + PG; Neo4j template persistence unsupported by design)
 - Search language/parser depth: `DONE` (full AST, DSL parser, SET_OPS/EXISTS SQL compiler, Cypher compiler)
-- Integration test depth and parity matrix: `PARTIAL` (env-gated; CI file exists but not running remotely)
-- CI/CD infrastructure: `PARTIAL` (Makefile, docker-compose, GH Actions workflow exist; not yet activated on remote)
+- Integration test depth and parity matrix: `PARTIAL` (env-gated; PostgreSQL and Neo4j integration jobs are defined in CI)
+- CI/CD infrastructure: `PARTIAL` (Makefile, docker-compose, and push/pull-request workflows exist; release publishing remains separate)
 
 ## Track A: SDL parser and setup (top priority)
 
@@ -115,8 +115,8 @@ Status: `PARTIAL`
 
 ### Test coverage
 
-- **Unit tests**: 1,104 tests across base profile covering parser, search, CRUD, GraphQL, memory backend.
-- **GraphQL profile**: 1,107 tests including graphql-erlang execution tests.
+- **Unit tests**: base profile covers parser, search, CRUD, GraphQL resources, and memory backend; dependency-gated checks require additional profiles.
+- **GraphQL profile**: includes graphql-erlang execution and SDL tests.
 - **Property tests**: 558 randomized search parser tests + 239 status transition tests.
 - **Pipeline tests**: 24 full-path tests from text query through AST to SQL/Cypher compilation.
 - **Integration tests**: env-gated PG and Neo4j tests (`IPTO_PG_INTEGRATION=1`, `IPTO_NEO4J_INTEGRATION=1`).
@@ -125,7 +125,7 @@ Status: `PARTIAL`
 
 - `Makefile` with targets: `test`, `test-graphql`, `test-pg`, `test-neo4j`, `test-all`, `full-check`, `up`/`down`.
 - `docker-compose.yml` for Postgres 16 + Neo4j 5 with health checks and schema auto-loading.
-- `.github/workflows/erlang-ci.yml` workflow (unit + PG integration, not yet activated on remote).
+- `.github/workflows/erlang-ci.yml` defines base/GraphQL unit tests and PostgreSQL/Neo4j integration checks for pushes and pull requests.
 
 ## Milestone plan
 

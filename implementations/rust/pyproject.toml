@@ -5,7 +5,7 @@ build-backend = "maturin"
 [project]
 name = "ipto-rust"
 version = "0.1.0"
-description = "Rust implementation scaffold for IPTO with Python bindings"
+description = "IPTO metadata repository with PostgreSQL and Neo4j backends and Python bindings"
 requires-python = ">=3.9"
 classifiers = [
     "Programming Language :: Rust",

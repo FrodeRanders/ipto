@@ -1,23 +1,23 @@
 # ipto
 
-`ipto` is an OTP scaffold intended to mirror the core behavior of `repo`.
+`ipto` is an OTP implementation of the IPTO repository core with in-memory,
+PostgreSQL, and Neo4j backends, GraphQL, and an optional HTTP server.
 
 ## Current status
 
-- Project structure and module boundaries are in place.
-- Public facade API exists in `src/ipto.erl`.
-- In-memory persistence exists in `src/ipto_db.erl` via `ipto_cache`.
-- PostgreSQL mode is wired as a best-effort implementation through `epgsql` (if available at runtime).
-- Search parser supports a minimal query-string syntax for PostgreSQL search.
-- Unit write/read in PostgreSQL mode now prefers stored procedures and falls back to direct SQL if procedure calls fail.
+- The public facade in `src/ipto.erl` exposes unit lifecycle/versioning, locks, relations, associations, and metadata operations.
+- Backend adapters implement memory, PostgreSQL (`epgsql` profile), and Neo4j persistence.
+- Text queries, maps, and typed ASTs share a search pipeline with SQL/Cypher compilation.
+- SDL inspection/configuration and GraphQL queries/mutations are available through the GraphQL profile.
+- PostgreSQL persists record and unit templates; Neo4j template persistence is unsupported.
+- GitHub Actions defines unit, GraphQL, PostgreSQL, and Neo4j checks.
 
 Detailed parity scope and roadmap are tracked in `FEATURE_COMPLETENESS.md`.
 
-## Intended migration path
+## Remaining work
 
-1. Expand PostgreSQL search coverage (attributes/relations) to match Java parity.
-2. Add full JSON attribute persistence for unit writes.
-3. Expand integration tests for status/version/attribute semantics.
+1. Expand integration and cross-backend parity coverage for lifecycle and payload edge cases.
+2. Keep shared schema, search behavior, and SDL setup aligned with the Java reference.
 
 ## Module map
 

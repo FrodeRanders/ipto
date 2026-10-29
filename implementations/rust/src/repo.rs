@@ -454,10 +454,10 @@ impl RepoService {
     /// Locked units cannot be inactivated.
     pub fn inactivate_unit(&self, unit: UnitRef) -> RepoResult<()> {
         let status = self.current_status(unit.clone())?;
+        if self.backend.is_unit_locked(unit.clone())? {
+            return Err(RepoError::AlreadyLocked);
+        }
         if status == STATUS_EFFECTIVE {
-            if self.backend.is_unit_locked(unit.clone())? {
-                return Err(RepoError::AlreadyLocked);
-            }
             self.backend.set_status(unit, STATUS_PENDING_DELETION)?;
         }
         Ok(())

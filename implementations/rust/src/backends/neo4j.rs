@@ -554,7 +554,7 @@ impl Backend for Neo4jBackend {
             },
         );
 
-        let compiled = crate::search_cypher::compile(expr, &order_pair, limit, offset);
+        let compiled = crate::search_cypher::compile(expr, &order_pair, limit, offset)?;
         let params_json = serde_json::Value::Object(compiled.params);
 
         let count_rows = self.query(&compiled.count_query, params_json.clone())?;
@@ -1430,6 +1430,28 @@ fn compile_unit_predicate(
         }
     };
     Ok(sql)
+}
+
+// Share attribute selectors and coercion with JSON search while the typed AST
+// compiler preserves the surrounding boolean expression.
+pub(crate) fn compile_ast_attribute(
+    item: &crate::search_ast::SearchItem,
+    index: &mut i64,
+    values: &mut Map<String, Value>,
+) -> RepoResult<String> {
+    let expression = crate::search_query::search_expr_to_json(
+        &crate::search_ast::SearchExpr::Leaf(item.clone()),
+    );
+    let constraint =
+        extract_attribute_constraint(expression.as_object().expect("attribute expression"))?;
+    let mut params = CypherParams {
+        values: std::mem::take(values),
+        index: *index as usize,
+    };
+    let predicate = compile_attribute_constraint(&constraint, &mut params)?;
+    *index = params.index as i64;
+    *values = params.values;
+    Ok(predicate)
 }
 
 fn compile_attribute_constraint(

@@ -24,12 +24,18 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Compile check
         working-directory: implementations/rust
-        run: cargo check
+        run: cargo check --locked
+      - name: Check Python bindings
+        working-directory: implementations/rust
+        run: cargo check --locked --features python
       - name: Lint (report only, non-blocking)
         working-directory: implementations/rust
-        run: cargo clippy
+        run: cargo clippy --locked
 
   unit:
     runs-on: ubuntu-latest
@@ -38,10 +44,11 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: Unit tests
         working-directory: implementations/rust
-        run: cargo test --lib
+        run: cargo test --locked --lib --test real_backend_runner_contract
 
   integration:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     services:
       postgres:
         image: postgres:16
@@ -72,6 +79,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Load PG schema & seed data
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
@@ -102,4 +112,17 @@ jobs:
           IPTO_PG_INTEGRATION: 1
           IPTO_NEO4J_INTEGRATION: 1
           IPTO_NEO4J_PASSWORD: neo4jtest
-        run: cargo test --test postgres_integration --test neo4j_integration -- --nocapture
+        run: cargo test --locked --test postgres_integration --test neo4j_integration --test backend_parity --test repo_contract -- --nocapture
+      - name: Build and install Python extension
+        working-directory: implementations/rust
+        run: |
+          python -m pip install -r requirements-dev.txt
+          maturin build --locked --out dist
+          python -m pip install --no-deps dist/*.whl
+      - name: Python integration tests
+        working-directory: implementations/rust
+        env:
+          IPTO_PG_INTEGRATION: 1
+          IPTO_NEO4J_INTEGRATION: 1
+          IPTO_NEO4J_PASSWORD: neo4jtest
+        run: python -m pytest -q python_tests/test_ipto.py

@@ -64,8 +64,11 @@ structure may be or search using the textual representation from the search faci
 There is also a Quarkus-based application that exposes an API used as backend to the
 web interface, that also exposes a HTTP endpoint for GraphQL.
 
-Additionally, there is a separate Erlang implementation of the core functionality,
-where the search facility is a bit simplified as compared to the Java version.
+There are also Erlang and Rust implementations of the repository core, with
+PostgreSQL and Neo4j backends, typed search expressions, and GraphQL interfaces.
+Rust additionally exposes a Python API through PyO3. Java remains the reference
+for the full SDL-driven GraphQL runtime; the ports track their remaining scope in
+their respective `FEATURE_COMPLETENESS.md` files.
 
 ## Systems manual and documentation
 
@@ -85,7 +88,42 @@ where the search facility is a bit simplified as compared to the Java version.
 - `./shared/db/java` contains some things that DB2 needs, but is generic JDBC.
 - `./apps/admin-web` contains the web-based administration interface.
 
-The Erlang version stores data to either PostgreSQL or Neo4j.
+PostgreSQL is the primary development target. DB2 support includes an optional
+Java 8 helper that stays on Jackson 2.x, separate from the main Java application's
+Jackson 3.x dependencies.
+
+### Building and testing
+
+Prepare a local PostgreSQL database with the shared schema, procedures, and boot data:
+
+```sh
+python3 shared/db/postgresql/setup-for-test.py
+```
+
+The setup script recreates its named test container (default `repo-postgres`).
+Use `--container-name` and `--host-port` to select a separate test instance.
+
+Build and verify the PostgreSQL Java application and integration tests:
+
+```sh
+mvn -f implementations/java/pom.xml -pl it,quarkus-app -am verify
+```
+
+This requires `org.gautelis:vopn:3.0-SNAPSHOT` installed from
+[java-vopn](https://github.com/FrodeRanders/java-vopn), as done by Java CI.
+CI uses JDK 25; the main application currently targets Java 21 bytecode.
+
+The default Maven reactor excludes the DB2 helper. Build it only for DB2:
+
+```sh
+mvn -f shared/db/java/pom.xml package
+```
+
+The helper retains its own Java 8 compiler settings and Jackson 2.x dependency.
+Use `-Pdb2` to include it when building the complete Java reactor for DB2.
+See the [Rust](implementations/rust/README.md),
+[Erlang](implementations/erlang/README.md), and
+[admin UI](apps/admin-web/README.md) READMEs for their build commands.
 
 ## For developers
 IPTO is a data management framework that treats GraphQL Schema Definition Language (SDL) as 

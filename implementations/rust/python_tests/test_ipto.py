@@ -23,7 +23,7 @@ def _neo4j_enabled() -> bool:
 
 def _require_module():
     if ipto_rust is None:
-        pytest.skip(f"ipto_rust import failed: {IMPORT_ERROR}")
+        pytest.fail(f"ipto_rust import failed: {IMPORT_ERROR}")
 
 
 def _unit_payload(tenant_id: int, name: str) -> str:
@@ -48,6 +48,14 @@ def neo4j_client():
     return ipto_rust.PyIpto("neo4j")
 
 
+def test_statistics_without_backend_connection(pg_client):
+    expected = {"backend": "postgres", "operations": {}}
+    assert pg_client.get_statistics() == expected
+    assert json.loads(pg_client.get_statistics_json()) == expected
+    pg_client.reset_statistics()
+    assert pg_client.get_statistics() == expected
+
+
 @pytest.mark.skipif(
     not _pg_enabled(),
     reason="Set IPTO_PG_INTEGRATION=1 to run PostgreSQL Python integration test",
@@ -67,9 +75,12 @@ def test_postgres_store_and_search_roundtrip(pg_client):
 
     loaded = pg_client.get_unit_json(tenant_id, unit_id)
     assert loaded is not None
-    loaded_by_corrid = pg_client.get_unit_by_corrid_json(tenant_id, corrid)
+    loaded_by_corrid = pg_client.get_unit_by_corrid_json(corrid)
     assert loaded_by_corrid is not None
     assert json.loads(loaded_by_corrid)["unitid"] == unit_id
+    stats = pg_client.get_statistics()
+    assert stats["operations"]["store_unit_json"]["count"] == 1
+    assert stats["operations"]["get_unit_by_corrid_json"]["errors"] == 0
     corrid_search = json.loads(
         pg_client.search_units(
             json.dumps({"tenantid": tenant_id, "corrid": corrid}),
@@ -421,6 +432,9 @@ def test_postgres_store_and_search_roundtrip(pg_client):
     pg_client.unlock_unit(tenant_id, unit_id)
     assert not pg_client.is_unit_locked(tenant_id, unit_id)
     pg_client.inactivate_unit(tenant_id, unit_id)
+    assert json.loads(pg_client.get_unit_json(tenant_id, unit_id))["status"] == 1
+    pg_client.set_status(tenant_id, unit_id, 30)
+    pg_client.inactivate_unit(tenant_id, unit_id)
     assert json.loads(pg_client.get_unit_json(tenant_id, unit_id))["status"] == 10
     pg_client.activate_unit(tenant_id, unit_id)
 
@@ -598,7 +612,7 @@ def test_postgres_store_and_search_roundtrip(pg_client):
     assert gql_instantiate_mut_allow_block_ext["code"] == "UNSUPPORTED"
     assert gql_instantiate_mut_allow_block_ext["operationType"] == "mutation"
     assert gql_instantiate_mut_allow_block_ext["operation"] == "instantiateAttributeMutation"
-    assert "health" in gql_instantiate_mut_allow_block_ext["supportedOperations"]
+    assert gql_instantiate_mut_allow_block_ext["supportedOperations"] == []
 
 
 @pytest.mark.skipif(
@@ -626,7 +640,7 @@ def test_neo4j_store_get_and_search_roundtrip(neo4j_client):
     assert loaded is not None
     loaded_json = json.loads(loaded)
     assert loaded_json["unitid"] == unit_id
-    loaded_by_corrid = neo4j_client.get_unit_by_corrid_json(tenant_id, corrid)
+    loaded_by_corrid = neo4j_client.get_unit_by_corrid_json(corrid)
     assert loaded_by_corrid is not None
     assert json.loads(loaded_by_corrid)["unitid"] == unit_id
     corrid_search = json.loads(
@@ -982,6 +996,8 @@ def test_neo4j_store_get_and_search_roundtrip(neo4j_client):
     assert not neo4j_client.is_unit_locked(tenant_id, unit_id)
     neo4j_client.lock_unit(tenant_id, unit_id, 31, "python-lifecycle-check")
     assert neo4j_client.is_unit_locked(tenant_id, unit_id)
+    with pytest.raises(RuntimeError):
+        neo4j_client.inactivate_unit(tenant_id, unit_id)
     neo4j_client.unlock_unit(tenant_id, unit_id)
     assert not neo4j_client.is_unit_locked(tenant_id, unit_id)
 
@@ -1159,4 +1175,4 @@ def test_neo4j_store_get_and_search_roundtrip(neo4j_client):
     assert gql_instantiate_mut_allow_block_ext["code"] == "UNSUPPORTED"
     assert gql_instantiate_mut_allow_block_ext["operationType"] == "mutation"
     assert gql_instantiate_mut_allow_block_ext["operation"] == "instantiateAttributeMutation"
-    assert "health" in gql_instantiate_mut_allow_block_ext["supportedOperations"]
+    assert gql_instantiate_mut_allow_block_ext["supportedOperations"] == []

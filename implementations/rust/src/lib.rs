@@ -171,14 +171,14 @@ mod pybindings {
             serde_json::to_string(&result).map_err(|e| PyRuntimeError::new_err(e.to_string()))
         }
 
-        fn get_statistics(&self, py: Python<'_>) -> PyResult<PyObject> {
+        fn get_statistics(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
             let result = self.statistics_value()?;
-            let root = PyDict::new_bound(py);
+            let root = PyDict::new(py);
             root.set_item("backend", result["backend"].as_str().unwrap_or_default())?;
-            let operations = PyDict::new_bound(py);
+            let operations = PyDict::new(py);
             if let Some(obj) = result["operations"].as_object() {
                 for (name, stat) in obj {
-                    let stat_dict = PyDict::new_bound(py);
+                    let stat_dict = PyDict::new(py);
                     stat_dict.set_item("count", stat["count"].as_u64().unwrap_or(0))?;
                     stat_dict.set_item("errors", stat["errors"].as_u64().unwrap_or(0))?;
                     stat_dict.set_item("total_ms", stat["total_ms"].as_f64().unwrap_or(0.0))?;
@@ -199,7 +199,7 @@ mod pybindings {
                 }
             }
             root.set_item("operations", operations)?;
-            Ok(root.into_py(py))
+            Ok(root.unbind())
         }
 
         fn health(&self) -> PyResult<String> {

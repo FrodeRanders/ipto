@@ -11,7 +11,7 @@ Minimal SvelteKit UI for administration, tree browsing, and search.
 
 ## Local run
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
@@ -23,17 +23,16 @@ This app can be built into the Quarkus static resources folder so it is served b
 
 ```bash
 cd apps/admin-web
-npm install
+npm ci
 npm run build
 ```
 
 The build output is written to `../../implementations/java/quarkus-app/src/main/resources/META-INF/resources`, which Quarkus serves at `/`.
 
 ## Integration points
-- Replace mock data with server calls in SvelteKit `load` functions.
-- Enforce server-side filtering by role and tenant in the API layer.
-- Use the role store as a placeholder for auth state, wired to real auth later.
-- Example REST call: `GET http://localhost:8080/api/units/example` (wired into search page).
+- `src/lib/api.js` calls the Quarkus `/api` endpoints for tenants, units, search, attributes, records, and templates.
+- The role store is a UI placeholder. Authentication and authorization belong in the deployment/API layer.
+- Java CI builds this app before packaging and testing Quarkus, including when only UI files change.
 
 ## Data content visualization
 - `DataPreview.svelte` renders JSON safely when `mimetype=application/json`.

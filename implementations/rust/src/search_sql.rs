@@ -141,76 +141,51 @@ fn compile_set_ops(
     offset: Option<i64>,
 ) -> CompiledQuery {
     let leaves = expr.collect_leaves();
-    let attr_leaves: Vec<&&SearchItem> = leaves
-        .iter()
-        .filter(|l| SearchExpr::is_attr_item(l))
-        .collect();
-
     let mut param_idx = 1;
+    let mut params = Vec::new();
+    let mut cte_defs = Vec::new();
+    let mut cte_names = Vec::new();
 
-    let mut unit_params: Vec<String> = Vec::new();
-    let unit_where = compile_exists_where(expr, &mut param_idx, &mut unit_params);
-
-    let mut cte_defs: Vec<String> = Vec::new();
-    let mut cte_params: Vec<String> = Vec::new();
-    let mut cte_names: Vec<(String, &&SearchItem)> = Vec::new();
-
-    for (i, item) in attr_leaves.iter().enumerate() {
+    // Compile every leaf into a set, so mixed unit/attribute OR and NOT retain
+    // their original boolean structure instead of becoming outer AND filters.
+    for (i, item) in leaves.iter().enumerate() {
         let cte_name = format!("c{}", i + 1);
-        let (cte_sql, item_params) = attr_item_to_cte(item, &cte_name, &mut param_idx);
-        cte_defs.push(cte_sql);
-        cte_params.extend(item_params);
+        let (sql, item_params) = if SearchExpr::is_attr_item(item) {
+            attr_item_to_cte(item, &cte_name, &mut param_idx)
+        } else {
+            let (predicate, item_params) = unit_item_to_sql(item, &mut param_idx);
+            (
+                format!(
+                    "{cte_name} AS (SELECT uk.tenantid, uk.unitid \
+                 FROM repo.repo_unit_kernel uk JOIN repo.repo_unit_version uv \
+                 ON uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver \
+                 WHERE {predicate})"
+                ),
+                item_params,
+            )
+        };
+        cte_defs.push(sql);
+        params.extend(item_params);
         cte_names.push((cte_name, *item));
     }
-
-    let attr_logic = build_set_ops_logic(expr, &cte_names);
-    let order_sql = build_order_sql(order);
+    let logic = build_set_ops_logic(expr, &cte_names);
+    let cte_block = format!("WITH {}, final AS ({logic})", cte_defs.join(", "));
+    let base_from = " FROM repo.repo_unit_kernel uk \
+        JOIN repo.repo_unit_version uv \
+        ON uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver \
+        JOIN final f ON uk.tenantid = f.tenantid AND uk.unitid = f.unitid";
+    let count_sql = format!("{cte_block} SELECT count(*){base_from}");
+    let count_params = params.clone();
     let (page_sql, page_params) = build_paging(limit, offset, &mut param_idx);
-
-    let cte_block = if cte_defs.is_empty() {
-        String::new()
-    } else {
-        format!("WITH {}\n", cte_defs.join(",\n    "))
-    };
-
-    let unit_where_sql = if unit_where.is_empty() {
-        String::new()
-    } else {
-        format!(" AND {}", unit_where)
-    };
-
-    let data_sql = format!(
-        "{}final AS ({})\n\
-         SELECT uk.tenantid, uk.unitid, uv.unitver, uk.corrid, uk.status, uk.created, uv.modified, uv.unitname\n\
-         FROM repo.repo_unit_kernel uk\n\
-         JOIN repo.repo_unit_version uv ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver)\n\
-         JOIN final f ON (uk.tenantid = f.tenantid AND uk.unitid = f.unitid)\n\
-         WHERE 1=1{}{}{}",
-        cte_block, attr_logic, unit_where_sql, order_sql, page_sql,
+    params.extend(page_params);
+    let sql = format!(
+        "{cte_block} SELECT uk.tenantid, uk.unitid, uv.unitver, uk.corrid, uk.status, \
+         uk.created, uv.modified, uv.unitname{base_from}{}{page_sql}",
+        build_order_sql(order)
     );
-
-    let count_sql = format!(
-        "{}final AS ({})\n\
-         SELECT count(*)\n\
-         FROM repo.repo_unit_kernel uk\n\
-         JOIN repo.repo_unit_version uv ON (uk.tenantid = uv.tenantid AND uk.unitid = uv.unitid AND uk.lastver = uv.unitver)\n\
-         JOIN final f ON (uk.tenantid = f.tenantid AND uk.unitid = f.unitid)\n\
-         WHERE 1=1{}",
-        cte_block, attr_logic, unit_where_sql,
-    );
-
-    let mut count_params: Vec<String> = Vec::new();
-    count_params.extend(unit_params.clone());
-    count_params.extend(cte_params.clone());
-
-    let mut all_params: Vec<String> = Vec::new();
-    all_params.extend(unit_params);
-    all_params.extend(cte_params);
-    all_params.extend(page_params);
-
     CompiledQuery {
-        sql: data_sql,
-        params: all_params,
+        sql,
+        params,
         count_sql,
         count_params,
     }
@@ -232,7 +207,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
             let col_sql = match column.as_str() {
                 "tenantid" => "uk.tenantid",
                 "unitid" => "uk.unitid",
-                "unitver" => "uk.unitver",
+                "unitver" => "uv.unitver",
                 "status" => "uk.status",
                 "corrid" => "uk.corrid",
                 "unitname" | "name" => "uv.unitname",
@@ -240,10 +215,22 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
                 "modified" => "uv.modified",
                 _ => return (String::new(), vec![]),
             };
-            let val = value_to_string(value);
             let i = next();
+            let cast = match column.as_str() {
+                "tenantid" | "unitver" | "status" => "integer",
+                "unitid" => "bigint",
+                "corrid" => "uuid",
+                "created" | "modified" => "timestamp",
+                _ => "text",
+            };
+            let parameter = parameter_sql(i, cast);
+            let val = if cast == "timestamp" {
+                timestamp_value(value)
+            } else {
+                value_to_string(value)
+            };
             (
-                format!("{} {} ${}", col_sql, operator.to_sql(), i),
+                format!("{} {} {}", col_sql, operator.to_sql(), parameter),
                 vec![val],
             )
         }
@@ -261,7 +248,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
                     format!(
                         "EXISTS (SELECT 1 FROM repo.repo_internal_relation r \
                          WHERE uk.tenantid = r.tenantid AND uk.unitid = r.unitid \
-                         AND r.reltype = ${} AND r.reltenantid = ${} AND r.relunitid = ${})",
+                         AND r.reltype = ${}::text::integer AND r.reltenantid = ${}::text::integer AND r.relunitid = ${}::text::bigint)",
                         i1, i2, i3
                     ),
                     vec![
@@ -274,7 +261,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
                     format!(
                         "EXISTS (SELECT 1 FROM repo.repo_internal_relation r \
                          WHERE uk.tenantid = r.reltenantid AND uk.unitid = r.relunitid \
-                         AND r.reltype = ${} AND r.tenantid = ${} AND r.unitid = ${})",
+                         AND r.reltype = ${}::text::integer AND r.tenantid = ${}::text::integer AND r.unitid = ${}::text::bigint)",
                         i1, i2, i3
                     ),
                     vec![
@@ -297,7 +284,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
                     format!(
                         "EXISTS (SELECT 1 FROM repo.repo_external_assoc a \
                          WHERE uk.tenantid = a.tenantid AND uk.unitid = a.unitid \
-                         AND a.assoctype = ${} AND a.assocstring = ${})",
+                         AND a.assoctype = ${}::text::integer AND a.assocstring = ${}::text)",
                         i1, i2
                     ),
                     vec![assoc_type.to_string(), ref_string.clone()],
@@ -305,7 +292,7 @@ fn unit_item_to_sql(item: &SearchItem, idx: &mut i64) -> (String, Vec<String>) {
                 crate::search_ast::Direction::Right => (
                     format!(
                         "EXISTS (SELECT 1 FROM repo.repo_external_assoc a \
-                         WHERE a.assoctype = ${} AND a.assocstring = ${} \
+                         WHERE a.assoctype = ${}::text::integer AND a.assocstring = ${}::text \
                          AND uk.tenantid = a.tenantid AND uk.unitid = a.unitid)",
                         i1, i2
                     ),
@@ -338,22 +325,51 @@ fn attr_item_to_cte(item: &SearchItem, cte_name: &str, idx: &mut i64) -> (String
         let i2 = *idx;
         *idx += 1;
 
+        let cast = match attr_type {
+            crate::search_ast::AttrType::String => "text",
+            crate::search_ast::AttrType::Integer => "integer",
+            crate::search_ast::AttrType::Long => "bigint",
+            crate::search_ast::AttrType::Double => "double precision",
+            crate::search_ast::AttrType::Bool => "boolean",
+            crate::search_ast::AttrType::Time => "timestamp",
+            crate::search_ast::AttrType::Record => "bigint",
+        };
+        let mut val = if cast == "timestamp" {
+            timestamp_value(value)
+        } else {
+            value_to_string(value)
+        };
+        let mut comparison = operator.to_sql();
+        let value_column = if cast == "text" {
+            val = val.to_lowercase().replace('*', "%");
+            if val.contains('%') || val.contains('_') {
+                comparison = match operator {
+                    crate::search_ast::Operator::Eq | crate::search_ast::Operator::Like => "LIKE",
+                    crate::search_ast::Operator::Ne => "NOT LIKE",
+                    _ => comparison,
+                };
+            }
+            format!("lower({col})")
+        } else {
+            col.to_string()
+        };
+        let parameter = parameter_sql(i2, cast);
         let sql = format!(
-            "{} AS (\n    SELECT av.tenantid, av.unitid\n    FROM repo.repo_attribute_value av\n    JOIN {} vv ON av.valueid = vv.valueid\n    WHERE av.attrid = ${} AND {} {} ${}\n)",
-            cte_name,
-            table,
-            i1,
-            col,
-            operator.to_sql(),
-            i2
+            "{cte_name} AS (SELECT DISTINCT av.tenantid, av.unitid \
+             FROM repo.repo_attribute_value av \
+             JOIN repo.{table} vv ON av.valueid = vv.valueid \
+             JOIN repo.repo_unit_kernel uk ON av.tenantid = uk.tenantid AND av.unitid = uk.unitid \
+             WHERE av.attrid = ${i1}::text::integer \
+             AND av.unitverfrom <= uk.lastver AND av.unitverto >= uk.lastver \
+             AND {value_column} {comparison} {parameter})"
         );
-        (sql, vec![attr_id.to_string(), value_to_string(value)])
+        (sql, vec![attr_id.to_string(), val])
     } else {
         (String::new(), vec![])
     }
 }
 
-fn build_set_ops_logic(expr: &SearchExpr, cte_names: &[(String, &&SearchItem)]) -> String {
+fn build_set_ops_logic(expr: &SearchExpr, cte_names: &[(String, &SearchItem)]) -> String {
     match expr {
         SearchExpr::And(l, r) => {
             format!(
@@ -391,9 +407,7 @@ fn build_set_ops_logic(expr: &SearchExpr, cte_names: &[(String, &&SearchItem)]) 
             }
         }
         SearchExpr::Leaf(item) => {
-            if SearchExpr::is_unit_like(item) {
-                "(SELECT tenantid, unitid FROM repo.repo_unit_kernel)".to_string()
-            } else if let Some(cte) = cte_name_for(cte_names, item) {
+            if let Some(cte) = cte_name_for(cte_names, item) {
                 format!("(SELECT tenantid, unitid FROM {})", cte)
             } else {
                 "(SELECT tenantid, unitid FROM repo.repo_unit_kernel)".to_string()
@@ -402,10 +416,10 @@ fn build_set_ops_logic(expr: &SearchExpr, cte_names: &[(String, &&SearchItem)]) 
     }
 }
 
-fn cte_name_for<'a>(cte_names: &'a [(String, &&SearchItem)], item: &SearchItem) -> Option<&'a str> {
+fn cte_name_for<'a>(cte_names: &'a [(String, &SearchItem)], item: &SearchItem) -> Option<&'a str> {
     cte_names
         .iter()
-        .find(|(_, i)| ***i == *item)
+        .find(|(_, i)| **i == *item)
         .map(|(name, _)| name.as_str())
 }
 
@@ -431,16 +445,35 @@ fn build_paging(limit: Option<i64>, offset: Option<i64>, idx: &mut i64) -> (Stri
     if let Some(lim) = limit {
         let i = *idx;
         *idx += 1;
-        sql.push_str(&format!(" LIMIT ${}", i));
+        sql.push_str(&format!(" LIMIT ${}::text::bigint", i));
         params.push(lim.to_string());
     }
     if let Some(off) = offset {
         let i = *idx;
         *idx += 1;
-        sql.push_str(&format!(" OFFSET ${}", i));
+        sql.push_str(&format!(" OFFSET ${}::text::bigint", i));
         params.push(off.to_string());
     }
     (sql, params)
+}
+
+// Parameters are stored as strings. Explicit text casts keep the driver's wire
+// type consistent; PostgreSQL then converts to the column's actual type.
+fn parameter_sql(index: i64, cast: &str) -> String {
+    if cast == "timestamp" {
+        format!("(${index}::text::timestamptz AT TIME ZONE 'UTC')")
+    } else {
+        format!("${index}::text::{cast}")
+    }
+}
+
+fn timestamp_value(value: &serde_json::Value) -> String {
+    let text = value_to_string(value);
+    text.parse::<i64>()
+        .ok()
+        .and_then(chrono::DateTime::from_timestamp_millis)
+        .map(|timestamp| timestamp.to_rfc3339())
+        .unwrap_or(text)
 }
 
 fn value_to_string(value: &serde_json::Value) -> String {

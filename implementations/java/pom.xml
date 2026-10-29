@@ -12,7 +12,6 @@
         <module>repo</module>
         <module>graphql</module>
         <module>repo-cdi</module>
-        <module>../../shared/db/java</module>
         <module>it</module>
         <module>quarkus-app</module>
     </modules>
@@ -198,6 +197,13 @@
     </build>
 
     <profiles>
+        <profile>
+            <id>db2</id>
+            <modules>
+                <!-- DB2 runs this helper on Java 8 with Jackson 2.x. -->
+                <module>../../shared/db/java</module>
+            </modules>
+        </profile>
         <profile>
             <id>deps</id>
             <!-- mvn -Pdeps validate -->

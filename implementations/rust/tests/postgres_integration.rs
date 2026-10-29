@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use ipto_rust::backend::RepoError;
 use ipto_rust::backends::postgres::PostgresBackend;
@@ -57,6 +58,152 @@ fn make_unit(tenant_id: i32, name: &str) -> serde_json::Value {
         "unitname": name,
         "attributes": []
     })
+}
+
+#[test]
+fn postgres_corrid_lookup_does_not_relock_client() {
+    if !pg_integration_enabled() {
+        return;
+    }
+
+    let tenant_id = 993_i32;
+    ensure_tenant(tenant_id);
+    let repo = RepoService::new(Arc::new(PostgresBackend::new()));
+    let unit = repo
+        .store_unit_json(make_unit(tenant_id, "rust-it-corrid"))
+        .expect("store unit");
+    let corrid = unit["corrid"].as_str().expect("corrid").to_owned();
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        let found = repo.get_unit_by_corrid_json(&corrid);
+        sender.send(found).expect("send lookup result");
+    });
+
+    let found = receiver
+        .recv_timeout(Duration::from_secs(5))
+        .expect("correlation lookup must return without deadlocking")
+        .expect("lookup by corrid")
+        .expect("unit found");
+    assert_eq!(found["unitid"], unit["unitid"]);
+    worker.join().expect("lookup worker");
+}
+
+#[test]
+fn postgres_duplicate_attribute_does_not_relock_client() {
+    if !pg_integration_enabled() {
+        return;
+    }
+    let repo = RepoService::new(Arc::new(PostgresBackend::new()));
+    let name = format!("duplicate_{}", Uuid::now_v7().simple());
+    let expected = repo
+        .create_attribute(&name, &name, &name, "string", false)
+        .expect("create attribute");
+    let (sender, receiver) = std::sync::mpsc::channel();
+    let worker = std::thread::spawn(move || {
+        sender
+            .send(repo.create_attribute(&name, &name, &name, "string", false))
+            .expect("send duplicate result");
+    });
+    let found = receiver
+        .recv_timeout(Duration::from_secs(5))
+        .expect("duplicate lookup must return without deadlocking")
+        .expect("existing attribute");
+    assert_eq!(found["id"], expected["id"]);
+    worker.join().expect("duplicate worker");
+}
+
+#[test]
+fn postgres_text_search_preserves_attribute_types_and_boolean_logic() {
+    if !pg_integration_enabled() {
+        return;
+    }
+    let tenant_id = 995_i32;
+    ensure_tenant(tenant_id);
+    let repo = RepoService::new(Arc::new(PostgresBackend::new()));
+    let suffix = Uuid::now_v7().simple().to_string();
+    let mut attributes = Vec::new();
+    for (label, kind) in [
+        ("color", "string"),
+        ("long", "long"),
+        ("double", "double"),
+        ("time", "time"),
+    ] {
+        let name = format!("{label}_{suffix}");
+        attributes.push(
+            repo.create_attribute(&name, &name, &name, kind, false)
+                .expect("create search attribute"),
+        );
+    }
+    let mut ids = Vec::new();
+    for (color, long, double) in [
+        ("Red", 9_007_199_254_740_993_i64, 1.5),
+        ("Blue", 42, 2.5),
+        ("Red", 43, 3.5),
+    ] {
+        let mut unit = make_unit(tenant_id, color);
+        unit["attributes"] = json!([
+            {"attrid": attributes[0]["id"], "attrtype": 1, "value": [color]},
+            {"attrid": attributes[1]["id"], "attrtype": 4, "value": [long]},
+            {"attrid": attributes[2]["id"], "attrtype": 5, "value": [double]},
+            {"attrid": attributes[3]["id"], "attrtype": 2, "value": ["2026-10-29T12:00:00Z"]}
+        ]);
+        ids.push(
+            repo.store_unit_json(unit).expect("store search unit")["unitid"]
+                .as_i64()
+                .unwrap(),
+        );
+    }
+    let query = |predicate: String| {
+        let result = repo
+            .search_units_query_strict(
+                &format!(
+                    "tenantid={tenant_id} and unitid in ({},{},{}) and ({predicate})",
+                    ids[0], ids[1], ids[2]
+                ),
+                SearchOrder {
+                    field: "unitid".to_string(),
+                    descending: false,
+                },
+                SearchPaging {
+                    limit: 10,
+                    offset: 0,
+                },
+            )
+            .expect("execute typed search");
+        assert_eq!(result.total_hits, result.results.len() as i64);
+        result
+            .results
+            .into_iter()
+            .map(|unit| unit.unit_id)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(
+        query(format!("unitid={} or attr:color_{suffix}='blue'", ids[0])),
+        vec![ids[0], ids[1]]
+    );
+    assert_eq!(
+        query(format!("not attr:color_{suffix}='blue'")),
+        vec![ids[0], ids[2]]
+    );
+    assert_eq!(
+        query(format!("attr:long_{suffix}=9007199254740993")),
+        vec![ids[0]]
+    );
+    assert_eq!(
+        query(format!("attr:double_{suffix}>2.0")),
+        vec![ids[1], ids[2]]
+    );
+    assert_eq!(
+        query(format!("attr:time_{suffix}='2026-10-29T13:00:00+01:00'")),
+        ids
+    );
+    repo.store_unit_json(json!({
+        "tenantid": tenant_id, "unitid": ids[1],
+        "attributes": [{"attrid": attributes[0]["id"], "attrtype": 1, "value": ["Green"]}]
+    }))
+    .expect("store new attribute version");
+    assert!(query(format!("attr:color_{suffix}='blue'")).is_empty());
+    assert_eq!(query(format!("attr:color_{suffix}='green'")), vec![ids[1]]);
 }
 
 #[test]

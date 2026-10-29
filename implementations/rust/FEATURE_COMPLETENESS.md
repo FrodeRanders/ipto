@@ -1,6 +1,6 @@
 # Rust Feature Completeness Tracker (vs Java `implementations/java/repo`)
 
-Last updated: 2026-06-11
+Last updated: 2026-10-29
 
 Legend: `DONE`, `PARTIAL`, `MISSING`
 
@@ -23,7 +23,7 @@ It focuses on externally meaningful repository behavior (not Java-internal liste
 - `DONE` SQL compiler (`src/search_sql.rs`) with SET_OPS (WITH/CTE + INTERSECT/UNION) and EXISTS strategies — matches Java's dual-strategy approach
 - `DONE` PostgresBackend overrides `search_units_ast` to use `search_sql::compile` directly, generating proper boolean-tree-aware WHERE clauses
 - `DONE` JSON→AST and AST→JSON conversion for backward compatibility with existing Python bindings and Neo4j backend
-- `PARTIAL` Neo4j backend currently uses default JSON-fallback (AST→JSON→Cypher); direct AST→Cypher compiler pending
+- `DONE` Neo4j backend compiles typed ASTs directly to Cypher via `src/search_cypher.rs`
 
 ## Relations and Associations
 - `DONE` add/remove relation
@@ -60,6 +60,9 @@ It focuses on externally meaningful repository behavior (not Java-internal liste
 - `DONE` Python integration checks for attribute search coercion/validation and wildcard semantics (`attribute_cmp` numeric-string/time-millis-string coercion; boolean-op validation; `attribute_eq` wildcard matching)
 
 ## Test Tooling
+- `DONE` CI checks the Python feature, builds a Python wheel, runs Python integration tests, and enables Rust backend parity tests
+- `DONE` PostgreSQL correlation-id and duplicate-attribute regression tests use bounded waits to detect client mutex deadlocks
+- `DONE` PostgreSQL text-search regressions cover mixed unit/attribute OR and NOT, long/double/time values, and latest-version filtering
 - `DONE` real-backend test runner script (`scripts/run_real_backend_tests.sh`) for PostgreSQL/Neo4j with env defaults, startup/readiness handling, and scope selection
 - `DONE` Makefile shortcuts for real-backend runs (`real-tests`, `real-tests-down`)
 - `DONE` PyO3-backed soak benchmark script (`scripts/python_backend_benchmark.py`) with running statistics, summary reporting, and configurable parallel workers (`--workers`)

@@ -1,45 +1,18 @@
-# Rust IPTO scaffold (`./implementations/rust`)
+# Rust IPTO (`./implementations/rust`)
 
-This directory is a `maturin`-ready Rust baseline for implementing IPTO `repo` and parts of `graphql`, with backend adapters for PostgreSQL and Neo4j.
+Rust implementation of the IPTO repository with PostgreSQL and Neo4j backends,
+a Python API through PyO3/maturin, and a constrained GraphQL interface.
 
-## Feasibility assessment
+## Current status
 
-Short answer: yes, this is realistic, but full Java parity is a substantial project.
+- Unit creation, retrieval, versioning, status transitions, locks, relations, and associations are implemented.
+- Metadata lookup and SDL-driven attribute/record/template setup are available; template persistence depends on the backend.
+- Text queries use a typed search AST with direct PostgreSQL SQL and Neo4j Cypher compilation.
+- Python exposes repository operations, GraphQL dispatch, SDL setup, and runtime statistics.
+- GraphQL uses an operation registry and allowlist. It does not implement the full Java dynamic GraphQL runtime.
 
-What is straightforward:
-- Mirror Erlang's backend contract as a Rust trait and keep orchestration backend-agnostic.
-- Expose a stable Python API via `pyo3` + `maturin`.
-- Implement PostgreSQL persistence first, then Neo4j.
-- Reuse existing GraphQL SDL conventions from `Specification.graphql` and `implementations/java/graphql/`.
-
-What is harder:
-- Reaching feature parity with Java search/query semantics and dynamic GraphQL runtime wiring.
-- Matching all edge cases around versioning, locking, relation/association cardinality, and status transitions.
-- Cross-backend consistency (PostgreSQL vs Neo4j) for query behavior and paging.
-
-## Recommended phased plan
-
-1. `repo-core` parity subset:
-- Unit create/get/store
-- version selector (`latest` / explicit version)
-- status updates
-- lock/unlock
-
-2. PostgreSQL backend MVP:
-- map unit JSON model to existing SQL schema and procedures in `shared/db/postgresql`
-- implement search for current Erlang subset first
-
-3. Neo4j backend MVP:
-- implement same backend trait against Cypher
-- preserve the same external API shape
-
-4. Python API stabilization:
-- freeze exception mapping and return shapes
-- add integration tests from Python for both backends
-
-5. GraphQL layer:
-- start with a minimal runtime surface for unit CRUD/search
-- optionally introduce dynamic SDL-driven wiring after core parity is stable
+Remaining work focuses on lifecycle and payload edge cases, broader GraphQL
+semantics, and cross-backend consistency. See [FEATURE_COMPLETENESS.md](FEATURE_COMPLETENESS.md).
 
 ## Package layout
 
@@ -47,9 +20,10 @@ What is harder:
 - `src/model.rs`: shared domain model types.
 - `src/backend.rs`: backend trait and shared types.
 - `src/repo.rs`: backend-agnostic orchestration service.
-- `src/backends/postgres.rs`: PostgreSQL adapter scaffold.
-- `src/backends/neo4j.rs`: Neo4j adapter scaffold.
-- `src/graphql.rs`: GraphQL runtime bridge (MVP supports `searchUnits` query execution).
+- `src/backends/postgres.rs`: PostgreSQL adapter using the shared schema and procedures.
+- `src/backends/neo4j.rs`: Neo4j adapter and schema bootstrap.
+- `src/search_ast.rs`, `src/search_sql.rs`, `src/search_cypher.rs`: typed search model and backend compilers.
+- `src/graphql.rs`: GraphQL operation registry and execution bridge.
 
 ## Build (local)
 
@@ -67,7 +41,12 @@ maturin build
 
 ## Note
 
-This scaffold intentionally does not claim parity yet. It defines the API and extension points so implementation can proceed iteratively while preserving a stable Python module shape.
+Full Java parity is still being developed. Default Cargo builds exclude the
+optional Python feature; check it explicitly when changing bindings or PyO3:
+
+```sh
+cargo check --locked --features python
+```
 
 Rust-only test/build (without Python linking):
 
@@ -76,7 +55,7 @@ cd implementations/rust
 cargo test
 ```
 
-## PostgreSQL MVP status
+## PostgreSQL backend
 
 Implemented in `PostgresBackend`:
 - `health`
@@ -190,7 +169,7 @@ Note: Rust Docker PostgreSQL initialization mounts SQL directly from
 `shared/db/postgresql/schema.sql` and `shared/db/postgresql/procedures.sql`.
 There are no Rust-local schema copies to keep in sync.
 
-Neo4j MVP currently implemented:
+Neo4j currently implements:
 - `health`, `unit_exists`, `set_status`
 - unit API: `store_unit_json`, `get_unit_json`, `search_units`
 - relation API: add/remove/get/count (left and right)
@@ -205,8 +184,8 @@ cd implementations/rust
 make neo4j-test
 ```
 
-GraphQL runtime MVP:
-- `GraphqlRuntime::execute(query, variables)` currently supports read-only:
+GraphQL runtime:
+- `GraphqlRuntime::execute(query, variables)` supports queries including:
   - `registeredOperations`
   - `searchUnits`
   - `unitExists`
@@ -424,3 +403,8 @@ assert blocked["errors"][0]["extensions"]["code"] == "UNSUPPORTED"
 
 Feature parity tracker:
 - `FEATURE_COMPLETENESS.md` (living status against Java `repo`)
+
+CI checks both default and Python-enabled compilation, Rust unit and runner
+contract tests, PostgreSQL/Neo4j integration and parity tests, and a built Python
+wheel exercised by pytest. Database tests require the integration environment
+variables; a plain `cargo test` does not exercise live backends.

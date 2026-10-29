@@ -116,8 +116,33 @@ fn expr_node_to_search_expr(node: ExprNode) -> RepoResult<SearchExpr> {
             Box::new(expr_node_to_search_expr(*r)?),
         )),
         ExprNode::Not(inner) => Ok(SearchExpr::Not(Box::new(expr_node_to_search_expr(*inner)?))),
-        ExprNode::Leaf(val) => json_leaf_to_search_item(&val).map(SearchExpr::Leaf),
+        ExprNode::Leaf(val) => json_expr_to_search_expr(&val),
     }
+}
+
+fn json_expr_to_search_expr(value: &Value) -> RepoResult<SearchExpr> {
+    // IN, NOT IN and BETWEEN are normalized to nested boolean JSON during
+    // parsing; preserve those nodes when building the typed AST too.
+    for key in ["and", "or"] {
+        if let Some(children) = value.get(key).and_then(Value::as_array) {
+            let mut children = children.iter().map(json_expr_to_search_expr);
+            let first = children
+                .next()
+                .ok_or_else(|| RepoError::InvalidInput(format!("empty {key} expression")))??;
+            return children.try_fold(first, |left, right| {
+                let right = right?;
+                Ok(if key == "and" {
+                    SearchExpr::And(Box::new(left), Box::new(right))
+                } else {
+                    SearchExpr::Or(Box::new(left), Box::new(right))
+                })
+            });
+        }
+    }
+    if let Some(inner) = value.get("not") {
+        return Ok(SearchExpr::Not(Box::new(json_expr_to_search_expr(inner)?)));
+    }
+    json_leaf_to_search_item(value).map(SearchExpr::Leaf)
 }
 
 fn json_leaf_to_search_item(leaf: &Value) -> RepoResult<SearchItem> {
@@ -139,11 +164,9 @@ fn json_leaf_to_search_item(leaf: &Value) -> RepoResult<SearchItem> {
             return attr_json_to_search_item(v);
         }
     }
-    Ok(SearchItem::Unit {
-        column: "tenantid".to_string(),
-        operator: Operator::Eq,
-        value: json!(1),
-    })
+    Err(RepoError::InvalidInput(
+        "unsupported search expression".to_string(),
+    ))
 }
 
 fn predicate_json_to_search_item(pred: &Value) -> RepoResult<SearchItem> {
@@ -172,8 +195,8 @@ fn predicate_json_to_search_item(pred: &Value) -> RepoResult<SearchItem> {
 
 fn relation_json_to_search_item(rel: &Value) -> RepoResult<SearchItem> {
     let rel_type: i64 = rel["type"]
-        .as_str()
-        .and_then(|s| s.parse().ok())
+        .as_i64()
+        .or_else(|| rel["type"].as_str().and_then(|s| s.parse().ok()))
         .unwrap_or(0);
     let side = match rel["side"].as_str().unwrap_or("right") {
         "left" => Direction::Left,
@@ -192,8 +215,8 @@ fn relation_json_to_search_item(rel: &Value) -> RepoResult<SearchItem> {
 
 fn association_json_to_search_item(assoc: &Value) -> RepoResult<SearchItem> {
     let assoc_type: i64 = assoc["type"]
-        .as_str()
-        .and_then(|s| s.parse().ok())
+        .as_i64()
+        .or_else(|| assoc["type"].as_str().and_then(|s| s.parse().ok()))
         .unwrap_or(0);
     let side = match assoc["side"].as_str().unwrap_or("right") {
         "left" => Direction::Left,
@@ -292,21 +315,22 @@ fn search_item_to_predicate_json(item: &SearchItem) -> Value {
             json!({
                 "predicates": [{
                     "field": col,
-                    "op": operator.to_string(),
+                    "op": if *operator == Operator::Ne { "neq".to_string() } else { operator.to_string() },
                     "value": value,
                 }]
             })
         }
         SearchItem::Attr {
             name,
+            attr_id,
             operator,
             value,
             ..
         } => {
             json!({
                 "attribute_cmp": {
-                    "name_or_id": name,
-                    "op": operator.to_string(),
+                    "name_or_id": attr_id.map(|id| id.to_string()).unwrap_or_else(|| name.clone()),
+                    "op": if *operator == Operator::Ne { "neq".to_string() } else { operator.to_string() },
                     "value": value,
                 }
             })
